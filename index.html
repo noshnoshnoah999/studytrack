@@ -111,11 +111,25 @@ a{color:inherit;text-decoration:none}
 .sched-rest{font-size:14px;color:var(--text3);font-style:italic;padding:10px 0}
 
 /* SCHEDULE BLOCK CARDS */
-.sbc{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;margin-bottom:6px;background:var(--bg);border-left:4px solid var(--border);box-shadow:0 1px 3px rgba(26,20,16,0.05)}
+.sbc{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;margin-bottom:6px;background:var(--bg);border-left:4px solid var(--border);box-shadow:0 1px 3px rgba(26,20,16,0.05);transition:opacity 0.2s}
 .sbc-main{flex:1;min-width:0}
 .sbc-name{font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sbc-time{font-size:12px;color:var(--text2);margin-top:2px}
 .sbc-dur{font-size:12px;font-weight:700;flex-shrink:0;opacity:0.8}
+.sbc-past{opacity:0.35}
+.sbc-active{box-shadow:0 2px 12px rgba(0,0,0,0.1)!important}
+
+/* NOW LINE */
+.now-line{display:flex;align-items:center;gap:8px;margin:2px 0 8px}
+.now-dot{width:9px;height:9px;border-radius:50%;background:#ef4444;flex-shrink:0;animation:nowpulse 1.4s ease-in-out infinite}
+@keyframes nowpulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.3)}}
+.now-time-txt{font-size:11px;font-weight:800;color:#ef4444;white-space:nowrap;flex-shrink:0;letter-spacing:0.3px}
+.now-bar{flex:1;height:1.5px;background:#ef4444;opacity:0.25;border-radius:1px}
+
+/* NOTIF BUTTON */
+.btn-notif{background:var(--bg3);border:none;width:36px;height:36px;border-radius:10px;font-size:17px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.btn-notif:hover{background:var(--bg4)}
+.btn-notif.on{background:var(--ol)}
 
 /* EDIT MODE */
 .edit-day-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
@@ -333,7 +347,10 @@ a{color:inherit;text-decoration:none}
     <div class="page" id="page-schedule">
       <div class="sched-header">
         <h2>Schedule</h2>
-        <button class="btn-toggle-edit" id="btn-edit-sched" onclick="toggleEditMode()">Edit Schedule</button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn-notif" id="btn-notif" onclick="toggleNotifications()" title="Enable notifications">🔕</button>
+          <button class="btn-toggle-edit" id="btn-edit-sched" onclick="toggleEditMode()">Edit Schedule</button>
+        </div>
       </div>
       <div id="sched-content"></div>
     </div>
@@ -932,8 +949,21 @@ function renderSchedule(){
       } else if(!blocks.length){
         html+='<div class="sched-rest">No blocks scheduled</div>';
       } else {
+        const nowDate=new Date();
+        const nowMins=nowDate.getHours()*60+nowDate.getMinutes();
+        const fmtNow=String(nowDate.getHours()).padStart(2,'0')+':'+String(nowDate.getMinutes()).padStart(2,'0');
+        let nowInserted=false;
         blocks.forEach(bl=>{
-          const dur=toMins(bl.end)-toMins(bl.start);
+          const startMins=toMins(bl.start);
+          const endMins=toMins(bl.end);
+          const dur=endMins-startMins;
+          const isActive=isToday&&nowMins>=startMins&&nowMins<endMins;
+          const isPast=isToday&&nowMins>=endMins;
+          // Insert NOW line before first upcoming block
+          if(isToday&&!nowInserted&&startMins>nowMins){
+            nowInserted=true;
+            html+='<div class="now-line"><div class="now-dot"></div><span class="now-time-txt">'+fmtNow+'</span><div class="now-bar"></div></div>';
+          }
           let color;
           if(bl.type==='work') color='#d97706';
           else if(bl.type==='break') color='#9ca3af';
@@ -941,14 +971,19 @@ function renderSchedule(){
           else color=SUBJ_COLORS[bl.subjectId]||'var(--o)';
           const isHex=color.startsWith('#');
           const bg=isHex?(color+'15'):'rgba(249,115,22,0.08)';
-          html+='<div class="sbc" style="border-left-color:'+color+';background:'+bg+'">'+
+          const extraClass=(isPast?' sbc-past':isActive?' sbc-active':'');
+          html+='<div class="sbc'+extraClass+'" style="border-left-color:'+color+';background:'+bg+'">'+
             '<div class="sbc-main">'+
-              '<div class="sbc-name">'+escHtml(bl.label)+(bl.locked?' <span style="opacity:0.5;font-size:11px">🔒</span>':'')+'</div>'+
+              '<div class="sbc-name">'+escHtml(bl.label)+(bl.locked?' <span style="opacity:0.5;font-size:11px">🔒</span>':'')+(isActive?' <span style="font-size:10px;font-weight:800;color:#ef4444;margin-left:4px">NOW</span>':'')+'</div>'+
               '<div class="sbc-time">'+bl.start+' – '+bl.end+'</div>'+
             '</div>'+
             '<div class="sbc-dur" style="color:'+color+'">'+durStr(dur)+'</div>'+
           '</div>';
         });
+        // NOW line at end if all blocks are past
+        if(isToday&&!nowInserted){
+          html+='<div class="now-line"><div class="now-dot"></div><span class="now-time-txt">'+fmtNow+'</span><div class="now-bar"></div></div>';
+        }
       }
       html+='</div>';
     });
@@ -1310,6 +1345,68 @@ function escHtml(s){
     .replace(/"/g,'&quot;');
 }
 
+// ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
+let notifTimers=[];
+
+function updateNotifBtn(){
+  const btn=document.getElementById('btn-notif');
+  if(!btn)return;
+  const on='Notification' in window&&Notification.permission==='granted'&&localStorage.getItem('st_notif')==='1';
+  btn.textContent=on?'🔔':'🔕';
+  btn.classList.toggle('on',on);
+  btn.title=on?'Notifications on — tap to disable':'Enable study notifications';
+}
+
+async function toggleNotifications(){
+  if(!('Notification' in window)){alert('Notifications are not supported in this browser.\n\nAdd the app to your home screen from Safari for notification support.');return;}
+  const already=Notification.permission==='granted'&&localStorage.getItem('st_notif')==='1';
+  if(already){
+    localStorage.setItem('st_notif','0');
+    notifTimers.forEach(t=>clearTimeout(t));
+    notifTimers=[];
+    updateNotifBtn();
+    return;
+  }
+  const perm=await Notification.requestPermission();
+  if(perm==='granted'){
+    localStorage.setItem('st_notif','1');
+    scheduleNotifications();
+    updateNotifBtn();
+    new Notification('StudyTrack 📚',{body:'Notifications enabled! You\'ll be reminded before each study block.',tag:'st-welcome'});
+  } else {
+    alert('Notification permission denied.\n\niPhone users: add this app to your home screen from Safari, then try again.');
+  }
+}
+
+function scheduleNotifications(){
+  if(!('Notification' in window)||Notification.permission!=='granted'||localStorage.getItem('st_notif')!=='1')return;
+  notifTimers.forEach(t=>clearTimeout(t));
+  notifTimers=[];
+  const schedule=loadSchedule();
+  const today=todayDow();
+  const blocks=schedule.filter(b=>b.day===today&&b.type==='study');
+  const now=new Date();
+  const nowMins=now.getHours()*60+now.getMinutes();
+  blocks.forEach(bl=>{
+    const startMins=toMins(bl.start);
+    // 5-min warning
+    const warnMins=startMins-5;
+    if(warnMins>nowMins){
+      const t=setTimeout(()=>{
+        new Notification('⏰ Starting in 5 min',{body:bl.label+' · '+bl.start,tag:'warn-'+bl.id,icon:''});
+      },(warnMins-nowMins)*60000);
+      notifTimers.push(t);
+    }
+    // On-time
+    if(startMins>nowMins){
+      const t=setTimeout(()=>{
+        new Notification('📚 Study time!',{body:bl.label+' · '+bl.start+' – '+bl.end,tag:'start-'+bl.id,icon:''});
+      },(startMins-nowMins)*60000);
+      notifTimers.push(t);
+    }
+  });
+}
+
 // ── SUPABASE SYNC ─────────────────────────────────────────────────────────────
 const SB_URL='https://epaiazxcdcseijkhrncm.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVwYWlhenhjZGNzZWlqa2hybmNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwMjQ0MzQsImV4cCI6MjA5MjYwMDQzNH0.h2t_kFLZ_YPvuJlzPPiyXVbOnW4Ub_52hdaYosMoOus';
@@ -1372,6 +1469,8 @@ async function syncFromCloud(){
   if(!localStorage.getItem('st_hours'))localStorage.setItem('st_hours',JSON.stringify({}));
   showPage('dashboard');
   syncFromCloud();
+  updateNotifBtn();
+  scheduleNotifications();
 })();
 </script>
 </body>
