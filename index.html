@@ -247,6 +247,33 @@ a{color:inherit;text-decoration:none}
 
 /* MISC */
 .divider{height:1px;background:var(--border);margin:16px 0}
+
+/* TOAST */
+.toast{position:fixed;bottom:calc(90px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(16px);background:var(--text);color:#fff;font-size:13px;font-weight:600;padding:10px 20px;border-radius:20px;opacity:0;pointer-events:none;transition:opacity 0.2s,transform 0.2s;z-index:3000;white-space:nowrap;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(min-width:769px){.toast{bottom:28px}}
+
+/* SETTINGS GEAR */
+.btn-gear{background:none;color:var(--text3);width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0;cursor:pointer;border:none}
+.btn-gear:hover{background:var(--bg3);color:var(--text)}
+
+/* SCAN BUTTON */
+.btn-scan{background:var(--bg3);color:var(--text);font-size:13px;font-weight:600;padding:8px 14px;border-radius:10px;transition:all 0.15s;display:inline-flex;align-items:center;gap:5px;border:none;cursor:pointer}
+.btn-scan:hover{background:var(--bg4)}
+
+/* SPINNER */
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--o);border-radius:50%;animation:spin 0.75s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* PREVIEW TABLE */
+.preview-table{width:100%;border-collapse:collapse;margin:8px 0 4px}
+.preview-table th{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.4px;padding:5px 0;text-align:left;border-bottom:1px solid var(--border)}
+.preview-table td{font-size:13px;padding:8px 0;border-bottom:1px solid var(--bg3);color:var(--text)}
+.preview-table tr:last-child td{border-bottom:none}
+.old-val{color:var(--text3);font-size:12px}
+.new-val{color:var(--ok);font-weight:700}
+.no-change{color:var(--text3);font-size:12px;font-style:italic}
+.upload-loading{display:flex;flex-direction:column;align-items:center;gap:14px;padding:28px 0;color:var(--text2);font-size:14px}
 </style>
 </head>
 <body>
@@ -280,7 +307,12 @@ a{color:inherit;text-decoration:none}
       </div>
     </nav>
     <div class="sidebar-footer">
-      <div class="sidebar-footer-label">Today's Progress</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div class="sidebar-footer-label" style="margin-bottom:0">Today's Progress</div>
+        <button class="btn-gear" onclick="openSettings()" title="Settings">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+      </div>
       <div class="sidebar-footer-bar"><div class="sidebar-footer-fill" id="sb-bar" style="width:0%"></div></div>
       <div class="sidebar-footer-val" id="sb-val">0h / 6h 18m</div>
     </div>
@@ -360,7 +392,16 @@ a{color:inherit;text-decoration:none}
     <div class="page" id="page-progress">
       <div class="prog-header">
         <h2>Subjects</h2>
-        <button class="btn-add" onclick="openSubjectModal(null)">＋ Add Subject</button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn-scan" onclick="triggerScreenshotUpload()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            Scan Report
+          </button>
+          <button class="btn-gear" onclick="openSettings()" title="Settings" style="display:none" id="mobile-settings-btn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
+          <button class="btn-add" onclick="openSubjectModal(null)">＋ Add</button>
+        </div>
       </div>
       <div class="card">
         <div id="subjects-list"></div>
@@ -406,6 +447,42 @@ a{color:inherit;text-decoration:none}
       Goals
     </div>
   </nav>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast"></div>
+
+<!-- HIDDEN FILE INPUT -->
+<input type="file" id="screenshot-input" accept="image/*" style="display:none" onchange="handleScreenshotFile(event)">
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settings-modal-overlay" onclick="handleOverlayClick(event,'settings-modal-overlay')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Settings</div>
+    <div class="form-group">
+      <label class="form-label">Anthropic API Key</label>
+      <input type="password" class="form-input" id="api-key-input" placeholder="sk-ant-api03-…">
+      <div style="font-size:12px;color:var(--text2);margin-top:6px;line-height:1.5">Used to scan progress report screenshots. Your key is stored locally on this device only.<br><a href="https://console.anthropic.com/settings/keys" style="color:var(--o);text-decoration:underline" target="_blank">Get an API key →</a></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-save" onclick="saveApiKey()">Save Key</button>
+      <button class="btn-cancel" onclick="closeModal('settings-modal-overlay')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREENSHOT PREVIEW MODAL -->
+<div class="modal-overlay" id="preview-modal-overlay" onclick="handleOverlayClick(event,'preview-modal-overlay')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Update Baselines</div>
+    <div id="preview-modal-body"></div>
+    <div class="modal-actions" id="preview-modal-actions">
+      <button class="btn-save" onclick="applyParsedBaselines()">Apply Updates</button>
+      <button class="btn-cancel" onclick="closeModal('preview-modal-overlay')">Cancel</button>
+    </div>
+  </div>
 </div>
 
 <!-- BLOCK MODAL -->
@@ -1299,6 +1376,243 @@ function escHtml(s){
     .replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;');
 }
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+let toastTimer=null;
+function showToast(msg,dur=2800){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),dur);
+}
+
+// ── SETTINGS ──────────────────────────────────────────────────────────────────
+function openSettings(){
+  const key=localStorage.getItem('st_apikey')||'';
+  document.getElementById('api-key-input').value=key;
+  document.getElementById('settings-modal-overlay').classList.add('open');
+}
+
+function saveApiKey(){
+  const key=document.getElementById('api-key-input').value.trim();
+  if(!key){alert('Please enter an API key.');return;}
+  localStorage.setItem('st_apikey',key);
+  closeModal('settings-modal-overlay');
+  showToast('API key saved ✓');
+}
+
+// ── SCREENSHOT UPLOAD ─────────────────────────────────────────────────────────
+function triggerScreenshotUpload(){
+  const key=localStorage.getItem('st_apikey');
+  if(!key){
+    showToast('Set your API key first');
+    openSettings();
+    return;
+  }
+  document.getElementById('screenshot-input').value='';
+  document.getElementById('screenshot-input').click();
+}
+
+function handleScreenshotFile(event){
+  const file=event.target.files&&event.target.files[0];
+  if(!file)return;
+  analyzeScreenshot(file);
+}
+
+function fileToBase64(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>{
+      const result=reader.result;
+      const base64=result.split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+let pendingBaselines=null;
+
+async function analyzeScreenshot(file){
+  const apiKey=localStorage.getItem('st_apikey');
+  if(!apiKey){openSettings();return;}
+
+  // Show loading state in preview modal
+  document.getElementById('preview-modal-body').innerHTML=
+    '<div class="upload-loading"><div class="spinner"></div><div>Scanning your progress report…</div></div>';
+  document.getElementById('preview-modal-actions').style.display='none';
+  document.getElementById('preview-modal-overlay').classList.add('open');
+
+  try{
+    const base64=await fileToBase64(file);
+    const mediaType=file.type||'image/jpeg';
+
+    const prompt=`This is a student progress report from TIHS (Tokyo Inter-High School) showing study hours per subject.
+
+Extract the total logged hours for each subject and return ONLY a valid JSON array with no markdown, no explanation, no code blocks.
+
+Match subjects to these exact IDs:
+- japanese = Japanese / 日本語
+- cwp = CWP / Cultures & World Perspectives / World History
+- english = English
+- el1 = Electives 1 / Elective 1
+- wa_hist = WA State History / Washington State History
+- fine_art = Fine Art / Film Studies / Art
+- us_hist = US History / American History
+- pe = PE / Physical Education / Cardio
+- health = Health / Health Science
+- civics = Civics / Government
+- science = Science / General Science
+- lab_sci = Lab Science / Laboratory Science
+- algebra1 = Algebra 1 / Mathematics
+- el2 = Electives 2 / Elective 2
+- el3 = Electives 3 / Elective 3
+
+Return ONLY this JSON format (decimal hours):
+[{"id":"japanese","hours":31.3},{"id":"cwp","hours":13.2}]
+
+Only include subjects you can clearly identify with a numeric hour value. Convert HH:MM to decimal if needed (e.g. 1:30 = 1.5). If you cannot read a value confidently, skip that subject.`;
+
+    const response=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'x-api-key':apiKey,
+        'anthropic-version':'2023-06-01',
+        'content-type':'application/json',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body:JSON.stringify({
+        model:'claude-haiku-4-5',
+        max_tokens:1024,
+        messages:[{
+          role:'user',
+          content:[
+            {type:'image',source:{type:'base64',media_type:mediaType,data:base64}},
+            {type:'text',text:prompt}
+          ]
+        }]
+      })
+    });
+
+    if(!response.ok){
+      const err=await response.json().catch(()=>({}));
+      throw new Error(err.error?.message||'API error '+response.status);
+    }
+
+    const data=await response.json();
+    const rawText=data.content&&data.content[0]&&data.content[0].text||'';
+
+    // Extract JSON from response (strip any markdown if present)
+    const jsonMatch=rawText.match(/\[[\s\S]*\]/);
+    if(!jsonMatch)throw new Error('Could not parse response from Claude');
+    const parsed=JSON.parse(jsonMatch[0]);
+
+    if(!Array.isArray(parsed)||parsed.length===0)throw new Error('No subjects found in screenshot');
+
+    showUpdatePreview(parsed);
+  }catch(err){
+    document.getElementById('preview-modal-body').innerHTML=
+      '<div style="padding:16px 0;color:var(--err);font-size:14px;line-height:1.6">'+
+      '<strong>Error scanning screenshot</strong><br>'+escHtml(err.message)+
+      '<br><br><span style="color:var(--text2);font-size:13px">Make sure your API key is correct and your image is a clear photo of the progress report.</span>'+
+      '</div>';
+    document.getElementById('preview-modal-actions').innerHTML=
+      '<button class="btn-cancel" onclick="closeModal(\'preview-modal-overlay\')">Close</button>';
+    document.getElementById('preview-modal-actions').style.display='flex';
+  }
+}
+
+function showUpdatePreview(changes){
+  const subjs=loadSubjects();
+
+  let tableRows='';
+  let hasChanges=false;
+  const validChanges=[];
+
+  changes.forEach(c=>{
+    const s=subjs.find(x=>x.id===c.id);
+    if(!s)return;
+    const newHours=parseFloat(c.hours)||0;
+    const changed=Math.abs(newHours-s.base)>0.05;
+    if(changed)hasChanges=true;
+    validChanges.push({...c,hours:newHours,name:s.name,oldBase:s.base,changed});
+    const arrow=changed?'→':'';
+    const newCell=changed?'<span class="new-val">'+newHours.toFixed(1)+'h</span>':'<span class="no-change">no change</span>';
+    tableRows+=
+      '<tr>'+
+        '<td>'+escHtml(s.name)+'</td>'+
+        '<td><span class="old-val">'+s.base.toFixed(1)+'h</span></td>'+
+        '<td>'+arrow+'</td>'+
+        '<td>'+newCell+'</td>'+
+      '</tr>';
+  });
+
+  if(!validChanges.length){
+    document.getElementById('preview-modal-body').innerHTML=
+      '<div style="padding:16px 0;color:var(--text2);font-size:14px">No recognizable subjects were found in the screenshot. Try a clearer image.</div>';
+    document.getElementById('preview-modal-actions').innerHTML=
+      '<button class="btn-cancel" onclick="closeModal(\'preview-modal-overlay\')">Close</button>';
+    document.getElementById('preview-modal-actions').style.display='flex';
+    return;
+  }
+
+  pendingBaselines=validChanges;
+
+  const subtitle=hasChanges
+    ?'Review the changes below before applying.'
+    :'No changes detected — your baselines already match this report.';
+
+  document.getElementById('preview-modal-body').innerHTML=
+    '<div style="font-size:13px;color:var(--text2);margin-bottom:8px">'+subtitle+'</div>'+
+    '<table class="preview-table">'+
+      '<thead><tr><th>Subject</th><th>Current</th><th></th><th>From Report</th></tr></thead>'+
+      '<tbody>'+tableRows+'</tbody>'+
+    '</table>';
+
+  document.getElementById('preview-modal-actions').innerHTML=
+    hasChanges
+      ? '<button class="btn-save" onclick="applyParsedBaselines()">Apply Updates</button><button class="btn-cancel" onclick="closeModal(\'preview-modal-overlay\')">Cancel</button>'
+      : '<button class="btn-cancel" onclick="closeModal(\'preview-modal-overlay\')">Close</button>';
+  document.getElementById('preview-modal-actions').style.display='flex';
+  document.getElementById('preview-modal-actions').style.flexDirection='column';
+  document.getElementById('preview-modal-actions').style.gap='8px';
+}
+
+function applyParsedBaselines(){
+  if(!pendingBaselines)return;
+  let subjs=loadSubjects();
+  let count=0;
+  pendingBaselines.forEach(c=>{
+    if(!c.changed)return;
+    const idx=subjs.findIndex(x=>x.id===c.id);
+    if(idx>=0){subjs[idx].base=c.hours;count++;}
+  });
+  saveSubjects(subjs);
+  // Also update DEFAULT_SUBJECTS entries so future loads pick up new baselines
+  pendingBaselines.forEach(c=>{
+    if(!c.changed)return;
+    const d=DEFAULT_SUBJECTS.find(x=>x.id===c.id);
+    if(d)d.base=c.hours;
+  });
+  pendingBaselines=null;
+  closeModal('preview-modal-overlay');
+  renderProgress();
+  updateSidebar();
+  showToast(count+' subject'+(count!==1?'s':'')+' updated ✓');
+}
+
+// Show mobile settings gear button on small screens
+(function(){
+  const mq=window.matchMedia('(max-width:768px)');
+  function check(e){
+    const btn=document.getElementById('mobile-settings-btn');
+    if(btn)btn.style.display=e.matches?'flex':'none';
+  }
+  mq.addEventListener('change',check);
+  check(mq);
+})();
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 (function init(){
