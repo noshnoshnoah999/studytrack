@@ -282,7 +282,7 @@ a{color:inherit;text-decoration:none}
     <div class="sidebar-footer">
       <div class="sidebar-footer-label">Today's Progress</div>
       <div class="sidebar-footer-bar"><div class="sidebar-footer-fill" id="sb-bar" style="width:0%"></div></div>
-      <div class="sidebar-footer-val" id="sb-val">0h / 6h 12m</div>
+      <div class="sidebar-footer-val" id="sb-val">0h / 6h 18m</div>
     </div>
   </aside>
 
@@ -589,21 +589,21 @@ function daysBetween(a,b){
 
 // ── DEFAULT DATA ──────────────────────────────────────────────────────────────
 const DEFAULT_SUBJECTS=[
-  {id:'japanese', name:'Japanese',            req:150, base:28.6,  passive:false, locked:false, done:false},
+  {id:'japanese', name:'Japanese',            req:150, base:31.3,  passive:false, locked:false, done:false},
   {id:'cwp',      name:'CWP / World History', req:75,  base:13.2,  passive:false, locked:false, done:false},
   {id:'english',  name:'English',             req:75,  base:3.3,   passive:false, locked:true,  done:false},
-  {id:'el1',      name:'Electives 1',         req:150, base:150,   passive:true,  locked:false, done:true },
-  {id:'wa_hist',  name:'WA State History',    req:75,  base:4.4,   passive:false, locked:false, done:false},
-  {id:'fine_art', name:'Fine Art / Film',     req:75,  base:25.8,  passive:true,  locked:false, done:false},
+  {id:'el1',      name:'Electives 1',         req:150, base:150.1, passive:true,  locked:false, done:true },
+  {id:'wa_hist',  name:'WA State History',    req:75,  base:6.7,   passive:false, locked:false, done:false},
+  {id:'fine_art', name:'Fine Art / Film',     req:75,  base:28.9,  passive:true,  locked:false, done:false},
   {id:'us_hist',  name:'US History',          req:75,  base:18.8,  passive:false, locked:false, done:false},
-  {id:'pe',       name:'PE / Cardio',         req:75,  base:27.8,  passive:true,  locked:false, done:false},
+  {id:'pe',       name:'PE / Cardio',         req:75,  base:34.5,  passive:true,  locked:false, done:false},
   {id:'health',   name:'Health Science',      req:75,  base:2,     passive:false, locked:false, done:false},
   {id:'civics',   name:'Civics',              req:75,  base:0,     passive:false, locked:false, done:false},
   {id:'science',  name:'Science',             req:75,  base:0,     passive:false, locked:false, done:false},
   {id:'lab_sci',  name:'Lab Science',         req:75,  base:0,     passive:false, locked:false, done:false},
   {id:'algebra1', name:'Algebra 1',           req:75,  base:0,     passive:false, locked:true,  done:false},
-  {id:'el2',      name:'Electives 2',         req:150, base:151.4, passive:true,  locked:false, done:true },
-  {id:'el3',      name:'Electives 3',         req:150, base:74.4,  passive:true,  locked:false, done:false},
+  {id:'el2',      name:'Electives 2',         req:150, base:150,   passive:true,  locked:false, done:true },
+  {id:'el3',      name:'Electives 3',         req:150, base:104.8, passive:true,  locked:false, done:false},
 ];
 
 function makeDefaultSchedule(){
@@ -653,7 +653,17 @@ function makeDefaultSchedule(){
 
 // ── STORAGE ───────────────────────────────────────────────────────────────────
 function loadSubjects(){
-  try{const s=localStorage.getItem('st_subjs');if(s)return JSON.parse(s);}catch(e){}
+  try{
+    const s=localStorage.getItem('st_subjs');
+    if(s){
+      const stored=JSON.parse(s);
+      // Always sync baselines from DEFAULT_SUBJECTS so teacher updates apply automatically
+      return stored.map(subj=>{
+        const def=DEFAULT_SUBJECTS.find(d=>d.id===subj.id);
+        return def ? {...subj, base:def.base, done:def.done} : subj;
+      });
+    }
+  }catch(e){}
   return JSON.parse(JSON.stringify(DEFAULT_SUBJECTS));
 }
 function saveSubjects(s){localStorage.setItem('st_subjs',JSON.stringify(s));}
@@ -722,10 +732,10 @@ function showPage(id){
 // ── SIDEBAR ───────────────────────────────────────────────────────────────────
 function updateSidebar(){
   const todayH=getTodayH();
-  const target=6.2;
+  const target=6.3;
   const pct=Math.min(100,todayH/target*100);
   document.getElementById('sb-bar').style.width=pct+'%';
-  document.getElementById('sb-val').textContent=fmtH(todayH)+' / 6h 12m';
+  document.getElementById('sb-val').textContent=fmtH(todayH)+' / 6h 18m';
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
@@ -747,7 +757,7 @@ function renderDashboard(){
   const remaining=Math.max(0,totalReq-totalLogged);
   const todayH=getTodayH();
   const weekH=getWeekH();
-  const target=6.2;
+  const target=6.3;
 
   document.getElementById('stats-strip').innerHTML=
     '<div class="stat-card"><div class="stat-label">Total Logged</div><div class="stat-val orange">'+fmtH(totalLogged)+'</div></div>'+
@@ -762,7 +772,7 @@ function renderDashboard(){
   document.getElementById('today-card').innerHTML=
     '<div class="card-title">Today\'s Progress</div>'+
     '<div class="today-big">'+fmtHColon(todayH)+'</div>'+
-    '<div class="today-sub">of 6h 12m daily target</div>'+
+    '<div class="today-sub">of 6h 18m daily target</div>'+
     '<div class="progress-bar"><div class="progress-fill" style="width:'+todayPct+'%;background:'+barColor+'"></div></div>'+
     '<div class="today-status" style="color:'+(todayH>=target?'var(--ok)':'var(--text2)')+'">'+
       (todayH>=target?'✓ Target reached':fmtH(todayRemain)+' remaining')+
