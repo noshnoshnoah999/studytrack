@@ -248,6 +248,15 @@ a{color:inherit;text-decoration:none}
 /* MISC */
 .divider{height:1px;background:var(--border);margin:16px 0}
 
+/* SYNC INDICATOR */
+.sync-row{display:flex;align-items:center;gap:6px;margin-top:8px}
+.sync-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;transition:background 0.3s}
+.sync-dot.synced{background:var(--ok)}
+.sync-dot.syncing{background:#f59e0b;animation:syncpulse 0.9s infinite}
+.sync-dot.error{background:var(--err)}
+.sync-dot.idle{background:var(--text3)}
+@keyframes syncpulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.sync-label{font-size:11px;color:var(--text3)}
 </style>
 </head>
 <body>
@@ -284,6 +293,10 @@ a{color:inherit;text-decoration:none}
       <div class="sidebar-footer-label">Today's Progress</div>
       <div class="sidebar-footer-bar"><div class="sidebar-footer-fill" id="sb-bar" style="width:0%"></div></div>
       <div class="sidebar-footer-val" id="sb-val">0h / 6h 18m</div>
+      <div class="sync-row">
+        <div class="sync-dot idle" id="sync-dot-sb"></div>
+        <span class="sync-label" id="sync-label-sb">Connecting…</span>
+      </div>
     </div>
   </aside>
 
@@ -667,22 +680,22 @@ function loadSubjects(){
   }catch(e){}
   return JSON.parse(JSON.stringify(DEFAULT_SUBJECTS));
 }
-function saveSubjects(s){localStorage.setItem('st_subjs',JSON.stringify(s));}
+function saveSubjects(s){localStorage.setItem('st_subjs',JSON.stringify(s));sbPush('st_subjs',s);}
 function loadSchedule(){
   try{const s=localStorage.getItem('st_sched');if(s)return JSON.parse(s);}catch(e){}
   return makeDefaultSchedule();
 }
-function saveSchedule(s){localStorage.setItem('st_sched',JSON.stringify(s));}
+function saveSchedule(s){localStorage.setItem('st_sched',JSON.stringify(s));sbPush('st_sched',s);}
 function loadSessions(){
   try{const s=localStorage.getItem('st_sessions');if(s)return JSON.parse(s);}catch(e){}
   return[];
 }
-function saveSessions(s){localStorage.setItem('st_sessions',JSON.stringify(s));}
+function saveSessions(s){localStorage.setItem('st_sessions',JSON.stringify(s));sbPush('st_sessions',s);}
 function loadHours(){
   try{const s=localStorage.getItem('st_hours');if(s)return JSON.parse(s);}catch(e){}
   return{};
 }
-function saveHours(h){localStorage.setItem('st_hours',JSON.stringify(h));}
+function saveHours(h){localStorage.setItem('st_hours',JSON.stringify(h));sbPush('st_hours',h);}
 
 // ── COMPUTED ──────────────────────────────────────────────────────────────────
 function getLogged(subjectId){
@@ -1301,13 +1314,68 @@ function escHtml(s){
     .replace(/"/g,'&quot;');
 }
 
+// ── SUPABASE SYNC ─────────────────────────────────────────────────────────────
+const SB_URL='https://epaiazxcdcseijkhrncm.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVwYWlhenhjZGNzZWlqa2hybmNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwMjQ0MzQsImV4cCI6MjA5MjYwMDQzNH0.h2t_kFLZ_YPvuJlzPPiyXVbOnW4Ub_52hdaYosMoOus';
+const SB_HDR={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'};
+
+function setSyncUI(status,msg){
+  document.querySelectorAll('.sync-dot').forEach(el=>{
+    el.className='sync-dot '+status;
+  });
+  const lbl=document.getElementById('sync-label-sb');
+  if(lbl)lbl.textContent=msg;
+}
+
+async function sbPush(key,value){
+  setSyncUI('syncing','Saving…');
+  try{
+    const res=await fetch(SB_URL+'/rest/v1/study_data',{
+      method:'POST',
+      headers:{...SB_HDR,'Prefer':'resolution=merge-duplicates'},
+      body:JSON.stringify({key,value,updated_at:new Date().toISOString()})
+    });
+    if(res.ok){setSyncUI('synced','Synced ✓');}
+    else{setSyncUI('error','Sync error');}
+  }catch(e){setSyncUI('error','Offline');}
+}
+
+async function sbPull(key){
+  try{
+    const res=await fetch(SB_URL+'/rest/v1/study_data?key=eq.'+key+'&select=value,updated_at',{headers:SB_HDR});
+    if(!res.ok)return null;
+    const rows=await res.json();
+    return rows&&rows[0]?rows[0]:null;
+  }catch(e){return null;}
+}
+
+async function syncFromCloud(){
+  setSyncUI('syncing','Syncing…');
+  try{
+    const KEYS=['st_subjs','st_sched','st_sessions','st_hours'];
+    const rows=await Promise.all(KEYS.map(k=>sbPull(k)));
+    let updated=false;
+    KEYS.forEach((k,i)=>{
+      if(rows[i]&&rows[i].value!==undefined){
+        localStorage.setItem(k,JSON.stringify(rows[i].value));
+        updated=true;
+      }
+    });
+    setSyncUI('synced','Synced ✓');
+    if(updated)showPage(currentPage);
+  }catch(e){
+    setSyncUI('error','Offline');
+  }
+}
+
 // ── INIT ──────────────────────────────────────────────────────────────────────
 (function init(){
-  if(!localStorage.getItem('st_subjs'))saveSubjects(JSON.parse(JSON.stringify(DEFAULT_SUBJECTS)));
-  if(!localStorage.getItem('st_sched'))saveSchedule(makeDefaultSchedule());
-  if(!localStorage.getItem('st_sessions'))saveSessions([]);
-  if(!localStorage.getItem('st_hours'))saveHours({});
+  if(!localStorage.getItem('st_subjs'))localStorage.setItem('st_subjs',JSON.stringify(JSON.parse(JSON.stringify(DEFAULT_SUBJECTS))));
+  if(!localStorage.getItem('st_sched'))localStorage.setItem('st_sched',JSON.stringify(makeDefaultSchedule()));
+  if(!localStorage.getItem('st_sessions'))localStorage.setItem('st_sessions',JSON.stringify([]));
+  if(!localStorage.getItem('st_hours'))localStorage.setItem('st_hours',JSON.stringify({}));
   showPage('dashboard');
+  syncFromCloud();
 })();
 </script>
 </body>
