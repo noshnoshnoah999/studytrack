@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TIHS Study Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0e0e0f;
+    --bg2: #161618;
+    --bg3: #1e1e21;
+    --bg4: #26262a;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #f0f0f0;
+    --text2: #888;
+    --text3: #555;
+    --accent: #c8f064;
+    --accent2: #9fd43a;
+    --red: #ff5f5f;
+    --blue: #5b9cf6;
+    --purple: #a78bfa;
+    --amber: #fbbf24;
+    --teal: #34d399;
+    --coral: #fb923c;
+    --pink: #f472b6;
+    --font: 'DM Sans', sans-serif;
+    --mono: 'DM Mono', monospace;
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* LAYOUT */
+  .app { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+
+  /* SIDEBAR */
+  .sidebar {
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    padding: 24px 0;
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  .sidebar-logo {
+    padding: 0 20px 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .sidebar-logo .school { font-size: 10px; color: var(--text3); letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--mono); }
+  .sidebar-logo .name { font-size: 16px; font-weight: 600; color: var(--text); margin-top: 2px; }
+  .sidebar-logo .id { font-size: 11px; color: var(--accent); font-family: var(--mono); margin-top: 1px; }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 20px;
+    cursor: pointer;
+    color: var(--text2);
+    font-size: 13px;
+    font-weight: 400;
+    transition: all 0.15s;
+    border-left: 2px solid transparent;
+  }
+  .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(200,240,100,0.05); font-weight: 500; }
+  .nav-icon { width: 16px; height: 16px; opacity: 0.7; flex-shrink: 0; }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 16px 20px 0;
+    border-top: 1px solid var(--border);
+  }
+  .daily-target { font-size: 11px; color: var(--text3); font-family: var(--mono); margin-bottom: 6px; }
+  .daily-bar { height: 4px; background: var(--bg4); border-radius: 2px; overflow: hidden; }
+  .daily-bar-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.5s; }
+  .daily-val { font-size: 12px; color: var(--text2); margin-top: 5px; font-family: var(--mono); }
+
+  /* MAIN */
+  .main { padding: 32px; overflow-y: auto; }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* HEADERS */
+  .page-header { margin-bottom: 28px; }
+  .page-title { font-size: 22px; font-weight: 600; color: var(--text); }
+  .page-sub { font-size: 13px; color: var(--text2); margin-top: 4px; }
+
+  /* CARDS */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .card-title { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--mono); margin-bottom: 14px; }
+
+  /* STATS ROW */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .stat-label { font-size: 11px; color: var(--text3); font-family: var(--mono); margin-bottom: 6px; }
+  .stat-val { font-size: 26px; font-weight: 600; color: var(--text); line-height: 1; }
+  .stat-unit { font-size: 12px; color: var(--text2); margin-top: 3px; }
+  .stat-accent { color: var(--accent); }
+  .stat-good { color: var(--teal); }
+  .stat-warn { color: var(--amber); }
+
+  /* PROGRESS PAGE */
+  .subject-list { display: flex; flex-direction: column; gap: 10px; }
+  .subject-row {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: grid;
+    grid-template-columns: 180px 1fr 80px 100px;
+    align-items: center;
+    gap: 16px;
+    transition: border-color 0.15s;
+  }
+  .subject-row:hover { border-color: var(--border2); }
+  .subj-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .subj-category { font-size: 11px; color: var(--text3); margin-top: 1px; font-family: var(--mono); }
+  .subj-bar-wrap { position: relative; }
+  .subj-bar { height: 6px; background: var(--bg4); border-radius: 3px; overflow: hidden; }
+  .subj-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s; }
+  .subj-pct { font-size: 12px; font-family: var(--mono); text-align: right; }
+  .subj-hours { font-size: 11px; color: var(--text3); text-align: right; font-family: var(--mono); }
+  .passive-tag { font-size: 10px; background: rgba(200,240,100,0.1); color: var(--accent); padding: 2px 6px; border-radius: 4px; margin-left: 6px; font-family: var(--mono); }
+
+  /* LOG PAGE */
+  .log-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .log-form { display: flex; flex-direction: column; gap: 12px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-label { font-size: 11px; color: var(--text3); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.06em; }
+  .form-input, .form-select {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+  .form-input:focus, .form-select:focus { border-color: var(--accent); }
+  .form-select option { background: var(--bg3); }
+  .btn {
+    background: var(--accent);
+    color: #0e0e0f;
+    border: none;
+    border-radius: 8px;
+    padding: 11px 20px;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    width: 100%;
+  }
+  .btn:hover { background: var(--accent2); }
+  .btn:active { transform: scale(0.98); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text2);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { background: var(--bg3); color: var(--text); }
+
+  .log-history { display: flex; flex-direction: column; gap: 8px; max-height: 400px; overflow-y: auto; }
+  .log-entry {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .log-entry-subj { font-size: 13px; font-weight: 500; }
+  .log-entry-meta { font-size: 11px; color: var(--text3); font-family: var(--mono); margin-top: 1px; }
+  .log-entry-hrs { font-size: 14px; font-weight: 600; font-family: var(--mono); color: var(--accent); white-space: nowrap; }
+  .log-delete { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 16px; padding: 2px 4px; border-radius: 4px; transition: color 0.15s; }
+  .log-delete:hover { color: var(--red); }
+
+  /* SCHEDULE PAGE */
+  .schedule-table { width: 100%; border-collapse: separate; border-spacing: 0 0; font-size: 12px; }
+  .schedule-table th {
+    background: var(--bg3);
+    color: var(--text3);
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 400;
+    border-bottom: 1px solid var(--border);
+  }
+  .schedule-table th:first-child { border-radius: 8px 0 0 0; }
+  .schedule-table th:last-child { border-radius: 0 8px 0 0; }
+  .time-col { color: var(--text3); font-family: var(--mono); font-size: 11px; padding: 8px 12px; white-space: nowrap; border-right: 1px solid var(--border); background: var(--bg2); }
+  .sched-cell { padding: 5px 6px; vertical-align: top; }
+  .sched-block {
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 11px;
+    line-height: 1.4;
+    height: 100%;
+  }
+  .sched-block .sb-subj { font-weight: 500; }
+  .sched-block .sb-time { opacity: 0.7; font-size: 10px; margin-top: 1px; font-family: var(--mono); }
+  .locked-badge { display: inline-block; font-size: 9px; background: rgba(255,95,95,0.2); color: #ff8a8a; padding: 1px 4px; border-radius: 3px; margin-top: 2px; font-family: var(--mono); }
+
+  .sb-work { background: rgba(255,95,95,0.1); color: #ff8a8a; border: 1px solid rgba(255,95,95,0.2); }
+  .sb-algebra { background: rgba(91,156,246,0.15); color: #8ab8f8; border: 1px solid rgba(91,156,246,0.2); }
+  .sb-english { background: rgba(167,139,250,0.15); color: #c4b0fd; border: 1px solid rgba(167,139,250,0.2); }
+  .sb-japanese { background: rgba(136,135,128,0.15); color: #aaa; border: 1px solid rgba(136,135,128,0.2); }
+  .sb-civics { background: rgba(251,191,36,0.12); color: #fcd462; border: 1px solid rgba(251,191,36,0.2); }
+  .sb-science { background: rgba(52,211,153,0.12); color: #6ee7b7; border: 1px solid rgba(52,211,153,0.2); }
+  .sb-health { background: rgba(251,146,60,0.12); color: #fca86a; border: 1px solid rgba(251,146,60,0.2); }
+  .sb-history { background: rgba(244,114,182,0.12); color: #f9a8d4; border: 1px solid rgba(244,114,182,0.2); }
+  .sb-cwp { background: rgba(52,211,100,0.12); color: #6ee7a0; border: 1px solid rgba(52,211,100,0.2); }
+  .sb-wa { background: rgba(52,211,100,0.12); color: #6ee7a0; border: 1px solid rgba(52,211,100,0.2); }
+  .sb-break { background: var(--bg3); color: var(--text3); border: 1px solid var(--border); }
+  .sb-free { background: transparent; color: var(--text3); border: 1px dashed var(--border); }
+  .sb-school { background: rgba(251,191,36,0.07); color: #fcd46299; border: 1px dashed rgba(251,191,36,0.2); }
+
+  .schedule-row { border-bottom: 1px solid var(--border); }
+  .schedule-row:last-child { border-bottom: none; }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--bg3); border: 1px solid var(--border2);
+    border-radius: 10px; padding: 12px 16px;
+    font-size: 13px; color: var(--text);
+    transform: translateY(80px); opacity: 0;
+    transition: all 0.3s; z-index: 100;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+
+  /* GRADUATION */
+  .milestone-list { display: flex; flex-direction: column; gap: 10px; }
+  .milestone {
+    display: flex; align-items: center; gap: 16px;
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px;
+  }
+  .milestone-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .milestone-info { flex: 1; }
+  .milestone-title { font-size: 13px; font-weight: 500; }
+  .milestone-date { font-size: 11px; color: var(--text3); font-family: var(--mono); margin-top: 2px; }
+  .milestone-req { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .milestone-days { font-size: 12px; font-family: var(--mono); color: var(--text2); white-space: nowrap; }
+
+  .grad-bar-wrap { margin-bottom: 24px; }
+  .grad-bar-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text3); font-family: var(--mono); margin-bottom: 6px; }
+  .grad-bar { height: 8px; background: var(--bg4); border-radius: 4px; overflow: hidden; }
+  .grad-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--teal)); border-radius: 4px; transition: width 0.8s; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 2px; }
+
+  .empty-state { text-align: center; padding: 32px; color: var(--text3); font-size: 13px; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .full-col { margin-bottom: 20px; }
+
+  .tag { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 4px; font-family: var(--mono); }
+  .tag-passive { background: rgba(200,240,100,0.1); color: var(--accent); }
+  .tag-done { background: rgba(52,211,153,0.1); color: var(--teal); }
+  .tag-zero { background: rgba(255,95,95,0.1); color: var(--red); }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="school">Tokyo Inter-High School</div>
+      <div class="name">Noah Fouty</div>
+      <div class="id">t2509002</div>
+    </div>
+    <nav>
+      <div class="nav-item active" onclick="showPage('dashboard')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-item" onclick="showPage('schedule')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="11" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M5 1v4M11 1v4M1 7h14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        Schedule
+      </div>
+      <div class="nav-item" onclick="showPage('log')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 5v3.5l2.5 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        Log Hours
+      </div>
+      <div class="nav-item" onclick="showPage('progress')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M1 12l4-4 3 3 4-5 3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Subject Progress
+      </div>
+      <div class="nav-item" onclick="showPage('graduation')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M8 2l6 3-6 3-6-3 6-3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M2 5v5M14 5v5M4 8.5c0 1.5 1.8 2.5 4 2.5s4-1 4-2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        Graduation
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="daily-target">Today's progress</div>
+      <div class="daily-bar"><div class="daily-bar-fill" id="sidebarDailyBar" style="width:0%"></div></div>
+      <div class="daily-val" id="sidebarDailyVal">0h 0m / 6h 12m</div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div class="page-title">Dashboard</div>
+        <div class="page-sub" id="dashDate"></div>
+      </div>
+
+      <div class="stats-row" id="statsRow"></div>
+
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title">Today's logged hours</div>
+          <div id="todaySubjects" style="display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">This week</div>
+          <div id="weekChart" style="display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+      </div>
+
+      <div class="card full-col">
+        <div class="card-title">Subjects needing attention <span style="color:var(--text3);font-weight:400;">(lowest % first)</span></div>
+        <div id="needsAttention" style="display:flex;flex-direction:column;gap:8px;margin-top:4px;"></div>
+      </div>
+    </div>
+
+    <!-- SCHEDULE -->
+    <div class="page" id="page-schedule">
+      <div class="page-header">
+        <div class="page-title">Weekly Schedule</div>
+        <div class="page-sub">Mon–Fri · Algebra and English are locked — non-negotiable first blocks</div>
+      </div>
+      <div class="card" style="overflow-x:auto;">
+        <table class="schedule-table" id="scheduleTable"></table>
+      </div>
+    </div>
+
+    <!-- LOG HOURS -->
+    <div class="page" id="page-log">
+      <div class="page-header">
+        <div class="page-title">Log Hours</div>
+        <div class="page-sub">Record your study session</div>
+      </div>
+      <div class="log-grid">
+        <div class="card">
+          <div class="card-title">New entry</div>
+          <div class="log-form">
+            <div class="form-group">
+              <label class="form-label">Subject</label>
+              <select class="form-select" id="logSubject"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Date</label>
+              <input type="date" class="form-input" id="logDate">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Start time</label>
+              <input type="time" class="form-input" id="logStart">
+            </div>
+            <div class="form-group">
+              <label class="form-label">End time</label>
+              <input type="time" class="form-input" id="logEnd">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Notes (optional)</label>
+              <input type="text" class="form-input" id="logNotes" placeholder="e.g. Chapter 3 algebra">
+            </div>
+            <div id="logDuration" style="font-size:13px;color:var(--text2);font-family:var(--mono);min-height:20px;"></div>
+            <button class="btn" onclick="logHours()">Log session</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Recent entries</div>
+          <div class="log-history" id="logHistory"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROGRESS -->
+    <div class="page" id="page-progress">
+      <div class="page-header">
+        <div class="page-title">Subject Progress</div>
+        <div class="page-sub">Hours logged vs required · 150h = 1 credit</div>
+      </div>
+      <div class="subject-list" id="subjectList"></div>
+    </div>
+
+    <!-- GRADUATION -->
+    <div class="page" id="page-graduation">
+      <div class="page-header">
+        <div class="page-title">Graduation Timeline</div>
+        <div class="page-sub">Target: 31 October 2027</div>
+      </div>
+
+      <div class="card grad-bar-wrap" style="margin-bottom:20px;">
+        <div class="card-title">Overall progress</div>
+        <div class="grad-bar-label">
+          <span id="gradHoursLogged">0h logged</span>
+          <span>2527h total</span>
+        </div>
+        <div class="grad-bar"><div class="grad-bar-fill" id="gradBarFill" style="width:0%"></div></div>
+        <div style="margin-top:10px;font-size:12px;color:var(--text2);font-family:var(--mono);" id="gradPace"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Milestones</div>
+        <div class="milestone-list" id="milestoneList"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"><div class="toast-dot"></div><span id="toastMsg"></span></div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────────────
+
+const SUBJECTS = [
+  { id: 'japanese',   name: 'Japanese',           required: 150, logged: 28.6,  color: '#888', passive: false },
+  { id: 'cwp',        name: 'CWP / World History', required: 75,  logged: 13.2,  color: '#34d360', passive: false },
+  { id: 'english',    name: 'English',             required: 75,  logged: 3.3,   color: '#a78bfa', passive: false },
+  { id: 'electives1', name: 'Electives 1',         required: 150, logged: 150,   color: '#34d399', passive: true, done: true },
+  { id: 'wa_history', name: 'WA State History',    required: 75,  logged: 4.4,   color: '#34d360', passive: false },
+  { id: 'fine_art',   name: 'Fine Art / Film',     required: 75,  logged: 25.8,  color: '#fb923c', passive: true },
+  { id: 'us_history', name: 'US History',          required: 75,  logged: 18.8,  color: '#f472b6', passive: false },
+  { id: 'pe',         name: 'PE / Cardio',         required: 75,  logged: 27.8,  color: '#5b9cf6', passive: true },
+  { id: 'health',     name: 'Health Science',      required: 75,  logged: 2,     color: '#fb923c', passive: false },
+  { id: 'civics',     name: 'Civics',              required: 75,  logged: 0,     color: '#fbbf24', passive: false },
+  { id: 'science',    name: 'Science',             required: 75,  logged: 0,     color: '#34d399', passive: false },
+  { id: 'lab_sci',    name: 'Lab Science',         required: 75,  logged: 0,     color: '#34d399', passive: false },
+  { id: 'algebra',    name: 'Algebra 1',           required: 75,  logged: 0,     color: '#5b9cf6', passive: false },
+  { id: 'electives2', name: 'Electives 2',         required: 150, logged: 151.4, color: '#34d399', passive: true, done: true },
+  { id: 'electives3', name: 'Electives 3',         required: 150, logged: 74.4,  color: '#c8f064', passive: true },
+];
+
+const MILESTONES = [
+  { title: '0 Graduation Guidance', date: '2027-04-20', req: '5–10 credits / 750h logged', color: '#a78bfa' },
+  { title: '1st Graduation Guidance', date: '2027-07-20', req: '5 credits / 150h', color: '#34d399' },
+  { title: '2nd Graduation Guidance', date: '2027-08-20', req: '2.5 credits / 75h', color: '#fbbf24' },
+  { title: '3rd Graduation Guidance (Final)', date: '2027-09-20', req: 'All remaining completed', color: '#ff5f5f' },
+  { title: 'Graduation', date: '2027-10-31', req: '24 credits total', color: '#c8f064' },
+];
+
+const SCHEDULE = [
+  { time: '09:00', mon: {l:'Work',t:'09:00–16:00',c:'sb-work',span:8}, tue: {l:'Work',t:'09:00–12:00',c:'sb-work',span:4}, wed: {l:'Algebra 1',t:'09:00–10:30',c:'sb-algebra locked',span:2,lock:true}, thu: {l:'Algebra 1',t:'09:00–10:30',c:'sb-algebra locked',span:2,lock:true}, fri: {l:'English',t:'09:00–10:30',c:'sb-english locked',span:2,lock:true} },
+  { time: '10:00', mon: null, tue: null, wed: null, thu: null, fri: null },
+  { time: '10:30', mon: null, tue: null, wed: {l:'Break',t:'10:30–10:45',c:'sb-break'}, thu: {l:'Break',t:'10:30–10:45',c:'sb-break'}, fri: {l:'Break',t:'10:30–10:45',c:'sb-break'} },
+  { time: '10:45', mon: null, tue: null, wed: {l:'English',t:'10:45–12:15',c:'sb-english locked',span:2,lock:true}, thu: {l:'Algebra 1',t:'10:45–12:15',c:'sb-algebra locked',span:2,lock:true}, fri: {l:'Science',t:'10:45–12:15',c:'sb-science',span:2} },
+  { time: '11:30', mon: null, tue: null, wed: null, thu: null, fri: null },
+  { time: '12:00', mon: null, tue: {l:'Travel + Lunch',t:'12:00–13:15',c:'sb-break',span:2}, wed: {l:'Lunch',t:'12:15–13:00',c:'sb-break'}, thu: {l:'Lunch',t:'12:15–13:00',c:'sb-break'}, fri: {l:'Lunch',t:'12:15–13:00',c:'sb-break'} },
+  { time: '12:30', mon: null, tue: null, wed: null, thu: null, fri: null },
+  { time: '13:00', mon: null, tue: null, wed: {l:'Civics',t:'13:00–14:30',c:'sb-civics',span:2}, thu: {l:'Health Science',t:'13:00–14:30',c:'sb-health',span:2}, fri: {l:'WA State History',t:'13:00–14:30',c:'sb-wa',span:2} },
+  { time: '13:15', mon: null, tue: {l:'Japanese',t:'13:15–14:45',c:'sb-japanese',span:2}, wed: null, thu: null, fri: null },
+  { time: '14:00', mon: null, tue: null, wed: null, thu: null, fri: null },
+  { time: '14:30', mon: null, tue: null, wed: {l:'Break',t:'14:30–14:45',c:'sb-break'}, thu: {l:'Break',t:'14:30–14:45',c:'sb-break'}, fri: {l:'Break',t:'14:30–14:45',c:'sb-break'} },
+  { time: '14:45', mon: null, tue: {l:'Civics',t:'14:45–16:00',c:'sb-civics sb-school',span:2}, wed: {l:'CWP',t:'14:45–16:00',c:'sb-cwp',span:2}, thu: {l:'Science',t:'14:45–16:00',c:'sb-science',span:2}, fri: {l:'Japanese',t:'14:45–16:00',c:'sb-japanese',span:2} },
+  { time: '15:30', mon: null, tue: null, wed: null, thu: null, fri: null },
+  { time: '16:00', mon: null, tue: {l:'Japanese',t:'16:00–17:00',c:'sb-japanese sb-school'}, wed: {l:'US History',t:'16:00–17:00',c:'sb-history'}, thu: {l:'Health Science',t:'16:00–17:00',c:'sb-health'}, fri: {l:'US History',t:'16:00–17:00',c:'sb-history'} },
+  { time: '17:00', mon: null, tue: null, wed: null, thu: null, fri: null },
+];
+
+// ─── STORAGE ─────────────────────────────────────────────────────────────────
+
+function loadData() {
+  try { return JSON.parse(localStorage.getItem('tihs_data') || '{"entries":[],"subjectHours":{}}'); }
+  catch { return { entries: [], subjectHours: {} }; }
+}
+function saveData(d) { localStorage.setItem('tihs_data', JSON.stringify(d)); }
+
+function getSubjectLogged(id) {
+  const d = loadData();
+  const base = SUBJECTS.find(s => s.id === id)?.logged || 0;
+  const extra = d.subjectHours[id] || 0;
+  return base + extra;
+}
+
+function getTotalLogged() { return SUBJECTS.reduce((sum, s) => sum + getSubjectLogged(s.id), 0); }
+
+// ─── NAV ──────────────────────────────────────────────────────────────────────
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  event.currentTarget.classList.add('active');
+  renderPage(id);
+}
+
+function renderPage(id) {
+  if (id === 'dashboard') renderDashboard();
+  if (id === 'schedule') renderSchedule();
+  if (id === 'log') renderLog();
+  if (id === 'progress') renderProgress();
+  if (id === 'graduation') renderGraduation();
+  updateSidebar();
+}
+
+// ─── SIDEBAR ─────────────────────────────────────────────────────────────────
+
+function updateSidebar() {
+  const todayH = getTodayHours();
+  const target = 6.2;
+  const pct = Math.min(100, (todayH / target) * 100);
+  document.getElementById('sidebarDailyBar').style.width = pct + '%';
+  document.getElementById('sidebarDailyVal').textContent = fmtH(todayH) + ' / 6h 12m';
+}
+
+function getTodayHours() {
+  const d = loadData();
+  const today = new Date().toISOString().split('T')[0];
+  return d.entries.filter(e => e.date === today).reduce((s, e) => s + e.hours, 0);
+}
+
+function getWeekHours() {
+  const d = loadData();
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const today = new Date();
+  const dow = today.getDay();
+  const monday = new Date(today); monday.setDate(today.getDate() - ((dow + 6) % 7));
+  const result = {};
+  for (let i = 0; i < 7; i++) {
+    const dd = new Date(monday); dd.setDate(monday.getDate() + i);
+    const key = dd.toISOString().split('T')[0];
+    result[days[i]] = d.entries.filter(e => e.date === key).reduce((s, e) => s + e.hours, 0);
+  }
+  return result;
+}
+
+// ─── DASHBOARD ───────────────────────────────────────────────────────────────
+
+function renderDashboard() {
+  const today = new Date();
+  document.getElementById('dashDate').textContent = today.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+  const totalLogged = getTotalLogged();
+  const remaining = Math.max(0, 2527 - totalLogged);
+  const todayH = getTodayHours();
+  const pct = ((totalLogged / 2527) * 100).toFixed(1);
+
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat-card"><div class="stat-label">Total logged</div><div class="stat-val stat-accent">${Math.round(totalLogged)}<span style="font-size:14px;color:var(--text2)">h</span></div><div class="stat-unit">of 2527h required</div></div>
+    <div class="stat-card"><div class="stat-label">Remaining</div><div class="stat-val">${Math.round(remaining)}<span style="font-size:14px;color:var(--text2)">h</span></div><div class="stat-unit">${pct}% complete</div></div>
+    <div class="stat-card"><div class="stat-label">Today</div><div class="stat-val ${todayH >= 6.2 ? 'stat-good' : 'stat-warn'}">${fmtH(todayH)}</div><div class="stat-unit">target: 6h 12m</div></div>
+    <div class="stat-card"><div class="stat-label">This week</div><div class="stat-val">${fmtH(Object.values(getWeekHours()).reduce((a,b)=>a+b,0))}</div><div class="stat-unit">target: 31h</div></div>
+  `;
+
+  // Today's subjects
+  const d = loadData();
+  const todayStr = today.toISOString().split('T')[0];
+  const todayEntries = d.entries.filter(e => e.date === todayStr);
+  const todayEl = document.getElementById('todaySubjects');
+  if (todayEntries.length === 0) {
+    todayEl.innerHTML = '<div class="empty-state">No sessions logged today</div>';
+  } else {
+    todayEl.innerHTML = todayEntries.map(e => {
+      const s = SUBJECTS.find(x => x.id === e.subject);
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg3);border-radius:7px;">
+        <div>
+          <div style="font-size:13px;font-weight:500;">${s ? s.name : e.subject}</div>
+          <div style="font-size:11px;color:var(--text3);font-family:var(--mono);">${e.start}–${e.end}${e.notes ? ' · ' + e.notes : ''}</div>
+        </div>
+        <div style="font-size:14px;font-weight:600;font-family:var(--mono);color:var(--accent);">${fmtH(e.hours)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // Week chart
+  const week = getWeekHours();
+  const maxH = Math.max(...Object.values(week), 6.2);
+  document.getElementById('weekChart').innerHTML = Object.entries(week).map(([day, h]) => `
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:28px;font-size:11px;color:var(--text3);font-family:var(--mono);">${day}</div>
+      <div style="flex:1;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;">
+        <div style="width:${(h/maxH)*100}%;height:100%;background:${h>=6.2?'var(--accent)':'var(--blue)'};border-radius:3px;transition:width 0.5s;"></div>
+      </div>
+      <div style="width:40px;font-size:11px;font-family:var(--mono);color:var(--text2);text-align:right;">${h>0?fmtH(h):'—'}</div>
+    </div>
+  `).join('');
+
+  // Needs attention
+  const sorted = [...SUBJECTS].filter(s => !s.done && !s.passive).sort((a,b) => {
+    const pa = getSubjectLogged(a.id) / a.required;
+    const pb = getSubjectLogged(b.id) / b.required;
+    return pa - pb;
+  }).slice(0, 5);
+  document.getElementById('needsAttention').innerHTML = sorted.map(s => {
+    const logged = getSubjectLogged(s.id);
+    const pct = Math.min(100, (logged / s.required) * 100);
+    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--bg3);border-radius:8px;">
+      <div style="width:120px;font-size:12px;font-weight:500;">${s.name}</div>
+      <div style="flex:1;height:5px;background:var(--bg4);border-radius:3px;overflow:hidden;">
+        <div style="width:${pct}%;height:100%;background:${s.color};border-radius:3px;"></div>
+      </div>
+      <div style="font-size:12px;font-family:var(--mono);color:var(--text2);width:50px;text-align:right;">${pct.toFixed(1)}%</div>
+      <div style="font-size:11px;color:var(--text3);font-family:var(--mono);width:80px;text-align:right;">${fmtH(s.required - logged)} left</div>
+    </div>`;
+  }).join('');
+}
+
+// ─── SCHEDULE ────────────────────────────────────────────────────────────────
+
+function renderSchedule() {
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+  let html = `<thead><tr><th>Time</th>${days.map(d=>`<th>${d}</th>`).join('')}</tr></thead><tbody>`;
+
+  const skip = { mon: {}, tue: {}, wed: {}, thu: {}, fri: {} };
+
+  SCHEDULE.forEach((row, ri) => {
+    html += `<tr class="schedule-row"><td class="time-col">${row.time}</td>`;
+    days.forEach(day => {
+      const dk = day.toLowerCase();
+      if (skip[dk][ri]) { return; }
+      const cell = row[dk];
+      if (!cell) {
+        html += `<td class="sched-cell"><div class="sched-block sb-free" style="min-height:32px;"></div></td>`;
+        return;
+      }
+      const span = cell.span || 1;
+      if (span > 1) for (let s = 1; s < span; s++) skip[dk][ri + s] = true;
+      const locked = cell.lock ? '<div class="locked-badge">locked</div>' : '';
+      html += `<td class="sched-cell" rowspan="${span}"><div class="sched-block ${cell.c}" style="min-height:${span*40}px;display:flex;flex-direction:column;justify-content:center;">
+        <div class="sb-subj">${cell.l}</div>
+        <div class="sb-time">${cell.t}</div>
+        ${locked}
+      </div></td>`;
+    });
+    html += '</tr>';
+  });
+
+  html += '</tbody>';
+  document.getElementById('scheduleTable').innerHTML = html;
+}
+
+// ─── LOG ─────────────────────────────────────────────────────────────────────
+
+function renderLog() {
+  const sel = document.getElementById('logSubject');
+  sel.innerHTML = SUBJECTS.filter(s => !s.done).map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+
+  const dateEl = document.getElementById('logDate');
+  if (!dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
+
+  document.getElementById('logStart').addEventListener('change', calcDuration);
+  document.getElementById('logEnd').addEventListener('change', calcDuration);
+
+  renderLogHistory();
+}
+
+function calcDuration() {
+  const s = document.getElementById('logStart').value;
+  const e = document.getElementById('logEnd').value;
+  if (s && e) {
+    const diff = (timeToMins(e) - timeToMins(s));
+    if (diff > 0) {
+      const h = Math.floor(diff / 60); const m = diff % 60;
+      document.getElementById('logDuration').textContent = `Duration: ${h}h ${m}m`;
+    } else {
+      document.getElementById('logDuration').textContent = '';
+    }
+  }
+}
+
+function timeToMins(t) { const [h,m] = t.split(':').map(Number); return h*60+m; }
+
+function logHours() {
+  const subject = document.getElementById('logSubject').value;
+  const date = document.getElementById('logDate').value;
+  const start = document.getElementById('logStart').value;
+  const end = document.getElementById('logEnd').value;
+  const notes = document.getElementById('logNotes').value;
+
+  if (!subject || !date || !start || !end) { showToast('Please fill in all fields'); return; }
+  const mins = timeToMins(end) - timeToMins(start);
+  if (mins <= 0) { showToast('End time must be after start time'); return; }
+
+  const hours = mins / 60;
+  const d = loadData();
+  d.entries.unshift({ id: Date.now(), subject, date, start, end, hours, notes });
+  d.subjectHours[subject] = (d.subjectHours[subject] || 0) + hours;
+  saveData(d);
+
+  document.getElementById('logStart').value = '';
+  document.getElementById('logEnd').value = '';
+  document.getElementById('logNotes').value = '';
+  document.getElementById('logDuration').textContent = '';
+
+  renderLogHistory();
+  updateSidebar();
+  showToast(`Logged ${fmtH(hours)} for ${SUBJECTS.find(s=>s.id===subject)?.name}`);
+}
+
+function deleteEntry(id) {
+  const d = loadData();
+  const entry = d.entries.find(e => e.id === id);
+  if (!entry) return;
+  d.subjectHours[entry.subject] = Math.max(0, (d.subjectHours[entry.subject] || 0) - entry.hours);
+  d.entries = d.entries.filter(e => e.id !== id);
+  saveData(d);
+  renderLogHistory();
+  updateSidebar();
+  showToast('Entry deleted');
+}
+
+function renderLogHistory() {
+  const d = loadData();
+  const el = document.getElementById('logHistory');
+  if (d.entries.length === 0) { el.innerHTML = '<div class="empty-state">No entries yet</div>'; return; }
+  el.innerHTML = d.entries.slice(0, 30).map(e => {
+    const s = SUBJECTS.find(x => x.id === e.subject);
+    return `<div class="log-entry">
+      <div style="flex:1;">
+        <div class="log-entry-subj">${s ? s.name : e.subject}</div>
+        <div class="log-entry-meta">${e.date} · ${e.start}–${e.end}${e.notes ? ' · ' + e.notes : ''}</div>
+      </div>
+      <div class="log-entry-hrs">${fmtH(e.hours)}</div>
+      <button class="log-delete" onclick="deleteEntry(${e.id})">×</button>
+    </div>`;
+  }).join('');
+}
+
+// ─── PROGRESS ────────────────────────────────────────────────────────────────
+
+function renderProgress() {
+  const el = document.getElementById('subjectList');
+  el.innerHTML = SUBJECTS.map(s => {
+    const logged = getSubjectLogged(s.id);
+    const pct = Math.min(100, (logged / s.required) * 100);
+    const remaining = Math.max(0, s.required - logged);
+    const tag = s.done ? '<span class="tag tag-done">done</span>' : s.passive ? '<span class="tag tag-passive">passive</span>' : pct === 0 ? '<span class="tag tag-zero">not started</span>' : '';
+    return `<div class="subject-row">
+      <div><div class="subj-name">${s.name} ${tag}</div><div class="subj-category">${s.required}h required · ${(s.required/150).toFixed(1)} credits</div></div>
+      <div class="subj-bar-wrap">
+        <div class="subj-bar"><div class="subj-bar-fill" style="width:${pct}%;background:${s.color};"></div></div>
+      </div>
+      <div class="subj-pct" style="color:${s.color};">${pct.toFixed(1)}%</div>
+      <div class="subj-hours">${fmtH(logged)} / ${s.required}h<br><span style="color:var(--text3);">${fmtH(remaining)} left</span></div>
+    </div>`;
+  }).join('');
+}
+
+// ─── GRADUATION ──────────────────────────────────────────────────────────────
+
+function renderGraduation() {
+  const total = getTotalLogged();
+  const pct = Math.min(100, (total / 2527) * 100);
+  document.getElementById('gradHoursLogged').textContent = Math.round(total) + 'h logged';
+  document.getElementById('gradBarFill').style.width = pct + '%';
+
+  const remaining = Math.max(0, 2527 - total);
+  const weeksNeeded = (remaining / 34.5).toFixed(1);
+  document.getElementById('gradPace').textContent = `At current pace (~34.5h/week): ${weeksNeeded} weeks remaining`;
+
+  const today = new Date();
+  document.getElementById('milestoneList').innerHTML = MILESTONES.map(m => {
+    const mDate = new Date(m.date);
+    const daysLeft = Math.ceil((mDate - today) / (1000 * 60 * 60 * 24));
+    const isPast = daysLeft < 0;
+    return `<div class="milestone">
+      <div class="milestone-dot" style="background:${isPast ? 'var(--teal)' : m.color};"></div>
+      <div class="milestone-info">
+        <div class="milestone-title">${m.title}</div>
+        <div class="milestone-date">${mDate.toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'})}</div>
+        <div class="milestone-req">${m.req}</div>
+      </div>
+      <div class="milestone-days" style="color:${isPast?'var(--teal)':daysLeft<90?'var(--amber)':'var(--text2)'};">${isPast ? 'passed' : daysLeft + ' days'}</div>
+    </div>`;
+  }).join('');
+}
+
+// ─── UTILS ───────────────────────────────────────────────────────────────────
+
+function fmtH(h) {
+  const hrs = Math.floor(h); const mins = Math.round((h - hrs) * 60);
+  if (hrs === 0) return mins + 'm';
+  if (mins === 0) return hrs + 'h';
+  return hrs + 'h ' + mins + 'm';
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+renderDashboard();
+updateSidebar();
+</script>
+</body>
+</html>
