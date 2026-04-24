@@ -666,21 +666,21 @@ function daysBetween(a,b){
 
 // ── DEFAULT DATA ──────────────────────────────────────────────────────────────
 const DEFAULT_SUBJECTS=[
-  {id:'japanese', name:'Japanese',            req:150, base:31.3,  passive:false, locked:false, done:false},
-  {id:'cwp',      name:'CWP / World History', req:75,  base:13.2,  passive:false, locked:false, done:false},
-  {id:'english',  name:'English',             req:75,  base:3.3,   passive:false, locked:true,  done:false},
+  {id:'japanese', name:'Japanese',            req:150, base:0,     passive:false, locked:false, done:false},
+  {id:'cwp',      name:'CWP / World History', req:75,  base:0,     passive:false, locked:false, done:false},
+  {id:'english',  name:'English',             req:75,  base:0,     passive:false, locked:true,  done:false},
   {id:'el1',      name:'Electives 1',         req:150, base:150.1, passive:true,  locked:false, done:true },
-  {id:'wa_hist',  name:'WA State History',    req:75,  base:6.7,   passive:false, locked:false, done:false},
-  {id:'fine_art', name:'Fine Art / Film',     req:75,  base:28.9,  passive:true,  locked:false, done:false},
-  {id:'us_hist',  name:'US History',          req:75,  base:18.8,  passive:false, locked:false, done:false},
-  {id:'pe',       name:'PE / Cardio',         req:75,  base:34.5,  passive:true,  locked:false, done:false},
-  {id:'health',   name:'Health Science',      req:75,  base:2,     passive:false, locked:false, done:false},
+  {id:'wa_hist',  name:'WA State History',    req:75,  base:0,     passive:false, locked:false, done:false},
+  {id:'fine_art', name:'Fine Art / Film',     req:75,  base:0,     passive:true,  locked:false, done:false},
+  {id:'us_hist',  name:'US History',          req:75,  base:0,     passive:false, locked:false, done:false},
+  {id:'pe',       name:'PE / Cardio',         req:75,  base:0,     passive:true,  locked:false, done:false},
+  {id:'health',   name:'Health Science',      req:75,  base:0,     passive:false, locked:false, done:false},
   {id:'civics',   name:'Civics',              req:75,  base:0,     passive:false, locked:false, done:false},
   {id:'science',  name:'Science',             req:75,  base:0,     passive:false, locked:false, done:false},
   {id:'lab_sci',  name:'Lab Science',         req:75,  base:0,     passive:false, locked:false, done:false},
   {id:'algebra1', name:'Algebra 1',           req:75,  base:0,     passive:false, locked:true,  done:false},
   {id:'el2',      name:'Electives 2',         req:150, base:150,   passive:true,  locked:false, done:true },
-  {id:'el3',      name:'Electives 3',         req:150, base:104.8, passive:true,  locked:false, done:false},
+  {id:'el3',      name:'Electives 3',         req:150, base:0,     passive:true,  locked:false, done:false},
 ];
 
 function makeDefaultSchedule(){
