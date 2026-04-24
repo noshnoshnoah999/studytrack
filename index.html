@@ -296,6 +296,77 @@
   .tag-passive { background: rgba(200,240,100,0.1); color: var(--accent); }
   .tag-done { background: rgba(52,211,153,0.1); color: var(--teal); }
   .tag-zero { background: rgba(255,95,95,0.1); color: var(--red); }
+
+  /* ── MOBILE NAV ── */
+  .mobile-nav {
+    display: none;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--bg2); border-top: 1px solid var(--border);
+    padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+    z-index: 200;
+    grid-template-columns: repeat(5, 1fr);
+  }
+  .mobile-nav-item {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 6px 4px; cursor: pointer; color: var(--text3);
+    font-size: 10px; font-family: var(--mono);
+    transition: color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-nav-item svg { width: 22px; height: 22px; }
+  .mobile-nav-item.active { color: var(--accent); }
+
+  /* ── MOBILE RESPONSIVE ── */
+  @media (max-width: 700px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .mobile-nav { display: grid; }
+    .main {
+      padding: 20px 16px;
+      padding-bottom: calc(70px + max(8px, env(safe-area-inset-bottom)));
+    }
+    .page-title { font-size: 18px; }
+    .page-header { margin-bottom: 18px; }
+
+    /* Stats: 2x2 grid */
+    .stats-row { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .stat-val { font-size: 20px; }
+
+    /* Two-col → single col */
+    .two-col { grid-template-columns: 1fr; gap: 12px; }
+    .log-grid { grid-template-columns: 1fr; gap: 12px; }
+
+    /* Subject rows: stack cleanly */
+    .subject-row {
+      grid-template-columns: 1fr auto;
+      grid-template-rows: auto auto;
+      gap: 8px 12px;
+    }
+    .subject-row .subj-bar-wrap { grid-column: 1 / -1; }
+    .subject-row .subj-hours { display: none; }
+
+    /* Log history entries */
+    .log-entry { gap: 8px; }
+    .log-entry-hrs { font-size: 13px; }
+
+    /* Schedule table: horizontal scroll */
+    .schedule-table { min-width: 520px; font-size: 11px; }
+    .schedule-table th { padding: 8px 6px; font-size: 9px; }
+    .time-col { font-size: 10px; padding: 6px 8px; }
+    .sched-cell { padding: 3px 4px; }
+    .sched-block { padding: 4px 6px; font-size: 10px; }
+
+    /* Milestones: tighter */
+    .milestone { padding: 10px 12px; gap: 10px; }
+    .milestone-title { font-size: 12px; }
+    .milestone-days { font-size: 11px; }
+
+    /* Cards */
+    .card { padding: 14px; }
+
+    /* Toast above nav */
+    .toast { bottom: calc(70px + max(8px, env(safe-area-inset-bottom))); right: 12px; left: 12px; }
+  }
 </style>
 </head>
 <body>
@@ -309,23 +380,23 @@
       <div class="id">t2509002</div>
     </div>
     <nav>
-      <div class="nav-item active" onclick="showPage('dashboard')">
+      <div class="nav-item active" data-page="dashboard" onclick="showPage('dashboard')">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/></svg>
         Dashboard
       </div>
-      <div class="nav-item" onclick="showPage('schedule')">
+      <div class="nav-item" data-page="schedule" onclick="showPage('schedule')">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="11" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M5 1v4M11 1v4M1 7h14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
         Schedule
       </div>
-      <div class="nav-item" onclick="showPage('log')">
+      <div class="nav-item" data-page="log" onclick="showPage('log')">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 5v3.5l2.5 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
         Log Hours
       </div>
-      <div class="nav-item" onclick="showPage('progress')">
+      <div class="nav-item" data-page="progress" onclick="showPage('progress')">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M1 12l4-4 3 3 4-5 3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Subject Progress
       </div>
-      <div class="nav-item" onclick="showPage('graduation')">
+      <div class="nav-item" data-page="graduation" onclick="showPage('graduation')">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M8 2l6 3-6 3-6-3 6-3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M2 5v5M14 5v5M4 8.5c0 1.5 1.8 2.5 4 2.5s4-1 4-2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
         Graduation
       </div>
@@ -453,6 +524,29 @@
   </main>
 </div>
 
+<nav class="mobile-nav">
+  <div class="mobile-nav-item active" data-page="dashboard" onclick="showPage('dashboard')">
+    <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.3"/></svg>
+    Home
+  </div>
+  <div class="mobile-nav-item" data-page="schedule" onclick="showPage('schedule')">
+    <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="11" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M5 1v4M11 1v4M1 7h14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+    Schedule
+  </div>
+  <div class="mobile-nav-item" data-page="log" onclick="showPage('log')">
+    <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 5v3.5l2.5 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+    Log
+  </div>
+  <div class="mobile-nav-item" data-page="progress" onclick="showPage('progress')">
+    <svg viewBox="0 0 16 16" fill="none"><path d="M1 12l4-4 3 3 4-5 3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Progress
+  </div>
+  <div class="mobile-nav-item" data-page="graduation" onclick="showPage('graduation')">
+    <svg viewBox="0 0 16 16" fill="none"><path d="M8 2l6 3-6 3-6-3 6-3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M2 5v5M14 5v5M4 8.5c0 1.5 1.8 2.5 4 2.5s4-1 4-2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+    Goals
+  </div>
+</nav>
+
 <div class="toast" id="toast"><div class="toast-dot"></div><span id="toastMsg"></span></div>
 
 <script>
@@ -523,9 +617,9 @@ function getTotalLogged() { return SUBJECTS.reduce((sum, s) => sum + getSubjectL
 
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.nav-item, .mobile-nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
-  event.currentTarget.classList.add('active');
+  document.querySelectorAll(`[data-page="${id}"]`).forEach(n => n.classList.add('active'));
   renderPage(id);
 }
 
