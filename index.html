@@ -105,17 +105,17 @@ a{color:inherit;text-decoration:none}
 .greeting-text p{font-size:14px;color:var(--text2);margin-top:2px}
 
 /* SCHEDULE */
-.sched-day-block{margin-bottom:24px}
+.sched-day-block{margin-bottom:20px}
 .sched-day-label{font-size:11px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--text2);margin-bottom:8px}
 .sched-day-label.today-label{color:var(--o)}
-.sched-rest{font-size:14px;color:var(--text3);font-style:italic;padding:12px 0}
-.timeline-wrap{position:relative;margin-bottom:6px}
-.timeline-row{display:flex;height:64px;gap:2px;border-radius:8px;overflow:hidden}
-.tl-block{height:100%;border-radius:8px;display:flex;flex-direction:column;justify-content:center;padding:0 8px;overflow:hidden;flex-shrink:0}
-.tl-label{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
-.tl-time{font-size:10px;opacity:0.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
-.tl-ruler{display:flex;justify-content:space-between;margin-top:4px}
-.tl-ruler span{font-size:10px;color:var(--text3);font-weight:500}
+.sched-rest{font-size:14px;color:var(--text3);font-style:italic;padding:10px 0}
+
+/* SCHEDULE BLOCK CARDS */
+.sbc{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;margin-bottom:6px;background:var(--bg);border-left:4px solid var(--border);box-shadow:0 1px 3px rgba(26,20,16,0.05)}
+.sbc-main{flex:1;min-width:0}
+.sbc-name{font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sbc-time{font-size:12px;color:var(--text2);margin-top:2px}
+.sbc-dur{font-size:12px;font-weight:700;flex-shrink:0;opacity:0.8}
 
 /* EDIT MODE */
 .edit-day-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
@@ -891,7 +891,8 @@ function renderSchedule(){
         html+='<div class="no-blocks">No blocks — tap + to add</div>';
       } else {
         blocks.forEach(bl=>{
-          const dotColor=bl.type==='work'?'#9ca3af':bl.type==='break'?'var(--text3)':bl.locked?'var(--o)':'#f59e0b';
+          const EDIT_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b'};
+          const dotColor=bl.type==='work'?'#d97706':bl.type==='break'?'#9ca3af':bl.locked?'var(--o)':(EDIT_COLORS[bl.subjectId]||'var(--o)');
           html+='<div class="block-card">'+
             '<div class="block-dot" style="background:'+dotColor+'"></div>'+
             '<div class="block-info">'+escHtml(bl.label)+'<div class="block-meta">'+bl.start+'–'+bl.end+'</div></div>'+
@@ -910,61 +911,44 @@ function renderSchedule(){
     });
     content.innerHTML=html;
   } else {
+    const SUBJ_COLORS={
+      japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',
+      el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',
+      us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',
+      civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',
+      algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b'
+    };
     let html='';
     DAY_ORDER.forEach(dow=>{
       const isToday=dow===tdow;
       const isSat=dow===6;
       const blocks=schedule.filter(b=>b.day===dow).sort((a,b)=>toMins(a.start)-toMins(b.start));
       html+='<div class="sched-day-block">'+
-        '<div class="sched-day-label'+(isToday?' today-label':'')+'">'+DAY_NAMES[dow].toUpperCase()+'</div>';
-
+        '<div class="sched-day-label'+(isToday?' today-label':'')+'">'+
+          (isToday?'▸ ':'')+DAY_NAMES[dow].toUpperCase()+
+        '</div>';
       if(isSat&&!blocks.length){
         html+='<div class="sched-rest">Rest day</div>';
       } else if(!blocks.length){
         html+='<div class="sched-rest">No blocks scheduled</div>';
       } else {
-        // Build segments within 09:00–17:00
-        const segments=[];
-        let cursor=WIN_START;
         blocks.forEach(bl=>{
-          const s=Math.max(toMins(bl.start),WIN_START);
-          const e=Math.min(toMins(bl.end),WIN_END);
-          if(s>cursor&&cursor<WIN_END){
-            segments.push({type:'gap',sm:cursor,em:Math.min(s,WIN_END)});
-          }
-          if(e>WIN_START&&s<WIN_END&&e>s){
-            segments.push({...bl,sm:s,em:e});
-          }
-          cursor=Math.max(cursor,toMins(bl.end));
+          const dur=toMins(bl.end)-toMins(bl.start);
+          let color;
+          if(bl.type==='work') color='#d97706';
+          else if(bl.type==='break') color='#9ca3af';
+          else if(bl.locked) color='var(--o)';
+          else color=SUBJ_COLORS[bl.subjectId]||'var(--o)';
+          const isHex=color.startsWith('#');
+          const bg=isHex?(color+'15'):'rgba(249,115,22,0.08)';
+          html+='<div class="sbc" style="border-left-color:'+color+';background:'+bg+'">'+
+            '<div class="sbc-main">'+
+              '<div class="sbc-name">'+escHtml(bl.label)+(bl.locked?' <span style="opacity:0.5;font-size:11px">🔒</span>':'')+'</div>'+
+              '<div class="sbc-time">'+bl.start+' – '+bl.end+'</div>'+
+            '</div>'+
+            '<div class="sbc-dur" style="color:'+color+'">'+durStr(dur)+'</div>'+
+          '</div>';
         });
-        if(cursor<WIN_END)segments.push({type:'gap',sm:Math.max(cursor,WIN_START),em:WIN_END});
-
-        html+='<div class="timeline-wrap"><div class="timeline-row">';
-        segments.forEach(seg=>{
-          const dur=seg.em-seg.sm;
-          if(dur<=0)return;
-          const w=(dur/WIN*100).toFixed(2)+'%';
-          if(seg.type==='gap'){
-            html+='<div class="tl-block" style="width:'+w+';background:var(--bg3);min-width:2px"></div>';
-          } else {
-            let bg,tc;
-            if(seg.type==='work'){bg='#fef9c3';tc='#713f12';}
-            else if(seg.type==='break'){bg='var(--bg3)';tc='transparent';}
-            else if(seg.locked){bg='var(--o)';tc='#fff';}
-            else{bg='#fff0e0';tc='#9a3412';}
-            const showLabel=dur>=30&&seg.type!=='break';
-            const showTime=dur>=60&&seg.type!=='break';
-            html+='<div class="tl-block" style="width:'+w+';background:'+bg+';min-width:4px">';
-            if(showLabel)html+='<div class="tl-label" style="color:'+tc+'">'+escHtml(seg.label||'')+'</div>';
-            if(showTime)html+='<div class="tl-time" style="color:'+tc+'">'+seg.start+'–'+seg.end+'</div>';
-            html+='</div>';
-          }
-        });
-        html+='</div>';
-        html+='<div class="tl-ruler">';
-        const rulerHrs=window.innerWidth<769?[9,11,13,15,17]:[9,10,11,12,13,14,15,16,17];
-        rulerHrs.forEach(h=>html+='<span>'+h+'</span>');
-        html+='</div></div>';
       }
       html+='</div>';
     });
