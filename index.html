@@ -1713,6 +1713,35 @@ function updateNotifBtn(){
   btn.title=on?'Notifications on — tap to disable':'Enable study notifications';
 }
 
+const VAPID_PUBLIC='BBEwohf6OZoKSoTe4tPnyB76nLY6NhWjPWIfwRi8VXJShRvZoV_86pAjioEGjEONCWwaFDmzDEy8xBoQfT6mK4o';
+
+function urlB64ToUint8(base64String){
+  const padding='='.repeat((4-base64String.length%4)%4);
+  const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');
+  const raw=atob(base64);
+  return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));
+}
+
+async function subscribePush(){
+  try{
+    const reg=await navigator.serviceWorker.ready;
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub){
+      sub=await reg.pushManager.subscribe({
+        userVisibleOnly:true,
+        applicationServerKey:urlB64ToUint8(VAPID_PUBLIC)
+      });
+    }
+    // Store subscription in Supabase so GitHub Actions can send pushes
+    await sbPush('push_subscription',JSON.stringify(sub.toJSON()));
+    console.log('Push subscription saved');
+    return true;
+  }catch(e){
+    console.warn('Push subscribe failed:',e);
+    return false;
+  }
+}
+
 async function toggleNotifications(){
   if(!('Notification' in window)){alert('Notifications are not supported in this browser.\n\nAdd the app to your home screen from Safari for notification support.');return;}
   const already=Notification.permission==='granted'&&localStorage.getItem('st_notif')==='1';
@@ -1728,6 +1757,8 @@ async function toggleNotifications(){
     localStorage.setItem('st_notif','1');
     scheduleNotifications();
     updateNotifBtn();
+    // Subscribe to Web Push for background notifications
+    if('serviceWorker' in navigator)await subscribePush();
     new Notification('StudyTrack 📚',{body:'Notifications enabled! You\'ll be reminded before each study block.',tag:'st-welcome'});
   } else {
     alert('Notification permission denied.\n\niPhone users: add this app to your home screen from Safari, then try again.');
@@ -1828,6 +1859,12 @@ async function syncFromCloud(){
   syncFromCloud();
   updateNotifBtn();
   scheduleNotifications();
+  // Register service worker for background push notifications
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('/studytrack/sw.js',{scope:'/studytrack/'})
+      .then(reg=>console.log('SW registered',reg.scope))
+      .catch(err=>console.warn('SW registration failed',err));
+  }
   // Refresh now/next banner every minute
   setInterval(()=>{if(document.getElementById('page-dashboard').classList.contains('active'))renderNowNext();},60000);
 })();

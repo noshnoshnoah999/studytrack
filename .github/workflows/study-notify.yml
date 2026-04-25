@@ -1,0 +1,95 @@
+name: Study Notifications
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'   # every 5 minutes
+  workflow_dispatch:          # manual trigger for testing
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send upcoming study block notifications
+        env:
+          VAPID_PUBLIC:  ${{ vars.VAPID_PUBLIC }}
+          VAPID_PRIVATE: ${{ secrets.VAPID_PRIVATE }}
+          VAPID_EMAIL:   noah@flouty.uk
+          SB_URL:        ${{ vars.SB_URL }}
+          SB_KEY:        ${{ secrets.SB_KEY }}
+        run: |
+          npm install --silent web-push
+          node << 'EOF'
+          const webpush = require('web-push');
+          const SB_URL  = process.env.SB_URL;
+          const SB_KEY  = process.env.SB_KEY;
+          const HDR = {
+            'apikey': SB_KEY,
+            'Authorization': 'Bearer ' + SB_KEY,
+            'Content-Type': 'application/json'
+          };
+
+          webpush.setVapidDetails(
+            'mailto:' + process.env.VAPID_EMAIL,
+            process.env.VAPID_PUBLIC,
+            process.env.VAPID_PRIVATE
+          );
+
+          async function sbGet(key) {
+            const r = await fetch(`${SB_URL}/rest/v1/study_data?key=eq.${key}&select=value`, { headers: HDR });
+            if (!r.ok) return null;
+            const rows = await r.json();
+            return rows && rows[0] ? JSON.parse(rows[0].value) : null;
+          }
+
+          function toMins(t) {
+            if (!t) return 0;
+            const [h, m] = t.split(':');
+            return parseInt(h) * 60 + parseInt(m || 0);
+          }
+
+          (async () => {
+            // Current time in Perth (Noah's timezone - AWST UTC+8)
+            const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Australia/Perth' }));
+            const dow = now.getDay();
+            const nowMins = now.getHours() * 60 + now.getMinutes();
+
+            console.log(`Checking at ${now.toLocaleTimeString()} (${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dow]}), ${nowMins} mins`);
+
+            // Fetch schedule + push subscriptions
+            const [schedule, subRaw] = await Promise.all([
+              sbGet('st_sched'),
+              sbGet('push_subscription')
+            ]);
+
+            if (!schedule) { console.log('No schedule'); return; }
+            if (!subRaw)   { console.log('No push subscription stored'); return; }
+
+            const subscription = typeof subRaw === 'string' ? JSON.parse(subRaw) : subRaw;
+
+            // Find study blocks starting in 2–12 minutes
+            const upcoming = schedule.filter(b =>
+              b.day === dow &&
+              b.type === 'study' &&
+              toMins(b.start) - nowMins >= 2 &&
+              toMins(b.start) - nowMins <= 12
+            );
+
+            console.log(`Upcoming blocks: ${upcoming.length}`);
+
+            for (const block of upcoming) {
+              const minsAway = toMins(block.start) - nowMins;
+              const payload = JSON.stringify({
+                title: minsAway <= 5 ? '⏰ Starting in ' + minsAway + ' min' : '📚 Coming up soon',
+                body:  block.label + ' · ' + block.start + ' – ' + block.end,
+                tag:   'study-' + block.id,
+                url:   '/studytrack/'
+              });
+              try {
+                await webpush.sendNotification(subscription, payload);
+                console.log(`Sent: ${block.label} @ ${block.start}`);
+              } catch (err) {
+                console.error(`Failed for ${block.label}:`, err.statusCode || err.message);
+              }
+            }
+          })();
+          EOF
