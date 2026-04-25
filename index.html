@@ -131,6 +131,16 @@ a{color:inherit;text-decoration:none}
 .btn-notif:hover{background:var(--bg4)}
 .btn-notif.on{background:var(--ol)}
 
+/* DAY TABS */
+.day-tabs{display:flex;gap:6px;margin-bottom:20px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;-ms-overflow-style:none}
+.day-tabs::-webkit-scrollbar{display:none}
+.day-tab{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 14px;border-radius:12px;cursor:pointer;border:none;background:var(--bg3);transition:all 0.15s;font-family:inherit;color:var(--text2)}
+.day-tab:hover{background:var(--bg4);color:var(--text)}
+.day-tab.active{background:var(--o);color:#fff}
+.day-tab.today-tab:not(.active){border:2px solid var(--o);color:var(--o);padding:6px 12px}
+.day-tab-name{font-size:13px;font-weight:700;line-height:1}
+.day-tab-num{font-size:10px;font-weight:500;opacity:0.75;margin-top:1px}
+
 /* EDIT MODE */
 .edit-day-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .edit-day-name{font-size:13px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:0.5px}
@@ -875,12 +885,18 @@ function renderDashboard(){
 
 // ── SCHEDULE ──────────────────────────────────────────────────────────────────
 let scheduleEditMode=false;
+let scheduleDay=new Date().getDay(); // default to today
 
 function toggleEditMode(){
   scheduleEditMode=!scheduleEditMode;
   const btn=document.getElementById('btn-edit-sched');
   btn.textContent=scheduleEditMode?'Done':'Edit Schedule';
   btn.classList.toggle('active',scheduleEditMode);
+  renderSchedule();
+}
+
+function selectScheduleDay(dow){
+  scheduleDay=dow;
   renderSchedule();
 }
 
@@ -895,9 +911,29 @@ function renderSchedule(){
   const DAY_ORDER=[1,2,3,4,5,0,6];
   const DAY_NAMES={0:'Sunday',1:'Monday',2:'Tuesday',3:'Wednesday',4:'Thursday',5:'Friday',6:'Saturday'};
 
+  const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b'};
+  const DAY_SHORT={0:'Sun',1:'Mon',2:'Tue',3:'Wed',4:'Thu',5:'Fri',6:'Sat'};
+
+  // Build day tabs (always shown)
+  const now2=new Date();
+  const tabHtml='<div class="day-tabs">'+DAY_ORDER.map(dow=>{
+    const isToday=dow===tdow;
+    const isSelected=dow===scheduleDay;
+    // Get date for this day in current week
+    const diff=dow-now2.getDay();
+    const d=new Date(now2);d.setDate(now2.getDate()+diff);
+    const dateNum=d.getDate();
+    return'<button class="day-tab'+(isSelected?' active':isToday?' today-tab':'')+'" onclick="selectScheduleDay('+dow+')">'+
+      '<span class="day-tab-name">'+DAY_SHORT[dow]+'</span>'+
+      '<span class="day-tab-num">'+dateNum+'</span>'+
+    '</button>';
+  }).join('')+'</div>';
+
   if(scheduleEditMode){
-    let html='';
+    let html=tabHtml;
+    // In edit mode show selected day + add button
     DAY_ORDER.forEach(dow=>{
+      if(dow!==scheduleDay)return;
       const blocks=schedule.filter(b=>b.day===dow).sort((a,b)=>toMins(a.start)-toMins(b.start));
       html+='<div class="sched-day-block">'+
         '<div class="edit-day-header">'+
@@ -908,8 +944,7 @@ function renderSchedule(){
         html+='<div class="no-blocks">No blocks — tap + to add</div>';
       } else {
         blocks.forEach(bl=>{
-          const EDIT_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b'};
-          const dotColor=bl.type==='work'?'#d97706':bl.type==='break'?'#9ca3af':bl.locked?'var(--o)':(EDIT_COLORS[bl.subjectId]||'var(--o)');
+          const dotColor=bl.type==='work'?'#d97706':bl.type==='break'?'#9ca3af':bl.locked?'var(--o)':(SUBJ_COLORS[bl.subjectId]||'var(--o)');
           html+='<div class="block-card">'+
             '<div class="block-dot" style="background:'+dotColor+'"></div>'+
             '<div class="block-info">'+escHtml(bl.label)+'<div class="block-meta">'+bl.start+'–'+bl.end+'</div></div>'+
@@ -928,65 +963,53 @@ function renderSchedule(){
     });
     content.innerHTML=html;
   } else {
-    const SUBJ_COLORS={
-      japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',
-      el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',
-      us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',
-      civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',
-      algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b'
-    };
-    let html='';
-    DAY_ORDER.forEach(dow=>{
-      const isToday=dow===tdow;
-      const isSat=dow===6;
-      const blocks=schedule.filter(b=>b.day===dow).sort((a,b)=>toMins(a.start)-toMins(b.start));
-      html+='<div class="sched-day-block">'+
-        '<div class="sched-day-label'+(isToday?' today-label':'')+'">'+
-          (isToday?'▸ ':'')+DAY_NAMES[dow].toUpperCase()+
-        '</div>';
-      if(isSat&&!blocks.length){
-        html+='<div class="sched-rest">Rest day</div>';
-      } else if(!blocks.length){
-        html+='<div class="sched-rest">No blocks scheduled</div>';
-      } else {
-        const nowDate=new Date();
-        const nowMins=nowDate.getHours()*60+nowDate.getMinutes();
-        const fmtNow=String(nowDate.getHours()).padStart(2,'0')+':'+String(nowDate.getMinutes()).padStart(2,'0');
-        let nowInserted=false;
-        blocks.forEach(bl=>{
-          const startMins=toMins(bl.start);
-          const endMins=toMins(bl.end);
-          const dur=endMins-startMins;
-          const isActive=isToday&&nowMins>=startMins&&nowMins<endMins;
-          const isPast=isToday&&nowMins>=endMins;
-          // Insert NOW line before first upcoming block
-          if(isToday&&!nowInserted&&startMins>nowMins){
-            nowInserted=true;
-            html+='<div class="now-line"><div class="now-dot"></div><span class="now-time-txt">'+fmtNow+'</span><div class="now-bar"></div></div>';
-          }
-          let color;
-          if(bl.type==='work') color='#d97706';
-          else if(bl.type==='break') color='#9ca3af';
-          else if(bl.locked) color='var(--o)';
-          else color=SUBJ_COLORS[bl.subjectId]||'var(--o)';
-          const isHex=color.startsWith('#');
-          const bg=isHex?(color+'15'):'rgba(249,115,22,0.08)';
-          const extraClass=(isPast?' sbc-past':isActive?' sbc-active':'');
-          html+='<div class="sbc'+extraClass+'" style="border-left-color:'+color+';background:'+bg+'">'+
-            '<div class="sbc-main">'+
-              '<div class="sbc-name">'+escHtml(bl.label)+(bl.locked?' <span style="opacity:0.5;font-size:11px">🔒</span>':'')+(isActive?' <span style="font-size:10px;font-weight:800;color:#ef4444;margin-left:4px">NOW</span>':'')+'</div>'+
-              '<div class="sbc-time">'+bl.start+' – '+bl.end+'</div>'+
-            '</div>'+
-            '<div class="sbc-dur" style="color:'+color+'">'+durStr(dur)+'</div>'+
-          '</div>';
-        });
-        // NOW line at end if all blocks are past
-        if(isToday&&!nowInserted){
+    // View mode: show selected day only
+    const dow=scheduleDay;
+    const isToday=dow===tdow;
+    const isSat=dow===6;
+    const blocks=schedule.filter(b=>b.day===dow).sort((a,b)=>toMins(a.start)-toMins(b.start));
+    let html=tabHtml+'<div class="sched-day-block">';
+
+    if(isSat&&!blocks.length){
+      html+='<div class="sched-rest">Rest day 🌿</div>';
+    } else if(!blocks.length){
+      html+='<div class="sched-rest">No blocks scheduled</div>';
+    } else {
+      const nowDate=new Date();
+      const nowMins=nowDate.getHours()*60+nowDate.getMinutes();
+      const fmtNow=String(nowDate.getHours()).padStart(2,'0')+':'+String(nowDate.getMinutes()).padStart(2,'0');
+      let nowInserted=false;
+      blocks.forEach(bl=>{
+        const startMins=toMins(bl.start);
+        const endMins=toMins(bl.end);
+        const dur=endMins-startMins;
+        const isActive=isToday&&nowMins>=startMins&&nowMins<endMins;
+        const isPast=isToday&&nowMins>=endMins;
+        if(isToday&&!nowInserted&&startMins>nowMins){
+          nowInserted=true;
           html+='<div class="now-line"><div class="now-dot"></div><span class="now-time-txt">'+fmtNow+'</span><div class="now-bar"></div></div>';
         }
+        let color;
+        if(bl.type==='work') color='#d97706';
+        else if(bl.type==='break') color='#9ca3af';
+        else if(bl.locked) color='var(--o)';
+        else color=SUBJ_COLORS[bl.subjectId]||'var(--o)';
+        const isHex=color.startsWith('#');
+        const bg=isHex?(color+'15'):'rgba(249,115,22,0.08)';
+        const extraClass=(isPast?' sbc-past':isActive?' sbc-active':'');
+        html+='<div class="sbc'+extraClass+'" style="border-left-color:'+color+';background:'+bg+'">'+
+          '<div class="sbc-main">'+
+            '<div class="sbc-name">'+escHtml(bl.label)+(bl.locked?' <span style="opacity:0.5;font-size:11px">🔒</span>':'')+(isActive?' <span style="font-size:10px;font-weight:800;color:#ef4444;margin-left:4px">NOW</span>':'')+'</div>'+
+            '<div class="sbc-time">'+bl.start+' – '+bl.end+'</div>'+
+          '</div>'+
+          '<div class="sbc-dur" style="color:'+color+'">'+durStr(dur)+'</div>'+
+        '</div>';
+      });
+      if(isToday&&!nowInserted){
+        html+='<div class="now-line"><div class="now-dot"></div><span class="now-time-txt">'+fmtNow+'</span><div class="now-bar"></div></div>';
       }
-      html+='</div>';
-    });
+    }
+    html+='</div>';
     content.innerHTML=html;
   }
 }
