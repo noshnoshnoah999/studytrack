@@ -284,6 +284,22 @@ a{color:inherit;text-decoration:none}
 /* MISC */
 .divider{height:1px;background:var(--border);margin:16px 0}
 
+/* NOW / NEXT BANNER */
+.now-next-banner{display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:14px;margin-bottom:14px;border:1.5px solid transparent;cursor:default}
+.now-next-banner.is-now{background:var(--okl);border-color:var(--ok)}
+.now-next-banner.is-next{background:var(--ol);border-color:var(--od2)}
+.now-next-banner.is-break{background:var(--bg3);border-color:var(--border)}
+.nnb-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.is-now .nnb-dot{background:var(--ok);animation:nowpulse 1.4s ease-in-out infinite}
+.is-next .nnb-dot{background:var(--o)}
+.is-break .nnb-dot{background:var(--text3)}
+.nnb-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;flex-shrink:0}
+.is-now .nnb-label{color:var(--ok)}
+.is-next .nnb-label{color:var(--o)}
+.is-break .nnb-label{color:var(--text2)}
+.nnb-name{font-size:15px;font-weight:700;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nnb-time{font-size:12px;color:var(--text2);font-weight:600;white-space:nowrap;flex-shrink:0}
+
 /* DARK MODE */
 [data-theme="dark"]{
   --bg:#1c1916;--bg2:#131110;--bg3:#2a2420;--bg4:#342d26;
@@ -411,6 +427,7 @@ a{color:inherit;text-decoration:none}
         <button class="btn-dark" onclick="openGoalSettings()" title="Settings">⚙️</button>
         <button class="btn-dark" onclick="exportPDF()" title="Export PDF">📄</button>
       </div>
+      <div id="now-next-banner"></div>
       <div class="stats-strip" id="stats-strip"></div>
       <div class="two-col">
         <div class="card" id="today-card"></div>
@@ -708,6 +725,56 @@ function todayStr(){
 
 function todayDow(){return new Date().getDay();}
 
+// ── NOW / NEXT BANNER ─────────────────────────────────────────────────────────
+function renderNowNext(){
+  const el=document.getElementById('now-next-banner');
+  if(!el)return;
+  const schedule=loadSchedule();
+  const subjs=loadSubjects();
+  const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b'};
+  const now=new Date();
+  const dow=now.getDay();
+  const nowMins=now.getHours()*60+now.getMinutes();
+  const dayBlocks=schedule.filter(b=>b.day===dow).sort((a,b)=>toMins(a.start)-toMins(b.start));
+
+  // Find currently active block
+  const active=dayBlocks.find(b=>nowMins>=toMins(b.start)&&nowMins<toMins(b.end));
+  if(active){
+    const isBreak=active.type==='break';
+    const color=active.subjectId?SUBJ_COLORS[active.subjectId]||'var(--o)':'var(--text3)';
+    const endsIn=toMins(active.end)-nowMins;
+    const cls=isBreak?'is-break':'is-now';
+    const lbl=isBreak?'On Break':'Studying Now';
+    el.innerHTML=
+      '<div class="now-next-banner '+cls+'">'+
+        '<div class="nnb-dot" style="background:'+(isBreak?'var(--text3)':color)+'"></div>'+
+        '<span class="nnb-label">'+lbl+'</span>'+
+        '<span class="nnb-name">'+escHtml(active.label)+'</span>'+
+        '<span class="nnb-time">ends '+active.end+' · '+durStr(endsIn)+' left</span>'+
+      '</div>';
+    return;
+  }
+
+  // Find next upcoming block today
+  const next=dayBlocks.find(b=>toMins(b.start)>nowMins);
+  if(next){
+    const isBreak=next.type==='break';
+    const color=next.subjectId?SUBJ_COLORS[next.subjectId]||'var(--o)':'var(--text3)';
+    const startsIn=toMins(next.start)-nowMins;
+    el.innerHTML=
+      '<div class="now-next-banner is-next">'+
+        '<div class="nnb-dot" style="background:'+color+'"></div>'+
+        '<span class="nnb-label">Next Up</span>'+
+        '<span class="nnb-name">'+escHtml(next.label)+'</span>'+
+        '<span class="nnb-time">'+next.start+' · in '+durStr(startsIn)+'</span>'+
+      '</div>';
+    return;
+  }
+
+  // Nothing scheduled today or day is done
+  el.innerHTML='';
+}
+
 function weekRange(){
   const now=new Date();
   const dow=now.getDay();
@@ -886,6 +953,7 @@ function updateSidebar(){
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 function renderDashboard(){
+  renderNowNext();
   const now=new Date();
   const hour=now.getHours();
   let greet='Good morning';
@@ -1773,6 +1841,8 @@ async function syncFromCloud(){
   syncFromCloud();
   updateNotifBtn();
   scheduleNotifications();
+  // Refresh now/next banner every minute
+  setInterval(()=>{if(document.getElementById('page-dashboard').classList.contains('active'))renderNowNext();},60000);
 })();
 </script>
 </body>
