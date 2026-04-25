@@ -278,10 +278,65 @@ a{color:inherit;text-decoration:none}
 }
 @media(min-width:769px){
   .page{margin:0 auto}
+  #mobile-top-bar{display:none!important}
 }
 
 /* MISC */
 .divider{height:1px;background:var(--border);margin:16px 0}
+
+/* DARK MODE */
+[data-theme="dark"]{
+  --bg:#1c1916;--bg2:#131110;--bg3:#2a2420;--bg4:#342d26;
+  --border:#3a332b;--text:#f0ece8;--text2:#8a7d6e;--text3:#4a4038;
+  --ol:#2d1f0e;--od2:#7c3a0a;--okl:#0d2b1e;--errl:#2d0f14;
+  --shadow:0 1px 3px rgba(0,0,0,0.5),0 4px 20px rgba(0,0,0,0.4);
+}
+[data-theme="dark"] .modal-sheet,[data-theme="dark"] #bottom-nav{background:var(--bg)}
+[data-theme="dark"] .form-input{background:var(--bg3);border-color:var(--border);color:var(--text)}
+
+/* DARK TOGGLE */
+.btn-dark{background:none;border:none;cursor:pointer;font-size:17px;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0}
+.btn-dark:hover{background:var(--bg3)}
+
+/* STREAK */
+.streak-badge{display:flex;align-items:center;gap:5px}
+.streak-fire{font-size:18px;line-height:1}
+.streak-count{font-size:22px;font-weight:800;color:var(--text)}
+.streak-zero{color:var(--text3)}
+
+/* FOCUS CARD */
+.focus-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.focus-row:last-child{border-bottom:none}
+.focus-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.focus-main{flex:1;min-width:0}
+.focus-name{font-size:14px;font-weight:600;color:var(--text)}
+.focus-behind{font-size:12px;color:var(--text3);margin-top:1px}
+.focus-suggest{font-size:13px;font-weight:700;color:var(--o);flex-shrink:0}
+
+/* WEEK SUMMARY */
+.week-sum-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:10px 0}
+.wsd{display:flex;flex-direction:column;align-items:center;gap:3px}
+.wsd-bar-wrap{width:100%;height:44px;background:var(--bg3);border-radius:5px;position:relative;overflow:hidden}
+.wsd-bar-fill{position:absolute;bottom:0;left:0;right:0;border-radius:5px;transition:height 0.4s}
+.wsd-name{font-size:9px;font-weight:700;color:var(--text2)}
+.wsd-val{font-size:9px;color:var(--text3)}
+
+/* GRAD ESTIMATOR */
+.est-date{font-size:26px;font-weight:800;color:var(--o);letter-spacing:-0.5px;margin:6px 0 2px}
+.est-meta{font-size:13px;color:var(--text2);margin-bottom:12px}
+.pace-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)}
+.pace-row:last-child{border-bottom:none}
+.pace-label{font-size:13px;color:var(--text2)}
+.pace-val{font-size:14px;font-weight:700;color:var(--text)}
+
+/* PRINT */
+@media print{
+  #sidebar,#bottom-nav,.btn-primary,.btn-add,.btn-toggle-edit,.btn-notif,.btn-dark,.btn-gear,button{display:none!important}
+  #main{margin:0!important}body{background:#fff!important;color:#000!important}
+  .page{display:block!important;padding:20px!important;max-width:100%!important}
+  .card{box-shadow:none!important;border:1px solid #ddd!important}
+  .stat-card{box-shadow:none!important;border:1px solid #ddd!important}
+}
 
 /* SYNC INDICATOR */
 .sync-row{display:flex;align-items:center;gap:6px;margin-top:8px}
@@ -325,7 +380,13 @@ a{color:inherit;text-decoration:none}
       </div>
     </nav>
     <div class="sidebar-footer">
-      <div class="sidebar-footer-label">Today's Progress</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div class="sidebar-footer-label" style="margin-bottom:0">Today's Progress</div>
+        <div style="display:flex;gap:2px">
+          <button class="btn-dark" id="btn-dark-sb" onclick="toggleDarkMode()" title="Dark mode">🌙</button>
+          <button class="btn-dark" onclick="openGoalSettings()" title="Settings">⚙️</button>
+        </div>
+      </div>
       <div class="sidebar-footer-bar"><div class="sidebar-footer-fill" id="sb-bar" style="width:0%"></div></div>
       <div class="sidebar-footer-val" id="sb-val">0h / 6h 18m</div>
       <div class="sync-row">
@@ -345,12 +406,19 @@ a{color:inherit;text-decoration:none}
           <p id="greeting-date"></p>
         </div>
       </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px" id="mobile-top-bar">
+        <button class="btn-dark" id="btn-dark-mob" onclick="toggleDarkMode()" title="Dark mode">🌙</button>
+        <button class="btn-dark" onclick="openGoalSettings()" title="Settings">⚙️</button>
+        <button class="btn-dark" onclick="exportPDF()" title="Export PDF">📄</button>
+      </div>
       <div class="stats-strip" id="stats-strip"></div>
       <div class="two-col">
         <div class="card" id="today-card"></div>
         <div class="card" id="week-card"></div>
       </div>
       <div class="card" id="attention-card"></div>
+      <div class="card" style="margin-top:16px" id="focus-card"></div>
+      <div class="card" style="margin-top:16px" id="week-summary-card"></div>
     </div>
 
     <!-- PAGE: SCHEDULE -->
@@ -421,7 +489,11 @@ a{color:inherit;text-decoration:none}
 
     <!-- PAGE: GRADUATION -->
     <div class="page" id="page-graduation">
-      <div class="greeting-row"><div class="greeting-text"><h1>Graduation</h1></div></div>
+      <div class="greeting-row">
+        <div class="greeting-text"><h1>Graduation</h1></div>
+        <button class="btn-scan" onclick="exportPDF()" style="height:36px">📄 Export PDF</button>
+      </div>
+      <div class="card" id="grad-estimator-card" style="margin-bottom:16px"></div>
       <div class="card">
         <div class="grad-overall">
           <div class="grad-label" id="grad-label"></div>
@@ -458,6 +530,27 @@ a{color:inherit;text-decoration:none}
       Goals
     </div>
   </nav>
+</div>
+
+<!-- GOAL SETTINGS MODAL -->
+<div class="modal-overlay" id="goal-modal-overlay" onclick="handleOverlayClick(event,'goal-modal-overlay')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Goals & Settings</div>
+    <div class="form-group">
+      <label class="form-label">Daily Hour Target</label>
+      <input type="number" class="form-input" id="goal-daily" placeholder="6.3" min="1" max="16" step="0.1">
+      <div style="font-size:12px;color:var(--text2);margin-top:4px">Currently 6h 18m/day</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Weekly Hour Target</label>
+      <input type="number" class="form-input" id="goal-weekly" placeholder="31.5" min="1" max="80" step="0.5">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-save" onclick="saveGoalSettings()">Save</button>
+      <button class="btn-cancel" onclick="closeModal('goal-modal-overlay')">Cancel</button>
+    </div>
+  </div>
 </div>
 
 <!-- BLOCK MODAL -->
@@ -784,10 +877,11 @@ function showPage(id){
 // ── SIDEBAR ───────────────────────────────────────────────────────────────────
 function updateSidebar(){
   const todayH=getTodayH();
-  const target=6.3;
+  const goals=loadGoals();
+  const target=goals.daily;
   const pct=Math.min(100,todayH/target*100);
   document.getElementById('sb-bar').style.width=pct+'%';
-  document.getElementById('sb-val').textContent=fmtH(todayH)+' / 6h 18m';
+  document.getElementById('sb-val').textContent=fmtH(todayH)+' / '+fmtH(target);
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
@@ -809,13 +903,15 @@ function renderDashboard(){
   const remaining=Math.max(0,totalReq-totalLogged);
   const todayH=getTodayH();
   const weekH=getWeekH();
-  const target=6.3;
+  const goals=loadGoals();
+  const target=goals.daily;
+  const streak=checkStreak();
 
   document.getElementById('stats-strip').innerHTML=
-    '<div class="stat-card"><div class="stat-label">Total Logged</div><div class="stat-val orange">'+fmtH(totalLogged)+'</div></div>'+
-    '<div class="stat-card"><div class="stat-label">Remaining</div><div class="stat-val">'+fmtH(remaining)+'</div></div>'+
     '<div class="stat-card"><div class="stat-label">Today</div><div class="stat-val '+(todayH>=target?'green':'amber')+'">'+fmtH(todayH)+'</div></div>'+
-    '<div class="stat-card"><div class="stat-label">This Week</div><div class="stat-val">'+fmtH(weekH)+'</div></div>';
+    '<div class="stat-card"><div class="stat-label">This Week</div><div class="stat-val">'+fmtH(weekH)+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Total Logged</div><div class="stat-val orange">'+fmtH(totalLogged)+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">🔥 Streak</div><div class="stat-val '+(streak>0?'orange':'')+'">'+streak+'<span style="font-size:14px;font-weight:600"> days</span></div></div>';
 
   // Today card
   const todayPct=Math.min(100,todayH/target*100);
@@ -881,6 +977,9 @@ function renderDashboard(){
   document.getElementById('attention-card').innerHTML=
     '<div class="card-title">Needs Attention</div>'+
     (arows||'<div class="empty-state">All subjects on track!</div>');
+
+  renderFocusCard();
+  renderWeeklySummary();
 }
 
 // ── SCHEDULE ──────────────────────────────────────────────────────────────────
@@ -1297,6 +1396,7 @@ function deleteSubjectFromModal(){
 
 // ── GRADUATION ────────────────────────────────────────────────────────────────
 function renderGraduation(){
+  renderGradEstimator();
   const TOTAL_REQ=2527;
   const WEEKLY=34.5;
   const totalLogged=getTotalLogged();
@@ -1366,6 +1466,184 @@ function escHtml(s){
     .replace(/</g,'&lt;')
     .replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;');
+}
+
+// ── DARK MODE ─────────────────────────────────────────────────────────────────
+function applyDarkMode(dark){
+  document.documentElement.setAttribute('data-theme',dark?'dark':'light');
+  document.querySelectorAll('.btn-dark[id^="btn-dark"]').forEach(b=>b.textContent=dark?'☀️':'🌙');
+}
+function toggleDarkMode(){
+  const dark=document.documentElement.getAttribute('data-theme')!=='dark';
+  localStorage.setItem('st_dark',dark?'1':'0');
+  applyDarkMode(dark);
+}
+
+// ── GOAL SETTINGS ─────────────────────────────────────────────────────────────
+function loadGoals(){
+  try{const g=localStorage.getItem('st_goals');if(g)return JSON.parse(g);}catch(e){}
+  return{daily:6.3,weekly:31.5};
+}
+function saveGoalSettings(){
+  const daily=parseFloat(document.getElementById('goal-daily').value)||6.3;
+  const weekly=parseFloat(document.getElementById('goal-weekly').value)||31.5;
+  localStorage.setItem('st_goals',JSON.stringify({daily,weekly}));
+  closeModal('goal-modal-overlay');
+  renderDashboard();
+  updateSidebar();
+}
+function openGoalSettings(){
+  const g=loadGoals();
+  document.getElementById('goal-daily').value=g.daily;
+  document.getElementById('goal-weekly').value=g.weekly;
+  document.getElementById('goal-modal-overlay').classList.add('open');
+}
+
+// ── STREAK ────────────────────────────────────────────────────────────────────
+function checkStreak(){
+  const goals=loadGoals();
+  const sessions=loadSessions();
+  let streak=JSON.parse(localStorage.getItem('st_streak')||'{"count":0,"lastDate":""}');
+  const today=todayStr();
+  if(streak.lastDate===today)return streak.count;
+  // Check yesterday
+  const yest=new Date();yest.setDate(yest.getDate()-1);
+  const yestStr=yest.getFullYear()+'-'+String(yest.getMonth()+1).padStart(2,'0')+'-'+String(yest.getDate()).padStart(2,'0');
+  const yestH=sessions.filter(s=>s.date===yestStr).reduce((a,s)=>a+s.hours,0);
+  if(yestH>=goals.daily){streak.count++;}
+  else if(streak.lastDate&&streak.lastDate!==yestStr){streak.count=0;}
+  streak.lastDate=today;
+  localStorage.setItem('st_streak',JSON.stringify(streak));
+  return streak.count;
+}
+
+// ── FOCUS TODAY ───────────────────────────────────────────────────────────────
+function renderFocusCard(){
+  const subjs=loadSubjects();
+  const hours=loadHours();
+  const goals=loadGoals();
+  const candidates=subjs
+    .filter(s=>!s.done&&!s.passive)
+    .map(s=>{
+      const logged=s.base+(hours[s.id]||0);
+      const pct=s.req>0?logged/s.req*100:100;
+      const left=Math.max(0,s.req-logged);
+      return{...s,logged,pct,left};
+    })
+    .sort((a,b)=>a.pct-b.pct)
+    .slice(0,3);
+
+  const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b'};
+  const dayTarget=goals.daily;
+  const el=document.getElementById('focus-card');
+  if(!el)return;
+  if(!candidates.length){el.style.display='none';return;}
+  el.style.display='';
+
+  // Suggest hours per subject (split today's target across top 3)
+  const splits=[0.5,0.3,0.2];
+  let rows='';
+  candidates.forEach((s,i)=>{
+    const color=SUBJ_COLORS[s.id]||'var(--o)';
+    const suggest=Math.round(dayTarget*splits[i]*10)/10;
+    rows+='<div class="focus-row">'+
+      '<div class="focus-dot" style="background:'+color+'"></div>'+
+      '<div class="focus-main">'+
+        '<div class="focus-name">'+escHtml(s.name)+'</div>'+
+        '<div class="focus-behind">'+Math.round(s.pct)+'% complete · '+fmtH(s.left)+' left</div>'+
+      '</div>'+
+      '<div class="focus-suggest">'+suggest+'h</div>'+
+    '</div>';
+  });
+  el.innerHTML='<div class="card-title">🎯 Focus Today</div>'+rows;
+}
+
+// ── WEEKLY SUMMARY ────────────────────────────────────────────────────────────
+function renderWeeklySummary(){
+  const sessions=loadSessions();
+  const goals=loadGoals();
+  const el=document.getElementById('week-summary-card');
+  if(!el)return;
+  const DAY_SHORT=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const now=new Date();
+  // Build last 7 days
+  const days=[];
+  for(let i=6;i>=0;i--){
+    const d=new Date(now);d.setDate(now.getDate()-i);
+    const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const h=sessions.filter(s=>s.date===ds).reduce((a,s)=>a+s.hours,0);
+    days.push({label:DAY_SHORT[d.getDay()],h,ds,isToday:i===0});
+  }
+  const weekTotal=days.reduce((a,d)=>a+d.h,0);
+  const maxH=Math.max(goals.daily,...days.map(d=>d.h),0.1);
+  let bars='';
+  days.forEach(d=>{
+    const pct=Math.min(100,d.h/maxH*100);
+    const col=d.h>=goals.daily?'var(--ok)':'var(--o)';
+    const op=d.h>0?1:0.25;
+    bars+='<div class="wsd">'+
+      '<div class="wsd-bar-wrap"><div class="wsd-bar-fill" style="height:'+pct+'%;background:'+col+';opacity:'+op+'"></div></div>'+
+      '<div class="wsd-name" style="'+(d.isToday?'color:var(--o)':'')+'">'+d.label+'</div>'+
+      '<div class="wsd-val">'+(d.h>0?fmtH(d.h):'')+'</div>'+
+    '</div>';
+  });
+  const hit=days.filter(d=>d.h>=goals.daily).length;
+  el.innerHTML=
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
+      '<div class="card-title" style="margin-bottom:0">📊 Last 7 Days</div>'+
+      '<div style="font-size:13px;font-weight:700;color:var(--o)">'+fmtH(weekTotal)+'</div>'+
+    '</div>'+
+    '<div class="week-sum-grid">'+bars+'</div>'+
+    '<div style="font-size:12px;color:var(--text2);margin-top:4px">'+hit+' of 7 days hit target · '+fmtH(goals.weekly)+' weekly goal</div>';
+}
+
+// ── GRAD ESTIMATOR ────────────────────────────────────────────────────────────
+function renderGradEstimator(){
+  const el=document.getElementById('grad-estimator-card');
+  if(!el)return;
+  const sessions=loadSessions();
+  const subjs=loadSubjects();
+  const hours=loadHours();
+  const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
+  const totalLogged=subjs.reduce((a,s)=>a+s.base+(hours[s.id]||0),0);
+  const remaining=Math.max(0,TOTAL_REQ-totalLogged);
+
+  // Avg hours/week from last 28 days
+  const now=new Date();
+  const cutoff=new Date(now);cutoff.setDate(now.getDate()-28);
+  const cutoffStr=cutoff.getFullYear()+'-'+String(cutoff.getMonth()+1).padStart(2,'0')+'-'+String(cutoff.getDate()).padStart(2,'0');
+  const recentH=sessions.filter(s=>s.date>=cutoffStr).reduce((a,s)=>a+s.hours,0);
+  const avgWeekly=recentH/4;
+
+  let estDateStr='—';
+  let weeksLeft='—';
+  let paceNote='';
+  if(avgWeekly>0){
+    const wks=remaining/avgWeekly;
+    weeksLeft=wks.toFixed(1);
+    const estDate=new Date(now);estDate.setDate(now.getDate()+Math.round(wks*7));
+    const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    estDateStr=MONTHS[estDate.getMonth()]+' '+estDate.getFullYear();
+    const target=new Date('2027-10-31');
+    const diffDays=Math.round((target-estDate)/(1000*60*60*24));
+    paceNote=diffDays>0?'✓ '+diffDays+' days ahead of Oct 2027 target':Math.abs(diffDays)+' days behind target';
+  } else {
+    paceNote='Log sessions to see your pace estimate';
+  }
+
+  el.innerHTML=
+    '<div class="card-title">🎓 Estimated Finish</div>'+
+    '<div class="est-date">'+estDateStr+'</div>'+
+    '<div class="est-meta" style="color:'+(paceNote.startsWith('✓')?'var(--ok)':'var(--err)')+'">'+paceNote+'</div>'+
+    '<div class="pace-row"><span class="pace-label">Your avg pace</span><span class="pace-val">'+fmtH(avgWeekly)+'/week</span></div>'+
+    '<div class="pace-row"><span class="pace-label">Hours remaining</span><span class="pace-val">'+fmtH(remaining)+'</span></div>'+
+    '<div class="pace-row"><span class="pace-label">Weeks to finish</span><span class="pace-val">'+(weeksLeft==='—'?'—':weeksLeft+' wks')+'</span></div>';
+}
+
+// ── EXPORT PDF ────────────────────────────────────────────────────────────────
+function exportPDF(){
+  showPage('graduation');
+  setTimeout(()=>window.print(),300);
 }
 
 // ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
@@ -1490,6 +1768,7 @@ async function syncFromCloud(){
   if(!localStorage.getItem('st_sched'))localStorage.setItem('st_sched',JSON.stringify(makeDefaultSchedule()));
   if(!localStorage.getItem('st_sessions'))localStorage.setItem('st_sessions',JSON.stringify([]));
   if(!localStorage.getItem('st_hours'))localStorage.setItem('st_hours',JSON.stringify({}));
+  applyDarkMode(localStorage.getItem('st_dark')==='1');
   showPage('dashboard');
   syncFromCloud();
   updateNotifBtn();
