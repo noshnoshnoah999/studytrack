@@ -71,11 +71,6 @@ jobs:
             return `${mins}m`;
           }
 
-          // Is current time within a window around target? (default ±3 min)
-          function near(targetMins, lo=2, hi=5) {
-            return nowMins >= targetMins - lo && nowMins < targetMins + hi;
-          }
-
           // ── Send helper ───────────────────────────────────────────────────
           async function send(sub, title, body, tag) {
             try {
@@ -96,6 +91,11 @@ jobs:
             const nowMins = nowDate.getHours() * 60 + nowDate.getMinutes();
             const DAY = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
             console.log(`${DAY[dow]} ${nowDate.toLocaleTimeString()} (${nowMins}m)`);
+
+            // Is current time within a window around target?
+            function near(targetMins, lo=2, hi=5) {
+              return nowMins >= targetMins - lo && nowMins < targetMins + hi;
+            }
 
             // Fetch everything in parallel
             const [schedule, subjectsRaw, sessionsRaw, hoursRaw, subRaw, notifDone] = await Promise.all([
@@ -191,28 +191,53 @@ jobs:
               );
             }
 
-            // ── 4. Morning summary — 8:30am ───────────────────────────────
+            // ── 4. Morning summary — 8:30am (split into 2 notifications) ──
             if (near(8 * 60 + 30)) {
               const studyBlocks = todayBlocks.filter(b => b.type === 'study');
+              const allBlocks   = todayBlocks.filter(b => b.type === 'study' || b.type === 'break');
               const scheduledH  = studyBlocks.reduce((a, b) => a + (toMins(b.end) - toMins(b.start)) / 60, 0);
 
-              // Behind subjects
-              const behind = subjects
-                .filter(s => !s.done && !s.passive && s.req > 0)
-                .map(s => ({ ...s, logged: getLogged(s.id), pct: getLogged(s.id) / s.req * 100 }))
-                .filter(s => s.pct < 30)
-                .sort((a, b) => a.pct - b.pct)
-                .slice(0, 2);
+              if (studyBlocks.length === 0) {
+                await send(sub, '🌅 Good morning!', 'No study blocks scheduled today · rest up!', 'morning-summary');
+              } else {
+                // Notification 1: schedule overview
+                const blockLines = allBlocks
+                  .map(b => `${b.type === 'break' ? '☕' : '📖'} ${b.start}–${b.end} ${b.label}`)
+                  .join('\n');
+                await send(sub,
+                  `🌅 Good morning! ${studyBlocks.length} blocks today · ${fmtH(scheduledH)}`,
+                  blockLines,
+                  'morning-schedule'
+                );
 
-              let body = studyBlocks.length
-                ? `${studyBlocks.length} blocks · ${fmtH(scheduledH)} scheduled`
-                : 'No study blocks today';
+                // Notification 2: subject focus — most behind subjects
+                const subjectStats = subjects
+                  .filter(s => !s.done && !s.passive && s.req > 0)
+                  .map(s => {
+                    const logged = getLogged(s.id);
+                    const pct = logged / s.req * 100;
+                    const left = Math.max(0, s.req - logged);
+                    return { ...s, logged, pct, left };
+                  })
+                  .sort((a, b) => a.pct - b.pct);
 
-              if (behind.length) {
-                body += ` · ⚠️ ${behind.map(s => s.name).join(', ')} need attention`;
+                const top3 = subjectStats.slice(0, 3);
+                const focusBody = top3
+                  .map(s => `${s.name} · ${Math.round(s.pct)}% · ${fmtH(s.left)} left`)
+                  .join('\n');
+
+                // Check if any on today's schedule
+                const todaySubjectIds = studyBlocks.map(b => b.subjectId).filter(Boolean);
+                const todayScheduled = subjectStats
+                  .filter(s => todaySubjectIds.includes(s.id))
+                  .map(s => s.name);
+
+                const focusTitle = todayScheduled.length
+                  ? `🎯 Today: ${todayScheduled.join(', ')}`
+                  : '🎯 Most behind subjects';
+
+                await send(sub, focusTitle, focusBody, 'morning-focus');
               }
-
-              await send(sub, '🌅 Good morning!', body, 'morning-summary');
             }
 
             // ── 5. Daily wrap-up — 6pm ────────────────────────────────────
@@ -224,18 +249,7 @@ jobs:
               await send(sub, '📊 Daily wrap-up', body, 'daily-wrapup');
             }
 
-            // ── 6. Streak at risk — 11pm ──────────────────────────────────
-            if (near(23 * 60)) {
-              if (todayH < dailyGoal * 0.5) {
-                await send(sub,
-                  '🔥 Streak at risk!',
-                  `Only ${fmtH(todayH)} logged today · Log a session before midnight to keep your streak`,
-                  'streak-risk'
-                );
-              }
-            }
-
-            // ── 7. Monday morning — weekly preview ────────────────────────
+            // ── 6. Monday morning — weekly preview ───────────────────────
             if (dow === 1 && near(8 * 60)) {
               await send(sub,
                 '📅 New week!',
