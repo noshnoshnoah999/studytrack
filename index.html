@@ -284,6 +284,25 @@ a{color:inherit;text-decoration:none}
 /* MISC */
 .divider{height:1px;background:var(--border);margin:16px 0}
 
+/* TIMER PAGE */
+.timer-hero{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px 20px 20px}
+.timer-subject-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:100px;font-size:13px;font-weight:700;margin-bottom:8px}
+.timer-context{font-size:13px;color:var(--text2);margin-bottom:24px;min-height:20px}
+.timer-clock{font-size:clamp(56px,14vw,88px);font-weight:800;letter-spacing:-2px;font-variant-numeric:tabular-nums;line-height:1;margin-bottom:8px;transition:color 0.3s}
+.timer-sub-progress{font-size:13px;color:var(--text2);margin-bottom:28px}
+.timer-controls{display:flex;gap:12px;align-items:center;margin-bottom:28px}
+.timer-btn-main{height:60px;padding:0 36px;border-radius:30px;font-size:17px;font-weight:700;transition:all 0.2s;border:none;cursor:pointer}
+.timer-btn-main.idle{background:var(--o);color:#fff}
+.timer-btn-main.running{background:var(--err);color:#fff}
+.timer-btn-main.done{background:var(--ok);color:#fff}
+.timer-btn-reset{height:44px;padding:0 20px;border-radius:22px;font-size:14px;font-weight:600;background:var(--bg3);color:var(--text2);border:none;cursor:pointer}
+.timer-subject-select{width:100%;margin-bottom:0}
+.timer-log-card{margin-top:0}
+.timer-stat-row{display:flex;gap:12px;width:100%;max-width:400px}
+.timer-stat{flex:1;background:var(--bg3);border-radius:12px;padding:12px;text-align:center}
+.timer-stat-val{font-size:18px;font-weight:800;color:var(--text)}
+.timer-stat-lbl{font-size:11px;color:var(--text2);font-weight:600;margin-top:2px}
+
 /* NOW / NEXT BANNER */
 .now-next-banner{display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:14px;margin-bottom:14px;border:1.5px solid transparent;cursor:default}
 .now-next-banner.is-now{background:var(--okl);border-color:var(--ok)}
@@ -383,6 +402,10 @@ a{color:inherit;text-decoration:none}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         Subjects
       </div>
+      <div class="nav-item" data-page="timer" onclick="showPage('timer')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Timer
+      </div>
       <div class="nav-item" data-page="graduation" onclick="showPage('graduation')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
         Graduation
@@ -444,21 +467,6 @@ a{color:inherit;text-decoration:none}
 
     <!-- PAGE: LOG -->
     <div class="page" id="page-log">
-      <div class="card" id="timer-card" style="margin-bottom:16px">
-        <div class="card-title">Session Timer</div>
-        <div style="margin-bottom:12px">
-          <label class="form-label">Subject</label>
-          <select class="form-input" id="timer-subject" onchange="document.getElementById('log-subject').value=this.value"></select>
-        </div>
-        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-          <div id="timer-display" style="font-size:36px;font-weight:800;letter-spacing:-1px;color:var(--text);font-variant-numeric:tabular-nums;min-width:110px">00:00:00</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn-primary" id="timer-btn" onclick="timerToggle()" style="min-width:90px">▶ Start</button>
-            <button class="btn-cancel" id="timer-reset" onclick="timerReset()" style="display:none">Reset</button>
-          </div>
-          <div id="timer-fill-hint" style="font-size:12px;color:var(--text2);display:none">Stop the timer to auto-fill start &amp; end times</div>
-        </div>
-      </div>
       <div class="log-layout">
         <div>
           <div class="card">
@@ -528,6 +536,12 @@ a{color:inherit;text-decoration:none}
         <div id="milestones-list"></div>
       </div>
     </div>
+
+    <!-- PAGE: TIMER -->
+    <div class="page" id="page-timer">
+      <div id="timer-page-inner"></div>
+    </div>
+
   </main>
 
   <!-- BOTTOM NAV (mobile) -->
@@ -547,6 +561,10 @@ a{color:inherit;text-decoration:none}
     <div class="bn-item" data-page="progress" onclick="showPage('progress')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       Progress
+    </div>
+    <div class="bn-item" data-page="timer" onclick="showPage('timer')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Timer
     </div>
     <div class="bn-item" data-page="graduation" onclick="showPage('graduation')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
@@ -944,6 +962,7 @@ function showPage(id){
   else if(id==='log')renderLog();
   else if(id==='progress')renderProgress();
   else if(id==='graduation')renderGraduation();
+  else if(id==='timer')renderTimerPage();
   updateSidebar();
 }
 
@@ -1363,69 +1382,196 @@ function renderLogEntries(){
 let timerInterval=null;
 let timerStart=null;
 let timerStartWallClock=null;
+let timerSubjectId=null;
+const SUBJ_COLORS_T={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b'};
 
-function timerTick(){
-  const elapsed=Math.floor((Date.now()-timerStart)/1000);
-  const h=Math.floor(elapsed/3600);
-  const m=Math.floor((elapsed%3600)/60);
-  const s=elapsed%60;
-  document.getElementById('timer-display').textContent=
-    String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+function timerElapsedSecs(){return timerStart?Math.floor((Date.now()-timerStart)/1000):0;}
+
+function timerFmtClock(secs){
+  const h=Math.floor(secs/3600),m=Math.floor((secs%3600)/60),s=secs%60;
+  return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
 }
 
-function timerToggle(){
-  const btn=document.getElementById('timer-btn');
-  const resetBtn=document.getElementById('timer-reset');
-  const hint=document.getElementById('timer-fill-hint');
-  if(!timerInterval){
+function timerTick(){
+  const el=document.getElementById('tp-clock');
+  if(el)el.textContent=timerFmtClock(timerElapsedSecs());
+  // Also update log-page display if visible
+  const el2=document.getElementById('timer-display');
+  if(el2)el2.textContent=timerFmtClock(timerElapsedSecs());
+}
+
+function renderTimerPage(){
+  const subjs=loadSubjects();
+  const available=subjs.filter(s=>!s.done);
+  const schedule=loadSchedule();
+  const now=new Date();
+  const dow=now.getDay();
+  const nowMins=now.getHours()*60+now.getMinutes();
+  const todayBlocks=schedule.filter(b=>b.day===dow).sort((a,b)=>toMins(a.start)-toMins(b.start));
+  const activeBlock=todayBlocks.find(b=>b.type==='study'&&nowMins>=toMins(b.start)&&nowMins<toMins(b.end));
+  const nextBlock=todayBlocks.find(b=>b.type==='study'&&toMins(b.start)>nowMins);
+  const schedBlock=activeBlock||nextBlock;
+  const schedSubj=schedBlock&&schedBlock.subjectId?subjs.find(s=>s.id===schedBlock.subjectId):null;
+
+  // Default subject
+  if(!timerSubjectId){
+    timerSubjectId=schedSubj?schedSubj.id:(available[0]?available[0].id:null);
+  }
+  const currentSubj=subjs.find(s=>s.id===timerSubjectId)||available[0];
+  const subjColor=currentSubj?SUBJ_COLORS_T[currentSubj.id]||'var(--o)':'var(--o)';
+
+  // Subject stats
+  const hours=loadHours();
+  const sessions=loadSessions();
+  function getLogged(id){
+    const s=subjs.find(x=>x.id===id);if(!s)return 0;
+    return(s.base||0)+(hours[id]||0)+sessions.filter(x=>x.subjectId===id).reduce((a,x)=>a+x.hours,0);
+  }
+  const logged=currentSubj?getLogged(currentSubj.id):0;
+  const req=currentSubj?currentSubj.req:0;
+  const pct=req>0?Math.min(100,logged/req*100):100;
+  const left=Math.max(0,req-logged);
+  const todaySubjH=sessions.filter(s=>s.date===todayStr()&&s.subjectId===(currentSubj?currentSubj.id:'')).reduce((a,s)=>a+s.hours,0);
+
+  // Context line
+  let contextLine='';
+  if(activeBlock&&currentSubj&&activeBlock.subjectId===currentSubj.id){
+    const endsIn=toMins(activeBlock.end)-nowMins;
+    contextLine=`📖 Scheduled block until ${activeBlock.end} · ${durStr(endsIn)} remaining`;
+  } else if(schedSubj&&currentSubj&&schedSubj.id===currentSubj.id&&nextBlock){
+    const startsIn=toMins(nextBlock.start)-nowMins;
+    contextLine=`⏭ Scheduled at ${nextBlock.start} · starts in ${durStr(startsIn)}`;
+  } else if(currentSubj){
+    contextLine=`${Math.round(pct)}% complete · ${fmtH(left)} left to go`;
+  }
+
+  // Subject options with schedule suggestion at top
+  const schedOpt=schedSubj?
+    '<option value="'+schedSubj.id+'">'+(activeBlock?'▶ Now: ':'⏭ Next: ')+escHtml(schedSubj.name)+'</option>'+
+    '<option disabled>──────────</option>':'';
+  const restOpts=available.map(s=>'<option value="'+s.id+'">'+escHtml(s.name)+'</option>').join('');
+
+  const running=!!timerInterval;
+  const stopped=!running&&timerStart!==null;
+  const elapsed=timerElapsedSecs();
+
+  const el=document.getElementById('timer-page-inner');
+  el.innerHTML=`
+    <div class="timer-hero">
+      <div class="timer-subject-badge" style="background:${subjColor}22;color:${subjColor}">
+        <span style="width:8px;height:8px;border-radius:50%;background:${subjColor};display:inline-block"></span>
+        ${escHtml(currentSubj?currentSubj.name:'Select subject')}
+      </div>
+      <div class="timer-context">${contextLine}</div>
+
+      <div class="timer-clock" id="tp-clock" style="color:${running?'var(--err)':stopped?'var(--ok)':'var(--text)'}">
+        ${timerFmtClock(elapsed)}
+      </div>
+      <div class="timer-sub-progress">${currentSubj?`${fmtH(todaySubjH)} logged today · ${Math.round(pct)}% overall`:''}</div>
+
+      <div class="timer-controls">
+        <button class="timer-btn-main ${running?'running':stopped?'done':'idle'}" onclick="timerPageToggle()">
+          ${running?'⏹ Stop':stopped?'▶ New Session':'▶ Start'}
+        </button>
+        ${(running||stopped)?'<button class="timer-btn-reset" onclick="timerPageReset()">Reset</button>':''}
+      </div>
+
+      <div class="timer-stat-row">
+        <div class="timer-stat">
+          <div class="timer-stat-val">${fmtH(todaySubjH)}</div>
+          <div class="timer-stat-lbl">Today</div>
+        </div>
+        <div class="timer-stat">
+          <div class="timer-stat-val">${Math.round(pct)}%</div>
+          <div class="timer-stat-lbl">Complete</div>
+        </div>
+        <div class="timer-stat">
+          <div class="timer-stat-val">${fmtH(left)}</div>
+          <div class="timer-stat-lbl">Remaining</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="form-group" style="margin-bottom:${stopped?'16px':'0'}">
+        <label class="form-label">Subject</label>
+        <select class="form-input timer-subject-select" id="tp-subject" onchange="timerChangeSubject(this.value)" ${running?'disabled':''}>
+          ${schedOpt+restOpts}
+        </select>
+      </div>
+      ${stopped?`
+      <div class="form-group">
+        <label class="form-label">Notes (optional)</label>
+        <input type="text" class="form-input" id="tp-notes" placeholder="e.g. chapter 3 review">
+      </div>
+      <button class="btn-primary" onclick="timerPageLog()" style="width:100%">✓ Log This Session</button>
+      `:''}
+    </div>
+  `;
+
+  // Set current subject in dropdown
+  const tpSel=document.getElementById('tp-subject');
+  if(tpSel&&timerSubjectId)tpSel.value=timerSubjectId;
+}
+
+function timerChangeSubject(id){
+  timerSubjectId=id;
+  renderTimerPage();
+}
+
+function timerPageToggle(){
+  if(timerInterval){
+    // Stop
+    clearInterval(timerInterval);
+    timerInterval=null;
+    renderTimerPage();
+  } else if(timerStart!==null){
+    // Stopped state — start new session
+    timerPageReset();
+  } else {
     // Start
     timerStart=Date.now();
     timerStartWallClock=new Date();
     timerInterval=setInterval(timerTick,1000);
-    btn.textContent='⏹ Stop';
-    btn.style.background='var(--err)';
-    resetBtn.style.display='inline-flex';
-    hint.style.display='block';
-    document.getElementById('timer-display').style.color='var(--err)';
-  } else {
-    // Stop — auto-fill start, end, subject
-    clearInterval(timerInterval);
-    timerInterval=null;
-    const endTime=new Date();
-    const fmt=d=>String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
-    document.getElementById('log-start').value=fmt(timerStartWallClock);
-    document.getElementById('log-end').value=fmt(endTime);
-    // Sync subject from timer dropdown to log form
-    const tSubj=document.getElementById('timer-subject').value;
-    if(tSubj)document.getElementById('log-subject').value=tSubj;
-    // Set date to today
-    const ds=endTime.getFullYear()+'-'+String(endTime.getMonth()+1).padStart(2,'0')+'-'+String(endTime.getDate()).padStart(2,'0');
-    document.getElementById('log-date').value=ds;
-    updateLogDuration();
-    btn.textContent='▶ Start';
-    btn.style.background='';
-    hint.textContent='✓ Times filled in below — review and log!';
-    hint.style.color='var(--ok)';
-    document.getElementById('timer-display').style.color='var(--ok)';
+    renderTimerPage();
   }
 }
 
-function timerReset(){
+function timerPageReset(){
   clearInterval(timerInterval);
   timerInterval=null;
   timerStart=null;
   timerStartWallClock=null;
-  document.getElementById('timer-display').textContent='00:00:00';
-  document.getElementById('timer-display').style.color='var(--text)';
-  const btn=document.getElementById('timer-btn');
-  btn.textContent='▶ Start';
-  btn.style.background='';
-  document.getElementById('timer-reset').style.display='none';
-  const hint=document.getElementById('timer-fill-hint');
-  hint.style.display='none';
-  hint.style.color='var(--text2)';
-  hint.textContent='Stop the timer to auto-fill start & end times';
+  renderTimerPage();
 }
+
+function timerPageLog(){
+  if(!timerStartWallClock)return;
+  const endTime=new Date();
+  const fmt=d=>String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  const ds=endTime.getFullYear()+'-'+String(endTime.getMonth()+1).padStart(2,'0')+'-'+String(endTime.getDate()).padStart(2,'0');
+  const notes=document.getElementById('tp-notes')?document.getElementById('tp-notes').value:'';
+  const startStr=fmt(timerStartWallClock);
+  const endStr=fmt(endTime);
+  const diffMins=toMins(endStr)-toMins(startStr);
+  if(diffMins<=0){alert('Session too short to log.');return;}
+  const hrs=diffMins/60;
+  const sessions=loadSessions();
+  sessions.push({id:genId(),subjectId:timerSubjectId,date:ds,hours:hrs,start:startStr,end:endStr,notes});
+  saveSessions(sessions);
+  timerPageReset();
+  // Show confirmation
+  const el=document.getElementById('timer-page-inner');
+  const toast=document.createElement('div');
+  toast.style.cssText='position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--ok);color:#fff;padding:10px 22px;border-radius:20px;font-weight:700;font-size:14px;z-index:999;white-space:nowrap';
+  toast.textContent='✓ Session logged! '+fmtH(hrs);
+  document.body.appendChild(toast);
+  setTimeout(()=>toast.remove(),2500);
+}
+
+// Legacy log-page timer toggle (kept for backward compat)
+function timerToggle(){timerPageToggle();}
+function timerReset(){timerPageReset();}
 
 function updateLogDuration(){
   const start=document.getElementById('log-start').value;
@@ -1970,7 +2116,7 @@ async function syncFromCloud(){
   applyDarkMode(localStorage.getItem('st_dark')==='1');
   // Deep link support: open specific page via URL hash e.g. #log
   const hash=window.location.hash.replace('#','');
-  const validPages=['dashboard','schedule','log','progress','graduation'];
+  const validPages=['dashboard','schedule','log','progress','graduation','timer'];
   showPage(validPages.includes(hash)?hash:'dashboard');
   syncFromCloud();
   updateNotifBtn();
