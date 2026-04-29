@@ -1288,11 +1288,30 @@ function deleteBlockFromModal(){
 function renderLog(){
   const subjs=loadSubjects();
   const available=subjs.filter(s=>!s.done);
-  const opts=available.map(s=>{
+
+  // Find current or next study block from schedule
+  const schedule=loadSchedule();
+  const now=new Date();
+  const dow=now.getDay();
+  const nowMins=now.getHours()*60+now.getMinutes();
+  const todayBlocks=schedule.filter(b=>b.day===dow).sort((a,b)=>toMins(a.start)-toMins(b.start));
+  const activeBlock=todayBlocks.find(b=>b.type==='study'&&nowMins>=toMins(b.start)&&nowMins<toMins(b.end));
+  const nextBlock=todayBlocks.find(b=>b.type==='study'&&toMins(b.start)>nowMins);
+  const schedBlock=activeBlock||nextBlock;
+  const schedSubj=schedBlock&&schedBlock.subjectId?subjs.find(s=>s.id===schedBlock.subjectId):null;
+
+  // Build options — schedule suggestion at top if available
+  const schedOpt=schedSubj?
+    '<option value="'+schedSubj.id+'" style="font-weight:700">'+
+      (activeBlock?'▶ Now: ':'⏭ Next: ')+escHtml(schedSubj.name)+
+    '</option><option disabled>──────────────</option>':
+    '';
+  const restOpts=available.map(s=>{
     const pre=s.locked?'🔒 ':'';
     const suf=s.passive?' (passive)':'';
     return'<option value="'+s.id+'">'+pre+escHtml(s.name)+suf+'</option>';
   }).join('');
+  const opts=schedOpt+restOpts;
 
   const sel=document.getElementById('log-subject');
   const prev=sel.value;
@@ -1304,6 +1323,7 @@ function renderLog(){
   const tprev=tsel.value;
   tsel.innerHTML=opts;
   if(tprev&&available.find(s=>s.id===tprev))tsel.value=tprev;
+  else if(schedSubj&&!tprev)tsel.value=schedSubj.id; // auto-select schedule subject
   // Sync log subject to match timer subject
   if(tsel.value)sel.value=tsel.value;
 
