@@ -1855,7 +1855,10 @@ async function syncFromCloud(){
   if(!localStorage.getItem('st_sessions'))localStorage.setItem('st_sessions',JSON.stringify([]));
   if(!localStorage.getItem('st_hours'))localStorage.setItem('st_hours',JSON.stringify({}));
   applyDarkMode(localStorage.getItem('st_dark')==='1');
-  showPage('dashboard');
+  // Deep link support: open specific page via URL hash e.g. #log
+  const hash=window.location.hash.replace('#','');
+  const validPages=['dashboard','schedule','log','progress','graduation'];
+  showPage(validPages.includes(hash)?hash:'dashboard');
   syncFromCloud();
   updateNotifBtn();
   scheduleNotifications();
