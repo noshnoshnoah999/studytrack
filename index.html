@@ -444,6 +444,17 @@ a{color:inherit;text-decoration:none}
 
     <!-- PAGE: LOG -->
     <div class="page" id="page-log">
+      <div class="card" id="timer-card" style="margin-bottom:16px">
+        <div class="card-title">Session Timer</div>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div id="timer-display" style="font-size:36px;font-weight:800;letter-spacing:-1px;color:var(--text);font-variant-numeric:tabular-nums;min-width:110px">00:00:00</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn-primary" id="timer-btn" onclick="timerToggle()" style="min-width:90px">▶ Start</button>
+            <button class="btn-cancel" id="timer-reset" onclick="timerReset()" style="display:none">Reset</button>
+          </div>
+          <div id="timer-fill-hint" style="font-size:12px;color:var(--text2);display:none">Stop the timer to auto-fill start &amp; end times</div>
+        </div>
+      </div>
       <div class="log-layout">
         <div>
           <div class="card">
@@ -1312,6 +1323,71 @@ function renderLogEntries(){
       '<button class="btn-del" onclick="deleteEntry(\''+s.id+'\')">×</button>'+
     '</div>';
   }).join('');
+}
+
+// ── SESSION TIMER ─────────────────────────────────────────────────────────────
+let timerInterval=null;
+let timerStart=null;
+let timerStartWallClock=null;
+
+function timerTick(){
+  const elapsed=Math.floor((Date.now()-timerStart)/1000);
+  const h=Math.floor(elapsed/3600);
+  const m=Math.floor((elapsed%3600)/60);
+  const s=elapsed%60;
+  document.getElementById('timer-display').textContent=
+    String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+
+function timerToggle(){
+  const btn=document.getElementById('timer-btn');
+  const resetBtn=document.getElementById('timer-reset');
+  const hint=document.getElementById('timer-fill-hint');
+  if(!timerInterval){
+    // Start
+    timerStart=Date.now();
+    timerStartWallClock=new Date();
+    timerInterval=setInterval(timerTick,1000);
+    btn.textContent='⏹ Stop';
+    btn.style.background='var(--err)';
+    resetBtn.style.display='inline-flex';
+    hint.style.display='block';
+    document.getElementById('timer-display').style.color='var(--err)';
+  } else {
+    // Stop — auto-fill start & end times
+    clearInterval(timerInterval);
+    timerInterval=null;
+    const endTime=new Date();
+    const fmt=d=>String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+    document.getElementById('log-start').value=fmt(timerStartWallClock);
+    document.getElementById('log-end').value=fmt(endTime);
+    // Set date to today
+    const ds=endTime.getFullYear()+'-'+String(endTime.getMonth()+1).padStart(2,'0')+'-'+String(endTime.getDate()).padStart(2,'0');
+    document.getElementById('log-date').value=ds;
+    updateLogDuration();
+    btn.textContent='▶ Start';
+    btn.style.background='';
+    hint.textContent='✓ Times filled in below — review and log!';
+    hint.style.color='var(--ok)';
+    document.getElementById('timer-display').style.color='var(--ok)';
+  }
+}
+
+function timerReset(){
+  clearInterval(timerInterval);
+  timerInterval=null;
+  timerStart=null;
+  timerStartWallClock=null;
+  document.getElementById('timer-display').textContent='00:00:00';
+  document.getElementById('timer-display').style.color='var(--text)';
+  const btn=document.getElementById('timer-btn');
+  btn.textContent='▶ Start';
+  btn.style.background='';
+  document.getElementById('timer-reset').style.display='none';
+  const hint=document.getElementById('timer-fill-hint');
+  hint.style.display='none';
+  hint.style.color='var(--text2)';
+  hint.textContent='Stop the timer to auto-fill start & end times';
 }
 
 function updateLogDuration(){
