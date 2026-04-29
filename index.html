@@ -446,6 +446,10 @@ a{color:inherit;text-decoration:none}
     <div class="page" id="page-log">
       <div class="card" id="timer-card" style="margin-bottom:16px">
         <div class="card-title">Session Timer</div>
+        <div style="margin-bottom:12px">
+          <label class="form-label">Subject</label>
+          <select class="form-input" id="timer-subject" onchange="document.getElementById('log-subject').value=this.value"></select>
+        </div>
         <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
           <div id="timer-display" style="font-size:36px;font-weight:800;letter-spacing:-1px;color:var(--text);font-variant-numeric:tabular-nums;min-width:110px">00:00:00</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -1284,14 +1288,24 @@ function deleteBlockFromModal(){
 function renderLog(){
   const subjs=loadSubjects();
   const available=subjs.filter(s=>!s.done);
-  const sel=document.getElementById('log-subject');
-  const prev=sel.value;
-  sel.innerHTML=available.map(s=>{
+  const opts=available.map(s=>{
     const pre=s.locked?'🔒 ':'';
     const suf=s.passive?' (passive)':'';
     return'<option value="'+s.id+'">'+pre+escHtml(s.name)+suf+'</option>';
   }).join('');
+
+  const sel=document.getElementById('log-subject');
+  const prev=sel.value;
+  sel.innerHTML=opts;
   if(prev&&available.find(s=>s.id===prev))sel.value=prev;
+
+  // Keep timer subject dropdown in sync
+  const tsel=document.getElementById('timer-subject');
+  const tprev=tsel.value;
+  tsel.innerHTML=opts;
+  if(tprev&&available.find(s=>s.id===tprev))tsel.value=tprev;
+  // Sync log subject to match timer subject
+  if(tsel.value)sel.value=tsel.value;
 
   const dateIn=document.getElementById('log-date');
   if(!dateIn.value)dateIn.value=todayStr();
@@ -1354,13 +1368,16 @@ function timerToggle(){
     hint.style.display='block';
     document.getElementById('timer-display').style.color='var(--err)';
   } else {
-    // Stop — auto-fill start & end times
+    // Stop — auto-fill start, end, subject
     clearInterval(timerInterval);
     timerInterval=null;
     const endTime=new Date();
     const fmt=d=>String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
     document.getElementById('log-start').value=fmt(timerStartWallClock);
     document.getElementById('log-end').value=fmt(endTime);
+    // Sync subject from timer dropdown to log form
+    const tSubj=document.getElementById('timer-subject').value;
+    if(tSubj)document.getElementById('log-subject').value=tSubj;
     // Set date to today
     const ds=endTime.getFullYear()+'-'+String(endTime.getMonth()+1).padStart(2,'0')+'-'+String(endTime.getDate()).padStart(2,'0');
     document.getElementById('log-date').value=ds;
