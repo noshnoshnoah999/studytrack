@@ -2569,6 +2569,37 @@ async function syncFromCloud(){
   if(!localStorage.getItem('st_sched'))localStorage.setItem('st_sched',JSON.stringify(makeDefaultSchedule()));
   if(!localStorage.getItem('st_sessions'))localStorage.setItem('st_sessions',JSON.stringify([]));
   if(!localStorage.getItem('st_hours'))localStorage.setItem('st_hours',JSON.stringify({}));
+
+  // ── One-time base recalculation for passive subjects ──────────────────────
+  // Ensures total (base + sessions + hours) exactly matches the teacher report target.
+  // Runs once per target change; keyed by target value so it re-runs if target changes.
+  const PASSIVE_TARGETS={el3:132.7};
+  const migKey='st_passive_base_migrated';
+  let migDone={};try{migDone=JSON.parse(localStorage.getItem(migKey)||'{}');}catch(e){}
+  let needsMig=Object.keys(PASSIVE_TARGETS).some(id=>migDone[id]!==PASSIVE_TARGETS[id]);
+  if(needsMig){
+    try{
+      const sessions=JSON.parse(localStorage.getItem('st_sessions')||'[]');
+      const hours=JSON.parse(localStorage.getItem('st_hours')||'{}');
+      const subjs=JSON.parse(localStorage.getItem('st_subjs')||'[]');
+      let changed=false;
+      subjs.forEach(s=>{
+        if(!PASSIVE_TARGETS[s.id]||migDone[s.id]===PASSIVE_TARGETS[s.id])return;
+        const target=PASSIVE_TARGETS[s.id];
+        const sessH=sessions.filter(x=>x.subjectId===s.id).reduce((a,x)=>a+x.hours,0);
+        const hoursH=hours[s.id]||0;
+        s.base=Math.max(0,Math.round((target-sessH-hoursH)*10)/10);
+        migDone[s.id]=target;
+        changed=true;
+      });
+      if(changed){
+        localStorage.setItem('st_subjs',JSON.stringify(subjs));
+        localStorage.setItem(migKey,JSON.stringify(migDone));
+      }
+    }catch(e){}
+  }
+  // ── End passive base migration ─────────────────────────────────────────────
+
   applyDarkMode(localStorage.getItem('st_dark')==='1');
   // Deep link support: open specific page via URL hash e.g. #log
   const hash=window.location.hash.replace('#','');
