@@ -1011,7 +1011,12 @@ function loadSchedule(){
       NEW_BLOCKS.forEach(nb=>{
         const existing=sched.find(b=>b.id===nb.id);
         if(!existing){sched.push(nb);changed=true;}
-        else if(existing.subjectId!==nb.subjectId){existing.subjectId=nb.subjectId;changed=true;}
+        else{
+          // Sync label, type and subjectId from definition
+          if(existing.label!==nb.label){existing.label=nb.label;changed=true;}
+          if(existing.type!==nb.type){existing.type=nb.type;changed=true;}
+          if(existing.subjectId!==nb.subjectId){existing.subjectId=nb.subjectId;changed=true;}
+        }
       });
       if(changed){localStorage.setItem('st_sched',JSON.stringify(sched));sbPush('st_sched',sched);}
       return sched;
