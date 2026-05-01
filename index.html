@@ -1233,8 +1233,12 @@ function openBlockModal(blockId,defaultDay){
     }
   } else {
     document.getElementById('bm-day').value=defaultDay!==null?defaultDay:1;
-    document.getElementById('bm-start').value='09:00';
-    document.getElementById('bm-end').value='10:00';
+    const _now=new Date();
+    const _hh=String(_now.getHours()).padStart(2,'0');
+    const _mm=String(Math.round(_now.getMinutes()/5)*5%60).padStart(2,'0');
+    const _eh=String(_now.getHours()+1).padStart(2,'0');
+    document.getElementById('bm-start').value=_hh+':'+_mm;
+    document.getElementById('bm-end').value=_eh+':'+_mm;
     document.getElementById('bm-type').value='study';
     document.getElementById('bm-subject').value=subjs[0]?subjs[0].id:'';
     document.getElementById('bm-label').value='';
