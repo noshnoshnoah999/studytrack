@@ -167,6 +167,29 @@ a{color:inherit;text-decoration:none}
 .btn-icon.danger:hover{background:var(--errl);color:var(--err)}
 .no-blocks{font-size:13px;color:var(--text3);font-style:italic;padding:8px 0}
 
+/* HISTORY PAGE */
+.hist-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.hist-header h2{font-size:22px;font-weight:800;letter-spacing:-0.3px}
+.hist-controls{display:flex;gap:8px;margin-bottom:14px}
+.hist-filter{flex:1;font-size:13px;padding:8px 12px}
+.hist-summary{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.hist-stat{flex:1;min-width:80px;background:var(--bg3);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.hist-stat-val{font-size:18px;font-weight:800;color:var(--text)}
+.hist-stat-lbl{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px}
+.hist-group{margin-bottom:20px}
+.hist-date-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 2px}
+.hist-date-label{font-size:12px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px}
+.hist-date-total{font-size:12px;font-weight:700;color:var(--o)}
+.hist-card{display:flex;align-items:center;gap:12px;padding:13px 16px;background:var(--bg);border-radius:14px;margin-bottom:6px;box-shadow:0 1px 4px rgba(26,20,16,0.06);border-left:4px solid var(--border)}
+.hist-card-main{flex:1;min-width:0}
+.hist-card-subject{font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px}
+.hist-card-meta{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.hist-card-time{font-weight:600}
+.hist-card-notes{color:var(--text3);font-style:italic}
+.hist-card-dur{font-size:13px;font-weight:800;flex-shrink:0;padding:4px 10px;border-radius:8px;background:rgba(0,0,0,0.05)}
+.hist-card-del{background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s}
+.hist-card-del:hover{background:var(--errl);color:var(--err)}
+
 /* SCHEDULE HEADER */
 .sched-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
 .sched-header h2{font-size:22px;font-weight:800;letter-spacing:-0.3px}
@@ -417,6 +440,10 @@ a{color:inherit;text-decoration:none}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         Timer
       </div>
+      <div class="nav-item" data-page="history" onclick="showPage('history')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
+        History
+      </div>
       <div class="nav-item" data-page="graduation" onclick="showPage('graduation')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
         Graduation
@@ -553,6 +580,26 @@ a{color:inherit;text-decoration:none}
       <div id="timer-page-inner"></div>
     </div>
 
+    <!-- PAGE: HISTORY -->
+    <div class="page" id="page-history">
+      <div class="hist-header">
+        <h2>History</h2>
+      </div>
+      <div class="hist-controls">
+        <select class="form-input hist-filter" id="hist-subject-filter" onchange="renderHistory()">
+          <option value="">All Subjects</option>
+        </select>
+        <select class="form-input hist-filter" id="hist-sort" onchange="renderHistory()">
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+          <option value="longest">Longest first</option>
+          <option value="shortest">Shortest first</option>
+        </select>
+      </div>
+      <div class="hist-summary" id="hist-summary"></div>
+      <div id="hist-entries"></div>
+    </div>
+
   </main>
 
   <!-- BOTTOM NAV (mobile) -->
@@ -577,9 +624,9 @@ a{color:inherit;text-decoration:none}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       Timer
     </div>
-    <div class="bn-item" data-page="graduation" onclick="showPage('graduation')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
-      Goals
+    <div class="bn-item" data-page="history" onclick="showPage('history')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
+      History
     </div>
   </nav>
 </div>
@@ -971,6 +1018,7 @@ function showPage(id){
   if(id==='dashboard')renderDashboard();
   else if(id==='schedule')renderSchedule();
   else if(id==='log')renderLog();
+  else if(id==='history')renderHistory();
   else if(id==='progress')renderProgress();
   else if(id==='graduation')renderGraduation();
   else if(id==='timer')renderTimerPage();
@@ -1413,6 +1461,116 @@ function renderLogEntries(){
       '<button class="btn-del" onclick="deleteEntry(\''+s.id+'\')">×</button>'+
     '</div>';
   }).join('');
+}
+
+// ── HISTORY PAGE ─────────────────────────────────────────────────────────────
+function renderHistory(){
+  const sessions=loadSessions();
+  const subjs=loadSubjects();
+
+  // Populate subject filter
+  const filterEl=document.getElementById('hist-subject-filter');
+  if(filterEl){
+    const cur=filterEl.value;
+    filterEl.innerHTML='<option value="">All Subjects</option>'+
+      subjs.map(s=>'<option value="'+s.id+'"'+(s.id===cur?' selected':'')+'>'+escHtml(s.name)+'</option>').join('');
+    if(cur)filterEl.value=cur;
+  }
+
+  const subjectFilter=filterEl?filterEl.value:'';
+  const sort=document.getElementById('hist-sort')?document.getElementById('hist-sort').value:'newest';
+
+  // Filter
+  let filtered=subjectFilter?sessions.filter(s=>s.subjectId===subjectFilter):sessions;
+
+  // Sort
+  filtered=[...filtered].sort((a,b)=>{
+    if(sort==='oldest') return a.date!==b.date?a.date.localeCompare(b.date):a.start.localeCompare(b.start);
+    if(sort==='longest') return b.hours-a.hours;
+    if(sort==='shortest') return a.hours-b.hours;
+    // newest (default)
+    return a.date!==b.date?b.date.localeCompare(a.date):b.start.localeCompare(a.start);
+  });
+
+  // Summary stats
+  const totalH=filtered.reduce((a,s)=>a+s.hours,0);
+  const totalSessions=filtered.length;
+  const uniqueDays=new Set(filtered.map(s=>s.date)).size;
+  const avgPerDay=uniqueDays>0?totalH/uniqueDays:0;
+  const summaryEl=document.getElementById('hist-summary');
+  if(summaryEl){
+    summaryEl.innerHTML=
+      '<div class="hist-stat"><span class="hist-stat-val">'+totalSessions+'</span><span class="hist-stat-lbl">Sessions</span></div>'+
+      '<div class="hist-stat"><span class="hist-stat-val">'+fmtH(totalH)+'</span><span class="hist-stat-lbl">Total</span></div>'+
+      '<div class="hist-stat"><span class="hist-stat-val">'+uniqueDays+'</span><span class="hist-stat-lbl">Days</span></div>'+
+      '<div class="hist-stat"><span class="hist-stat-val">'+fmtH(avgPerDay)+'</span><span class="hist-stat-lbl">Avg/Day</span></div>';
+  }
+
+  // Group by date
+  const groups={};
+  filtered.forEach(s=>{
+    if(!groups[s.date])groups[s.date]=[];
+    groups[s.date].push(s);
+  });
+
+  const dates=Object.keys(groups);
+  // Keep date order consistent with sort
+  if(sort==='oldest') dates.sort((a,b)=>a.localeCompare(b));
+  else dates.sort((a,b)=>b.localeCompare(a));
+
+  const entriesEl=document.getElementById('hist-entries');
+  if(!entriesEl)return;
+  if(!filtered.length){entriesEl.innerHTML='<div class="empty-state">No sessions yet</div>';return;}
+
+  entriesEl.innerHTML=dates.map(date=>{
+    const daySessions=groups[date];
+    const dayTotal=daySessions.reduce((a,s)=>a+s.hours,0);
+    // Format date nicely
+    const d=new Date(date+'T12:00:00');
+    const today=new Date(); today.setHours(12,0,0,0);
+    const yesterday=new Date(today); yesterday.setDate(today.getDate()-1);
+    let dateLabel;
+    if(d.toDateString()===today.toDateString()) dateLabel='Today';
+    else if(d.toDateString()===yesterday.toDateString()) dateLabel='Yesterday';
+    else dateLabel=d.toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'});
+
+    const cards=daySessions.map(s=>{
+      const subj=subjs.find(x=>x.id===s.subjectId);
+      const name=subj?subj.name:(s.subjectId||'Unknown');
+      const color=SUBJ_COLORS[s.subjectId]||'var(--o)';
+      const isHex=color.startsWith('#');
+      const bg=isHex?(color+'12'):'rgba(249,115,22,0.07)';
+      const timeStr=(s.start&&s.end)?s.start+' – '+s.end:'';
+      return '<div class="hist-card" style="border-left-color:'+color+';background:'+bg+'">'+
+        '<div class="hist-card-main">'+
+          '<div class="hist-card-subject" style="color:'+color+'">'+escHtml(name)+'</div>'+
+          '<div class="hist-card-meta">'+
+            (timeStr?'<span class="hist-card-time">'+timeStr+'</span>':'')+
+            (s.notes?'<span class="hist-card-notes">· '+escHtml(s.notes)+'</span>':'')+
+          '</div>'+
+        '</div>'+
+        '<div class="hist-card-dur" style="color:'+color+'">'+fmtH(s.hours)+'</div>'+
+        '<button class="hist-card-del" onclick="deleteHistEntry(\''+s.id+'\')">×</button>'+
+      '</div>';
+    }).join('');
+
+    return '<div class="hist-group">'+
+      '<div class="hist-date-header">'+
+        '<span class="hist-date-label">'+dateLabel+'</span>'+
+        '<span class="hist-date-total">'+fmtH(dayTotal)+'</span>'+
+      '</div>'+
+      cards+
+    '</div>';
+  }).join('');
+}
+
+function deleteHistEntry(id){
+  const sessions=loadSessions();
+  const updated=sessions.filter(s=>s.id!==id);
+  saveSessions(updated);
+  sbPush('st_sessions',updated);
+  renderHistory();
+  renderLogEntries();
 }
 
 // ── SESSION TIMER ─────────────────────────────────────────────────────────────
@@ -2207,7 +2365,7 @@ async function syncFromCloud(){
   applyDarkMode(localStorage.getItem('st_dark')==='1');
   // Deep link support: open specific page via URL hash e.g. #log
   const hash=window.location.hash.replace('#','');
-  const validPages=['dashboard','schedule','log','progress','graduation','timer'];
+  const validPages=['dashboard','schedule','log','progress','graduation','timer','history'];
   showPage(validPages.includes(hash)?hash:'dashboard');
   syncFromCloud();
   updateNotifBtn();
