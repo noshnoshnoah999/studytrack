@@ -98,17 +98,25 @@ jobs:
             }
 
             // Fetch everything in parallel
-            const [schedule, subjectsRaw, sessionsRaw, hoursRaw, subRaw, notifDone] = await Promise.all([
+            const [schedule, subjectsRaw, sessionsRaw, hoursRaw, subsRaw, notifDone] = await Promise.all([
               sbGet('st_sched'),
               sbGet('st_subjs'),
               sbGet('st_sessions'),
               sbGet('st_hours'),
-              sbGet('push_subscription'),
+              sbGet('push_subscriptions'),
               sbGet('notif_done_subjs')
             ]);
 
-            if (!subRaw) { console.log('No push subscription'); return; }
-            const sub = typeof subRaw === 'string' ? JSON.parse(subRaw) : subRaw;
+            if (!subsRaw) { console.log('No push subscriptions'); return; }
+            const subs = Array.isArray(subsRaw) ? subsRaw : [subsRaw];
+            console.log(`Sending to ${subs.length} device(s)`);
+
+            // Helper: send to ALL subscribed devices
+            async function sendAll(title, body, tag) {
+              for (const sub of subs) {
+                await send(sub, title, body, tag);
+              }
+            }
 
             const todayBlocks = (schedule || [])
               .filter(b => b.day === dow)
@@ -155,7 +163,7 @@ jobs:
             );
             for (const bl of startingSoon) {
               const minsAway = toMins(bl.start) - nowMins;
-              await send(sub,
+              await sendAll(
                 minsAway <= 5 ? `⏰ Starting in ${minsAway}min` : '📚 Coming up soon',
                 `${bl.label} · ${bl.start}–${bl.end}`,
                 `start-${bl.id}`
@@ -169,7 +177,7 @@ jobs:
               toMins(b.end) - nowMins <= 8
             );
             for (const bl of endingSoon) {
-              await send(sub,
+              await sendAll(
                 `⏱ ${bl.label} ending soon`,
                 `Finishes at ${bl.end} · Don't forget to log your session!`,
                 `end-${bl.id}`
@@ -184,7 +192,7 @@ jobs:
             );
             for (const bl of breakEndingSoon) {
               const nextBlock = todayBlocks.find(b => toMins(b.start) >= toMins(bl.end) && b.type === 'study');
-              await send(sub,
+              await sendAll(
                 '☕ Break ending soon',
                 nextBlock ? `Up next: ${nextBlock.label} at ${nextBlock.start}` : 'Break wrapping up',
                 `break-end-${bl.id}`
@@ -198,13 +206,13 @@ jobs:
               const scheduledH  = studyBlocks.reduce((a, b) => a + (toMins(b.end) - toMins(b.start)) / 60, 0);
 
               if (studyBlocks.length === 0) {
-                await send(sub, '🌅 Good morning!', 'No study blocks scheduled today · rest up!', 'morning-summary');
+                await sendAll( '🌅 Good morning!', 'No study blocks scheduled today · rest up!', 'morning-summary');
               } else {
                 // Notification 1: schedule overview
                 const blockLines = allBlocks
                   .map(b => `${b.type === 'break' ? '☕' : '📖'} ${b.start}–${b.end} ${b.label}`)
                   .join('\n');
-                await send(sub,
+                await sendAll(
                   `🌅 Good morning! ${studyBlocks.length} blocks today · ${fmtH(scheduledH)}`,
                   blockLines,
                   'morning-schedule'
@@ -236,7 +244,7 @@ jobs:
                   ? `🎯 Today: ${todayScheduled.join(', ')}`
                   : '🎯 Most behind subjects';
 
-                await send(sub, focusTitle, focusBody, 'morning-focus');
+                await sendAll( focusTitle, focusBody, 'morning-focus');
               }
             }
 
@@ -246,12 +254,12 @@ jobs:
               const body = todayH >= dailyGoal
                 ? `✓ Target hit! You studied ${fmtH(todayH)} today 🎉`
                 : `${fmtH(todayH)} logged · ${fmtH(remaining)} to hit today's target`;
-              await send(sub, '📊 Daily wrap-up', body, 'daily-wrapup');
+              await sendAll( '📊 Daily wrap-up', body, 'daily-wrapup');
             }
 
             // ── 6. Monday morning — weekly preview ───────────────────────
             if (dow === 1 && near(8 * 60)) {
-              await send(sub,
+              await sendAll(
                 '📅 New week!',
                 `Goal: ${fmtH(weeklyGoal)} this week · You averaged ${fmtH(weeklyAvg)}/week recently`,
                 'monday-preview'
@@ -267,7 +275,7 @@ jobs:
                 })
                 .reduce((map, s) => { map[s.date] = (map[s.date] || 0) + s.hours; return map; }, {});
               const daysHit = Object.values(hitTarget).filter(h => h >= dailyGoal).length;
-              await send(sub,
+              await sendAll(
                 '📆 Weekly recap',
                 `${fmtH(weekH)} this week · ${daysHit}/7 days hit target`,
                 'weekly-recap'
@@ -280,7 +288,7 @@ jobs:
               s.done && !alreadyNotified.includes(s.id)
             );
             for (const s of newlyDone) {
-              await send(sub,
+              await sendAll(
                 '🎉 Subject complete!',
                 `${s.name} is done · Great work!`,
                 `done-${s.id}`
@@ -305,7 +313,7 @@ jobs:
                 .slice(0, 3);
 
               if (wayBehind.length) {
-                await send(sub,
+                await sendAll(
                   '⚠️ Subjects falling behind',
                   wayBehind.map(s => `${s.name} (${Math.round(s.pct)}%)`).join(' · '),
                   'behind-subjects'
