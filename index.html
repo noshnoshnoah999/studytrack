@@ -1991,9 +1991,18 @@ async function subscribePush(){
         applicationServerKey:urlB64ToUint8(VAPID_PUBLIC)
       });
     }
-    // Store subscription in Supabase so GitHub Actions can send pushes
-    await sbPush('push_subscription',JSON.stringify(sub.toJSON()));
-    console.log('Push subscription saved');
+    const subJson=sub.toJSON();
+    // Fetch existing subscriptions and add this one (keyed by endpoint)
+    const existing=await sbPull('push_subscriptions');
+    let subs=[];
+    if(existing&&existing.value){
+      try{subs=typeof existing.value==='string'?JSON.parse(existing.value):existing.value;}catch(e){subs=[];}
+    }
+    // Remove any old entry for this same endpoint, then add fresh
+    subs=subs.filter(s=>s.endpoint!==subJson.endpoint);
+    subs.push(subJson);
+    await sbPush('push_subscriptions',subs);
+    console.log('Push subscription saved, total devices:',subs.length);
     return true;
   }catch(e){
     console.warn('Push subscribe failed:',e);
