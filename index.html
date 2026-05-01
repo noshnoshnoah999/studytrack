@@ -189,6 +189,11 @@ a{color:inherit;text-decoration:none}
 .hist-card-dur{font-size:13px;font-weight:800;flex-shrink:0;padding:4px 10px;border-radius:8px;background:rgba(0,0,0,0.05)}
 .hist-card-del{background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s}
 .hist-card-del:hover{background:var(--errl);color:var(--err)}
+.hist-archive-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--ol);border:1px solid var(--od2);border-radius:12px;padding:12px 16px;margin-bottom:16px}
+.hist-archive-text{font-size:13px;color:var(--o);font-weight:600;flex:1}
+.hist-archive-text span{color:var(--text2);font-weight:400}
+.btn-archive{background:var(--o);color:#fff;font-size:12px;font-weight:700;padding:7px 14px;border-radius:8px;white-space:nowrap;transition:opacity 0.15s}
+.btn-archive:hover{opacity:0.85}
 
 /* SCHEDULE HEADER */
 .sched-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
@@ -596,6 +601,7 @@ a{color:inherit;text-decoration:none}
           <option value="shortest">Shortest first</option>
         </select>
       </div>
+      <div id="hist-archive-banner"></div>
       <div class="hist-summary" id="hist-summary"></div>
       <div id="hist-entries"></div>
     </div>
@@ -1492,6 +1498,23 @@ function renderHistory(){
     return a.date!==b.date?b.date.localeCompare(a.date):b.start.localeCompare(a.start);
   });
 
+  // Archive banner — show if there are sessions older than 4 months
+  const cutoff=new Date(); cutoff.setMonth(cutoff.getMonth()-4);
+  const cutoffStr=cutoff.toISOString().slice(0,10);
+  const archivable=sessions.filter(s=>s.date<cutoffStr);
+  const bannerEl=document.getElementById('hist-archive-banner');
+  if(bannerEl){
+    if(archivable.length){
+      const archiveH=archivable.reduce((a,s)=>a+s.hours,0);
+      bannerEl.innerHTML='<div class="hist-archive-banner">'+
+        '<div class="hist-archive-text">'+archivable.length+' sessions older than 4 months <span>('+fmtH(archiveH)+' · hours kept)</span></div>'+
+        '<button class="btn-archive" onclick="archiveOldSessions()">Archive</button>'+
+      '</div>';
+    } else {
+      bannerEl.innerHTML='';
+    }
+  }
+
   // Summary stats
   const totalH=filtered.reduce((a,s)=>a+s.hours,0);
   const totalSessions=filtered.length;
@@ -1562,6 +1585,30 @@ function renderHistory(){
       cards+
     '</div>';
   }).join('');
+}
+
+function archiveOldSessions(){
+  const cutoff=new Date(); cutoff.setMonth(cutoff.getMonth()-4);
+  const cutoffStr=cutoff.toISOString().slice(0,10);
+  const sessions=loadSessions();
+  const old=sessions.filter(s=>s.date<cutoffStr);
+  const keep=sessions.filter(s=>s.date>=cutoffStr);
+  if(!old.length)return;
+
+  // Absorb old session hours into st_hours so totals don't change
+  const hours=loadHours();
+  old.forEach(s=>{
+    if(s.subjectId) hours[s.subjectId]=(hours[s.subjectId]||0)+s.hours;
+  });
+
+  saveHours(hours);
+  saveSessions(keep);
+  sbPush('st_sessions',keep);
+
+  const count=old.length;
+  renderHistory();
+  renderLogEntries();
+  showToast('Archived '+count+' old sessions — hours preserved ✓');
 }
 
 function deleteHistEntry(id){
