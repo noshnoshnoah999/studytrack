@@ -1111,8 +1111,11 @@ function renderSchedule(){
   const tabHtml='<div class="day-tabs">'+DAY_ORDER.map(dow=>{
     const isToday=dow===tdow;
     const isSelected=dow===scheduleDay;
-    // Get date for this day in current week
-    const diff=dow-now2.getDay();
+    // Get date for this day in current week (Sun=7 when at end of Mon-Sun order)
+    const todayDow=now2.getDay();
+    const dowAdj=dow===0?7:dow;
+    const todayAdj=todayDow===0?7:todayDow;
+    const diff=dowAdj-todayAdj;
     const d=new Date(now2);d.setDate(now2.getDate()+diff);
     const dateNum=d.getDate();
     return'<button class="day-tab'+(isSelected?' active':isToday?' today-tab':'')+'" onclick="selectScheduleDay('+dow+')">'+
