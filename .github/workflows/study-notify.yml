@@ -155,18 +155,32 @@ jobs:
             const dailyGoal = 6.3;
             const weeklyGoal = 44;
 
-            // ‚îÄ‚îÄ 1. Block starting in 2‚Äì12 min ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
+            // ‚îÄ‚îÄ 1a. Block starting in 5‚Äì15 min ‚Äî heads up ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
             const startingSoon = todayBlocks.filter(b =>
               b.type === 'study' &&
-              toMins(b.start) - nowMins >= 2 &&
-              toMins(b.start) - nowMins <= 12
+              toMins(b.start) - nowMins >= 5 &&
+              toMins(b.start) - nowMins <= 15
             );
             for (const bl of startingSoon) {
               const minsAway = toMins(bl.start) - nowMins;
               await sendAll(
-                minsAway <= 5 ? `‚è∞ Starting in ${minsAway}min` : 'üìö Coming up soon',
+                `üìö Starting in ${minsAway}min`,
                 `${bl.label} ¬∑ ${bl.start}‚Äì${bl.end}`,
-                `start-${bl.id}`,
+                `soon-${bl.id}`
+              );
+            }
+
+            // ‚îÄ‚îÄ 1b. Block just started (0‚Äì4 min ago) ‚Äî Start Timer ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
+            const justStarted = todayBlocks.filter(b =>
+              b.type === 'study' &&
+              nowMins >= toMins(b.start) &&
+              nowMins < toMins(b.start) + 5
+            );
+            for (const bl of justStarted) {
+              await sendAll(
+                `üü¢ Time to study ‚Äî ${bl.label}`,
+                `${bl.start}‚Äì${bl.end} ¬∑ Tap to start your timer`,
+                `started-${bl.id}`,
                 { type: 'block-start', subjectId: bl.subjectId || null, blockStart: bl.start }
               );
             }
