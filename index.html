@@ -2542,6 +2542,27 @@ async function sbPull(key){
   }catch(e){return null;}
 }
 
+// Recalculate bases for passive subjects so total = teacher-reported target
+// (runs after every cloud sync so Supabase data can't overwrite the correction)
+function applyPassiveBaseFix(){
+  const PASSIVE_TARGETS={el3:132.7};
+  try{
+    const sessions=JSON.parse(localStorage.getItem('st_sessions')||'[]');
+    const hours=JSON.parse(localStorage.getItem('st_hours')||'{}');
+    const subjs=JSON.parse(localStorage.getItem('st_subjs')||'[]');
+    let changed=false;
+    subjs.forEach(s=>{
+      if(!PASSIVE_TARGETS[s.id])return;
+      const target=PASSIVE_TARGETS[s.id];
+      const sessH=sessions.filter(x=>x.subjectId===s.id).reduce((a,x)=>a+x.hours,0);
+      const hoursH=hours[s.id]||0;
+      const correctBase=Math.max(0,Math.round((target-sessH-hoursH)*10)/10);
+      if(s.base!==correctBase){s.base=correctBase;changed=true;}
+    });
+    if(changed)localStorage.setItem('st_subjs',JSON.stringify(subjs));
+  }catch(e){}
+}
+
 async function syncFromCloud(){
   setSyncUI('syncing','Syncing…');
   try{
@@ -2554,7 +2575,8 @@ async function syncFromCloud(){
         updated=true;
       }
     });
-    // Re-apply subject migrations after cloud sync (ensures base/done from DEFAULT_SUBJECTS wins)
+    // Fix passive subject bases BEFORE saving back, so correct values go to Supabase
+    applyPassiveBaseFix();
     saveSubjects(loadSubjects());
     setSyncUI('synced','Synced ✓');
     if(updated)showPage(currentPage);
