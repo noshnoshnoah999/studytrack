@@ -167,7 +167,7 @@ jobs:
                 minsAway <= 5 ? `‚è∞ Starting in ${minsAway}min` : 'üìö Coming up soon',
                 `${bl.label} ¬∑ ${bl.start}‚Äì${bl.end}`,
                 `start-${bl.id}`,
-                { type: 'block-start', subjectId: bl.subjectId || null }
+                {}
               );
             }
 
@@ -181,7 +181,8 @@ jobs:
               await sendAll(
                 `‚è± ${bl.label} ending soon`,
                 `Finishes at ${bl.end} ¬∑ Don't forget to log your session!`,
-                `end-${bl.id}`
+                `end-${bl.id}`,
+                { type: 'block-end', subjectId: bl.subjectId || null }
               );
             }
 
