@@ -2543,24 +2543,35 @@ async function sbPull(key){
   }catch(e){return null;}
 }
 
-// Recalculate bases for passive subjects so total = teacher-reported target
-// (runs after every cloud sync so Supabase data can't overwrite the correction)
-function applyPassiveBaseFix(){
-  const PASSIVE_TARGETS={el3:132.7};
+// Clean-reset passive subjects: wipe any logged sessions/hours and set base directly.
+// Passive subjects use the teacher report as sole source of truth.
+// Add an entry here whenever the teacher report changes for a passive subject.
+const PASSIVE_RESETS={el3:{base:132.7,done:false}};
+const PASSIVE_RESET_KEY='st_passive_reset_v';
+const PASSIVE_RESET_VER='el3=132.7';
+function applyPassiveReset(){
   try{
-    const sessions=JSON.parse(localStorage.getItem('st_sessions')||'[]');
-    const hours=JSON.parse(localStorage.getItem('st_hours')||'{}');
+    if(localStorage.getItem(PASSIVE_RESET_KEY)===PASSIVE_RESET_VER)return;
     const subjs=JSON.parse(localStorage.getItem('st_subjs')||'[]');
+    let sessions=JSON.parse(localStorage.getItem('st_sessions')||'[]');
+    const hours=JSON.parse(localStorage.getItem('st_hours')||'{}');
     let changed=false;
-    subjs.forEach(s=>{
-      if(!PASSIVE_TARGETS[s.id])return;
-      const target=PASSIVE_TARGETS[s.id];
-      const sessH=sessions.filter(x=>x.subjectId===s.id).reduce((a,x)=>a+x.hours,0);
-      const hoursH=hours[s.id]||0;
-      const correctBase=Math.max(0,Math.round((target-sessH-hoursH)*10)/10);
-      if(s.base!==correctBase){s.base=correctBase;changed=true;}
+    Object.entries(PASSIVE_RESETS).forEach(([id,cfg])=>{
+      const s=subjs.find(x=>x.id===id);
+      if(s){s.base=cfg.base;s.done=cfg.done;changed=true;}
+      sessions=sessions.filter(x=>x.subjectId!==id);
+      delete hours[id];
     });
-    if(changed)localStorage.setItem('st_subjs',JSON.stringify(subjs));
+    if(changed){
+      localStorage.setItem('st_subjs',JSON.stringify(subjs));
+      localStorage.setItem('st_sessions',JSON.stringify(sessions));
+      localStorage.setItem('st_hours',JSON.stringify(hours));
+      // Push corrected data to Supabase
+      sbPush('st_subjs',subjs);
+      sbPush('st_sessions',sessions);
+      sbPush('st_hours',hours);
+      localStorage.setItem(PASSIVE_RESET_KEY,PASSIVE_RESET_VER);
+    }
   }catch(e){}
 }
 
@@ -2576,9 +2587,8 @@ async function syncFromCloud(){
         updated=true;
       }
     });
-    // Fix passive subject bases BEFORE saving back, so correct values go to Supabase
-    applyPassiveBaseFix();
-    saveSubjects(loadSubjects());
+    // Clean-reset passive subjects after cloud sync so Supabase can't overwrite them
+    applyPassiveReset();
     setSyncUI('synced','Synced ✓');
     if(updated)showPage(currentPage);
   }catch(e){
@@ -2593,36 +2603,7 @@ async function syncFromCloud(){
   if(!localStorage.getItem('st_sessions'))localStorage.setItem('st_sessions',JSON.stringify([]));
   if(!localStorage.getItem('st_hours'))localStorage.setItem('st_hours',JSON.stringify({}));
 
-  // ── One-time base recalculation for passive subjects ──────────────────────
-  // Ensures total (base + sessions + hours) exactly matches the teacher report target.
-  // Runs once per target change; keyed by target value so it re-runs if target changes.
-  const PASSIVE_TARGETS={el3:132.7};
-  const migKey='st_passive_base_migrated';
-  let migDone={};try{migDone=JSON.parse(localStorage.getItem(migKey)||'{}');}catch(e){}
-  let needsMig=Object.keys(PASSIVE_TARGETS).some(id=>migDone[id]!==PASSIVE_TARGETS[id]);
-  if(needsMig){
-    try{
-      const sessions=JSON.parse(localStorage.getItem('st_sessions')||'[]');
-      const hours=JSON.parse(localStorage.getItem('st_hours')||'{}');
-      const subjs=JSON.parse(localStorage.getItem('st_subjs')||'[]');
-      let changed=false;
-      subjs.forEach(s=>{
-        if(!PASSIVE_TARGETS[s.id]||migDone[s.id]===PASSIVE_TARGETS[s.id])return;
-        const target=PASSIVE_TARGETS[s.id];
-        const sessH=sessions.filter(x=>x.subjectId===s.id).reduce((a,x)=>a+x.hours,0);
-        const hoursH=hours[s.id]||0;
-        s.base=Math.max(0,Math.round((target-sessH-hoursH)*10)/10);
-        migDone[s.id]=target;
-        changed=true;
-      });
-      if(changed){
-        localStorage.setItem('st_subjs',JSON.stringify(subjs));
-        localStorage.setItem(migKey,JSON.stringify(migDone));
-      }
-    }catch(e){}
-  }
-  // ── End passive base migration ─────────────────────────────────────────────
-
+  applyPassiveReset();
   applyDarkMode(localStorage.getItem('st_dark')==='1');
   // Deep link support: open specific page via URL hash e.g. #log
   const hash=window.location.hash.replace('#','');
