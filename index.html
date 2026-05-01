@@ -205,6 +205,13 @@ a{color:inherit;text-decoration:none}
 
 /* LOG PAGE */
 .log-layout{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.class-prompt{display:flex;align-items:center;gap:12px;background:#6366f111;border:1px solid #6366f133;border-radius:14px;padding:12px 14px;margin-bottom:14px}
+.class-prompt-icon{font-size:20px;flex-shrink:0}
+.class-prompt-text{flex:1;min-width:0}
+.class-prompt-title{font-size:13px;font-weight:700;color:var(--text)}
+.class-prompt-sub{font-size:12px;color:var(--text2);margin-top:1px}
+.class-prompt-btn{flex-shrink:0;background:#6366f1;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer}
+.class-prompt-dismiss{flex-shrink:0;background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:0 2px;line-height:1}
 .form-group{margin-bottom:14px}
 .form-label{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:5px;display:block}
 .form-input{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:9px 12px;background:var(--bg);font-size:14px;color:var(--text);transition:all 0.15s}
@@ -520,6 +527,7 @@ a{color:inherit;text-decoration:none}
 
     <!-- PAGE: LOG -->
     <div class="page" id="page-log">
+      <div id="class-log-prompts"></div>
       <div class="log-layout">
         <div>
           <div class="card">
@@ -1442,11 +1450,42 @@ function renderLog(){
   const subjs=loadSubjects();
   const available=subjs.filter(s=>!s.done);
 
-  // Find current or next study block from schedule
+  // ── Class log prompts ─────────────────────────────────────────────────────
   const schedule=loadSchedule();
   const now=new Date();
   const dow=now.getDay();
   const nowMins=now.getHours()*60+now.getMinutes();
+  const todayStr2=todayStr();
+  const sessions=loadSessions();
+  const dismissed=JSON.parse(localStorage.getItem('st_dismissed_class_prompts')||'[]');
+
+  // Find class blocks that ended today and haven't been logged yet
+  const classPrompts=schedule
+    .filter(b=>b.day===dow&&b.type==='class'&&b.subjectId&&nowMins>toMins(b.end))
+    .filter(b=>{
+      const key=todayStr2+'_'+b.id;
+      if(dismissed.includes(key))return false;
+      // Already logged this subject today overlapping this block?
+      return!sessions.find(s=>s.subjectId===b.subjectId&&s.date===todayStr2&&s.start===b.start);
+    });
+
+  const promptsEl=document.getElementById('class-log-prompts');
+  if(promptsEl){
+    promptsEl.innerHTML=classPrompts.map(b=>{
+      const subj=subjs.find(s=>s.id===b.subjectId);
+      const key=todayStr2+'_'+b.id;
+      return'<div class="class-prompt" id="cp-'+b.id+'">'+
+        '<div class="class-prompt-icon">🎓</div>'+
+        '<div class="class-prompt-text">'+
+          '<div class="class-prompt-title">Log '+escHtml(b.label)+'?</div>'+
+          '<div class="class-prompt-sub">'+b.start+'–'+b.end+' · '+escHtml(subj?subj.name:b.subjectId)+'</div>'+
+        '</div>'+
+        '<button class="class-prompt-btn" onclick="autofillClassLog(\''+b.subjectId+'\',\''+b.start+'\',\''+b.end+'\',\''+escHtml(b.label)+'\',\''+b.id+'\')">Autofill</button>'+
+        '<button class="class-prompt-dismiss" onclick="dismissClassPrompt(\''+key+'\',\''+b.id+'\')" title="Dismiss">×</button>'+
+      '</div>';
+    }).join('');
+  }
+
   const todayBlocks=schedule.filter(b=>b.day===dow).sort((a,b)=>toMins(a.start)-toMins(b.start));
   const activeBlock=todayBlocks.find(b=>b.type==='study'&&nowMins>=toMins(b.start)&&nowMins<toMins(b.end));
   const nextBlock=todayBlocks.find(b=>b.type==='study'&&toMins(b.start)>nowMins);
@@ -1484,6 +1523,33 @@ function renderLog(){
   if(!dateIn.value)dateIn.value=todayStr();
   updateLogDuration();
   renderLogEntries();
+}
+
+function autofillClassLog(subjectId,start,end,label,blockId){
+  // Fill the log form with class details
+  const sel=document.getElementById('log-subject');
+  if(sel)sel.value=subjectId;
+  const ls=document.getElementById('log-start');
+  const le=document.getElementById('log-end');
+  const ld=document.getElementById('log-date');
+  const ln=document.getElementById('log-notes');
+  if(ls)ls.value=start;
+  if(le)le.value=end;
+  if(ld)ld.value=todayStr();
+  if(ln)ln.value=label;
+  updateLogDuration();
+  // Dismiss the prompt
+  const key=todayStr()+'_'+blockId;
+  dismissClassPrompt(key,blockId);
+  // Scroll to form
+  document.getElementById('log-subject')&&document.getElementById('log-subject').scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+function dismissClassPrompt(key,blockId){
+  const dismissed=JSON.parse(localStorage.getItem('st_dismissed_class_prompts')||'[]');
+  if(!dismissed.includes(key)){dismissed.push(key);localStorage.setItem('st_dismissed_class_prompts',JSON.stringify(dismissed));}
+  const el=document.getElementById('cp-'+blockId);
+  if(el)el.remove();
 }
 
 function renderLogEntries(){
