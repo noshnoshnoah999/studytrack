@@ -996,12 +996,14 @@ function loadSchedule(){
       const sched=JSON.parse(s);
       // Inject new class blocks if not already present
       const NEW_BLOCKS=[
-        {id:'block_am_hist', day:5, type:'class', start:'11:00', end:'12:00', label:'US History (School)', subjectId:null, locked:false},
-        {id:'block_jp_exch', day:5, type:'class', start:'14:00', end:'15:00', label:'Japanese Exchange', subjectId:null, locked:false},
+        {id:'block_am_hist', day:5, type:'class', start:'11:00', end:'12:00', label:'US History (School)', subjectId:'us_hist', locked:false},
+        {id:'block_jp_exch', day:5, type:'class', start:'14:00', end:'15:00', label:'Japanese Exchange', subjectId:'japanese', locked:false},
       ];
       let changed=false;
       NEW_BLOCKS.forEach(nb=>{
-        if(!sched.find(b=>b.id===nb.id)){sched.push(nb);changed=true;}
+        const existing=sched.find(b=>b.id===nb.id);
+        if(!existing){sched.push(nb);changed=true;}
+        else if(existing.subjectId!==nb.subjectId){existing.subjectId=nb.subjectId;changed=true;}
       });
       if(changed){localStorage.setItem('st_sched',JSON.stringify(sched));sbPush('st_sched',sched);}
       return sched;
