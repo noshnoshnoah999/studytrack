@@ -820,7 +820,7 @@ function renderNowNext(){
   if(!el)return;
   const schedule=loadSchedule();
   const subjs=loadSubjects();
-  const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b'};
+  const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',am_hist:'#b45309',jp_exch:'#7c3aed'};
   const now=new Date();
   const dow=now.getDay();
   const nowMins=now.getHours()*60+now.getMinutes();
@@ -905,6 +905,8 @@ const DEFAULT_SUBJECTS=[
   {id:'algebra1', name:'Algebra 1',           req:75,  base:0,     passive:false, locked:true,  done:false},
   {id:'el2',      name:'Electives 2',         req:150, base:151.4, passive:true,  locked:false, done:true },
   {id:'el3',      name:'Electives 3',         req:150, base:104.8, passive:true,  locked:false, done:false},
+  {id:'am_hist',  name:'American History',    req:75,  base:0,     passive:false, locked:false, done:false},
+  {id:'jp_exch',  name:'Japanese Exchange',   req:75,  base:0,     passive:false, locked:false, done:false},
 ];
 
 function makeDefaultSchedule(){
@@ -958,23 +960,42 @@ function loadSubjects(){
     const s=localStorage.getItem('st_subjs');
     if(s){
       const stored=JSON.parse(s);
-      // Always sync baselines from DEFAULT_SUBJECTS so teacher updates apply automatically
-      return stored.map(subj=>{
+      // Sync fields from defaults for existing subjects
+      const result=stored.map(subj=>{
         const def=DEFAULT_SUBJECTS.find(d=>d.id===subj.id);
         if(!def) return subj;
-        // Sync baseline, done, and passive overrides from defaults
         const out={...subj, base:def.base, done:def.done};
-        // Force passive flag for subjects that can't be self-scheduled
         if(def.passive===true) out.passive=true;
         return out;
       });
+      // Add any new subjects from defaults not yet in stored data
+      DEFAULT_SUBJECTS.forEach(def=>{
+        if(!result.find(s=>s.id===def.id)) result.push({...def});
+      });
+      return result;
     }
   }catch(e){}
   return JSON.parse(JSON.stringify(DEFAULT_SUBJECTS));
 }
 function saveSubjects(s){localStorage.setItem('st_subjs',JSON.stringify(s));sbPush('st_subjs',s);}
 function loadSchedule(){
-  try{const s=localStorage.getItem('st_sched');if(s)return JSON.parse(s);}catch(e){}
+  try{
+    const s=localStorage.getItem('st_sched');
+    if(s){
+      const sched=JSON.parse(s);
+      // Inject new class blocks if not already present
+      const NEW_BLOCKS=[
+        {id:'block_am_hist', day:5, type:'study', start:'11:00', end:'12:00', label:'American History', subjectId:'am_hist', locked:false},
+        {id:'block_jp_exch', day:5, type:'study', start:'14:00', end:'15:00', label:'Japanese Exchange', subjectId:'jp_exch', locked:false},
+      ];
+      let changed=false;
+      NEW_BLOCKS.forEach(nb=>{
+        if(!sched.find(b=>b.id===nb.id)){sched.push(nb);changed=true;}
+      });
+      if(changed){localStorage.setItem('st_sched',JSON.stringify(sched));sbPush('st_sched',sched);}
+      return sched;
+    }
+  }catch(e){}
   return makeDefaultSchedule();
 }
 function saveSchedule(s){localStorage.setItem('st_sched',JSON.stringify(s));sbPush('st_sched',s);}
@@ -1175,7 +1196,7 @@ function renderSchedule(){
   const DAY_ORDER=[1,2,3,4,5,6,0];
   const DAY_NAMES={0:'Sunday',1:'Monday',2:'Tuesday',3:'Wednesday',4:'Thursday',5:'Friday',6:'Saturday'};
 
-  const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b'};
+  const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',am_hist:'#b45309',jp_exch:'#7c3aed'};
   const DAY_SHORT={0:'Sun',1:'Mon',2:'Tue',3:'Wed',4:'Thu',5:'Fri',6:'Sat'};
 
   // Build day tabs (always shown)
@@ -1566,7 +1587,7 @@ function renderHistory(){
     const cards=daySessions.map(s=>{
       const subj=subjs.find(x=>x.id===s.subjectId);
       const name=subj?subj.name:(s.subjectId||'Unknown');
-      const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b'};
+      const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',am_hist:'#b45309',jp_exch:'#7c3aed'};
       const color=SUBJ_COLORS[s.subjectId]||'var(--o)';
       const isHex=color.startsWith('#');
       const bg=isHex?(color+'12'):'rgba(249,115,22,0.07)';
@@ -1632,7 +1653,7 @@ let timerInterval=null;
 let timerStart=null;
 let timerStartWallClock=null;
 let timerSubjectId=null;
-const SUBJ_COLORS_T={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b'};
+const SUBJ_COLORS_T={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',am_hist:'#b45309',jp_exch:'#7c3aed'};
 
 function timerElapsedSecs(){return timerStart?Math.floor((Date.now()-timerStart)/1000):0;}
 
@@ -2133,7 +2154,7 @@ function checkStreak(){
 function renderFocusCard(){
   const subjs=loadSubjects();
   const hours=loadHours();
-  const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b'};
+  const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',am_hist:'#b45309',jp_exch:'#7c3aed'};
   const el=document.getElementById('focus-card');
   if(!el)return;
 
