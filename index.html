@@ -1563,6 +1563,7 @@ function renderHistory(){
     const cards=daySessions.map(s=>{
       const subj=subjs.find(x=>x.id===s.subjectId);
       const name=subj?subj.name:(s.subjectId||'Unknown');
+      const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b'};
       const color=SUBJ_COLORS[s.subjectId]||'var(--o)';
       const isHex=color.startsWith('#');
       const bg=isHex?(color+'12'):'rgba(249,115,22,0.07)';
