@@ -2133,54 +2133,57 @@ function checkStreak(){
 function renderFocusCard(){
   const subjs=loadSubjects();
   const hours=loadHours();
-  const candidates=subjs
-    .filter(s=>!s.done&&!s.passive)
-    .map(s=>{
-      const logged=s.base+(hours[s.id]||0);
-      const pct=s.req>0?logged/s.req*100:100;
-      const left=Math.max(0,s.req-logged);
-      return{...s,logged,pct,left};
-    })
-    .sort((a,b)=>a.pct-b.pct)
-    .slice(0,3);
-
   const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b'};
   const el=document.getElementById('focus-card');
   if(!el)return;
-  if(!candidates.length){el.style.display='none';return;}
-  el.style.display='';
 
-  // Build scheduled time per subject for today
+  // Get today's scheduled study blocks
   const sched=loadSchedule();
   const todayDow=new Date().getDay();
   const todayBlocks=sched.filter(b=>b.day===todayDow&&b.type==='study'&&b.subjectId);
-  function scheduledToday(subjectId){
-    return todayBlocks
-      .filter(b=>b.subjectId===subjectId)
-      .reduce((a,b)=>{
-        const [sh,sm]=b.start.split(':').map(Number);
-        const [eh,em]=b.end.split(':').map(Number);
-        return a+(eh*60+em-sh*60-sm)/60;
-      },0);
+
+  // Build scheduled hours per subject today
+  const schedMap={};
+  todayBlocks.forEach(b=>{
+    const [sh,sm]=b.start.split(':').map(Number);
+    const [eh,em]=b.end.split(':').map(Number);
+    const h=(eh*60+em-sh*60-sm)/60;
+    schedMap[b.subjectId]=(schedMap[b.subjectId]||0)+h;
+  });
+
+  // Only subjects scheduled today, enriched with progress info
+  const scheduled=Object.keys(schedMap)
+    .map(id=>{
+      const s=subjs.find(x=>x.id===id);
+      if(!s||s.done)return null;
+      const logged=s.base+(hours[s.id]||0);
+      const pct=s.req>0?logged/s.req*100:100;
+      const left=Math.max(0,s.req-logged);
+      return{...s,logged,pct,left,schedH:schedMap[id]};
+    })
+    .filter(Boolean)
+    .sort((a,b)=>a.pct-b.pct); // most behind first
+
+  el.style.display='';
+  if(!scheduled.length){
+    el.innerHTML='<div class="card-title">🎯 Today\'s Schedule</div>'+
+      '<div style="color:var(--text2);font-size:14px;padding:4px 0">Nothing scheduled for today</div>';
+    return;
   }
 
   let rows='';
-  candidates.forEach((s)=>{
+  scheduled.forEach(s=>{
     const color=SUBJ_COLORS[s.id]||'var(--o)';
-    const schedH=scheduledToday(s.id);
-    const rightHtml=schedH>0
-      ? '<div class="focus-suggest">'+fmtH(schedH)+' <span style="font-size:11px;font-weight:500;color:var(--text2)">today</span></div>'
-      : '<div class="focus-suggest" style="color:var(--text3);font-size:12px">not scheduled</div>';
     rows+='<div class="focus-row">'+
       '<div class="focus-dot" style="background:'+color+'"></div>'+
       '<div class="focus-main">'+
         '<div class="focus-name">'+escHtml(s.name)+'</div>'+
         '<div class="focus-behind">'+Math.round(s.pct)+'% complete · '+fmtH(s.left)+' left</div>'+
       '</div>'+
-      rightHtml+
+      '<div class="focus-suggest">'+fmtH(s.schedH)+'</div>'+
     '</div>';
   });
-  el.innerHTML='<div class="card-title">🎯 Focus Today</div>'+rows;
+  el.innerHTML='<div class="card-title">🎯 Today\'s Schedule</div>'+rows;
 }
 
 // ── WEEKLY SUMMARY ────────────────────────────────────────────────────────────
