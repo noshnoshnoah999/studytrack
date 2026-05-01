@@ -2554,6 +2554,8 @@ async function syncFromCloud(){
         updated=true;
       }
     });
+    // Re-apply subject migrations after cloud sync (ensures base/done from DEFAULT_SUBJECTS wins)
+    saveSubjects(loadSubjects());
     setSyncUI('synced','Synced ✓');
     if(updated)showPage(currentPage);
   }catch(e){
