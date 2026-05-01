@@ -2172,6 +2172,22 @@ async function syncFromCloud(){
     navigator.serviceWorker.register('/studytrack/sw.js',{scope:'/studytrack/'})
       .then(reg=>console.log('SW registered',reg.scope))
       .catch(err=>console.warn('SW registration failed',err));
+    // Listen for "Start Timer" action tapped on notification
+    navigator.serviceWorker.addEventListener('message',e=>{
+      if(e.data&&e.data.type==='start-timer'&&e.data.subjectId){
+        timerSubjectId=e.data.subjectId;
+        showPage('timer');
+      }
+    });
+  }
+  // Also handle URL param ?starttimer= when app is opened fresh from notification action
+  const urlParams=new URLSearchParams(window.location.search);
+  const startTimerSubject=urlParams.get('starttimer');
+  if(startTimerSubject){
+    timerSubjectId=startTimerSubject;
+    showPage('timer');
+    // Clean up URL
+    history.replaceState(null,'','/studytrack/');
   }
   // Refresh now/next banner every minute
   setInterval(()=>{if(document.getElementById('page-dashboard').classList.contains('active'))renderNowNext();},60000);
