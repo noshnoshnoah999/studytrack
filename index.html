@@ -1582,6 +1582,51 @@ function timerPageReset(){
   renderTimerPage();
 }
 
+// Called from notification action: start timer for a subject (optionally with a backdated start time)
+function startTimerForSubject(subjectId, blockStartStr){
+  timerSubjectId=subjectId;
+  clearInterval(timerInterval);
+  // If block already started (e.g. notification fires a few mins late), backdate the start
+  if(blockStartStr){
+    const now=new Date();
+    const [h,m]=blockStartStr.split(':').map(Number);
+    const blockStart=new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m,0,0);
+    timerStartWallClock=blockStart;
+    timerStart=blockStart.getTime();
+  } else {
+    timerStartWallClock=new Date();
+    timerStart=Date.now();
+  }
+  timerInterval=setInterval(timerTick,1000);
+  showPage('timer');
+  renderTimerPage();
+}
+
+// Called from notification action: stop timer and pre-fill log page
+function stopTimerAndLog(){
+  if(!timerStart)return;
+  clearInterval(timerInterval);
+  timerInterval=null;
+  const endTime=new Date();
+  const fmt=d=>String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  const startStr=fmt(timerStartWallClock);
+  const endStr=fmt(endTime);
+  // Navigate to log page and pre-fill fields
+  showPage('log');
+  setTimeout(()=>{
+    const sel=document.getElementById('log-subject');
+    if(sel&&timerSubjectId)sel.value=timerSubjectId;
+    const ls=document.getElementById('log-start');
+    const le=document.getElementById('log-end');
+    if(ls)ls.value=startStr;
+    if(le)le.value=endStr;
+    updateLogDuration();
+  },100);
+  // Reset timer state
+  timerStart=null;
+  timerStartWallClock=null;
+}
+
 function timerPageLog(){
   if(!timerStartWallClock)return;
   const endTime=new Date();
@@ -2172,27 +2217,23 @@ async function syncFromCloud(){
     navigator.serviceWorker.register('/studytrack/sw.js',{scope:'/studytrack/'})
       .then(reg=>console.log('SW registered',reg.scope))
       .catch(err=>console.warn('SW registration failed',err));
-    // Listen for "Log Session" action tapped on notification
+    // Listen for notification actions
     navigator.serviceWorker.addEventListener('message',e=>{
-      if(e.data&&e.data.type==='log-session'&&e.data.subjectId){
-        // Pre-select subject on log page and navigate
-        showPage('log');
-        setTimeout(()=>{
-          const sel=document.getElementById('log-subject');
-          if(sel)sel.value=e.data.subjectId;
-        },100);
+      if(!e.data)return;
+      if(e.data.type==='start-timer'){
+        startTimerForSubject(e.data.subjectId, e.data.blockStart||null);
+      } else if(e.data.type==='stop-log'){
+        stopTimerAndLog();
       }
     });
   }
-  // Also handle URL param ?startlog= when app is opened fresh from notification action
+  // Handle URL params when app opened fresh from notification action
   const urlParams=new URLSearchParams(window.location.search);
-  const startLogSubject=urlParams.get('startlog');
-  if(startLogSubject){
-    showPage('log');
-    setTimeout(()=>{
-      const sel=document.getElementById('log-subject');
-      if(sel)sel.value=startLogSubject;
-    },100);
+  if(urlParams.get('starttimer')){
+    startTimerForSubject(urlParams.get('starttimer'), urlParams.get('blockstart')||null);
+    history.replaceState(null,'','/studytrack/');
+  } else if(urlParams.get('stoplog')){
+    stopTimerAndLog();
     history.replaceState(null,'','/studytrack/');
   }
   // Refresh now/next banner every minute
