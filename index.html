@@ -122,6 +122,7 @@ a{color:inherit;text-decoration:none}
 .sbc-badge{font-size:10px;font-weight:800;padding:2px 6px;border-radius:5px;letter-spacing:0.3px;flex-shrink:0}
 .sbc-badge.now{background:#ef4444;color:#fff}
 .sbc-badge.break{background:#9ca3af22;color:#6b7280}
+.sbc-badge.class{background:#6366f122;color:#6366f1}
 .sbc-prog{height:3px;border-radius:2px;background:rgba(0,0,0,0.07);margin-top:7px;overflow:hidden}
 .sbc-prog-fill{height:100%;border-radius:2px;transition:width 0.3s}
 .day-summary{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--bg3);border-radius:12px;margin-bottom:16px}
@@ -324,6 +325,7 @@ a{color:inherit;text-decoration:none}
 .divider{height:1px;background:var(--border);margin:16px 0}
 
 /* TIMER PAGE */
+/* ── Timer idle/stopped state ── */
 .timer-hero{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px 20px 20px}
 .timer-subject-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:100px;font-size:13px;font-weight:700;margin-bottom:8px}
 .timer-context{font-size:13px;color:var(--text2);margin-bottom:24px;min-height:20px}
@@ -341,6 +343,17 @@ a{color:inherit;text-decoration:none}
 .timer-stat{flex:1;background:var(--bg3);border-radius:12px;padding:12px;text-align:center}
 .timer-stat-val{font-size:18px;font-weight:800;color:var(--text)}
 .timer-stat-lbl{font-size:11px;color:var(--text2);font-weight:600;margin-top:2px}
+/* ── Distraction-free running state ── */
+.timer-df{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100dvh - 140px);text-align:center;padding:24px;position:relative}
+.timer-df-subject{display:inline-flex;align-items:center;gap:8px;padding:7px 18px;border-radius:100px;font-size:14px;font-weight:700;margin-bottom:40px}
+.timer-df-clock{font-size:clamp(80px,22vw,130px);font-weight:800;letter-spacing:-4px;font-variant-numeric:tabular-nums;line-height:1;margin-bottom:52px;transition:color 0.3s}
+.timer-df-stop{height:64px;padding:0 48px;border-radius:32px;font-size:18px;font-weight:700;border:none;cursor:pointer;background:var(--err);color:#fff;transition:opacity 0.2s}
+.timer-df-stop:active{opacity:0.8}
+.timer-df-block-info{position:absolute;top:16px;right:16px;text-align:right}
+.timer-df-block-label{font-size:11px;color:var(--text3);font-weight:600;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:2px}
+.timer-df-block-time{font-size:15px;font-weight:800;color:var(--text)}
+.timer-df-prog-wrap{position:absolute;bottom:0;left:0;right:0;height:5px;background:var(--border);border-radius:0 0 0 0}
+.timer-df-prog-fill{height:100%;border-radius:3px;transition:width 1s linear}
 
 /* NOW / NEXT BANNER */
 .now-next-banner{display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:14px;margin-bottom:14px;border:1.5px solid transparent;cursor:default}
@@ -446,7 +459,7 @@ a{color:inherit;text-decoration:none}
         Timer
       </div>
       <div class="nav-item" data-page="history" onclick="showPage('history')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>
         History
       </div>
       <div class="nav-item" data-page="graduation" onclick="showPage('graduation')">
@@ -905,8 +918,6 @@ const DEFAULT_SUBJECTS=[
   {id:'algebra1', name:'Algebra 1',           req:75,  base:0,     passive:false, locked:true,  done:false},
   {id:'el2',      name:'Electives 2',         req:150, base:151.4, passive:true,  locked:false, done:true },
   {id:'el3',      name:'Electives 3',         req:150, base:104.8, passive:true,  locked:false, done:false},
-  {id:'am_hist',  name:'American History',    req:75,  base:0,     passive:false, locked:false, done:false},
-  {id:'jp_exch',  name:'Japanese Exchange',   req:75,  base:0,     passive:false, locked:false, done:false},
 ];
 
 function makeDefaultSchedule(){
@@ -985,8 +996,8 @@ function loadSchedule(){
       const sched=JSON.parse(s);
       // Inject new class blocks if not already present
       const NEW_BLOCKS=[
-        {id:'block_am_hist', day:5, type:'study', start:'11:00', end:'12:00', label:'American History', subjectId:'am_hist', locked:false},
-        {id:'block_jp_exch', day:5, type:'study', start:'14:00', end:'15:00', label:'Japanese Exchange', subjectId:'jp_exch', locked:false},
+        {id:'block_am_hist', day:5, type:'class', start:'11:00', end:'12:00', label:'US History (School)', subjectId:null, locked:false},
+        {id:'block_jp_exch', day:5, type:'class', start:'14:00', end:'15:00', label:'Japanese Exchange', subjectId:null, locked:false},
       ];
       let changed=false;
       NEW_BLOCKS.forEach(nb=>{
@@ -1232,7 +1243,7 @@ function renderSchedule(){
         html+='<div class="no-blocks">No blocks — tap + to add</div>';
       } else {
         blocks.forEach(bl=>{
-          const dotColor=bl.type==='work'?'#d97706':bl.type==='break'?'#9ca3af':bl.locked?'var(--o)':(SUBJ_COLORS[bl.subjectId]||'var(--o)');
+          const dotColor=bl.type==='work'?'#d97706':bl.type==='break'?'#9ca3af':bl.type==='class'?'#6366f1':bl.locked?'var(--o)':(SUBJ_COLORS[bl.subjectId]||'var(--o)');
           html+='<div class="block-card">'+
             '<div class="block-dot" style="background:'+dotColor+'"></div>'+
             '<div class="block-info">'+escHtml(bl.label)+'<div class="block-meta">'+bl.start+'–'+bl.end+'</div></div>'+
@@ -1291,6 +1302,7 @@ function renderSchedule(){
         let color;
         if(bl.type==='work') color='#d97706';
         else if(bl.type==='break') color='#9ca3af';
+        else if(bl.type==='class') color='#6366f1';
         else if(bl.locked) color='var(--o)';
         else color=SUBJ_COLORS[bl.subjectId]||'var(--o)';
         const isHex=color.startsWith('#');
@@ -1302,6 +1314,7 @@ function renderSchedule(){
         let badge='';
         if(isActive) badge='<span class="sbc-badge now">NOW</span>';
         else if(bl.type==='break') badge='<span class="sbc-badge break">BREAK</span>';
+        else if(bl.type==='class') badge='<span class="sbc-badge class">CLASS</span>';
         else if(bl.locked) badge='<span style="opacity:0.5;font-size:12px">🔒</span>';
         html+='<div class="sbc'+extraClass+'" style="border-left-color:'+color+';background:'+(isActive?activeBg:bg)+'">'+
           '<div class="sbc-main">'+
@@ -1726,58 +1739,74 @@ function renderTimerPage(){
   const elapsed=timerElapsedSecs();
 
   const el=document.getElementById('timer-page-inner');
-  el.innerHTML=`
-    <div class="timer-hero">
-      <div class="timer-subject-badge" style="background:${subjColor}22;color:${subjColor}">
-        <span style="width:8px;height:8px;border-radius:50%;background:${subjColor};display:inline-block"></span>
-        ${escHtml(currentSubj?currentSubj.name:'Select subject')}
-      </div>
-      <div class="timer-context">${contextLine}</div>
 
-      <div class="timer-clock" id="tp-clock" style="color:${running?'var(--err)':stopped?'var(--ok)':'var(--text)'}">
-        ${timerFmtClock(elapsed)}
-      </div>
-      <div class="timer-sub-progress">${currentSubj?`${fmtH(todaySubjH)} logged today · ${Math.round(pct)}% overall`:''}</div>
-
-      <div class="timer-controls">
-        <button class="timer-btn-main ${running?'running':stopped?'done':'idle'}" onclick="timerPageToggle()">
-          ${running?'⏹ Stop':stopped?'▶ New Session':'▶ Start'}
-        </button>
-        ${(running||stopped)?'<button class="timer-btn-reset" onclick="timerPageReset()">Reset</button>':''}
-      </div>
-
-      <div class="timer-stat-row">
-        <div class="timer-stat">
-          <div class="timer-stat-val">${fmtH(todaySubjH)}</div>
-          <div class="timer-stat-lbl">Today</div>
+  if(running){
+    // ── Distraction-free mode ──────────────────────────────────────────
+    let blockInfoHtml='';
+    let progHtml='';
+    if(activeBlock&&currentSubj&&activeBlock.subjectId===currentSubj.id){
+      const blockDur=toMins(activeBlock.end)-toMins(activeBlock.start);
+      const elapsed2=nowMins-toMins(activeBlock.start);
+      const progPct=Math.min(100,Math.max(0,elapsed2/blockDur*100));
+      const remaining=Math.max(0,toMins(activeBlock.end)-nowMins);
+      blockInfoHtml=`<div class="timer-df-block-info">
+        <div class="timer-df-block-label">block ends ${activeBlock.end}</div>
+        <div class="timer-df-block-time" style="color:${subjColor}">${durStr(remaining)} left</div>
+      </div>`;
+      progHtml=`<div class="timer-df-prog-wrap"><div class="timer-df-prog-fill" style="width:${progPct}%;background:${subjColor}"></div></div>`;
+    }
+    el.innerHTML=`
+      <div class="timer-df">
+        ${blockInfoHtml}
+        <div class="timer-df-subject" style="background:${subjColor}18;color:${subjColor}">
+          <span style="width:9px;height:9px;border-radius:50%;background:${subjColor};display:inline-block"></span>
+          ${escHtml(currentSubj?currentSubj.name:'Studying')}
         </div>
-        <div class="timer-stat">
-          <div class="timer-stat-val">${Math.round(pct)}%</div>
-          <div class="timer-stat-lbl">of subject done</div>
+        <div class="timer-df-clock" id="tp-clock" style="color:${subjColor}">${timerFmtClock(elapsed)}</div>
+        <button class="timer-df-stop" onclick="timerPageToggle()">⏹ Stop</button>
+        ${progHtml}
+      </div>`;
+  } else {
+    // ── Idle / stopped state ───────────────────────────────────────────
+    el.innerHTML=`
+      <div class="timer-hero">
+        <div class="timer-subject-badge" style="background:${subjColor}22;color:${subjColor}">
+          <span style="width:8px;height:8px;border-radius:50%;background:${subjColor};display:inline-block"></span>
+          ${escHtml(currentSubj?currentSubj.name:'Select subject')}
         </div>
-        <div class="timer-stat">
-          <div class="timer-stat-val">${fmtH(left)}</div>
-          <div class="timer-stat-lbl">hrs left in subject</div>
+        <div class="timer-context">${contextLine}</div>
+        <div class="timer-clock" id="tp-clock" style="color:${stopped?'var(--ok)':'var(--text)'}">
+          ${timerFmtClock(elapsed)}
+        </div>
+        <div class="timer-sub-progress">${currentSubj?`${fmtH(todaySubjH)} logged today · ${Math.round(pct)}% overall`:''}</div>
+        <div class="timer-controls">
+          <button class="timer-btn-main ${stopped?'done':'idle'}" onclick="timerPageToggle()">
+            ${stopped?'▶ New Session':'▶ Start'}
+          </button>
+          ${stopped?'<button class="timer-btn-reset" onclick="timerPageReset()">Reset</button>':''}
+        </div>
+        <div class="timer-stat-row">
+          <div class="timer-stat"><div class="timer-stat-val">${fmtH(todaySubjH)}</div><div class="timer-stat-lbl">Today</div></div>
+          <div class="timer-stat"><div class="timer-stat-val">${Math.round(pct)}%</div><div class="timer-stat-lbl">done</div></div>
+          <div class="timer-stat"><div class="timer-stat-val">${fmtH(left)}</div><div class="timer-stat-lbl">left</div></div>
         </div>
       </div>
-    </div>
-
-    <div class="card" style="margin-top:16px">
-      <div class="form-group" style="margin-bottom:${stopped?'16px':'0'}">
-        <label class="form-label">Subject</label>
-        <select class="form-input timer-subject-select" id="tp-subject" onchange="timerChangeSubject(this.value)" ${running?'disabled':''}>
-          ${schedOpt+restOpts}
-        </select>
-      </div>
-      ${stopped?`
-      <div class="form-group">
-        <label class="form-label">Notes (optional)</label>
-        <input type="text" class="form-input" id="tp-notes" placeholder="e.g. chapter 3 review">
-      </div>
-      <button class="btn-primary" onclick="timerPageLog()" style="width:100%">✓ Log This Session</button>
-      `:''}
-    </div>
-  `;
+      <div class="card" style="margin-top:16px">
+        <div class="form-group" style="margin-bottom:${stopped?'16px':'0'}">
+          <label class="form-label">Subject</label>
+          <select class="form-input timer-subject-select" id="tp-subject" onchange="timerChangeSubject(this.value)">
+            ${schedOpt+restOpts}
+          </select>
+        </div>
+        ${stopped?`
+        <div class="form-group">
+          <label class="form-label">Notes (optional)</label>
+          <input type="text" class="form-input" id="tp-notes" placeholder="e.g. chapter 3 review">
+        </div>
+        <button class="btn-primary" onclick="timerPageLog()" style="width:100%">✓ Log This Session</button>
+        `:''}
+      </div>`;
+  }
 
   // Set current subject in dropdown
   const tpSel=document.getElementById('tp-subject');
