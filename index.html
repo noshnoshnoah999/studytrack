@@ -983,7 +983,8 @@ function loadSubjects(){
       const result=stored.map(subj=>{
         const def=DEFAULT_SUBJECTS.find(d=>d.id===subj.id);
         if(!def) return subj;
-        const out={...subj, base:def.base, done:def.done};
+        const out={...subj};
+        if(def.done===true) out.done=true;
         if(def.passive===true) out.passive=true;
         return out;
       });
