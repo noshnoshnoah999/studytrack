@@ -7,7 +7,7 @@ on:
 
 jobs:
   notify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-lates
     steps:
       - name: Send study notifications
         env:
@@ -39,10 +39,13 @@ jobs:
           async function sbGet(key) {
             try {
               const r = await fetch(`${SB_URL}/rest/v1/study_data?key=eq.${key}&select=value`, { headers: HDR });
-              if (!r.ok) return null;
+              if (!r.ok) { console.error('sbGet ' + key + ' failed: ' + r.status); return null; }
               const rows = await r.json();
-              return rows && rows[0] ? JSON.parse(rows[0].value) : null;
-            } catch(e) { return null; }
+              if (!rows || !rows[0]) return null;
+              const val = rows[0].value;
+              if (typeof val === 'string') { try { return JSON.parse(val); } catch(e) { return val; } }
+              return val;
+            } catch(e) { console.error('sbGet error:', e.message); return null; }
           }
 
           async function sbSet(key, val) {
