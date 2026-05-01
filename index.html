@@ -2133,7 +2133,6 @@ function checkStreak(){
 function renderFocusCard(){
   const subjs=loadSubjects();
   const hours=loadHours();
-  const goals=loadGoals();
   const candidates=subjs
     .filter(s=>!s.done&&!s.passive)
     .map(s=>{
@@ -2146,25 +2145,39 @@ function renderFocusCard(){
     .slice(0,3);
 
   const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b'};
-  const dayTarget=goals.daily;
   const el=document.getElementById('focus-card');
   if(!el)return;
   if(!candidates.length){el.style.display='none';return;}
   el.style.display='';
 
-  // Suggest hours per subject (split today's target across top 3)
-  const splits=[0.5,0.3,0.2];
+  // Build scheduled time per subject for today
+  const sched=loadSchedule();
+  const todayDow=new Date().getDay();
+  const todayBlocks=sched.filter(b=>b.day===todayDow&&b.type==='study'&&b.subjectId);
+  function scheduledToday(subjectId){
+    return todayBlocks
+      .filter(b=>b.subjectId===subjectId)
+      .reduce((a,b)=>{
+        const [sh,sm]=b.start.split(':').map(Number);
+        const [eh,em]=b.end.split(':').map(Number);
+        return a+(eh*60+em-sh*60-sm)/60;
+      },0);
+  }
+
   let rows='';
-  candidates.forEach((s,i)=>{
+  candidates.forEach((s)=>{
     const color=SUBJ_COLORS[s.id]||'var(--o)';
-    const suggest=Math.round(dayTarget*splits[i]*10)/10;
+    const schedH=scheduledToday(s.id);
+    const rightHtml=schedH>0
+      ? '<div class="focus-suggest">'+fmtH(schedH)+' <span style="font-size:11px;font-weight:500;color:var(--text2)">today</span></div>'
+      : '<div class="focus-suggest" style="color:var(--text3);font-size:12px">not scheduled</div>';
     rows+='<div class="focus-row">'+
       '<div class="focus-dot" style="background:'+color+'"></div>'+
       '<div class="focus-main">'+
         '<div class="focus-name">'+escHtml(s.name)+'</div>'+
         '<div class="focus-behind">'+Math.round(s.pct)+'% complete · '+fmtH(s.left)+' left</div>'+
       '</div>'+
-      '<div class="focus-suggest">'+suggest+'h</div>'+
+      rightHtml+
     '</div>';
   });
   el.innerHTML='<div class="card-title">🎯 Focus Today</div>'+rows;
