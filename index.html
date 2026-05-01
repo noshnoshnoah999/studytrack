@@ -1478,9 +1478,13 @@ function renderLog(){
         '<div class="class-prompt-icon">🎓</div>'+
         '<div class="class-prompt-text">'+
           '<div class="class-prompt-title">Log '+escHtml(b.label)+'?</div>'+
-          '<div class="class-prompt-sub">'+b.start+'–'+b.end+' · '+escHtml(subj?subj.name:b.subjectId)+'</div>'+
+          '<div class="class-prompt-sub" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">'+
+            b.start+' – '+
+            '<input type="time" id="cp-end-'+b.id+'" value="'+b.end+'" style="border:1px solid var(--border);border-radius:5px;padding:1px 4px;font-size:12px;font-weight:600;color:var(--text);background:var(--bg);width:80px">'+
+            ' · '+escHtml(subj?subj.name:b.subjectId)+
+          '</div>'+
         '</div>'+
-        '<button class="class-prompt-btn" onclick="autofillClassLog(\''+b.subjectId+'\',\''+b.start+'\',\''+b.end+'\',\''+escHtml(b.label)+'\',\''+b.id+'\')">Autofill</button>'+
+        '<button class="class-prompt-btn" onclick="autofillClassLog(\''+b.subjectId+'\',\''+b.start+'\',document.getElementById(\'cp-end-'+b.id+'\').value,\''+escHtml(b.label)+'\',\''+b.id+'\')">Autofill</button>'+
         '<button class="class-prompt-dismiss" onclick="dismissClassPrompt(\''+key+'\',\''+b.id+'\')" title="Dismiss">×</button>'+
       '</div>';
     }).join('');
