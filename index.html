@@ -902,7 +902,7 @@ const DEFAULT_SUBJECTS=[
   {id:'health',   name:'Health Science',      req:75,  base:2,     passive:false, locked:false, done:false},
   {id:'civics',   name:'Civics',              req:75,  base:0,     passive:false, locked:false, done:false},
   {id:'science',  name:'Science',             req:75,  base:0,     passive:false, locked:false, done:false},
-  {id:'lab_sci',  name:'Lab Science',         req:75,  base:0,     passive:false, locked:false, done:false},
+  {id:'lab_sci',  name:'Lab Science',         req:75,  base:0,     passive:true,  locked:false, done:false},
   {id:'algebra1', name:'Algebra 1',           req:75,  base:0,     passive:false, locked:true,  done:false},
   {id:'el2',      name:'Electives 2',         req:150, base:151.4, passive:true,  locked:false, done:true },
   {id:'el3',      name:'Electives 3',         req:150, base:104.8, passive:true,  locked:false, done:false},
@@ -962,7 +962,12 @@ function loadSubjects(){
       // Always sync baselines from DEFAULT_SUBJECTS so teacher updates apply automatically
       return stored.map(subj=>{
         const def=DEFAULT_SUBJECTS.find(d=>d.id===subj.id);
-        return def ? {...subj, base:def.base, done:def.done} : subj;
+        if(!def) return subj;
+        // Sync baseline, done, and passive overrides from defaults
+        const out={...subj, base:def.base, done:def.done};
+        // Force passive flag for subjects that can't be self-scheduled
+        if(def.passive===true) out.passive=true;
+        return out;
       });
     }
   }catch(e){}
