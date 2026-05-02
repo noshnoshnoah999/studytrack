@@ -2543,36 +2543,21 @@ async function sbPull(key){
   }catch(e){return null;}
 }
 
-// Clean-reset passive subjects: wipe any logged sessions/hours and set base directly.
-// Passive subjects use the teacher report as sole source of truth.
-// Add an entry here whenever the teacher report changes for a passive subject.
+// Passive subject reset — only called from syncFromCloud AFTER fresh data is in localStorage.
+// Sets base directly from the teacher report and strips any logged sessions for passive subjects.
+// Safe to run every sync (idempotent).
 const PASSIVE_RESETS={el3:{base:132.7,done:false}};
-const PASSIVE_RESET_KEY='st_passive_reset_v';
-const PASSIVE_RESET_VER='el3=132.7';
-function applyPassiveReset(){
-  try{
-    if(localStorage.getItem(PASSIVE_RESET_KEY)===PASSIVE_RESET_VER)return;
-    const subjs=JSON.parse(localStorage.getItem('st_subjs')||'[]');
-    let sessions=JSON.parse(localStorage.getItem('st_sessions')||'[]');
-    const hours=JSON.parse(localStorage.getItem('st_hours')||'{}');
-    let changed=false;
-    Object.entries(PASSIVE_RESETS).forEach(([id,cfg])=>{
-      const s=subjs.find(x=>x.id===id);
-      if(s){s.base=cfg.base;s.done=cfg.done;changed=true;}
-      sessions=sessions.filter(x=>x.subjectId!==id);
-      delete hours[id];
-    });
-    if(changed){
-      localStorage.setItem('st_subjs',JSON.stringify(subjs));
-      localStorage.setItem('st_sessions',JSON.stringify(sessions));
-      localStorage.setItem('st_hours',JSON.stringify(hours));
-      // Push corrected data to Supabase
-      sbPush('st_subjs',subjs);
-      sbPush('st_sessions',sessions);
-      sbPush('st_hours',hours);
-      localStorage.setItem(PASSIVE_RESET_KEY,PASSIVE_RESET_VER);
-    }
-  }catch(e){}
+function applyPassiveReset(subjs,sessions,hours){
+  let subjChanged=false;
+  Object.entries(PASSIVE_RESETS).forEach(([id,cfg])=>{
+    const s=subjs.find(x=>x.id===id);
+    if(s&&(s.base!==cfg.base||s.done!==cfg.done)){s.base=cfg.base;s.done=cfg.done;subjChanged=true;}
+    // Remove any stray sessions/hours logged for passive subjects
+    const before=sessions.length;
+    sessions=sessions.filter(x=>x.subjectId!==id);
+    if(hours[id]!==undefined){delete hours[id];}
+  });
+  return{subjs,sessions,hours,subjChanged};
 }
 
 async function syncFromCloud(){
@@ -2587,8 +2572,17 @@ async function syncFromCloud(){
         updated=true;
       }
     });
-    // Clean-reset passive subjects after cloud sync so Supabase can't overwrite them
-    applyPassiveReset();
+    // Apply passive subject resets using the freshly-synced data
+    try{
+      let subjs=JSON.parse(localStorage.getItem('st_subjs')||'[]');
+      let sessions=JSON.parse(localStorage.getItem('st_sessions')||'[]');
+      let hours=JSON.parse(localStorage.getItem('st_hours')||'{}');
+      const res=applyPassiveReset(subjs,sessions,hours);
+      localStorage.setItem('st_subjs',JSON.stringify(res.subjs));
+      localStorage.setItem('st_sessions',JSON.stringify(res.sessions));
+      localStorage.setItem('st_hours',JSON.stringify(res.hours));
+      if(res.subjChanged){sbPush('st_subjs',res.subjs);}
+    }catch(e){}
     setSyncUI('synced','Synced ✓');
     if(updated)showPage(currentPage);
   }catch(e){
@@ -2603,7 +2597,6 @@ async function syncFromCloud(){
   if(!localStorage.getItem('st_sessions'))localStorage.setItem('st_sessions',JSON.stringify([]));
   if(!localStorage.getItem('st_hours'))localStorage.setItem('st_hours',JSON.stringify({}));
 
-  applyPassiveReset();
   applyDarkMode(localStorage.getItem('st_dark')==='1');
   // Deep link support: open specific page via URL hash e.g. #log
   const hash=window.location.hash.replace('#','');
