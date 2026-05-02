@@ -1385,16 +1385,27 @@ function renderSchedule(){
           return(h%12||12)+':'+(mm||'00')+(h<12?' AM':' PM');
         }
 
+        // Colour — subject colour for study blocks, fixed for others
+        const subj=bl.subjectId?subjs.find(s=>s.id===bl.subjectId):null;
+        const subjName=subj?subj.name:'';
+        let color;
+        if(isBreak) color='#9ca3af';
+        else if(bl.type==='work') color='#d97706';
+        else if(bl.type==='class') color='#6366f1';
+        else color=SUBJ_COLORS[bl.subjectId]||'var(--o)';
+        const isHex=color.startsWith('#');
+        const bgTint=isHex?(isPast?color+'08':color+'14'):'rgba(249,115,22,0.08)';
+        const activeBg=isHex?color+'22':'rgba(249,115,22,0.14)';
+        const dotColor=isBreak?'var(--bg3)':color;
+
         // Badge
         let badge='';
-        if(isActive) badge='<span class="tl-badge now">NOW</span>';
+        if(isActive) badge='<span class="tl-badge now" style="background:'+color+';color:#fff">NOW</span>';
         else if(isBreak) badge='<span class="tl-badge break">BREAK</span>';
         else if(bl.type==='class') badge='<span class="tl-badge class">CLASS</span>';
         else if(bl.locked) badge='<span style="font-size:12px;opacity:0.5">🔒</span>';
 
-        // Sub-line: time range + subject name if available
-        const subj=bl.subjectId?subjs.find(s=>s.id===bl.subjectId):null;
-        const subjName=subj?subj.name:'';
+        // Sub-line
         const timeRange=fmtAmPm(bl.start)+' – '+fmtAmPm(bl.end);
         const subLine=subjName&&subjName!==bl.label?timeRange+' · '+subjName:timeRange;
 
@@ -1402,21 +1413,22 @@ function renderSchedule(){
         const progPct=isActive?Math.min(100,Math.round((nowMins-startMins)/dur*100)):0;
         const minsLeft=isActive?endMins-nowMins:0;
 
-        // Dot class
-        const dotCls=isActive?'tl-dot active':isPast?'tl-dot done':isBreak?'tl-dot break-dot':'tl-dot';
+        // Dot style
+        const dotStyle='background:'+(isActive||(!isPast&&!isBreak)?color:'var(--bg3)')+';border-color:'+(isPast?'var(--bg4)':color)+';'+(isActive?'box-shadow:0 0 0 4px '+color+'28':'');
+        const dotCls=isBreak?'tl-dot break-dot':'tl-dot';
 
         html+=
           '<div class="tl-item">'+
-            '<div class="tl-left"><div class="tl-time">'+fmtAmPm(bl.start)+'</div></div>'+
-            '<div class="tl-spine"><div class="'+dotCls+'"></div><div class="tl-line"></div></div>'+
+            '<div class="tl-left"><div class="tl-time" style="color:'+(isActive?color:'')+'">'+fmtAmPm(bl.start)+'</div></div>'+
+            '<div class="tl-spine"><div class="'+dotCls+'" style="'+dotStyle+'"></div><div class="tl-line"></div></div>'+
             '<div class="tl-card-wrap">'+
-              '<div class="tl-card'+(isActive?' tl-active':isPast?' tl-past':isBreak?' tl-break':'')+'">'+
+              '<div class="tl-card'+(isPast?' tl-past':isBreak?' tl-break':'')+'" style="background:'+(isActive?activeBg:bgTint)+';border-color:'+(isBreak?'var(--border)':isPast?'var(--border)':color+'44')+'">'+
                 '<div class="tl-card-top">'+
-                  '<span class="tl-card-name">'+escHtml(bl.label)+'</span>'+
-                  (badge?badge+' ':'')+'<span class="tl-card-dur">'+durStr(dur)+'</span>'+
+                  '<span class="tl-card-name" style="color:'+(isPast?'var(--text2)':'var(--text)')+'">'+escHtml(bl.label)+'</span>'+
+                  (badge?badge+' ':'')+'<span class="tl-card-dur" style="background:'+color+'18;color:'+color+'">'+durStr(dur)+'</span>'+
                 '</div>'+
                 '<div class="tl-card-sub">'+(isActive?timeRange+' · '+durStr(minsLeft)+' left':subLine)+'</div>'+
-                (isActive?'<div class="tl-prog"><div class="tl-prog-fill" style="width:'+progPct+'%"></div></div>':'')+
+                (isActive?'<div class="tl-prog"><div class="tl-prog-fill" style="width:'+progPct+'%;background:'+color+'"></div></div>':'')+
               '</div>'+
             '</div>'+
           '</div>';
