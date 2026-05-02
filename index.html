@@ -258,22 +258,40 @@ a{color:inherit;text-decoration:none}
 .btn-edit-subj:hover{background:var(--bg3);color:var(--text)}
 
 /* GRADUATION */
-.grad-overall{margin-bottom:28px}
-.grad-bar-wrap{height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;margin:10px 0}
-.grad-bar-fill{height:100%;background:linear-gradient(90deg,var(--o),var(--ok));border-radius:4px;transition:width 0.4s}
-.grad-label{font-size:15px;font-weight:700;color:var(--text)}
-.grad-sub{font-size:13px;color:var(--text2);margin-top:4px}
-.milestone-row{display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-bottom:1px solid var(--border)}
-.milestone-row:last-child{border-bottom:none}
-.milestone-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0;margin-top:3px;border:2px solid var(--border)}
-.milestone-dot.past{background:var(--ok);border-color:var(--ok)}
-.milestone-dot.next{background:var(--o);border-color:var(--o)}
-.milestone-dot.future{background:transparent;border-color:var(--text3)}
-.milestone-info{flex:1}
-.milestone-name{font-size:14px;font-weight:700;color:var(--text)}
-.milestone-req{font-size:12px;color:var(--text2);margin-top:2px}
-.milestone-date{font-size:13px;font-weight:600;color:var(--text2)}
-.milestone-days{font-size:12px;color:var(--text3);margin-top:2px}
+/* GRADUATION PAGE */
+.grad-hero{text-align:center;padding:8px 0 24px}
+.grad-pct-big{font-size:64px;font-weight:900;line-height:1;color:var(--o);letter-spacing:-2px}
+.grad-pct-label{font-size:14px;color:var(--text2);margin-top:4px;margin-bottom:20px}
+.grad-bar-wrap{height:12px;background:var(--bg3);border-radius:6px;overflow:hidden;margin:0 0 12px}
+.grad-bar-fill{height:100%;background:linear-gradient(90deg,var(--o),var(--ok));border-radius:6px;transition:width 0.6s cubic-bezier(.4,0,.2,1)}
+.grad-stats-row{display:flex;justify-content:space-around;gap:8px;margin-top:4px}
+.grad-stat{text-align:center}
+.grad-stat-val{font-size:17px;font-weight:800;color:var(--text)}
+.grad-stat-lbl{font-size:11px;color:var(--text2);margin-top:2px;text-transform:uppercase;letter-spacing:.4px}
+.grad-est-card{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.grad-est-left{}
+.grad-est-date{font-size:36px;font-weight:900;color:var(--text);line-height:1}
+.grad-est-pace{font-size:12px;color:var(--text2);margin-top:6px}
+.grad-est-right{text-align:right;flex-shrink:0}
+.grad-est-tag{font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;display:inline-block}
+.grad-est-tag.ahead{background:var(--okl);color:var(--ok)}
+.grad-est-tag.behind{background:var(--errl);color:var(--err)}
+.grad-est-weeks{font-size:13px;color:var(--text2);margin-top:6px}
+.grad-need{font-size:12px;color:var(--text2);margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.ms-row{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border)}
+.ms-row:last-child{border-bottom:none}
+.ms-icon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.ms-icon.done{background:var(--okl)}
+.ms-icon.next{background:var(--ol)}
+.ms-icon.future{background:var(--bg3)}
+.ms-body{flex:1;min-width:0}
+.ms-name{font-size:14px;font-weight:700;color:var(--text)}
+.ms-sub{font-size:12px;color:var(--text2);margin-top:2px}
+.ms-prog{height:4px;background:var(--bg3);border-radius:2px;margin-top:8px;overflow:hidden}
+.ms-prog-fill{height:100%;background:var(--o);border-radius:2px;transition:width .4s}
+.ms-right{text-align:right;flex-shrink:0}
+.ms-right-top{font-size:13px;font-weight:700;color:var(--text)}
+.ms-right-bot{font-size:11px;color:var(--text2);margin-top:3px}
 
 /* MODAL / BOTTOM SHEET */
 .modal-overlay{position:fixed;inset:0;background:rgba(26,20,16,0.4);z-index:1000;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.25s}
@@ -585,17 +603,9 @@ a{color:inherit;text-decoration:none}
       <div class="greeting-row">
         <div class="greeting-text"><h1>Graduation</h1></div>
       </div>
-      <div class="card" id="grad-estimator-card" style="margin-bottom:16px"></div>
-      <div class="card">
-        <div class="grad-overall">
-          <div class="grad-label" id="grad-label"></div>
-          <div class="grad-bar-wrap"><div class="grad-bar-fill" id="grad-bar" style="width:0%"></div></div>
-          <div class="grad-sub" id="grad-sub"></div>
-        </div>
-        <div class="divider"></div>
-        <div class="card-title">Milestones</div>
-        <div id="milestones-list"></div>
-      </div>
+      <div class="card" style="margin-bottom:16px" id="grad-progress-card"></div>
+      <div class="card" style="margin-bottom:16px" id="grad-est-card"></div>
+      <div class="card" id="grad-milestones-card"></div>
     </div>
 
     <!-- PAGE: TIMER -->
@@ -2143,58 +2153,117 @@ function deleteSubjectFromModal(){
 
 // ── GRADUATION ────────────────────────────────────────────────────────────────
 function renderGraduation(){
-  renderGradEstimator();
-  const TOTAL_REQ=2527;
-  const WEEKLY=34.5;
+  const sessions=loadSessions();
+  const subjs=loadSubjects();
+  const hours=loadHours();
+  const goals=loadGoals();
+  const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
   const totalLogged=getTotalLogged();
-  const pct=Math.min(100,totalLogged/TOTAL_REQ*100);
-  document.getElementById('grad-bar').style.width=pct.toFixed(2)+'%';
-  document.getElementById('grad-label').textContent=
-    fmtH(totalLogged)+' logged of '+TOTAL_REQ+'h · '+pct.toFixed(1)+'% complete';
   const remaining=Math.max(0,TOTAL_REQ-totalLogged);
-  const weeksLeft=remaining>0?(remaining/WEEKLY).toFixed(1):'0';
-  document.getElementById('grad-sub').textContent=
-    'At '+WEEKLY+'h/week: '+weeksLeft+' weeks remaining';
+  const pct=Math.min(100,totalLogged/TOTAL_REQ*100);
+  const now=new Date();
+  const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-  const today=todayStr();
-  const milestones=[
-    {date:'2025-06-01',name:'Halfway Milestone',req:'1263.5h logged',hours:1263.5},
-    {date:'2025-09-01',name:'Core Subjects Complete',req:'All 75h subjects finished',hours:900},
-    {date:'2025-12-01',name:'75% Complete',req:'1895.25h logged',hours:1895.25},
-    {date:'2026-03-01',name:'Final Stretch',req:'2200h logged',hours:2200},
-    {date:'2026-06-15',name:'Graduation',req:'2527h total logged',hours:2527},
+  // ── Pace calc ─────────────────────────────────────────────────────────────
+  const cutoff=new Date(now);cutoff.setDate(now.getDate()-28);
+  const cutoffStr=cutoff.getFullYear()+'-'+String(cutoff.getMonth()+1).padStart(2,'0')+'-'+String(cutoff.getDate()).padStart(2,'0');
+  const recentH=sessions.filter(s=>s.date>=cutoffStr).reduce((a,s)=>a+s.hours,0);
+  const hasGoodData=recentH>=3;
+  const pace=hasGoodData?recentH/4:goals.weekly;
+  const paceIsGoal=!hasGoodData;
+
+  // ── Est finish date ────────────────────────────────────────────────────────
+  let estDateStr='—';
+  let weeksLeft=0;
+  let estDate=null;
+  if(pace>0){
+    weeksLeft=remaining/pace;
+    estDate=new Date(now);estDate.setDate(now.getDate()+Math.round(weeksLeft*7));
+    estDateStr=MONTHS[estDate.getMonth()]+' '+estDate.getFullYear();
+  }
+  const targetDate=new Date('2027-10-31');
+  const diffDays=estDate?Math.round((targetDate-estDate)/(1000*60*60*24)):null;
+  const ahead=diffDays!==null&&diffDays>0;
+  // Hours needed per week to finish by Oct 2027
+  const weeksToTarget=Math.max(1,(targetDate-now)/(1000*60*60*24*7));
+  const neededPace=remaining/weeksToTarget;
+
+  // ── Card 1: Progress overview ──────────────────────────────────────────────
+  document.getElementById('grad-progress-card').innerHTML=
+    '<div class="grad-hero">'+
+      '<div class="grad-pct-big">'+pct.toFixed(1)+'%</div>'+
+      '<div class="grad-pct-label">of graduation complete</div>'+
+      '<div class="grad-bar-wrap"><div class="grad-bar-fill" id="grad-bar" style="width:'+pct.toFixed(2)+'%"></div></div>'+
+      '<div class="grad-stats-row">'+
+        '<div class="grad-stat"><div class="grad-stat-val">'+fmtH(totalLogged)+'</div><div class="grad-stat-lbl">Logged</div></div>'+
+        '<div class="grad-stat"><div class="grad-stat-val">'+fmtH(remaining)+'</div><div class="grad-stat-lbl">Remaining</div></div>'+
+        '<div class="grad-stat"><div class="grad-stat-val">'+TOTAL_REQ+'h</div><div class="grad-stat-lbl">Required</div></div>'+
+      '</div>'+
+    '</div>';
+
+  // ── Card 2: Estimated finish ───────────────────────────────────────────────
+  document.getElementById('grad-est-card').innerHTML=
+    '<div style="margin-bottom:12px;font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Estimated Finish</div>'+
+    '<div class="grad-est-card">'+
+      '<div class="grad-est-left">'+
+        '<div class="grad-est-date">'+estDateStr+'</div>'+
+        '<div class="grad-est-pace">'+(paceIsGoal?'Based on your '+fmtH(pace)+'/week goal':'Based on your recent '+fmtH(pace)+'/week pace')+'</div>'+
+      '</div>'+
+      '<div class="grad-est-right">'+
+        (diffDays!==null
+          ? '<div class="grad-est-tag '+(ahead?'ahead':'behind')+'">'+(ahead?'✓ '+diffDays+'d ahead':diffDays===0?'On track':Math.abs(diffDays)+'d behind')+'</div>'+
+            '<div class="grad-est-weeks">'+Math.round(weeksLeft)+' weeks to go</div>'
+          : '')+
+      '</div>'+
+    '</div>'+
+    '<div class="grad-need">'+
+      '📌 Need <strong>'+fmtH(neededPace)+'/week</strong> to finish by Oct 2027'+
+    '</div>';
+
+  // ── Card 3: Milestones (hours-based, estimated dates) ─────────────────────
+  const MILESTONES=[
+    {emoji:'⭐',name:'Quarter Way',hours:TOTAL_REQ*0.25},
+    {emoji:'🏅',name:'Halfway There',hours:TOTAL_REQ*0.5},
+    {emoji:'🔥',name:'Three Quarters',hours:TOTAL_REQ*0.75},
+    {emoji:'🏁',name:'Final 100 Hours',hours:TOTAL_REQ-100},
+    {emoji:'🎓',name:'Graduation',hours:TOTAL_REQ},
   ];
 
-  let nextFound=false;
-  document.getElementById('milestones-list').innerHTML=milestones.map(m=>{
-    const isPast=totalLogged>=m.hours&&today>=m.date;
-    let cls;
-    if(isPast){cls='past';}
-    else if(!nextFound){cls='next';nextFound=true;}
-    else{cls='future';}
-    const diff=daysBetween(today,m.date);
-    let daysHtml;
-    if(isPast){
-      daysHtml='<div class="milestone-days" style="color:var(--ok)">passed</div>';
-    } else if(diff===0){
-      daysHtml='<div class="milestone-days" style="color:var(--o)">Today!</div>';
-    } else if(diff>0){
-      daysHtml='<div class="milestone-days">'+diff+' days away</div>';
+  const msHtml=MILESTONES.map(m=>{
+    const done=totalLogged>=m.hours;
+    const hoursNeeded=Math.max(0,m.hours-totalLogged);
+    const msPct=Math.min(100,totalLogged/m.hours*100);
+    let rightTop,rightBot,iconCls,progressBar='';
+    if(done){
+      iconCls='done';
+      rightTop='<span style="color:var(--ok);font-weight:800">✓ Done</span>';
+      rightBot='';
     } else {
-      daysHtml='<div class="milestone-days" style="color:var(--text3)">'+Math.abs(diff)+' days ago</div>';
+      iconCls=hoursNeeded<=remaining?'next':'future';
+      const weeksAway=pace>0?hoursNeeded/pace:null;
+      const arrivalDate=weeksAway?new Date(now.getTime()+weeksAway*7*24*60*60*1000):null;
+      rightTop=arrivalDate?MONTHS[arrivalDate.getMonth()]+' '+arrivalDate.getFullYear():'—';
+      rightBot=fmtH(hoursNeeded)+' to go';
+      progressBar='<div class="ms-prog"><div class="ms-prog-fill" style="width:'+msPct.toFixed(1)+'%"></div></div>';
     }
-    return'<div class="milestone-row">'+
-      '<div class="milestone-dot '+cls+'"></div>'+
-      '<div class="milestone-info">'+
-        '<div class="milestone-name">'+m.name+'</div>'+
-        '<div class="milestone-req">'+m.req+'</div>'+
+    return'<div class="ms-row">'+
+      '<div class="ms-icon '+iconCls+'">'+m.emoji+'</div>'+
+      '<div class="ms-body">'+
+        '<div class="ms-name">'+m.name+'</div>'+
+        '<div class="ms-sub">'+fmtH(m.hours)+' total logged</div>'+
+        progressBar+
       '</div>'+
-      '<div style="text-align:right">'+
-        '<div class="milestone-date">'+m.date+'</div>'+
-        daysHtml+
+      '<div class="ms-right">'+
+        '<div class="ms-right-top">'+rightTop+'</div>'+
+        (rightBot?'<div class="ms-right-bot">'+rightBot+'</div>':'')+
       '</div>'+
     '</div>';
   }).join('');
+
+  document.getElementById('grad-milestones-card').innerHTML=
+    '<div class="card-title" style="margin-bottom:4px">Milestones</div>'+
+    '<div style="font-size:12px;color:var(--text2);margin-bottom:16px">Estimated dates based on '+(paceIsGoal?'weekly goal':'recent pace')+'</div>'+
+    msHtml;
 }
 
 // ── MODAL UTILS ───────────────────────────────────────────────────────────────
@@ -2374,61 +2443,6 @@ function renderWeekCombined(){
 }
 
 // ── GRAD ESTIMATOR ────────────────────────────────────────────────────────────
-function renderGradEstimator(){
-  const el=document.getElementById('grad-estimator-card');
-  if(!el)return;
-  const sessions=loadSessions();
-  const subjs=loadSubjects();
-  const hours=loadHours();
-  const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
-  const totalLogged=subjs.reduce((a,s)=>a+s.base+(hours[s.id]||0),0);
-  const remaining=Math.max(0,TOTAL_REQ-totalLogged);
-
-  const goals=loadGoals();
-  const now=new Date();
-  const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
-  // Avg hours/week from last 28 days of sessions
-  const cutoff=new Date(now);cutoff.setDate(now.getDate()-28);
-  const cutoffStr=cutoff.getFullYear()+'-'+String(cutoff.getMonth()+1).padStart(2,'0')+'-'+String(cutoff.getDate()).padStart(2,'0');
-  const recentSessions=sessions.filter(s=>s.date>=cutoffStr);
-  const recentH=recentSessions.reduce((a,s)=>a+s.hours,0);
-  const recentPace=recentH/4;
-
-  // Use weekly goal as fallback if not enough session history (< 3h in last 28 days)
-  const hasGoodData=recentH>=3;
-  const pace=hasGoodData?recentPace:goals.weekly;
-  const paceLabel=hasGoodData?'Your avg pace (28d)':'At your weekly goal';
-
-  let estDateStr='—';
-  let weeksLeft='—';
-  let paceNote='';
-  let paceNoteColor='var(--err)';
-
-  if(pace>0){
-    const wks=remaining/pace;
-    weeksLeft=wks.toFixed(1);
-    const estDate=new Date(now);estDate.setDate(now.getDate()+Math.round(wks*7));
-    estDateStr=MONTHS[estDate.getMonth()]+' '+estDate.getFullYear();
-    const target=new Date('2027-10-31');
-    const diffDays=Math.round((target-estDate)/(1000*60*60*24));
-    if(diffDays>0){paceNote='✓ '+diffDays+' days ahead of Oct 2027 target';paceNoteColor='var(--ok)';}
-    else{paceNote=Math.abs(diffDays)+' days behind target';}
-  } else {
-    paceNote='Log sessions to see your pace estimate';
-  }
-
-  const dataWarning=!hasGoodData&&recentH>0?'<div style="font-size:11px;color:var(--t3);margin-bottom:8px">⚠ Limited recent data — showing goal-based estimate</div>':'';
-
-  el.innerHTML=
-    '<div class="card-title">🎓 Estimated Finish</div>'+
-    '<div class="est-date">'+estDateStr+'</div>'+
-    '<div class="est-meta" style="color:'+paceNoteColor+'">'+paceNote+'</div>'+
-    dataWarning+
-    '<div class="pace-row"><span class="pace-label">'+paceLabel+'</span><span class="pace-val">'+fmtH(pace)+'/week</span></div>'+
-    '<div class="pace-row"><span class="pace-label">Hours remaining</span><span class="pace-val">'+fmtH(remaining)+'</span></div>'+
-    '<div class="pace-row"><span class="pace-label">Weeks to finish</span><span class="pace-val">'+(weeksLeft==='—'?'—':weeksLeft+' wks')+'</span></div>';
-}
 
 // ── EXPORT PDF ────────────────────────────────────────────────────────────────
 
