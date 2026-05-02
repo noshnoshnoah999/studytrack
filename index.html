@@ -1101,9 +1101,9 @@ function updateSidebar(){
   const goals=loadGoals();
   const target=goals.daily;
   const wknd=!isWeekday(new Date());
-  const pct=wknd?Math.min(100,todayH/target*100):Math.min(100,todayH/target*100);
-  document.getElementById('sb-bar').style.width=(wknd?30:pct)+'%';
-  document.getElementById('sb-val').textContent=wknd?fmtH(todayH)+' (weekend)':fmtH(todayH)+' / '+fmtH(target);
+  const pct=Math.min(100,todayH/target*100);
+  document.getElementById('sb-bar').style.width=(wknd?0:pct)+'%';
+  document.getElementById('sb-val').textContent=wknd?fmtH(todayH)+' today (weekend)':fmtH(todayH)+' / '+fmtH(target);
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
