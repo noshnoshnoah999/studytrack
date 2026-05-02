@@ -2258,11 +2258,12 @@ function renderGraduation(){
       '<div class="grad-est-left">'+
         '<div class="grad-est-date">Oct 31, 2027</div>'+
         '<div class="grad-est-pace">'+weeksToGrad+' weeks remaining · Official target</div>'+
-        '<div style="margin-top:8px;font-size:12px;color:var(--text2)">'+
-          'Est. at current pace: <strong style="color:var(--text)">'+estDateStr+'</strong>'+
-          (diffDays!==null?' · <span style="color:'+(ahead?'var(--ok)':'var(--err)')+'">'+
-            (ahead?'✓ '+diffDays+'d ahead of target':Math.abs(diffDays)+'d behind target')+
-          '</span>':'')+
+        '<div style="margin-top:10px">'+
+          '<div style="font-size:11px;color:var(--text2);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.4px;font-weight:600">Est. at current pace</div>'+
+          '<div style="font-size:28px;font-weight:900;color:var(--text);letter-spacing:-1px;line-height:1">'+estDateStr+'</div>'+
+          (diffDays!==null?'<div style="font-size:12px;font-weight:700;margin-top:4px;color:'+(ahead?'var(--ok)':'var(--err)')+'">'+
+            (ahead?'✓ '+diffDays+'d ahead of target':'⚠ '+Math.abs(diffDays)+'d behind target')+
+          '</div>':'')+
         '</div>'+
       '</div>'+
       '<div class="grad-est-right">'+
