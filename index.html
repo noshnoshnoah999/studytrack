@@ -2201,24 +2201,26 @@ function renderGraduation(){
       '</div>'+
     '</div>';
 
-  // ── Card 2: Estimated finish ───────────────────────────────────────────────
+  // ── Card 2: Graduation target date ────────────────────────────────────────
+  const weeksToGrad=Math.round(Math.max(0,(targetDate-now)/(1000*60*60*24*7)));
+  const onTrack=pace>=neededPace;
+  const paceStatus=paceIsGoal?'Based on your '+fmtH(pace)+'/week goal':'Current pace: '+fmtH(pace)+'/week';
   document.getElementById('grad-est-card').innerHTML=
-    '<div style="margin-bottom:12px;font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Estimated Finish</div>'+
+    '<div style="margin-bottom:12px;font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Graduation Date</div>'+
     '<div class="grad-est-card">'+
       '<div class="grad-est-left">'+
-        '<div class="grad-est-date">'+estDateStr+'</div>'+
-        '<div class="grad-est-pace">'+(paceIsGoal?'Based on your '+fmtH(pace)+'/week goal':'Based on your recent '+fmtH(pace)+'/week pace')+'</div>'+
+        '<div class="grad-est-date">Oct 31, 2027</div>'+
+        '<div class="grad-est-pace">'+weeksToGrad+' weeks remaining</div>'+
       '</div>'+
       '<div class="grad-est-right">'+
-        (diffDays!==null
-          ? '<div class="grad-est-tag '+(ahead?'ahead':'behind')+'">'+(ahead?'✓ '+diffDays+'d ahead':diffDays===0?'On track':Math.abs(diffDays)+'d behind')+'</div>'+
-            '<div class="grad-est-weeks">'+Math.round(weeksLeft)+' weeks to go</div>'
-          : '')+
+        '<div class="grad-est-tag '+(onTrack?'ahead':'behind')+'">'+(onTrack?'✓ On track':'⚠ Behind pace')+'</div>'+
+        '<div class="grad-est-weeks">'+fmtH(neededPace)+'/week needed</div>'+
       '</div>'+
     '</div>'+
     '<div class="grad-need">'+
-      '📌 Need <strong>'+fmtH(neededPace)+'/week</strong> to finish by Oct 2027'+
-    '</div>';
+      '📌 Need <strong>'+fmtH(neededPace)+'/week</strong> to finish by Oct 31, 2027'+
+    '</div>'+
+    '<div style="font-size:11px;color:var(--text2);margin-top:6px">'+paceStatus+'</div>';
 
   // ── Card 3: Milestones (hours-based, estimated dates) ─────────────────────
   const MILESTONES=[
@@ -2233,6 +2235,7 @@ function renderGraduation(){
     const done=totalLogged>=m.hours;
     const hoursNeeded=Math.max(0,m.hours-totalLogged);
     const msPct=Math.min(100,totalLogged/m.hours*100);
+    const isGradMilestone=m.name==='Graduation';
     let rightTop,rightBot,iconCls,progressBar='';
     if(done){
       iconCls='done';
@@ -2240,9 +2243,13 @@ function renderGraduation(){
       rightBot='';
     } else {
       iconCls=hoursNeeded<=remaining?'next':'future';
-      const weeksAway=pace>0?hoursNeeded/pace:null;
-      const arrivalDate=weeksAway?new Date(now.getTime()+weeksAway*7*24*60*60*1000):null;
-      rightTop=arrivalDate?MONTHS[arrivalDate.getMonth()]+' '+arrivalDate.getFullYear():'—';
+      if(isGradMilestone){
+        rightTop='Oct 31, 2027';
+      } else {
+        const weeksAway=pace>0?hoursNeeded/pace:null;
+        const arrivalDate=weeksAway?new Date(now.getTime()+weeksAway*7*24*60*60*1000):null;
+        rightTop=arrivalDate?MONTHS[arrivalDate.getMonth()]+' '+arrivalDate.getFullYear():'—';
+      }
       rightBot=fmtH(hoursNeeded)+' to go';
       progressBar='<div class="ms-prog"><div class="ms-prog-fill" style="width:'+msPct.toFixed(1)+'%"></div></div>';
     }
