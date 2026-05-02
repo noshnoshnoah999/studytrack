@@ -382,6 +382,10 @@ a{color:inherit;text-decoration:none}
 
 /* NOW / NEXT BANNER */
 .now-next-banner{display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:14px;margin-bottom:14px;border:1.5px solid transparent;cursor:default}
+.nnb-quicklog{margin-left:auto;flex-shrink:0;padding:5px 12px;border-radius:8px;font-size:12px;font-weight:700;border:none;cursor:pointer;background:var(--o);color:#fff;transition:opacity 0.15s}
+.nnb-quicklog:hover{opacity:0.85}
+.log-form-card{transition:border-color 0.2s,box-shadow 0.2s}
+.log-subject-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px;flex-shrink:0}
 .now-next-banner.is-now{background:var(--okl);border-color:var(--ok)}
 .now-next-banner.is-next{background:var(--ol);border-color:var(--od2)}
 .now-next-banner.is-break{background:var(--bg3);border-color:var(--border)}
@@ -548,11 +552,11 @@ a{color:inherit;text-decoration:none}
       <div id="class-log-prompts"></div>
       <div class="log-layout">
         <div>
-          <div class="card">
+          <div class="card log-form-card" id="log-form-card">
             <div class="card-title">Log a Session</div>
             <div class="form-group">
               <label class="form-label">Subject</label>
-              <select class="form-input" id="log-subject"></select>
+              <select class="form-input" id="log-subject" onchange="updateLogFormColour()"></select>
             </div>
             <div class="form-group">
               <label class="form-label">Date</label>
@@ -865,12 +869,15 @@ function renderNowNext(){
     const endsIn=toMins(active.end)-nowMins;
     const cls=isBreak?'is-break':'is-now';
     const lbl=isBreak?'On Break':'Studying Now';
+    const qlBtn=(!isBreak&&active.subjectId)?
+      '<button class="nnb-quicklog" onclick="quickLog(\''+active.subjectId+'\',\''+active.start+'\')">⚡ Quick Log</button>':'';
     el.innerHTML=
       '<div class="now-next-banner '+cls+'">'+
         '<div class="nnb-dot" style="background:'+(isBreak?'var(--text3)':color)+'"></div>'+
         '<span class="nnb-label">'+lbl+'</span>'+
         '<span class="nnb-name">'+escHtml(active.label)+'</span>'+
         '<span class="nnb-time">ends '+active.end+' · '+durStr(endsIn)+' left</span>'+
+        qlBtn+
       '</div>';
     return;
   }
@@ -1547,9 +1554,42 @@ function renderLog(){
   if(tsel.value)sel.value=tsel.value;
 
   const dateIn=document.getElementById('log-date');
-  if(!dateIn.value)dateIn.value=todayStr();
+  dateIn.value=todayStr();
   updateLogDuration();
   renderLogEntries();
+  updateLogFormColour();
+}
+
+// ── Log form colour accent ────────────────────────────────────────────────────
+const LOG_SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',am_hist:'#b45309',jp_exch:'#7c3aed'};
+function updateLogFormColour(){
+  const sel=document.getElementById('log-subject');
+  const card=document.getElementById('log-form-card');
+  if(!sel||!card)return;
+  const color=LOG_SUBJ_COLORS[sel.value];
+  if(color){
+    card.style.borderLeft='4px solid '+color;
+    card.style.boxShadow='inset 3px 0 0 0 '+color+'22';
+  } else {
+    card.style.borderLeft='';
+    card.style.boxShadow='';
+  }
+}
+
+// ── Quick log from dashboard ──────────────────────────────────────────────────
+function quickLog(subjectId,start){
+  showPage('log');
+  setTimeout(()=>{
+    const sel=document.getElementById('log-subject');
+    const ls=document.getElementById('log-start');
+    const ld=document.getElementById('log-date');
+    if(sel&&subjectId)sel.value=subjectId;
+    if(ls&&start)ls.value=start;
+    if(ld)ld.value=todayStr();
+    updateLogDuration();
+    updateLogFormColour();
+    document.getElementById('log-end')&&document.getElementById('log-end').focus();
+  },50);
 }
 
 function autofillClassLog(subjectId,start,end,label,blockId){
