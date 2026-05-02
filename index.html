@@ -27,8 +27,8 @@ html,body{overflow-x:hidden}
   --okl:#d1fae5;
   --err:#e11d48;
   --errl:#ffe4e6;
-  --shadow:0 1px 3px rgba(26,20,16,0.06),0 4px 20px rgba(26,20,16,0.05);
-  --radius:14px;
+  --shadow:0 2px 8px rgba(26,20,16,0.08),0 8px 28px rgba(26,20,16,0.07);
+  --radius:16px;
 }
 html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg2);color:var(--text);font-size:15px;line-height:1.5}
 button{font-family:inherit;cursor:pointer;border:none;outline:none}
@@ -57,39 +57,44 @@ a{color:inherit;text-decoration:none}
 .sidebar-footer{padding:16px 20px;border-top:1px solid var(--border)}
 .sidebar-footer-label{font-size:12px;color:var(--text2);margin-bottom:6px;font-weight:500}
 .sidebar-footer-bar{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden}
-.sidebar-footer-fill{height:100%;background:var(--o);border-radius:3px;transition:width 0.4s}
+.sidebar-footer-fill{height:100%;background:linear-gradient(90deg,var(--o),#fb923c);border-radius:3px;transition:width 0.5s cubic-bezier(.4,0,.2,1)}
 .sidebar-footer-val{font-size:12px;color:var(--text2);margin-top:5px;text-align:right}
 
 /* CARDS */
-.card{background:var(--bg);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
-.card-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:16px}
+.card{background:var(--bg);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px;border:1px solid var(--border)}
+.card-title{font-size:13px;font-weight:700;color:var(--text2);margin-bottom:16px;text-transform:uppercase;letter-spacing:0.5px}
 
 /* STAT STRIP */
 .stats-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
-.stat-card{background:var(--bg);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px}
+.stat-card{background:var(--bg);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;border-top:3px solid var(--border);transition:border-color 0.3s}
+.stat-card.accent-orange{border-top-color:var(--o)}
+.stat-card.accent-green{border-top-color:var(--ok)}
+.stat-card.accent-amber{border-top-color:#d97706}
+.stat-card.accent-streak{border-top-color:#f97316}
 .stat-label{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px}
 .stat-val{font-size:22px;font-weight:800;color:var(--text)}
 .stat-val.orange{color:var(--o)}
 .stat-val.green{color:var(--ok)}
 .stat-val.amber{color:#d97706}
+.streak-badge{display:inline-flex;align-items:center;gap:5px;background:var(--ol);color:var(--o);font-size:20px;font-weight:800;padding:4px 10px;border-radius:10px;line-height:1.2}
 
 /* TWO COL */
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
 
 /* PROGRESS BAR */
-.progress-bar{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden}
-.progress-fill{height:100%;border-radius:3px;transition:width 0.4s}
+.progress-bar{height:8px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.progress-fill{height:100%;border-radius:4px;transition:width 0.5s cubic-bezier(.4,0,.2,1)}
 
 /* TODAY CARD */
-.today-big{font-size:52px;font-weight:800;color:var(--o);letter-spacing:-2px;line-height:1}
-.today-sub{font-size:13px;color:var(--text2);margin-top:4px;margin-bottom:14px}
-.today-status{font-size:13px;font-weight:600;margin-top:8px}
+.today-big{font-size:54px;font-weight:900;color:var(--o);letter-spacing:-2.5px;line-height:1;font-variant-numeric:tabular-nums}
+.today-sub{font-size:13px;color:var(--text2);margin-top:6px;margin-bottom:16px}
+.today-status{font-size:13px;font-weight:600;margin-top:10px;display:flex;align-items:center;gap:6px}
 
 /* WEEK CHART */
 .week-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
 .week-day{font-size:12px;font-weight:600;color:var(--text2);width:28px;flex-shrink:0}
 .week-bar-wrap{flex:1;height:10px;background:var(--bg3);border-radius:5px;overflow:hidden}
-.week-bar-fill{height:100%;border-radius:5px;transition:width 0.4s}
+.week-bar-fill{height:100%;border-radius:5px;transition:width 0.5s cubic-bezier(.4,0,.2,1)}
 .week-val{font-size:12px;font-weight:600;color:var(--text2);width:34px;text-align:right;flex-shrink:0}
 
 /* NEEDS ATTENTION */
@@ -239,8 +244,7 @@ a{color:inherit;text-decoration:none}
 .prog-header h2{font-size:22px;font-weight:800;letter-spacing:-0.3px}
 .btn-add{background:var(--o);color:#fff;font-size:13px;font-weight:700;padding:8px 16px;border-radius:10px;transition:all 0.15s}
 .btn-add:hover{background:var(--od)}
-.subj-row{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--border)}
-.subj-row:last-child{border-bottom:none}
+.subj-row{display:flex;align-items:center;gap:12px;padding:14px 12px;border-radius:12px;margin-bottom:4px;border-left:4px solid var(--border);background:var(--bg2);transition:border-color 0.2s}
 .subj-main{flex:1;min-width:0}
 .subj-name-row{display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap}
 .subj-name{font-size:14px;font-weight:700;color:var(--text)}
@@ -250,8 +254,8 @@ a{color:inherit;text-decoration:none}
 .tag.locked{background:var(--ol);color:var(--od)}
 .tag.zero{background:var(--bg3);color:var(--text3)}
 .subj-bar-row{display:flex;align-items:center;gap:8px}
-.subj-bar{flex:1;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden}
-.subj-bar-fill{height:100%;border-radius:3px}
+.subj-bar{flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.subj-bar-fill{height:100%;border-radius:4px;transition:width 0.5s cubic-bezier(.4,0,.2,1)}
 .subj-pct{font-size:12px;font-weight:700;color:var(--text2);width:34px;text-align:right}
 .subj-hours{font-size:12px;color:var(--text3);margin-top:3px}
 .btn-edit-subj{background:none;color:var(--text3);width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0}
@@ -405,7 +409,7 @@ a{color:inherit;text-decoration:none}
   --bg:#1c1916;--bg2:#131110;--bg3:#2a2420;--bg4:#342d26;
   --border:#3a332b;--text:#f0ece8;--text2:#8a7d6e;--text3:#4a4038;
   --ol:#2d1f0e;--od2:#7c3a0a;--okl:#0d2b1e;--errl:#2d0f14;
-  --shadow:0 1px 3px rgba(0,0,0,0.5),0 4px 20px rgba(0,0,0,0.4);
+  --shadow:0 2px 8px rgba(0,0,0,0.5),0 8px 28px rgba(0,0,0,0.4);
 }
 [data-theme="dark"] .modal-sheet,[data-theme="dark"] #bottom-nav{background:var(--bg)}
 [data-theme="dark"] .form-input{background:var(--bg3);border-color:var(--border);color:var(--text)}
@@ -1138,25 +1142,26 @@ function renderDashboard(){
   const streak=checkStreak();
   const isWknd=!isWeekday(now);
 
+  const todayAccent=isWknd?'accent-orange':todayH>=target?'accent-green':'accent-amber';
   document.getElementById('stats-strip').innerHTML=
-    '<div class="stat-card"><div class="stat-label">Today</div><div class="stat-val '+(isWknd?'orange':todayH>=target?'green':'amber')+'">'+fmtH(todayH)+(isWknd?'<span style="font-size:11px;color:var(--text2)"> bonus</span>':'')+'</div></div>'+
+    '<div class="stat-card '+todayAccent+'"><div class="stat-label">Today</div><div class="stat-val '+(isWknd?'orange':todayH>=target?'green':'amber')+'">'+fmtH(todayH)+(isWknd?'<span style="font-size:11px;color:var(--text2)"> bonus</span>':'')+'</div></div>'+
     '<div class="stat-card"><div class="stat-label">This Week</div><div class="stat-val">'+fmtH(weekH)+'</div></div>'+
-    '<div class="stat-card"><div class="stat-label">Total Logged</div><div class="stat-val orange">'+fmtH(totalLogged)+'</div></div>'+
-    '<div class="stat-card"><div class="stat-label">🔥 Streak</div><div class="stat-val '+(streak>0?'orange':'')+'">'+streak+'<span style="font-size:14px;font-weight:600"> days</span></div></div>';
+    '<div class="stat-card accent-orange"><div class="stat-label">Total Logged</div><div class="stat-val orange">'+fmtH(totalLogged)+'</div></div>'+
+    '<div class="stat-card accent-streak"><div class="stat-label">Streak</div><div class="streak-badge">🔥 '+streak+'<span style="font-size:13px;font-weight:600;opacity:0.7"> days</span></div></div>';
 
   // Today card
   const todayPct=Math.min(100,todayH/target*100);
   const todayRemain=Math.max(0,target-todayH);
-  const barColor=todayH>=target?'var(--ok)':'var(--o)';
+  const barGrad=todayH>=target?'linear-gradient(90deg,var(--ok),#34d399)':'linear-gradient(90deg,var(--o),#fb923c)';
   document.getElementById('today-card').innerHTML=
     '<div class="card-title">Today\'s Progress</div>'+
     '<div class="today-big">'+fmtHColon(todayH)+'</div>'+
     (isWknd
       ? '<div class="today-sub">Weekend — no target today 🎉</div>'+
-        '<div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--o);opacity:0.3"></div></div>'+
+        '<div class="progress-bar"><div class="progress-fill" style="width:100%;background:linear-gradient(90deg,var(--o),#fb923c);opacity:0.25"></div></div>'+
         '<div class="today-status" style="color:var(--o)">'+( todayH>0 ? '✓ '+fmtH(todayH)+' bonus hours!' : 'Rest day — enjoy the weekend'  )+'</div>'
       : '<div class="today-sub">of '+fmtH(target)+' daily target</div>'+
-        '<div class="progress-bar"><div class="progress-fill" style="width:'+todayPct+'%;background:'+barColor+'"></div></div>'+
+        '<div class="progress-bar"><div class="progress-fill" style="width:'+todayPct+'%;background:'+barGrad+'"></div></div>'+
         '<div class="today-status" style="color:'+(todayH>=target?'var(--ok)':'var(--text2)')+'">'+
           (todayH>=target?'✓ Target reached':fmtH(todayRemain)+' remaining')+
         '</div>'
@@ -1178,8 +1183,8 @@ function renderDashboard(){
   dayAbbr.forEach((d,i)=>{
     const h=dayHours[i];
     const barPct=Math.min(100,h/maxH*100);
-    const col=h>=target?'var(--ok)':'var(--o)';
-    const op=h>0?1:0.3;
+    const col=h>=target?'linear-gradient(90deg,var(--ok),#34d399)':'linear-gradient(90deg,var(--o),#fb923c)';
+    const op=h>0?1:0.25;
     weekRows+='<div class="week-row">'+
       '<div class="week-day">'+d+'</div>'+
       '<div class="week-bar-wrap"><div class="week-bar-fill" style="width:'+barPct+'%;background:'+col+';opacity:'+op+'"></div></div>'+
@@ -1206,7 +1211,7 @@ function renderDashboard(){
     const left=Math.max(0,s.req-s.logged);
     arows+='<div class="attention-row">'+
       '<div class="attention-name">'+s.name+'</div>'+
-      '<div style="flex:2;min-width:60px"><div class="progress-bar"><div class="progress-fill" style="width:'+s.pct+'%;background:'+(s.pct>=100?'var(--ok)':'var(--o)')+'"></div></div></div>'+
+      '<div style="flex:2;min-width:60px"><div class="progress-bar"><div class="progress-fill" style="width:'+s.pct+'%;background:'+(s.pct>=100?'linear-gradient(90deg,var(--ok),#34d399)':'linear-gradient(90deg,var(--o),#fb923c)')+'"></div></div></div>'+
       '<div class="attention-pct">'+Math.round(s.pct)+'%</div>'+
       '<div class="attention-left">'+fmtH(left)+'</div>'+
       '</div>';
@@ -2108,23 +2113,25 @@ function renderProgress(){
   const subjs=loadSubjects();
   const el=document.getElementById('subjects-list');
   if(!subjs.length){el.innerHTML='<div class="empty-state">No subjects yet. Add one above.</div>';return;}
+  const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',am_hist:'#b45309',jp_exch:'#7c3aed'};
   el.innerHTML=subjs.map(s=>{
     const logged=getLogged(s.id);
     const pct=s.req>0?Math.min(100,logged/s.req*100):100;
-    const barColor=s.done?'var(--ok)':pct>=100?'var(--ok)':'var(--o)';
+    const subjColor=SUBJ_COLORS[s.id]||'var(--o)';
+    const barBg=s.done?'linear-gradient(90deg,var(--ok),#34d399)':pct>=100?'linear-gradient(90deg,var(--ok),#34d399)':'linear-gradient(90deg,'+subjColor+','+subjColor+'cc)';
     const tags=[];
     if(s.done)tags.push('<span class="tag done">✓ Done</span>');
     else if(logged===0)tags.push('<span class="tag zero">Not started</span>');
     if(s.passive)tags.push('<span class="tag passive">Passive</span>');
     if(s.locked)tags.push('<span class="tag locked">🔒 Locked</span>');
-    return'<div class="subj-row">'+
+    return'<div class="subj-row" style="border-left-color:'+subjColor+'">'+
       '<div class="subj-main">'+
         '<div class="subj-name-row"><span class="subj-name">'+escHtml(s.name)+'</span>'+tags.join('')+'</div>'+
         '<div class="subj-bar-row">'+
-          '<div class="subj-bar"><div class="subj-bar-fill" style="width:'+pct+'%;background:'+barColor+'"></div></div>'+
+          '<div class="subj-bar"><div class="subj-bar-fill" style="width:'+pct+'%;background:'+barBg+'"></div></div>'+
           '<div class="subj-pct">'+Math.round(pct)+'%</div>'+
         '</div>'+
-        '<div class="subj-hours">'+fmtH(logged)+' logged / '+fmtH(s.req)+' required</div>'+
+        '<div class="subj-hours">'+fmtH(logged)+' logged · '+fmtH(s.req)+' required</div>'+
       '</div>'+
       '<button class="btn-edit-subj" onclick="openSubjectModal(\''+s.id+'\')" title="Edit">'+
         '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'+
