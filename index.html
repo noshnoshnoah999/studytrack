@@ -2227,7 +2227,9 @@ function loadGoals(){
 function saveGoalSettings(){
   const daily=parseFloat(document.getElementById('goal-daily').value)||6.3;
   const weekly=parseFloat(document.getElementById('goal-weekly').value)||31.5;
-  localStorage.setItem('st_goals',JSON.stringify({daily,weekly}));
+  const g={daily,weekly};
+  localStorage.setItem('st_goals',JSON.stringify(g));
+  sbPush('st_goals',g);
   closeModal('goal-modal-overlay');
   renderDashboard();
   updateSidebar();
