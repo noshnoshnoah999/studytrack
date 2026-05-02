@@ -2374,34 +2374,48 @@ function renderGradEstimator(){
   const totalLogged=subjs.reduce((a,s)=>a+s.base+(hours[s.id]||0),0);
   const remaining=Math.max(0,TOTAL_REQ-totalLogged);
 
-  // Avg hours/week from last 28 days
+  const goals=loadGoals();
   const now=new Date();
+  const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  // Avg hours/week from last 28 days of sessions
   const cutoff=new Date(now);cutoff.setDate(now.getDate()-28);
   const cutoffStr=cutoff.getFullYear()+'-'+String(cutoff.getMonth()+1).padStart(2,'0')+'-'+String(cutoff.getDate()).padStart(2,'0');
-  const recentH=sessions.filter(s=>s.date>=cutoffStr).reduce((a,s)=>a+s.hours,0);
-  const avgWeekly=recentH/4;
+  const recentSessions=sessions.filter(s=>s.date>=cutoffStr);
+  const recentH=recentSessions.reduce((a,s)=>a+s.hours,0);
+  const recentPace=recentH/4;
+
+  // Use weekly goal as fallback if not enough session history (< 3h in last 28 days)
+  const hasGoodData=recentH>=3;
+  const pace=hasGoodData?recentPace:goals.weekly;
+  const paceLabel=hasGoodData?'Your avg pace (28d)':'At your weekly goal';
 
   let estDateStr='—';
   let weeksLeft='—';
   let paceNote='';
-  if(avgWeekly>0){
-    const wks=remaining/avgWeekly;
+  let paceNoteColor='var(--err)';
+
+  if(pace>0){
+    const wks=remaining/pace;
     weeksLeft=wks.toFixed(1);
     const estDate=new Date(now);estDate.setDate(now.getDate()+Math.round(wks*7));
-    const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     estDateStr=MONTHS[estDate.getMonth()]+' '+estDate.getFullYear();
     const target=new Date('2027-10-31');
     const diffDays=Math.round((target-estDate)/(1000*60*60*24));
-    paceNote=diffDays>0?'✓ '+diffDays+' days ahead of Oct 2027 target':Math.abs(diffDays)+' days behind target';
+    if(diffDays>0){paceNote='✓ '+diffDays+' days ahead of Oct 2027 target';paceNoteColor='var(--ok)';}
+    else{paceNote=Math.abs(diffDays)+' days behind target';}
   } else {
     paceNote='Log sessions to see your pace estimate';
   }
 
+  const dataWarning=!hasGoodData&&recentH>0?'<div style="font-size:11px;color:var(--t3);margin-bottom:8px">⚠ Limited recent data — showing goal-based estimate</div>':'';
+
   el.innerHTML=
     '<div class="card-title">🎓 Estimated Finish</div>'+
     '<div class="est-date">'+estDateStr+'</div>'+
-    '<div class="est-meta" style="color:'+(paceNote.startsWith('✓')?'var(--ok)':'var(--err)')+'">'+paceNote+'</div>'+
-    '<div class="pace-row"><span class="pace-label">Your avg pace</span><span class="pace-val">'+fmtH(avgWeekly)+'/week</span></div>'+
+    '<div class="est-meta" style="color:'+paceNoteColor+'">'+paceNote+'</div>'+
+    dataWarning+
+    '<div class="pace-row"><span class="pace-label">'+paceLabel+'</span><span class="pace-val">'+fmtH(pace)+'/week</span></div>'+
     '<div class="pace-row"><span class="pace-label">Hours remaining</span><span class="pace-val">'+fmtH(remaining)+'</span></div>'+
     '<div class="pace-row"><span class="pace-label">Weeks to finish</span><span class="pace-val">'+(weeksLeft==='—'?'—':weeksLeft+' wks')+'</span></div>';
 }
