@@ -2257,7 +2257,13 @@ function renderGraduation(){
     '<div class="grad-est-card">'+
       '<div class="grad-est-left">'+
         '<div class="grad-est-date">Oct 31, 2027</div>'+
-        '<div class="grad-est-pace">'+weeksToGrad+' weeks remaining</div>'+
+        '<div class="grad-est-pace">'+weeksToGrad+' weeks remaining · Official target</div>'+
+        '<div style="margin-top:8px;font-size:12px;color:var(--text2)">'+
+          'Est. at current pace: <strong style="color:var(--text)">'+estDateStr+'</strong>'+
+          (diffDays!==null?' · <span style="color:'+(ahead?'var(--ok)':'var(--err)')+'">'+
+            (ahead?'✓ '+diffDays+'d ahead of target':Math.abs(diffDays)+'d behind target')+
+          '</span>':'')+
+        '</div>'+
       '</div>'+
       '<div class="grad-est-right">'+
         '<div class="grad-est-tag '+(onTrack?'ahead':'behind')+'">'+(onTrack?'✓ On track':'⚠ Behind pace')+'</div>'+
