@@ -2882,6 +2882,8 @@ async function syncFromCloud(){
   }
   // Refresh now/next banner every minute
   setInterval(()=>{if(document.getElementById('page-dashboard').classList.contains('active'))renderNowNext();},60000);
+  // Refresh schedule NOW indicator every minute while on schedule page
+  setInterval(()=>{if(document.getElementById('page-schedule').classList.contains('active'))renderSchedule();},60000);
 })();
 </script>
 </body>
