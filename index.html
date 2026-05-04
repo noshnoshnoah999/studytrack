@@ -629,16 +629,16 @@ a{color:inherit;text-decoration:none}
             <div class="time-split-input" id="log-start-wrap">
               <input class="tsplit-hh" id="log-start-hh" type="text" inputmode="numeric" maxlength="2" placeholder="12" autocomplete="off" oninput="timeSplitInput('log-start','log-start-hh','log-start-mm')">
               <span class="tsplit-sep">:</span>
-              <input class="tsplit-mm" id="log-start-mm" type="text" inputmode="numeric" maxlength="2" placeholder="30" autocomplete="off" oninput="timeSplitInput('log-start','log-start-mm','log-end-hh')">
+              <input class="tsplit-mm" id="log-start-mm" type="text" inputmode="numeric" maxlength="2" placeholder="30" autocomplete="off" oninput="timeSplitInput('log-start','log-start-mm','log-end-hh')" onkeydown="timeSplitBack(event,'log-start-hh')">
             </div>
           </div>
           <div class="form-group" style="margin-bottom:0">
             <label class="form-label">End</label>
             <input type="hidden" id="log-end">
             <div class="time-split-input" id="log-end-wrap">
-              <input class="tsplit-hh" id="log-end-hh" type="text" inputmode="numeric" maxlength="2" placeholder="12" autocomplete="off" oninput="timeSplitInput('log-end','log-end-hh','log-end-mm')">
+              <input class="tsplit-hh" id="log-end-hh" type="text" inputmode="numeric" maxlength="2" placeholder="12" autocomplete="off" oninput="timeSplitInput('log-end','log-end-hh','log-end-mm')" onkeydown="timeSplitBack(event,'log-start-mm')">
               <span class="tsplit-sep">:</span>
-              <input class="tsplit-mm" id="log-end-mm" type="text" inputmode="numeric" maxlength="2" placeholder="30" autocomplete="off" oninput="timeSplitInput('log-end','log-end-mm',null)">
+              <input class="tsplit-mm" id="log-end-mm" type="text" inputmode="numeric" maxlength="2" placeholder="30" autocomplete="off" oninput="timeSplitInput('log-end','log-end-mm',null)" onkeydown="timeSplitBack(event,'log-end-hh')">
             </div>
           </div>
         </div>
@@ -2169,6 +2169,14 @@ function timerToggle(){timerPageToggle();}
 function timerReset(){timerPageReset();}
 
 // ── Split time input helpers ──────────────────────────────────────────────────
+function timeSplitBack(e, prevId){
+  // On Backspace/Delete when field is already empty, jump to previous field
+  if((e.key==='Backspace'||e.key==='Delete')&&e.target.value===''){
+    const prev=document.getElementById(prevId);
+    if(prev){prev.focus();prev.select();}
+  }
+}
+
 function timeSplitInput(hiddenId, thisId, nextId){
   const el=document.getElementById(thisId);
   // Strip non-numeric
