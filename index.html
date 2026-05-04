@@ -283,6 +283,11 @@ a{color:inherit;text-decoration:none}
 .form-input{width:100%;border:none;border-radius:10px;padding:11px 14px;background:var(--bg3);font-size:14px;color:var(--text);transition:all 0.15s}
 .form-input:focus{background:var(--bg4)}
 .time-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.time-split-input{display:flex;align-items:center;background:var(--bg3);border-radius:10px;padding:11px 14px;gap:2px}
+.time-split-input:focus-within{box-shadow:0 0 0 3px rgba(249,115,22,0.2)}
+.tsplit-hh,.tsplit-mm{background:none;border:none;outline:none;font-family:inherit;font-size:14px;font-weight:600;color:var(--text);width:2.2ch;text-align:center;padding:0;caret-color:var(--o)}
+.tsplit-hh::placeholder,.tsplit-mm::placeholder{color:var(--text3)}
+.tsplit-sep{font-size:14px;font-weight:700;color:var(--text2);flex-shrink:0;line-height:1;margin:0 1px}
 .duration-display{font-size:13px;font-weight:700;color:var(--o);margin-top:6px;min-height:18px}
 .btn-primary{width:100%;background:var(--o);color:#fff;font-size:15px;font-weight:700;padding:14px;border-radius:100px;transition:all 0.15s}
 .btn-primary:hover{background:var(--od)}
@@ -620,11 +625,21 @@ a{color:inherit;text-decoration:none}
           </div>
           <div class="form-group" style="margin-bottom:0">
             <label class="form-label">Start</label>
-            <input type="time" class="form-input" id="log-start" oninput="updateLogDuration()">
+            <input type="hidden" id="log-start">
+            <div class="time-split-input" id="log-start-wrap">
+              <input class="tsplit-hh" id="log-start-hh" type="text" inputmode="numeric" maxlength="2" placeholder="12" autocomplete="off" oninput="timeSplitInput('log-start','log-start-hh','log-start-mm')">
+              <span class="tsplit-sep">:</span>
+              <input class="tsplit-mm" id="log-start-mm" type="text" inputmode="numeric" maxlength="2" placeholder="30" autocomplete="off" oninput="timeSplitInput('log-start','log-start-mm','log-end-hh')">
+            </div>
           </div>
           <div class="form-group" style="margin-bottom:0">
             <label class="form-label">End</label>
-            <input type="time" class="form-input" id="log-end" oninput="updateLogDuration()">
+            <input type="hidden" id="log-end">
+            <div class="time-split-input" id="log-end-wrap">
+              <input class="tsplit-hh" id="log-end-hh" type="text" inputmode="numeric" maxlength="2" placeholder="12" autocomplete="off" oninput="timeSplitInput('log-end','log-end-hh','log-end-mm')">
+              <span class="tsplit-sep">:</span>
+              <input class="tsplit-mm" id="log-end-mm" type="text" inputmode="numeric" maxlength="2" placeholder="30" autocomplete="off" oninput="timeSplitInput('log-end','log-end-mm',null)">
+            </div>
           </div>
         </div>
         <div class="duration-display" id="log-duration" style="margin:10px 0 14px"></div>
@@ -1677,41 +1692,34 @@ function quickLog(subjectId,start){
   showPage('log');
   setTimeout(()=>{
     const sel=document.getElementById('log-subject');
-    const ls=document.getElementById('log-start');
     const ld=document.getElementById('log-date');
     if(sel&&subjectId)sel.value=subjectId;
-    if(ls&&start)ls.value=start;
+    if(start)setLogTime('log-start',start);
     if(ld)ld.value=todayStr();
     updateLogDuration();
     updateLogFormColour();
-    document.getElementById('log-end')&&document.getElementById('log-end').focus();
+    document.getElementById('log-end-hh')&&document.getElementById('log-end-hh').focus();
   },50);
 }
 
 function autofillFromBlock(subjectId,start,end){
   const sel=document.getElementById('log-subject');
   if(sel){sel.value=subjectId;updateLogFormColour();}
-  const ls=document.getElementById('log-start');
-  const le=document.getElementById('log-end');
+  setLogTime('log-start',start);
+  setLogTime('log-end',end);
   const ld=document.getElementById('log-date');
-  if(ls)ls.value=start;
-  if(le)le.value=end;
   if(ld)ld.value=todayStr();
   updateLogDuration();
-  // Scroll form into view
   document.getElementById('log-form-card')&&document.getElementById('log-form-card').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function autofillClassLog(subjectId,start,end,label,blockId){
-  // Fill the log form with class details
   const sel=document.getElementById('log-subject');
   if(sel)sel.value=subjectId;
-  const ls=document.getElementById('log-start');
-  const le=document.getElementById('log-end');
+  setLogTime('log-start',start);
+  setLogTime('log-end',end);
   const ld=document.getElementById('log-date');
   const ln=document.getElementById('log-notes');
-  if(ls)ls.value=start;
-  if(le)le.value=end;
   if(ld)ld.value=todayStr();
   if(ln)ln.value=label;
   updateLogDuration();
@@ -2123,10 +2131,8 @@ function stopTimerAndLog(){
   setTimeout(()=>{
     const sel=document.getElementById('log-subject');
     if(sel&&timerSubjectId)sel.value=timerSubjectId;
-    const ls=document.getElementById('log-start');
-    const le=document.getElementById('log-end');
-    if(ls)ls.value=startStr;
-    if(le)le.value=endStr;
+    setLogTime('log-start',startStr);
+    setLogTime('log-end',endStr);
     updateLogDuration();
   },100);
   // Reset timer state
@@ -2162,6 +2168,54 @@ function timerPageLog(){
 function timerToggle(){timerPageToggle();}
 function timerReset(){timerPageReset();}
 
+// ── Split time input helpers ──────────────────────────────────────────────────
+function timeSplitInput(hiddenId, thisId, nextId){
+  const el=document.getElementById(thisId);
+  // Strip non-numeric
+  el.value=el.value.replace(/\D/g,'');
+  // Clamp: HH 0-23, MM 0-59
+  const isHH=thisId.endsWith('-hh');
+  const max=isHH?23:59;
+  if(el.value.length===2){
+    let v=parseInt(el.value,10);
+    if(isNaN(v))v=0;
+    if(v>max)v=max;
+    el.value=String(v).padStart(2,'0');
+    // Auto-advance to next input
+    if(nextId)document.getElementById(nextId).focus();
+  }
+  // Sync to hidden input
+  const wrap=hiddenId==='log-start'?'log-start':'log-end';
+  const hh=document.getElementById(wrap+'-hh').value;
+  const mm=document.getElementById(wrap+'-mm').value;
+  if(hh.length===2&&mm.length===2){
+    document.getElementById(wrap).value=hh.padStart(2,'0')+':'+mm.padStart(2,'0');
+  } else {
+    document.getElementById(wrap).value='';
+  }
+  updateLogDuration();
+}
+
+function setLogTime(prefix, timeStr){
+  // timeStr = "HH:MM"
+  if(!timeStr){
+    const hhEl=document.getElementById(prefix+'-hh');
+    const mmEl=document.getElementById(prefix+'-mm');
+    if(hhEl)hhEl.value='';
+    if(mmEl)mmEl.value='';
+    const hid=document.getElementById(prefix);
+    if(hid)hid.value='';
+    return;
+  }
+  const [hh,mm]=(timeStr||'').split(':');
+  const hhEl=document.getElementById(prefix+'-hh');
+  const mmEl=document.getElementById(prefix+'-mm');
+  if(hhEl)hhEl.value=hh||'';
+  if(mmEl)mmEl.value=mm||'';
+  const hid=document.getElementById(prefix);
+  if(hid)hid.value=timeStr;
+}
+
 function updateLogDuration(){
   const start=document.getElementById('log-start').value;
   const end=document.getElementById('log-end').value;
@@ -2191,8 +2245,8 @@ function logSession(){
   hoursStore[subjectId]=(hoursStore[subjectId]||0)+hours;
   saveSessions(sessions);
   saveHours(hoursStore);
-  document.getElementById('log-start').value='';
-  document.getElementById('log-end').value='';
+  setLogTime('log-start','');
+  setLogTime('log-end','');
   document.getElementById('log-notes').value='';
   document.getElementById('log-duration').textContent='';
   renderLogEntries();
