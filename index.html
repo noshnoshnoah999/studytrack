@@ -264,6 +264,13 @@ a{color:inherit;text-decoration:none}
 
 /* LOG PAGE */
 .log-layout{display:block}
+.log-suggest-wrap{margin-bottom:12px}
+.log-suggest-label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:8px}
+.log-suggest-row{display:flex;flex-wrap:wrap;gap:8px}
+.log-suggest-chip{display:flex;flex-direction:column;gap:2px;padding:10px 14px;background:var(--bg2);border:none;border-radius:12px;cursor:pointer;font-family:inherit;text-align:left;transition:background 0.15s;flex-shrink:0}
+.log-suggest-chip:hover{background:var(--bg3)}
+.log-suggest-time{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.2px}
+.log-suggest-name{font-size:14px;font-weight:700;color:var(--text)}
 .class-prompt{display:flex;align-items:center;gap:12px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:12px 14px;margin-bottom:14px}
 .class-prompt-icon{font-size:20px;flex-shrink:0}
 .class-prompt-text{flex:1;min-width:0}
@@ -1560,12 +1567,14 @@ function deleteBlockFromModal(){
   renderSchedule();
 }
 
+// ── Log subject colours ───────────────────────────────────────────────────────
+const LOG_SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',am_hist:'#b45309',jp_exch:'#7c3aed'};
+
 // ── LOG ───────────────────────────────────────────────────────────────────────
 function renderLog(){
   const subjs=loadSubjects();
   const available=subjs.filter(s=>!s.done);
 
-  // ── Class log prompts ─────────────────────────────────────────────────────
   const schedule=loadSchedule();
   const now=new Date();
   const dow=now.getDay();
@@ -1574,36 +1583,39 @@ function renderLog(){
   const sessions=loadSessions();
   const dismissed=JSON.parse(localStorage.getItem('st_dismissed_class_prompts')||'[]');
 
-  // Find class blocks that ended today and haven't been logged yet
-  const classPrompts=schedule
-    .filter(b=>b.day===dow&&b.type==='class'&&b.subjectId&&nowMins>toMins(b.end))
+  // ── Smart suggestions: past study/class blocks not yet logged ─────────────
+  const pastUnlogged=schedule
+    .filter(b=>b.day===dow&&b.subjectId&&nowMins>toMins(b.end))
     .filter(b=>{
-      const key=todayStr2+'_'+b.id;
-      if(dismissed.includes(key))return false;
-      // Already logged this subject today overlapping this block?
+      // Already have a session that covers this block's start time?
       return!sessions.find(s=>s.subjectId===b.subjectId&&s.date===todayStr2&&s.start===b.start);
-    });
+    })
+    .sort((a,b)=>toMins(a.start)-toMins(b.start));
 
   const promptsEl=document.getElementById('class-log-prompts');
   if(promptsEl){
-    promptsEl.innerHTML=classPrompts.map(b=>{
-      const subj=subjs.find(s=>s.id===b.subjectId);
-      const key=todayStr2+'_'+b.id;
-      return'<div class="class-prompt" id="cp-'+b.id+'">'+
-        '<div class="class-prompt-icon">🎓</div>'+
-        '<div class="class-prompt-text">'+
-          '<div class="class-prompt-title">Log '+escHtml(b.label)+'?</div>'+
-          '<div class="class-prompt-sub" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">'+
-            b.start+' – '+
-            '<input type="time" id="cp-end-'+b.id+'" value="'+b.end+'" style="border:1px solid var(--border);border-radius:5px;padding:1px 4px;font-size:12px;font-weight:600;color:var(--text);background:var(--bg);width:80px">'+
-            ' · '+escHtml(subj?subj.name:b.subjectId)+
-          '</div>'+
-        '</div>'+
-        '<button class="class-prompt-btn" onclick="autofillClassLog(\''+b.subjectId+'\',\''+b.start+'\',document.getElementById(\'cp-end-'+b.id+'\').value,\''+escHtml(b.label)+'\',\''+b.id+'\')">Autofill</button>'+
-        '<button class="class-prompt-dismiss" onclick="dismissClassPrompt(\''+key+'\',\''+b.id+'\')" title="Dismiss">×</button>'+
-      '</div>';
-    }).join('');
+    if(pastUnlogged.length===0){
+      promptsEl.innerHTML='';
+    } else {
+      const chips=pastUnlogged.map(b=>{
+        const subj=subjs.find(s=>s.id===b.subjectId);
+        const color=LOG_SUBJ_COLORS[b.subjectId]||'var(--o)';
+        const label=subj?subj.name:escHtml(b.label);
+        return'<button class="log-suggest-chip" onclick="autofillFromBlock(\''+b.subjectId+'\',\''+b.start+'\',\''+b.end+'\')" style="border-left:3px solid '+color+'">'+
+          '<span class="log-suggest-time">'+b.start+'–'+b.end+'</span>'+
+          '<span class="log-suggest-name">'+escHtml(label)+'</span>'+
+        '</button>';
+      }).join('');
+      promptsEl.innerHTML=
+        '<div class="log-suggest-wrap">'+
+          '<div class="log-suggest-label">Unlogged today — tap to autofill</div>'+
+          '<div class="log-suggest-row">'+chips+'</div>'+
+        '</div>';
+    }
   }
+
+  // ── Legacy class prompts (kept for class-type blocks) ─────────────────────
+  // (merged into pastUnlogged above, so no separate display needed)
 
   const todayBlocks=schedule.filter(b=>b.day===dow).sort((a,b)=>toMins(a.start)-toMins(b.start));
   const activeBlock=todayBlocks.find(b=>b.type==='study'&&nowMins>=toMins(b.start)&&nowMins<toMins(b.end));
@@ -1646,7 +1658,6 @@ function renderLog(){
 }
 
 // ── Log form colour accent ────────────────────────────────────────────────────
-const LOG_SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',am_hist:'#b45309',jp_exch:'#7c3aed'};
 function updateLogFormColour(){
   const sel=document.getElementById('log-subject');
   const card=document.getElementById('log-form-card');
@@ -1675,6 +1686,20 @@ function quickLog(subjectId,start){
     updateLogFormColour();
     document.getElementById('log-end')&&document.getElementById('log-end').focus();
   },50);
+}
+
+function autofillFromBlock(subjectId,start,end){
+  const sel=document.getElementById('log-subject');
+  if(sel){sel.value=subjectId;updateLogFormColour();}
+  const ls=document.getElementById('log-start');
+  const le=document.getElementById('log-end');
+  const ld=document.getElementById('log-date');
+  if(ls)ls.value=start;
+  if(le)le.value=end;
+  if(ld)ld.value=todayStr();
+  updateLogDuration();
+  // Scroll form into view
+  document.getElementById('log-form-card')&&document.getElementById('log-form-card').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function autofillClassLog(subjectId,start,end,label,blockId){
