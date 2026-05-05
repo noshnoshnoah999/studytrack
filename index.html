@@ -683,6 +683,7 @@ a{color:inherit;text-decoration:none}
         <div class="greeting-text"><h1>Graduation</h1></div>
       </div>
       <div class="card" style="margin-bottom:16px" id="grad-progress-card"></div>
+      <div class="card" style="margin-bottom:16px" id="grad-today-rec-card"></div>
       <div class="card" style="margin-bottom:16px" id="grad-est-card"></div>
       <div class="card" id="grad-milestones-card"></div>
     </div>
@@ -2536,6 +2537,74 @@ function renderGraduation(){
         '<div class="grad-stat"><div class="grad-stat-val">'+TOTAL_REQ+'h</div><div class="grad-stat-lbl">Required</div></div>'+
       '</div>'+
     '</div>';
+
+  // ── Card: Today's recommended hours ───────────────────────────────────────
+  const daysLeft=Math.max(1,(targetDate-now)/(1000*60*60*24));
+  // Minimum daily hours to finish exactly on Oct 31 2027
+  const dailyMinimum=remaining/daysLeft;
+  // Hours currently behind/ahead in absolute terms
+  const hoursBehind=Math.max(0,(expectedPct-pct)/100*TOTAL_REQ);
+  const hoursAhead=Math.max(0,(pct-expectedPct)/100*TOTAL_REQ);
+  // Spread any deficit over the next 14 days, add a 30-min buffer to get ahead
+  const catchUp=hoursBehind/14;
+  const toStayOnTrack=Math.max(0,dailyMinimum);
+  const toGetAhead=toStayOnTrack+catchUp+0.5;
+  // Today's hours already logged
+  const todayStr2=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  const todayLogged=sessions.filter(s=>s.date===todayStr2).reduce((a,s)=>a+s.hours,0);
+  const stillNeededToday=Math.max(0,toGetAhead-todayLogged);
+  const todayPctOfGoal=Math.min(100,todayLogged/toGetAhead*100);
+  const isWeekend=[0,6].includes(now.getDay());
+
+  const recEl=document.getElementById('grad-today-rec-card');
+  if(recEl){
+    recEl.innerHTML=
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'+
+        '<div>'+
+          '<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px">Today\'s target</div>'+
+          '<div style="font-size:11px;color:var(--text3);margin-top:2px">To get ahead of schedule</div>'+
+        '</div>'+
+        (scheduleAhead?
+          '<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px;background:var(--okl);color:var(--ok)">✓ Ahead '+hoursAhead.toFixed(1)+'h</span>':
+          '<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px;background:var(--errl);color:var(--err)">⚠ Behind '+hoursBehind.toFixed(1)+'h</span>'
+        )+
+      '</div>'+
+      // Big recommended number
+      '<div style="display:flex;align-items:flex-end;gap:16px;margin-bottom:16px">'+
+        '<div>'+
+          '<div style="font-size:42px;font-weight:900;color:var(--o);line-height:1;letter-spacing:-1px">'+fmtH(toGetAhead)+'</div>'+
+          '<div style="font-size:13px;color:var(--text2);margin-top:4px">recommended today to get ahead</div>'+
+        '</div>'+
+      '</div>'+
+      // Progress bar for today
+      '<div style="margin-bottom:10px">'+
+        '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:5px">'+
+          '<span>'+fmtH(todayLogged)+' logged today</span>'+
+          '<span>'+fmtH(stillNeededToday)+' still needed</span>'+
+        '</div>'+
+        '<div style="height:8px;background:var(--bg3);border-radius:100px;overflow:hidden">'+
+          '<div style="height:100%;border-radius:100px;background:'+(todayLogged>=toGetAhead?'var(--ok)':'linear-gradient(90deg,var(--o),#fb923c)')+';width:'+Math.min(100,todayPctOfGoal).toFixed(1)+'%;transition:width 0.4s"></div>'+
+        '</div>'+
+      '</div>'+
+      // Breakdown row
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px">'+
+        '<div style="background:var(--bg3);border-radius:10px;padding:10px;text-align:center">'+
+          '<div style="font-size:15px;font-weight:800;color:var(--text)">'+fmtH(toStayOnTrack)+'</div>'+
+          '<div style="font-size:10px;color:var(--text3);margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px">To stay on track</div>'+
+        '</div>'+
+        '<div style="background:var(--bg3);border-radius:10px;padding:10px;text-align:center">'+
+          '<div style="font-size:15px;font-weight:800;color:'+(catchUp>0?'var(--err)':'var(--text)')+'">'+fmtH(catchUp)+'</div>'+
+          '<div style="font-size:10px;color:var(--text3);margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px">Catch-up</div>'+
+        '</div>'+
+        '<div style="background:var(--bg3);border-radius:10px;padding:10px;text-align:center">'+
+          '<div style="font-size:15px;font-weight:800;color:var(--ok)">+0h 30m</div>'+
+          '<div style="font-size:10px;color:var(--text3);margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px">Get ahead</div>'+
+        '</div>'+
+      '</div>'+
+      (isWeekend?'<div style="margin-top:10px;font-size:12px;color:var(--text3);text-align:center">🌿 Weekend — any study counts as a bonus</div>':
+        (todayLogged>=toGetAhead?'<div style="margin-top:10px;font-size:13px;font-weight:700;color:var(--ok);text-align:center">🎉 You\'ve hit today\'s target!</div>':'')
+      );
+  }
 
   // ── Card 2: Graduation target date ────────────────────────────────────────
   const weeksToGrad=Math.round(Math.max(0,(targetDate-now)/(1000*60*60*24*7)));
