@@ -1610,8 +1610,10 @@ function renderLog(){
   const dismissed=JSON.parse(localStorage.getItem('st_dismissed_class_prompts')||'[]');
 
   // ── Smart suggestions: past study/class/work blocks not yet logged ─────────
+  // Work blocks only appear if there's still an incomplete elective to log toward
+  const hasActiveElective=subjs.some(s=>['el1','el2','el3','el4'].includes(s.id)&&!s.done&&getLogged(s.id)<s.req);
   const pastUnlogged=schedule
-    .filter(b=>b.day===dow&&(b.subjectId||b.type==='work')&&nowMins>toMins(b.end))
+    .filter(b=>b.day===dow&&(b.subjectId||(b.type==='work'&&hasActiveElective))&&nowMins>toMins(b.end))
     .filter(b=>{
       if(b.type==='work'){
         // Work blocks: check by start time + date (no subjectId)
@@ -1628,9 +1630,10 @@ function renderLog(){
     } else {
       const chips=pastUnlogged.map(b=>{
         const isWork=b.type==='work';
-        // Work blocks log toward the first incomplete elective
+        // Work blocks log toward the first incomplete elective; skip entirely if all electives done
         const activeElective=isWork?subjs.find(s=>['el1','el2','el3','el4'].includes(s.id)&&!s.done&&getLogged(s.id)<s.req):null;
-        const workSubjId=activeElective?activeElective.id:'el4';
+        if(isWork&&!activeElective)return''; // all electives complete — don't show work chip
+        const workSubjId=activeElective?activeElective.id:'';
         const subj=b.subjectId?subjs.find(s=>s.id===b.subjectId):null;
         const color=isWork?(LOG_SUBJ_COLORS[workSubjId]||'#d97706'):(LOG_SUBJ_COLORS[b.subjectId]||'var(--o)');
         const label=isWork?(b.label||'Work')+(activeElective?' → '+activeElective.name:''):subj?subj.name:escHtml(b.label);
