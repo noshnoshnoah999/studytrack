@@ -236,6 +236,15 @@ a{color:inherit;text-decoration:none}
 .hist-stat{flex:1;min-width:80px;background:var(--bg2);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
 .hist-stat-val{font-size:18px;font-weight:800;color:var(--text)}
 .hist-stat-lbl{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px}
+.hist-month-group{margin-bottom:6px;border-radius:14px;overflow:hidden;background:var(--bg2)}
+.hist-month-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;user-select:none;transition:background 0.15s}
+.hist-month-header:hover{background:var(--bg3)}
+.hist-month-left{display:flex;align-items:center;gap:10px}
+.hist-month-chevron{font-size:11px;color:var(--text3);width:12px;flex-shrink:0}
+.hist-month-name{font-size:15px;font-weight:700;color:var(--text)}
+.hist-month-count{font-size:12px;color:var(--text3);font-weight:500}
+.hist-month-total{font-size:14px;font-weight:800;color:var(--o)}
+.hist-month-body{padding:0 12px 12px}
 .hist-group{margin-bottom:20px}
 .hist-date-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 2px}
 .hist-date-label{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px}
@@ -1848,25 +1857,22 @@ function renderHistory(){
   if(!entriesEl)return;
   if(!filtered.length){entriesEl.innerHTML='<div class="empty-state">No sessions yet</div>';return;}
 
-  entriesEl.innerHTML=dates.map(date=>{
-    const daySessions=groups[date];
-    const dayTotal=daySessions.reduce((a,s)=>a+s.hours,0);
-    // Format date nicely
+  const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',am_hist:'#b45309',jp_exch:'#7c3aed'};
+  const today=new Date(); today.setHours(12,0,0,0);
+  const yesterday=new Date(today); yesterday.setDate(today.getDate()-1);
+
+  function makeDayGroup(date,daySessions){
     const d=new Date(date+'T12:00:00');
-    const today=new Date(); today.setHours(12,0,0,0);
-    const yesterday=new Date(today); yesterday.setDate(today.getDate()-1);
+    const dayTotal=daySessions.reduce((a,s)=>a+s.hours,0);
     let dateLabel;
     if(d.toDateString()===today.toDateString()) dateLabel='Today';
     else if(d.toDateString()===yesterday.toDateString()) dateLabel='Yesterday';
     else dateLabel=d.toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'});
-
     const cards=daySessions.map(s=>{
       const subj=subjs.find(x=>x.id===s.subjectId);
       const name=subj?subj.name:(s.subjectId||'Unknown');
-      const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',am_hist:'#b45309',jp_exch:'#7c3aed'};
       const color=SUBJ_COLORS[s.subjectId]||'var(--o)';
-      const isHex=color.startsWith('#');
-      const bg=isHex?(color+'12'):'rgba(249,115,22,0.07)';
+      const bg=color.startsWith('#')?(color+'12'):'rgba(249,115,22,0.07)';
       const timeStr=(s.start&&s.end)?s.start+' – '+s.end:'';
       return '<div class="hist-card" style="border-left-color:'+color+';background:'+bg+'">'+
         '<div class="hist-card-main">'+
@@ -1880,15 +1886,62 @@ function renderHistory(){
         '<button class="hist-card-del" onclick="deleteHistEntry(\''+s.id+'\')">×</button>'+
       '</div>';
     }).join('');
-
     return '<div class="hist-group">'+
       '<div class="hist-date-header">'+
         '<span class="hist-date-label">'+dateLabel+'</span>'+
         '<span class="hist-date-total">'+fmtH(dayTotal)+'</span>'+
-      '</div>'+
-      cards+
-    '</div>';
-  }).join('');
+      '</div>'+cards+'</div>';
+  }
+
+  if(!subjectFilter){
+    // ── All subjects: group by month ────────────────────────────────────────
+    const monthGroups={};
+    dates.forEach(date=>{
+      const mk=date.slice(0,7); // "2025-05"
+      if(!monthGroups[mk])monthGroups[mk]=[];
+      monthGroups[mk].push(date);
+    });
+    const months=Object.keys(monthGroups).sort((a,b)=>
+      sort==='oldest'?a.localeCompare(b):b.localeCompare(a)
+    );
+    // Track which months are expanded (default: current month open, rest closed)
+    const curMonth=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0');
+    entriesEl.innerHTML=months.map(mk=>{
+      const monthDates=monthGroups[mk];
+      const d=new Date(mk+'-15T12:00:00');
+      const isCurrentMonth=mk===curMonth;
+      const monthLabel=d.toLocaleDateString('en-AU',{month:'long',year:'numeric'});
+      const monthTotal=monthDates.reduce((t,date)=>t+groups[date].reduce((a,s)=>a+s.hours,0),0);
+      const sessionCount=monthDates.reduce((t,date)=>t+groups[date].length,0);
+      const bodyId='hist-month-'+mk.replace('-','_');
+      const dayHtml=monthDates.map(date=>makeDayGroup(date,groups[date])).join('');
+      return '<div class="hist-month-group">'+
+        '<div class="hist-month-header" onclick="toggleHistMonth(\''+bodyId+'\',this)">'+
+          '<div class="hist-month-left">'+
+            '<span class="hist-month-chevron">'+(isCurrentMonth?'▾':'▸')+'</span>'+
+            '<span class="hist-month-name">'+monthLabel+'</span>'+
+            '<span class="hist-month-count">'+sessionCount+' session'+(sessionCount!==1?'s':'')+'</span>'+
+          '</div>'+
+          '<span class="hist-month-total">'+fmtH(monthTotal)+'</span>'+
+        '</div>'+
+        '<div class="hist-month-body" id="'+bodyId+'" style="display:'+(isCurrentMonth?'block':'none')+'">'+
+          dayHtml+
+        '</div>'+
+      '</div>';
+    }).join('');
+  } else {
+    // ── Single subject: keep day-by-day view ────────────────────────────────
+    entriesEl.innerHTML=dates.map(date=>makeDayGroup(date,groups[date])).join('');
+  }
+}
+
+function toggleHistMonth(bodyId, headerEl){
+  const body=document.getElementById(bodyId);
+  if(!body)return;
+  const open=body.style.display!=='none';
+  body.style.display=open?'none':'block';
+  const chevron=headerEl.querySelector('.hist-month-chevron');
+  if(chevron)chevron.textContent=open?'▸':'▾';
 }
 
 function archiveOldSessions(){
