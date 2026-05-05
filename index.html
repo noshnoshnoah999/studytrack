@@ -1182,9 +1182,9 @@ function renderDashboard(){
   renderNowNext();
   const now=new Date();
   const hour=now.getHours();
-  let greet='Good morning';
-  if(hour>=12&&hour<17)greet='Good afternoon';
-  else if(hour>=17)greet='Good evening';
+  let greet='Good Morning';
+  if(hour>=12&&hour<17)greet='Good Afternoon';
+  else if(hour>=17)greet='Good Evening';
   document.getElementById('greeting').textContent=greet+', Noah';
 
   const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
