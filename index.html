@@ -1598,11 +1598,14 @@ function renderLog(){
   const sessions=loadSessions();
   const dismissed=JSON.parse(localStorage.getItem('st_dismissed_class_prompts')||'[]');
 
-  // ── Smart suggestions: past study/class blocks not yet logged ─────────────
+  // ── Smart suggestions: past study/class/work blocks not yet logged ─────────
   const pastUnlogged=schedule
-    .filter(b=>b.day===dow&&b.subjectId&&nowMins>toMins(b.end))
+    .filter(b=>b.day===dow&&(b.subjectId||b.type==='work')&&nowMins>toMins(b.end))
     .filter(b=>{
-      // Already have a session that covers this block's start time?
+      if(b.type==='work'){
+        // Work blocks: check by start time + date (no subjectId)
+        return!sessions.find(s=>s.date===todayStr2&&s.start===b.start&&(!s.subjectId||s.subjectId===''));
+      }
       return!sessions.find(s=>s.subjectId===b.subjectId&&s.date===todayStr2&&s.start===b.start);
     })
     .sort((a,b)=>toMins(a.start)-toMins(b.start));
@@ -1613,10 +1616,12 @@ function renderLog(){
       promptsEl.innerHTML='';
     } else {
       const chips=pastUnlogged.map(b=>{
-        const subj=subjs.find(s=>s.id===b.subjectId);
-        const color=LOG_SUBJ_COLORS[b.subjectId]||'var(--o)';
-        const label=subj?subj.name:escHtml(b.label);
-        return'<button class="log-suggest-chip" onclick="autofillFromBlock(\''+b.subjectId+'\',\''+b.start+'\',\''+b.end+'\')" style="border-left:3px solid '+color+'">'+
+        const isWork=b.type==='work';
+        const subj=b.subjectId?subjs.find(s=>s.id===b.subjectId):null;
+        const color=isWork?'#d97706':(LOG_SUBJ_COLORS[b.subjectId]||'var(--o)');
+        const label=isWork?(b.label||'Work'):subj?subj.name:escHtml(b.label);
+        const sid=b.subjectId||'';
+        return'<button class="log-suggest-chip" onclick="autofillFromBlock(\''+sid+'\',\''+b.start+'\',\''+b.end+'\')" style="border-left:3px solid '+color+'">'+
           '<span class="log-suggest-time">'+b.start+'–'+b.end+'</span>'+
           '<span class="log-suggest-name">'+escHtml(label)+'</span>'+
         '</button>';
