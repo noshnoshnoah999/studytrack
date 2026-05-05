@@ -333,6 +333,8 @@ a{color:inherit;text-decoration:none}
 .subj-bar-fill{height:100%;border-radius:100px;transition:width 0.5s cubic-bezier(.4,0,.2,1)}
 .subj-pct{font-size:12px;font-weight:700;color:var(--text2);width:34px;text-align:right}
 .subj-hours{font-size:12px;color:var(--text3);margin-top:3px}
+.btn-ask-claude{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:#cc785c;background:rgba(204,120,92,0.12);border:1px solid rgba(204,120,92,0.25);border-radius:8px;padding:5px 10px;text-decoration:none;transition:all 0.15s;cursor:pointer}
+.btn-ask-claude:hover{background:rgba(204,120,92,0.22);border-color:rgba(204,120,92,0.45)}
 .btn-edit-subj{background:none;color:var(--text3);width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0}
 .btn-edit-subj:hover{background:var(--bg3);color:var(--text)}
 
@@ -2339,6 +2341,20 @@ function deleteEntry(id){
 }
 
 // ── PROGRESS ──────────────────────────────────────────────────────────────────
+function buildClaudeUrl(subj){
+  const prompt=
+    "I'm Noah, a student working toward high school graduation using a self-directed learning program. "+
+    "I need to log "+subj.req+" hours of study for \""+subj.name+"\" but I haven't started yet and I'm not sure where to begin.\n\n"+
+    "Can you help me with:\n"+
+    "1. What does "+subj.name+" actually cover? Give me a quick overview.\n"+
+    "2. Where should I start as a complete beginner?\n"+
+    "3. What are the best free resources (videos, websites, books) to use?\n"+
+    "4. How should I structure my study sessions to make real progress?\n"+
+    "5. Any tips for staying motivated and tracking my understanding?\n\n"+
+    "I have "+subj.req+" hours to fill over the coming months, so I want to use that time well.";
+  return'https://claude.ai/new?q='+encodeURIComponent(prompt);
+}
+
 function renderProgress(){
   const subjs=loadSubjects();
   const el=document.getElementById('subjects-list');
@@ -2354,6 +2370,11 @@ function renderProgress(){
     else if(logged===0)tags.push('<span class="tag zero">Not started</span>');
     if(s.passive&&pct<100)tags.push('<span class="tag passive">Passive</span>');
     if(s.locked)tags.push('<span class="tag locked">🔒 Locked</span>');
+    const askClaudeBtn=logged===0&&!(s.done||pct>=100)?
+      '<a class="btn-ask-claude" href="'+buildClaudeUrl(s)+'" target="_blank" rel="noopener" title="Ask Claude how to start">'+
+        '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>'+
+        'Ask Claude'+
+      '</a>':'';
     return'<div class="subj-row" style="border-left-color:'+subjColor+'">'+
       '<div class="subj-main">'+
         '<div class="subj-name-row"><span class="subj-name">'+escHtml(s.name)+'</span>'+tags.join('')+'</div>'+
@@ -2362,6 +2383,7 @@ function renderProgress(){
           '<div class="subj-pct">'+Math.round(pct)+'%</div>'+
         '</div>'+
         '<div class="subj-hours">'+fmtH(logged)+' logged · '+fmtH(s.req)+' required</div>'+
+        (logged===0&&!(s.done||pct>=100)?'<div style="margin-top:8px">'+askClaudeBtn+'</div>':'')+
       '</div>'+
       '<button class="btn-edit-subj" onclick="openSubjectModal(\''+s.id+'\')" title="Edit">'+
         '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'+
