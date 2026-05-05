@@ -757,7 +757,7 @@ a{color:inherit;text-decoration:none}
     <div class="form-group">
       <label class="form-label">Daily Hour Target</label>
       <input type="number" class="form-input" id="goal-daily" placeholder="6.3" min="1" max="16" step="0.1">
-      <div style="font-size:12px;color:var(--text2);margin-top:4px">Currently 6h 18m/day</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:4px" id="goal-daily-current"></div>
     </div>
     <div class="form-group">
       <label class="form-label">Weekly Hour Target</label>
@@ -1073,13 +1073,11 @@ function loadSubjects(){
     if(s){
       const stored=JSON.parse(s);
       // Sync fields from defaults for existing subjects
+      // Only force done/passive from defaults if user hasn't explicitly changed them
       const result=stored.map(subj=>{
         const def=DEFAULT_SUBJECTS.find(d=>d.id===subj.id);
         if(!def) return subj;
-        const out={...subj};
-        if(def.done===true) out.done=true;
-        if(def.passive===true) out.passive=true;
-        return out;
+        return subj; // keep user's saved values as-is
       });
       // Add any new subjects from defaults not yet in stored data
       DEFAULT_SUBJECTS.forEach(def=>{
@@ -1185,7 +1183,7 @@ function updateSidebar(){
   const target=goals.daily;
   const wknd=!isWeekday(new Date());
   const pct=Math.min(100,todayH/target*100);
-  document.getElementById('sb-bar').style.width=(wknd?0:pct)+'%';
+  document.getElementById('sb-bar').style.width=pct+'%';
   document.getElementById('sb-val').textContent=wknd?fmtH(todayH)+' today (weekend)':fmtH(todayH)+' / '+fmtH(target);
 }
 
@@ -1523,7 +1521,7 @@ function openBlockModal(blockId,defaultDay){
     const _now=new Date();
     const _hh=String(_now.getHours()).padStart(2,'0');
     const _mm=String(Math.round(_now.getMinutes()/5)*5%60).padStart(2,'0');
-    const _eh=String(_now.getHours()+1).padStart(2,'0');
+    const _eh=String(Math.min(23,_now.getHours()+1)).padStart(2,'0');
     document.getElementById('bm-start').value=_hh+':'+_mm;
     document.getElementById('bm-end').value=_eh+':'+_mm;
     document.getElementById('bm-type').value='study';
@@ -1682,8 +1680,8 @@ function renderLog(){
   tsel.innerHTML=opts;
   if(tprev&&available.find(s=>s.id===tprev))tsel.value=tprev;
   else if(schedSubj&&!tprev)tsel.value=schedSubj.id; // auto-select schedule subject
-  // Sync log subject to match timer subject
-  if(tsel.value)sel.value=tsel.value;
+  // Only pre-fill log subject from timer if log subject isn't already set
+  if(tsel.value&&!sel.value)sel.value=tsel.value;
 
   const dateIn=document.getElementById('log-date');
   dateIn.value=todayStr();
@@ -1962,8 +1960,7 @@ function archiveOldSessions(){
   });
 
   saveHours(hours);
-  saveSessions(keep);
-  sbPush('st_sessions',keep);
+  saveSessions(keep); // saveSessions already calls sbPush internally
 
   const count=old.length;
   renderHistory();
@@ -1974,8 +1971,7 @@ function archiveOldSessions(){
 function deleteHistEntry(id){
   const sessions=loadSessions();
   const updated=sessions.filter(s=>s.id!==id);
-  saveSessions(updated);
-  sbPush('st_sessions',updated);
+  saveSessions(updated); // saveSessions already calls sbPush internally
   renderHistory();
   renderLogEntries();
 }
@@ -2597,8 +2593,8 @@ function renderGraduation(){
           '<div style="font-size:10px;color:var(--text3);margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px">Catch-up</div>'+
         '</div>'+
         '<div style="background:var(--bg3);border-radius:10px;padding:10px;text-align:center">'+
-          '<div style="font-size:15px;font-weight:800;color:var(--ok)">+0h 30m</div>'+
-          '<div style="font-size:10px;color:var(--text3);margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px">Get ahead</div>'+
+          '<div style="font-size:15px;font-weight:800;color:var(--ok)">+'+fmtH(0.5)+'</div>'+
+          '<div style="font-size:10px;color:var(--text3);margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px">Buffer</div>'+
         '</div>'+
       '</div>'+
       (isWeekend?'<div style="margin-top:10px;font-size:12px;color:var(--text3);text-align:center">🌿 Weekend — any study counts as a bonus</div>':
@@ -2745,6 +2741,8 @@ function openGoalSettings(){
   const g=loadGoals();
   document.getElementById('goal-daily').value=g.daily;
   document.getElementById('goal-weekly').value=g.weekly;
+  const lbl=document.getElementById('goal-daily-current');
+  if(lbl)lbl.textContent='Currently '+fmtH(g.daily)+'/day';
   document.getElementById('goal-modal-overlay').classList.add('open');
 }
 
@@ -3020,7 +3018,7 @@ async function sbPull(key){
 async function syncFromCloud(){
   setSyncUI('syncing','Syncing…');
   try{
-    const KEYS=['st_subjs','st_sched','st_sessions','st_hours'];
+    const KEYS=['st_subjs','st_sched','st_sessions','st_hours','st_goals','st_streak'];
     const rows=await Promise.all(KEYS.map(k=>sbPull(k)));
     let updated=false;
     KEYS.forEach((k,i)=>{
