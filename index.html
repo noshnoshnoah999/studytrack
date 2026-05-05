@@ -931,7 +931,7 @@ function renderNowNext(){
   if(!el)return;
   const schedule=loadSchedule();
   const subjs=loadSubjects();
-  const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',am_hist:'#b45309',jp_exch:'#7c3aed'};
+  const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',el4:'#475569',am_hist:'#b45309',jp_exch:'#7c3aed'};
   const now=new Date();
   const dow=now.getDay();
   const nowMins=now.getHours()*60+now.getMinutes();
@@ -1019,6 +1019,7 @@ const DEFAULT_SUBJECTS=[
   {id:'algebra1', name:'Algebra 1',           req:75,  base:0,     passive:false, locked:true,  done:false},
   {id:'el2',      name:'Electives 2',         req:150, base:151.4, passive:true,  locked:false, done:true },
   {id:'el3',      name:'Electives 3',         req:150, base:132.7, passive:true,  locked:false, done:false},
+  {id:'el4',      name:'Electives 4',         req:150, base:0,     passive:true,  locked:false, done:false},
 ];
 
 function makeDefaultSchedule(){
@@ -1328,7 +1329,7 @@ function renderSchedule(){
   const DAY_ORDER=[1,2,3,4,5,6,0];
   const DAY_NAMES={0:'Sunday',1:'Monday',2:'Tuesday',3:'Wednesday',4:'Thursday',5:'Friday',6:'Saturday'};
 
-  const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',am_hist:'#b45309',jp_exch:'#7c3aed'};
+  const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',el4:'#475569',am_hist:'#b45309',jp_exch:'#7c3aed'};
   const DAY_SHORT={0:'Sun',1:'Mon',2:'Tue',3:'Wed',4:'Thu',5:'Fri',6:'Sat'};
 
   // Build day tabs (always shown)
@@ -1593,7 +1594,7 @@ function deleteBlockFromModal(){
 }
 
 // ── Log subject colours ───────────────────────────────────────────────────────
-const LOG_SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',am_hist:'#b45309',jp_exch:'#7c3aed'};
+const LOG_SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',el4:'#475569',am_hist:'#b45309',jp_exch:'#7c3aed'};
 
 // ── LOG ───────────────────────────────────────────────────────────────────────
 function renderLog(){
@@ -1628,8 +1629,8 @@ function renderLog(){
       const chips=pastUnlogged.map(b=>{
         const isWork=b.type==='work';
         // Work blocks log toward the first incomplete elective
-        const activeElective=isWork?subjs.find(s=>['el1','el2','el3'].includes(s.id)&&!s.done&&getLogged(s.id)<s.req):null;
-        const workSubjId=activeElective?activeElective.id:'el3';
+        const activeElective=isWork?subjs.find(s=>['el1','el2','el3','el4'].includes(s.id)&&!s.done&&getLogged(s.id)<s.req):null;
+        const workSubjId=activeElective?activeElective.id:'el4';
         const subj=b.subjectId?subjs.find(s=>s.id===b.subjectId):null;
         const color=isWork?(LOG_SUBJ_COLORS[workSubjId]||'#d97706'):(LOG_SUBJ_COLORS[b.subjectId]||'var(--o)');
         const label=isWork?(b.label||'Work')+(activeElective?' → '+activeElective.name:''):subj?subj.name:escHtml(b.label);
@@ -1858,7 +1859,7 @@ function renderHistory(){
   if(!entriesEl)return;
   if(!filtered.length){entriesEl.innerHTML='<div class="empty-state">No sessions yet</div>';return;}
 
-  const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',am_hist:'#b45309',jp_exch:'#7c3aed'};
+  const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',el4:'#475569',am_hist:'#b45309',jp_exch:'#7c3aed'};
   const today=new Date(); today.setHours(12,0,0,0);
   const yesterday=new Date(today); yesterday.setDate(today.getDate()-1);
 
@@ -1981,7 +1982,7 @@ let timerInterval=null;
 let timerStart=null;
 let timerStartWallClock=null;
 let timerSubjectId=null;
-const SUBJ_COLORS_T={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',am_hist:'#b45309',jp_exch:'#7c3aed'};
+const SUBJ_COLORS_T={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',el4:'#475569',am_hist:'#b45309',jp_exch:'#7c3aed'};
 
 function timerElapsedSecs(){return timerStart?Math.floor((Date.now()-timerStart)/1000):0;}
 
@@ -2362,7 +2363,7 @@ function renderProgress(){
   const subjs=loadSubjects();
   const el=document.getElementById('subjects-list');
   if(!subjs.length){el.innerHTML='<div class="empty-state">No subjects yet. Add one above.</div>';return;}
-  const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',am_hist:'#b45309',jp_exch:'#7c3aed'};
+  const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',el4:'#475569',am_hist:'#b45309',jp_exch:'#7c3aed'};
   el.innerHTML=subjs.map(s=>{
     const logged=getLogged(s.id);
     const pct=s.req>0?Math.min(100,logged/s.req*100):100;
@@ -2771,7 +2772,7 @@ function checkStreak(){
 function renderFocusCard(){
   const subjs=loadSubjects();
   const hours=loadHours();
-  const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',am_hist:'#b45309',jp_exch:'#7c3aed'};
+  const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',el4:'#475569',am_hist:'#b45309',jp_exch:'#7c3aed'};
   const el=document.getElementById('focus-card');
   if(!el)return;
 
