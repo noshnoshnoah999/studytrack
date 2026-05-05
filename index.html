@@ -1617,10 +1617,13 @@ function renderLog(){
     } else {
       const chips=pastUnlogged.map(b=>{
         const isWork=b.type==='work';
+        // Work blocks log toward the first incomplete elective
+        const activeElective=isWork?subjs.find(s=>['el1','el2','el3'].includes(s.id)&&!s.done&&getLogged(s.id)<s.req):null;
+        const workSubjId=activeElective?activeElective.id:'el3';
         const subj=b.subjectId?subjs.find(s=>s.id===b.subjectId):null;
-        const color=isWork?'#d97706':(LOG_SUBJ_COLORS[b.subjectId]||'var(--o)');
-        const label=isWork?(b.label||'Work'):subj?subj.name:escHtml(b.label);
-        const sid=b.subjectId||'';
+        const color=isWork?(LOG_SUBJ_COLORS[workSubjId]||'#d97706'):(LOG_SUBJ_COLORS[b.subjectId]||'var(--o)');
+        const label=isWork?(b.label||'Work')+(activeElective?' → '+activeElective.name:''):subj?subj.name:escHtml(b.label);
+        const sid=isWork?workSubjId:(b.subjectId||'');
         return'<button class="log-suggest-chip" onclick="autofillFromBlock(\''+sid+'\',\''+b.start+'\',\''+b.end+'\')" style="border-left:3px solid '+color+'">'+
           '<span class="log-suggest-time">'+b.start+'–'+b.end+'</span>'+
           '<span class="log-suggest-name">'+escHtml(label)+'</span>'+
