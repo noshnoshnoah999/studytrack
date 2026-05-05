@@ -2493,12 +2493,43 @@ function renderGraduation(){
   const weeksToTarget=Math.max(1,(targetDate-now)/(1000*60*60*24*7));
   const neededPace=remaining/weeksToTarget;
 
+  // ── Expected % today (based on Oct 31 2027 deadline) ─────────────────────
+  // Use earliest session date as program start, fall back to Sept 1 2025
+  const allDates=sessions.map(s=>s.date).sort();
+  const startStr=allDates.length?allDates[0]:'2025-09-01';
+  const startDate=new Date(startStr+'T12:00:00');
+  const totalDays=Math.max(1,(targetDate-startDate)/(1000*60*60*24));
+  const daysElapsed=Math.max(0,(now-startDate)/(1000*60*60*24));
+  const expectedPct=Math.min(100,daysElapsed/totalDays*100);
+  const pctDiff=pct-expectedPct;
+  const pctDiffStr=(pctDiff>=0?'+':'')+pctDiff.toFixed(1)+'%';
+  const scheduleAhead=pctDiff>=0;
+
   // ── Card 1: Progress overview ──────────────────────────────────────────────
   document.getElementById('grad-progress-card').innerHTML=
     '<div class="grad-hero">'+
       '<div class="grad-pct-big">'+pct.toFixed(1)+'%</div>'+
       '<div class="grad-pct-label">of graduation complete</div>'+
-      '<div class="grad-bar-wrap"><div class="grad-bar-fill" id="grad-bar" style="width:'+pct.toFixed(2)+'%"></div></div>'+
+      '<div class="grad-bar-wrap" style="position:relative">'+
+        '<div class="grad-bar-fill" id="grad-bar" style="width:'+pct.toFixed(2)+'%"></div>'+
+        // Expected marker line
+        '<div style="position:absolute;top:-3px;bottom:-3px;left:'+expectedPct.toFixed(2)+'%;width:2px;background:var(--text3);border-radius:2px" title="Expected: '+expectedPct.toFixed(1)+'%"></div>'+
+      '</div>'+
+      // Expected vs actual row
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding:10px 14px;background:var(--bg3);border-radius:10px">'+
+        '<div>'+
+          '<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Expected today</div>'+
+          '<div style="font-size:18px;font-weight:800;color:var(--text2);margin-top:2px">'+expectedPct.toFixed(1)+'%</div>'+
+        '</div>'+
+        '<div style="text-align:center">'+
+          '<div style="font-size:20px;font-weight:900;color:'+(scheduleAhead?'var(--ok)':'var(--err)')+'">'+pctDiffStr+'</div>'+
+          '<div style="font-size:11px;color:var(--text3);font-weight:600;margin-top:1px">'+(scheduleAhead?'ahead':'behind')+' schedule</div>'+
+        '</div>'+
+        '<div style="text-align:right">'+
+          '<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">You are</div>'+
+          '<div style="font-size:18px;font-weight:800;color:var(--o);margin-top:2px">'+pct.toFixed(1)+'%</div>'+
+        '</div>'+
+      '</div>'+
       '<div class="grad-stats-row">'+
         '<div class="grad-stat"><div class="grad-stat-val">'+fmtH(totalLogged)+'</div><div class="grad-stat-lbl">Logged</div></div>'+
         '<div class="grad-stat"><div class="grad-stat-val">'+fmtH(remaining)+'</div><div class="grad-stat-lbl">Remaining</div></div>'+
