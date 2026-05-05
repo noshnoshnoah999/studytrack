@@ -1838,9 +1838,11 @@ function renderHistory(){
   });
 
   const dates=Object.keys(groups);
-  // Keep date order consistent with sort
+  // Sort date groups to match the chosen sort
   if(sort==='oldest') dates.sort((a,b)=>a.localeCompare(b));
-  else dates.sort((a,b)=>b.localeCompare(a));
+  else if(sort==='longest') dates.sort((a,b)=>Math.max(...groups[b].map(s=>s.hours))-Math.max(...groups[a].map(s=>s.hours)));
+  else if(sort==='shortest') dates.sort((a,b)=>Math.min(...groups[a].map(s=>s.hours))-Math.min(...groups[b].map(s=>s.hours)));
+  else dates.sort((a,b)=>b.localeCompare(a)); // newest
 
   const entriesEl=document.getElementById('hist-entries');
   if(!entriesEl)return;
