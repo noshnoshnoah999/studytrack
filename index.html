@@ -1263,12 +1263,12 @@ function renderDashboard(){
   // Needs attention
   const subjs=loadSubjects();
   const attention=subjs
-    .filter(s=>!s.done&&!s.passive)
     .map(s=>{
       const logged=getLogged(s.id);
       const pct=s.req>0?Math.min(100,logged/s.req*100):100;
       return{...s,logged,pct};
     })
+    .filter(s=>!s.done&&!s.passive&&s.pct<100)
     .sort((a,b)=>a.pct-b.pct)
     .slice(0,5);
 
@@ -2287,9 +2287,9 @@ function renderProgress(){
     const subjColor=SUBJ_COLORS[s.id]||'var(--o)';
     const barBg=s.done?'linear-gradient(90deg,var(--ok),#34d399)':pct>=100?'linear-gradient(90deg,var(--ok),#34d399)':'linear-gradient(90deg,'+subjColor+','+subjColor+'cc)';
     const tags=[];
-    if(s.done)tags.push('<span class="tag done">✓ Done</span>');
+    if(s.done||pct>=100)tags.push('<span class="tag done">✓ Done</span>');
     else if(logged===0)tags.push('<span class="tag zero">Not started</span>');
-    if(s.passive)tags.push('<span class="tag passive">Passive</span>');
+    if(s.passive&&pct<100)tags.push('<span class="tag passive">Passive</span>');
     if(s.locked)tags.push('<span class="tag locked">🔒 Locked</span>');
     return'<div class="subj-row" style="border-left-color:'+subjColor+'">'+
       '<div class="subj-main">'+
@@ -2593,9 +2593,9 @@ function renderFocusCard(){
   const scheduled=Object.keys(schedMap)
     .map(id=>{
       const s=subjs.find(x=>x.id===id);
-      if(!s||s.done)return null;
-      const logged=s.base+(hours[s.id]||0);
-      const pct=s.req>0?logged/s.req*100:100;
+      const logged=s?(s.base+(hours[s.id]||0)):0;
+      const pct=s&&s.req>0?logged/s.req*100:100;
+      if(!s||s.done||pct>=100)return null;
       const left=Math.max(0,s.req-logged);
       return{...s,logged,pct,left,schedH:schedMap[id]};
     })
