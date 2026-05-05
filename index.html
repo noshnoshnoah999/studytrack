@@ -2658,14 +2658,18 @@ function renderWeeklySummary(){
       '<div class="wsd-val">'+(d.h>0?fmtH(d.h):'')+'</div>'+
     '</div>';
   });
-  const hit=days.filter(d=>d.h>=goals.daily).length;
+  // Count only days within the current Mon–Sun week (not rolling Sundays from last week)
+  const{mon:monStr}=weekRange();
+  const thisWeekDays=days.filter(d=>d.ds>=monStr);
+  const hit=thisWeekDays.filter(d=>d.h>=goals.daily).length;
+  const daysInWeek=thisWeekDays.length;
   window._last7Html=
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
       '<div class="card-title" style="margin-bottom:0">Last 7 Days</div>'+
       '<div style="font-size:13px;font-weight:700;color:var(--o)">'+fmtH(weekTotal)+'</div>'+
     '</div>'+
     '<div class="week-sum-grid">'+bars+'</div>'+
-    '<div style="font-size:12px;color:var(--text2);margin-top:4px">'+hit+' of 7 days hit target · '+fmtH(goals.weekly)+' weekly goal</div>';
+    '<div style="font-size:12px;color:var(--text2);margin-top:4px">'+hit+' of '+daysInWeek+' days this week hit target · '+fmtH(goals.weekly)+' weekly goal</div>';
   renderWeekCombined();
 }
 
