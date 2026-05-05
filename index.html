@@ -2492,10 +2492,8 @@ function renderGraduation(){
   const neededPace=remaining/weeksToTarget;
 
   // ── Expected % today (based on Oct 31 2027 deadline) ─────────────────────
-  // Use earliest session date as program start, fall back to Sept 1 2025
-  const allDates=sessions.map(s=>s.date).sort();
-  const startStr=allDates.length?allDates[0]:'2025-09-01';
-  const startDate=new Date(startStr+'T12:00:00');
+  // Fixed program start: Sept 1 2025 (beginning of school year)
+  const startDate=new Date('2025-09-01T12:00:00');
   const totalDays=Math.max(1,(targetDate-startDate)/(1000*60*60*24));
   const daysElapsed=Math.max(0,(now-startDate)/(1000*60*60*24));
   const expectedPct=Math.min(100,daysElapsed/totalDays*100);
@@ -2562,8 +2560,8 @@ function renderGraduation(){
           '<div style="font-size:11px;color:var(--text3);margin-top:2px">To get ahead of schedule</div>'+
         '</div>'+
         (scheduleAhead?
-          '<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px;background:var(--okl);color:var(--ok)">✓ Ahead '+hoursAhead.toFixed(1)+'h</span>':
-          '<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px;background:var(--errl);color:var(--err)">⚠ Behind '+hoursBehind.toFixed(1)+'h</span>'
+          '<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px;background:var(--okl);color:var(--ok)">✓ '+hoursAhead.toFixed(1)+'h ahead of pace</span>':
+          '<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px;background:var(--errl);color:var(--err)">⚠ '+hoursBehind.toFixed(1)+'h behind pace</span>'
         )+
       '</div>'+
       // Big recommended number
