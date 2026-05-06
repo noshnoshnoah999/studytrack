@@ -1292,6 +1292,8 @@ function toggleTodo(id){
   if(t){t.done=!t.done;t.doneAt=t.done?new Date().toISOString():null;}
   saveTodos(todos);
   renderTodos();
+  // Also refresh schedule if it's visible
+  if(document.getElementById('page-schedule').classList.contains('active'))renderSchedule();
 }
 
 function deleteTodo(id){
@@ -1732,6 +1734,44 @@ function renderSchedule(){
         html+='<div class="tl-now-row"><div class="tl-now-dot"></div><span class="tl-now-txt">'+fmtNow+'</span><div class="tl-now-bar"></div></div>';
       }
       html+='</div>';
+
+      // ── Todos for this day ───────────────────────────────────────────────────
+      const dayDate=new Date();
+      dayDate.setDate(dayDate.getDate()+(dow-tdow+7)%7-(dow<tdow?0:0));
+      // Calculate the actual date for the selected day tab
+      const baseDate=new Date();
+      const diff=(dow-baseDate.getDay()+7)%7;
+      const selDate=new Date(baseDate);
+      selDate.setDate(baseDate.getDate()+(dow===tdow?0:dow>tdow?diff:-(7-diff)));
+      const selDateStr=selDate.getFullYear()+'-'+String(selDate.getMonth()+1).padStart(2,'0')+'-'+String(selDate.getDate()).padStart(2,'0');
+      const todos=loadTodos();
+      const dayTodos=todos.filter(t=>t.date===selDateStr).sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99'));
+      if(dayTodos.length){
+        html+='<div style="margin-top:18px"><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:10px">To-Do</div>';
+        dayTodos.forEach(t=>{
+          const isDone=t.done;
+          const isOverdue=isToday&&t.time&&toMins(t.time)<nowMins&&!isDone;
+          const color=isDone?'var(--text3)':isOverdue?'var(--err)':'var(--ok)';
+          function fmtAmPm(t){const[hh,mm]=t.split(':');const h=parseInt(hh);return(h%12||12)+':'+(mm||'00')+(h<12?' AM':' PM');}
+          html+=
+            '<div class="tl-item" style="'+(isDone?'opacity:0.5':'')+'">'+
+              '<div class="tl-left"><div class="tl-time" style="color:'+(t.time?color:'var(--text3)')+'">'+( t.time?fmtAmPm(t.time):'–')+'</div></div>'+
+              '<div class="tl-spine"><div class="tl-dot" style="background:'+(isDone?'var(--bg3)':color)+';border-color:'+(isDone?'var(--bg4)':color)+';width:12px;height:12px;min-width:12px"></div><div class="tl-line"></div></div>'+
+              '<div class="tl-card-wrap">'+
+                '<div class="tl-card" style="background:'+(isDone?'var(--bg3)':isOverdue?'var(--errl)':'var(--okl)')+';border-color:'+(isDone?'var(--border)':isOverdue?'var(--err)44':'var(--ok)44')+'">'+
+                  '<div class="tl-card-top" style="gap:8px">'+
+                    '<span class="tl-card-name" style="color:'+(isDone?'var(--text3)':'var(--text)')+';text-decoration:'+(isDone?'line-through':'none')+'">'+(isDone?'✓ ':'')+escHtml(t.text)+'</span>'+
+                    (isOverdue?'<span class="tl-badge" style="background:var(--errl);color:var(--err);font-size:9px;padding:1px 6px">OVERDUE</span>':'')+
+                  '</div>'+
+                  '<div class="tl-card-sub" style="display:flex;gap:8px;align-items:center;margin-top:4px">'+
+                    '<button onclick="toggleTodo(\''+t.id+'\')" style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:100px;border:none;cursor:pointer;background:'+(isDone?'var(--bg4)':'var(--ok)')+';color:'+(isDone?'var(--text2)':'#fff')+'">'+(isDone?'Undo':'Done')+'</button>'+
+                  '</div>'+
+                '</div>'+
+              '</div>'+
+            '</div>';
+        });
+        html+='</div>';
+      }
     }
     html+='</div>';
     content.innerHTML=html;
