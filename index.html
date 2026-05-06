@@ -2892,7 +2892,7 @@ function renderGraduation(){
   // ── Card 2: Graduation target date ────────────────────────────────────────
   const weeksToGrad=Math.round(Math.max(0,(targetDate-now)/(1000*60*60*24*7)));
   const onTrack=pace>=neededPace;
-  const paceStatus=paceIsGoal?'Based on your '+fmtH(pace)+'/week goal':'Current pace: '+fmtH(pace)+'/week';
+  const currentPaceLabel=paceIsGoal?'Goal pace':'Your recent pace';
   document.getElementById('grad-est-card').innerHTML=
     '<div class="grad-est-card">'+
       '<div class="grad-est-left">'+
@@ -2911,13 +2911,21 @@ function renderGraduation(){
       '</div>'+
       '<div class="grad-est-right">'+
         '<div class="grad-est-tag '+(onTrack?'ahead':'behind')+'">'+(onTrack?'✓ On track':'⚠ Behind pace')+'</div>'+
-        '<div class="grad-est-weeks">'+fmtH(neededPace)+'/week needed</div>'+
+        '<div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">'+
+          '<div style="text-align:right">'+
+            '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">'+currentPaceLabel+'</div>'+
+            '<div style="font-size:16px;font-weight:800;color:'+(onTrack?'var(--ok)':'var(--err)')+'">'+fmtH(pace)+'/wk</div>'+
+          '</div>'+
+          '<div style="text-align:right">'+
+            '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">Min. to graduate</div>'+
+            '<div style="font-size:16px;font-weight:800;color:var(--text2)">'+fmtH(neededPace)+'/wk</div>'+
+          '</div>'+
+        '</div>'+
       '</div>'+
     '</div>'+
     '<div class="grad-need">'+
-      '📌 Need <strong>'+fmtH(neededPace)+'/week</strong> to finish by Oct 31, 2027'+
-    '</div>'+
-    '<div style="font-size:11px;color:var(--text2);margin-top:6px">'+paceStatus+'</div>';
+      '📌 Minimum to finish by Oct 31, 2027: <strong>'+fmtH(neededPace)+'/week</strong> · <strong>'+fmtH(neededPace/7)+'/day</strong>'+
+    '</div>';
 
   // ── Card 3: Milestones (hours-based, estimated dates) ─────────────────────
   const MILESTONES=[
