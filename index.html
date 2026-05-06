@@ -484,17 +484,36 @@ a{color:inherit;text-decoration:none}
 .nnb-time{font-size:12px;color:var(--text2);font-weight:600;white-space:nowrap;flex-shrink:0}
 
 /* DARK MODE TOGGLE (kept for light mode) */
-[data-theme="light"]{
-  --bg:#f4f5f7;--bg2:#ffffff;--bg3:#f0f1f3;--bg4:#e4e5e8;
-  --border:#e8e8e8;--text:#0d0d0d;--text2:#6b6b6b;--text3:#b0b0b0;
-  --ol:#fff4eb;--od2:#ffd4a8;--okl:#e6f9f1;--errl:#ffe8ec;
-  --shadow:0 1px 3px rgba(0,0,0,0.04),0 4px 16px rgba(0,0,0,0.06);
+/* ── EMBER THEME (warm cream + terracotta) ─────────────────────────────────── */
+[data-theme="ember"]{
+  --bg:#f2ece2;--bg2:#faf7f1;--bg3:#e7dfd2;--bg4:#d8ccbb;
+  --border:rgba(0,0,0,0.07);
+  --text:#261a0e;--text2:#7a5c3e;--text3:#b09070;
+  --o:#b5654e;--od:#9c5240;--ol:rgba(181,101,78,0.13);--od2:rgba(181,101,78,0.26);
+  --ok:#5a8a60;--okl:rgba(90,138,96,0.15);--errl:rgba(181,101,78,0.12);
+  --shadow:0 1px 4px rgba(60,30,10,0.06),0 6px 20px rgba(60,30,10,0.08);
 }
-[data-theme="light"] .modal-sheet,[data-theme="light"] #bottom-nav{background:var(--bg2)}
+[data-theme="ember"] .modal-sheet,[data-theme="ember"] #bottom-nav{background:var(--bg2)}
+/* ── SAGE THEME (soft sage green + forest accent) ──────────────────────────── */
+[data-theme="sage"]{
+  --bg:#edf1ea;--bg2:#f6f8f4;--bg3:#dfe6da;--bg4:#cfd9c8;
+  --border:rgba(0,0,0,0.07);
+  --text:#1a2618;--text2:#526b4e;--text3:#88a484;
+  --o:#4a7c5a;--od:#3a6a4a;--ol:rgba(74,124,90,0.13);--od2:rgba(74,124,90,0.26);
+  --ok:#6b9e73;--okl:rgba(107,158,115,0.15);--errl:rgba(220,80,80,0.12);
+  --shadow:0 1px 4px rgba(10,40,10,0.05),0 6px 20px rgba(10,40,10,0.07);
+}
+[data-theme="sage"] .modal-sheet,[data-theme="sage"] #bottom-nav{background:var(--bg2)}
 
-/* DARK TOGGLE BUTTON */
+/* THEME BUTTON */
 .btn-dark{background:none;border:none;cursor:pointer;font-size:17px;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0}
 .btn-dark:hover{background:var(--bg3)}
+/* THEME SWATCHES */
+.theme-swatch-row{display:flex;gap:8px;margin-top:8px}
+.theme-swatch{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 8px;border-radius:14px;border:2px solid transparent;cursor:pointer;background:var(--bg3);color:var(--text2);font-size:12px;font-weight:600;transition:all 0.18s;letter-spacing:0.2px}
+.theme-swatch:hover{background:var(--bg4)}
+.theme-swatch.active{border-color:var(--o);color:var(--o);background:var(--ol)}
+.swatch-dot{width:22px;height:22px;border-radius:50%;flex-shrink:0}
 
 /* STREAK */
 .streak-fire{font-size:18px;line-height:1}
@@ -585,7 +604,6 @@ a{color:inherit;text-decoration:none}
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
         <div class="sidebar-footer-label" style="margin-bottom:0">Today's Progress</div>
         <div style="display:flex;gap:2px">
-          <button class="btn-dark" id="btn-dark-sb" onclick="toggleDarkMode()" title="Toggle light mode">☀️</button>
           <button class="btn-dark" onclick="openGoalSettings()" title="Settings">⚙️</button>
         </div>
       </div>
@@ -608,7 +626,6 @@ a{color:inherit;text-decoration:none}
           <p style="font-size:11px;color:var(--text3);margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px" id="greeting-date"></p>
         </div>
         <div style="display:flex;gap:4px;align-items:center" id="mobile-top-bar">
-          <button class="btn-dark" id="btn-dark-mob" onclick="toggleDarkMode()" title="Toggle light mode">☀️</button>
           <button class="btn-dark" onclick="openGoalSettings()" title="Settings">⚙️</button>
         </div>
       </div>
@@ -760,6 +777,23 @@ a{color:inherit;text-decoration:none}
     <div class="form-group">
       <label class="form-label">Weekly Hour Target</label>
       <input type="number" class="form-input" id="goal-weekly" placeholder="31.5" min="1" max="80" step="0.5">
+    </div>
+    <div class="form-group" style="margin-top:6px">
+      <label class="form-label">Theme</label>
+      <div class="theme-swatch-row">
+        <button class="theme-swatch" data-theme-name="pumpkin" onclick="setTheme('pumpkin')" style="--swatch-bg:#1c2a3c;--swatch-fg:#f97316">
+          <span class="swatch-dot" style="background:#f97316;box-shadow:0 0 0 3px #1c2a3c,0 0 0 5px #f97316"></span>
+          <span style="color:inherit">Pumpkin</span>
+        </button>
+        <button class="theme-swatch" data-theme-name="ember" onclick="setTheme('ember')" style="--swatch-bg:#faf7f1;--swatch-fg:#b5654e">
+          <span class="swatch-dot" style="background:#b5654e;box-shadow:0 0 0 3px #faf7f1,0 0 0 5px #b5654e"></span>
+          <span style="color:inherit">Ember</span>
+        </button>
+        <button class="theme-swatch" data-theme-name="sage" onclick="setTheme('sage')" style="--swatch-bg:#f6f8f4;--swatch-fg:#4a7c5a">
+          <span class="swatch-dot" style="background:#4a7c5a;box-shadow:0 0 0 3px #f6f8f4,0 0 0 5px #4a7c5a"></span>
+          <span style="color:inherit">Sage</span>
+        </button>
+      </div>
     </div>
     <div class="form-group" style="margin-top:6px">
       <label class="form-label">Menu Order</label>
@@ -3001,14 +3035,23 @@ function escHtml(s){
 
 // ── DARK MODE ─────────────────────────────────────────────────────────────────
 // App is dark by default. Toggle switches to "light" mode.
-function applyDarkMode(light){
-  document.documentElement.setAttribute('data-theme',light?'light':'');
-  document.querySelectorAll('.btn-dark[id^="btn-dark"]').forEach(b=>b.textContent=light?'🌙':'☀️');
+function applyTheme(){
+  // Migrate old st_light pref → ember theme
+  let name=localStorage.getItem('st_theme');
+  if(!name){name=localStorage.getItem('st_light')==='1'?'ember':'pumpkin';}
+  document.documentElement.setAttribute('data-theme',name==='pumpkin'?'':name);
 }
-function toggleDarkMode(){
-  const light=document.documentElement.getAttribute('data-theme')==='light'?false:true;
-  localStorage.setItem('st_light',light?'1':'0');
-  applyDarkMode(light);
+function setTheme(name){
+  localStorage.setItem('st_theme',name);
+  document.documentElement.setAttribute('data-theme',name==='pumpkin'?'':name);
+  updateThemeSwatches();
+}
+function updateThemeSwatches(){
+  const name=localStorage.getItem('st_theme')||
+    (localStorage.getItem('st_light')==='1'?'ember':'pumpkin');
+  document.querySelectorAll('.theme-swatch').forEach(b=>{
+    b.classList.toggle('active',b.dataset.themeName===name);
+  });
 }
 
 function toggleSidebar(){
@@ -3051,6 +3094,7 @@ function openGoalSettings(){
   const lbl=document.getElementById('goal-daily-current');
   if(lbl)lbl.textContent='Currently '+fmtH(g.daily)+'/day';
   renderNavReorder();
+  updateThemeSwatches();
   document.getElementById('goal-modal-overlay').classList.add('open');
 }
 
@@ -3372,7 +3416,7 @@ async function syncFromCloud(){
   if(!localStorage.getItem('st_sessions'))localStorage.setItem('st_sessions',JSON.stringify([]));
   if(!localStorage.getItem('st_hours'))localStorage.setItem('st_hours',JSON.stringify({}));
 
-  applyDarkMode(localStorage.getItem('st_light')==='1');
+  applyTheme();
   applySidebarState();
   // Deep link support: open specific page via URL hash e.g. #log
   const hash=window.location.hash.replace('#','');
