@@ -2550,7 +2550,8 @@ function renderGraduation(){
   const hoursAhead=Math.max(0,(pct-expectedPct)/100*TOTAL_REQ);
   // Spread deficit evenly across remaining days — realistic, not a sprint
   const catchUp=hoursBehind/daysLeft;
-  const toStayOnTrack=Math.max(0,dailyMinimum);
+  // Base is your daily goal, not just the bare graduation minimum
+  const toStayOnTrack=Math.max(dailyMinimum,goals.daily);
   const toGetAhead=toStayOnTrack+catchUp+0.5;
   // Today's hours already logged
   const todayStr2=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
