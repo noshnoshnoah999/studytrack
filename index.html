@@ -565,40 +565,7 @@ a{color:inherit;text-decoration:none}
       <div class="logo-title">Study<span>Track</span></div>
       <div class="logo-sub">Noah Fouty · t2509002</div>
     </div>
-    <nav class="sidebar-nav">
-      <div class="nav-item active" data-page="dashboard" onclick="showPage('dashboard')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-        Dashboard
-      </div>
-      <div class="nav-item" data-page="schedule" onclick="showPage('schedule')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        Schedule
-      </div>
-      <div class="nav-item" data-page="log" onclick="showPage('log')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-        Log Hours
-      </div>
-      <div class="nav-item" data-page="progress" onclick="showPage('progress')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-        Subjects
-      </div>
-      <div class="nav-item" data-page="timer" onclick="showPage('timer')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        Timer
-      </div>
-      <div class="nav-item" data-page="history" onclick="showPage('history')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>
-        History
-      </div>
-      <div class="nav-item" data-page="graduation" onclick="showPage('graduation')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
-        Graduation
-      </div>
-      <div class="nav-item" data-page="todos" onclick="showPage('todos')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-        To-Do
-      </div>
-    </nav>
+    <nav class="sidebar-nav" id="sidebar-nav"></nav>
     <div class="sidebar-footer">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
         <div class="sidebar-footer-label" style="margin-bottom:0">Today's Progress</div>
@@ -759,40 +726,7 @@ a{color:inherit;text-decoration:none}
   </main>
 
   <!-- BOTTOM NAV (mobile) -->
-  <nav id="bottom-nav">
-    <div class="bn-item active" data-page="dashboard" onclick="showPage('dashboard')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      Home
-    </div>
-    <div class="bn-item" data-page="schedule" onclick="showPage('schedule')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      Schedule
-    </div>
-    <div class="bn-item" data-page="log" onclick="showPage('log')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-      Log
-    </div>
-    <div class="bn-item" data-page="progress" onclick="showPage('progress')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-      Progress
-    </div>
-    <div class="bn-item" data-page="timer" onclick="showPage('timer')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      Timer
-    </div>
-    <div class="bn-item" data-page="history" onclick="showPage('history')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>
-      History
-    </div>
-    <div class="bn-item" data-page="graduation" onclick="showPage('graduation')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
-      Grad
-    </div>
-    <div class="bn-item" data-page="todos" onclick="showPage('todos')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-      To-Do
-    </div>
-  </nav>
+  <nav id="bottom-nav"></nav>
 </div>
 
 <!-- GOAL SETTINGS MODAL -->
@@ -808,6 +742,10 @@ a{color:inherit;text-decoration:none}
     <div class="form-group">
       <label class="form-label">Weekly Hour Target</label>
       <input type="number" class="form-input" id="goal-weekly" placeholder="31.5" min="1" max="80" step="0.5">
+    </div>
+    <div class="form-group" style="margin-top:6px">
+      <label class="form-label">Menu Order</label>
+      <div id="nav-reorder-list" style="display:flex;flex-direction:column;gap:6px;margin-top:4px"></div>
     </div>
     <div class="modal-actions">
       <button class="btn-save" onclick="saveGoalSettings()">Save</button>
@@ -960,6 +898,62 @@ a{color:inherit;text-decoration:none}
 <script>
 // ── UTILITIES ─────────────────────────────────────────────────────────────────
 function genId(){return Math.random().toString(36).slice(2,9)+Math.random().toString(36).slice(2,5)}
+
+// ── NAV CONFIG & ORDER ────────────────────────────────────────────────────────
+const NAV_ITEMS=[
+  {id:'dashboard', label:'Dashboard', short:'Home',       icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>'},
+  {id:'schedule',  label:'Schedule',  short:'Schedule',   icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'},
+  {id:'log',       label:'Log Hours', short:'Log',        icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>'},
+  {id:'progress',  label:'Subjects',  short:'Progress',   icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>'},
+  {id:'timer',     label:'Timer',     short:'Timer',      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'},
+  {id:'history',   label:'History',   short:'History',    icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>'},
+  {id:'graduation',label:'Graduation',short:'Grad',       icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>'},
+  {id:'todos',     label:'To-Do',     short:'To-Do',      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>'},
+];
+const DEFAULT_NAV_ORDER=NAV_ITEMS.map(n=>n.id);
+
+function loadNavOrder(){
+  try{const s=localStorage.getItem('st_nav_order');if(s){const o=JSON.parse(s);if(Array.isArray(o)&&o.length===NAV_ITEMS.length)return o;}}catch(e){}
+  return [...DEFAULT_NAV_ORDER];
+}
+function saveNavOrder(o){localStorage.setItem('st_nav_order',JSON.stringify(o));}
+
+function buildNav(){
+  const order=loadNavOrder();
+  const items=order.map(id=>NAV_ITEMS.find(n=>n.id===id)).filter(Boolean);
+  const page=typeof currentPage!=='undefined'?currentPage:'dashboard';
+
+  // Sidebar
+  const sb=document.getElementById('sidebar-nav');
+  if(sb)sb.innerHTML=items.map(n=>`<div class="nav-item${n.id===page?' active':''}" data-page="${n.id}" onclick="showPage('${n.id}')">${n.icon}${n.label}</div>`).join('');
+
+  // Bottom nav
+  const bn=document.getElementById('bottom-nav');
+  if(bn)bn.innerHTML=items.map(n=>`<div class="bn-item${n.id===page?' active':''}" data-page="${n.id}" onclick="showPage('${n.id}')">${n.icon}${n.short}</div>`).join('');
+}
+
+function renderNavReorder(){
+  const order=loadNavOrder();
+  const items=order.map(id=>NAV_ITEMS.find(n=>n.id===id)).filter(Boolean);
+  const el=document.getElementById('nav-reorder-list');
+  if(!el)return;
+  el.innerHTML=items.map((n,i)=>`
+    <div style="display:flex;align-items:center;gap:10px;background:var(--bg3);border-radius:10px;padding:9px 12px">
+      <span style="font-size:13px;font-weight:600;color:var(--text);flex:1">${n.label}</span>
+      <button onclick="moveNavItem(${i},-1)" style="background:var(--bg4);border:none;color:var(--text2);width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center"${i===0?' disabled style="opacity:0.3;cursor:default;background:var(--bg4);border:none;color:var(--text2);width:28px;height:28px;border-radius:7px;font-size:14px"':''}>↑</button>
+      <button onclick="moveNavItem(${i},1)"  style="background:var(--bg4);border:none;color:var(--text2);width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center"${i===items.length-1?' disabled style="opacity:0.3;cursor:default;background:var(--bg4);border:none;color:var(--text2);width:28px;height:28px;border-radius:7px;font-size:14px"':''}>↓</button>
+    </div>`).join('');
+}
+
+function moveNavItem(idx,dir){
+  const order=loadNavOrder();
+  const newIdx=idx+dir;
+  if(newIdx<0||newIdx>=order.length)return;
+  [order[idx],order[newIdx]]=[order[newIdx],order[idx]];
+  saveNavOrder(order);
+  renderNavReorder();
+  buildNav();
+}
 
 function toMins(t){
   if(!t)return 0;
@@ -1403,9 +1397,7 @@ function showPage(id){
   document.querySelectorAll('.page').forEach(p=>{
     p.classList.toggle('active',p.id==='page-'+id);
   });
-  document.querySelectorAll('[data-page]').forEach(el=>{
-    el.classList.toggle('active',el.dataset.page===id);
-  });
+  buildNav();
   if(id==='dashboard')renderDashboard();
   else if(id==='schedule')renderSchedule();
   else if(id==='log')renderLog();
@@ -2978,6 +2970,7 @@ function openGoalSettings(){
   document.getElementById('goal-weekly').value=g.weekly;
   const lbl=document.getElementById('goal-daily-current');
   if(lbl)lbl.textContent='Currently '+fmtH(g.daily)+'/day';
+  renderNavReorder();
   document.getElementById('goal-modal-overlay').classList.add('open');
 }
 
