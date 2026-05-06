@@ -101,13 +101,14 @@ jobs:
             }
 
             // Fetch everything in parallel
-const [schedule, subjectsRaw, sessionsRaw, hoursRaw, subsRaw, notifDone, todosRaw] = await Promise.all([              sbGet('st_sched'),
+            const [schedule, subjectsRaw, sessionsRaw, hoursRaw, subsRaw, notifDone, todosRaw] = await Promise.all([
+              sbGet('st_sched'),
               sbGet('st_subjs'),
               sbGet('st_sessions'),
               sbGet('st_hours'),
               sbGet('push_subscriptions'),
               sbGet('notif_done_subjs'),
-                            sbGet('st_todos')
+              sbGet('st_todos')
             ]);
 
             if (!subsRaw) { console.log('No push subscriptions'); return; }
