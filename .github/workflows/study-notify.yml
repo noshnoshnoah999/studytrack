@@ -106,7 +106,8 @@ const [schedule, subjectsRaw, sessionsRaw, hoursRaw, subsRaw, notifDone, todosRa
               sbGet('st_sessions'),
               sbGet('st_hours'),
               sbGet('push_subscriptions'),
-              sbGet('notif_done_subjs')
+              sbGet('notif_done_subjs'),
+                            sbGet('st_todos')
             ]);
 
             if (!subsRaw) { console.log('No push subscriptions'); return; }
@@ -338,6 +339,14 @@ const [schedule, subjectsRaw, sessionsRaw, hoursRaw, subsRaw, notifDone, todosRa
                 );
               }
             }
-
+            // To-Do reminders
+            const todos = todosRaw || [];
+            for (const t of todos.filter(t => !t.done && t.date && t.time)) {
+              const [tHour, tMin] = t.time.split(':').map(Number);
+              const todoMins = tHour * 60 + tMin;
+              if (t.date === todayStr && near(todoMins, 2, 7)) {
+                await sendAll(`📋 Task due now`, t.text, `todo-${t.id}`);
+              }
+            }
           })();
           SCRIPT
