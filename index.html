@@ -38,8 +38,13 @@ a{color:inherit;text-decoration:none}
 
 /* LAYOUT */
 #app{display:flex;height:100%}
-#sidebar{width:210px;min-width:210px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100%;position:fixed;left:0;top:0;z-index:100}
-#main{margin-left:210px;flex:1;min-height:100%;display:flex;flex-direction:column}
+#sidebar{width:210px;min-width:210px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100%;position:fixed;left:0;top:0;z-index:100;transition:transform 0.25s cubic-bezier(.4,0,.2,1)}
+#sidebar.hidden{transform:translateX(-210px)}
+#main{margin-left:210px;flex:1;min-height:100%;display:flex;flex-direction:column;transition:margin-left 0.25s cubic-bezier(.4,0,.2,1)}
+#main.sidebar-hidden{margin-left:0}
+#sidebar-toggle{position:fixed;top:16px;left:16px;z-index:200;background:var(--bg2);border:1px solid var(--border);border-radius:9px;width:34px;height:34px;display:none;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);transition:all 0.15s}
+#sidebar-toggle:hover{color:var(--text);background:var(--bg3)}
+#sidebar-toggle.visible{display:flex}
 .page{display:none;flex:1;padding:32px 32px 60px;max-width:860px;width:100%}
 .page.active{display:block}
 #bottom-nav{display:none}
@@ -558,12 +563,21 @@ a{color:inherit;text-decoration:none}
 </style>
 </head>
 <body>
+<!-- Floating toggle shown when sidebar is hidden -->
+<button id="sidebar-toggle" onclick="toggleSidebar()" title="Show menu">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+</button>
 <div id="app">
   <!-- SIDEBAR -->
   <aside id="sidebar">
-    <div class="sidebar-logo">
-      <div class="logo-title">Study<span>Track</span></div>
-      <div class="logo-sub">Noah Fouty · t2509002</div>
+    <div class="sidebar-logo" style="display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div class="logo-title">Study<span>Track</span></div>
+        <div class="logo-sub">Noah Fouty · t2509002</div>
+      </div>
+      <button onclick="toggleSidebar()" title="Hide menu" style="background:none;border:none;cursor:pointer;color:var(--text3);padding:4px;border-radius:7px;display:flex;align-items:center;justify-content:center;transition:color 0.15s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text3)'">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
     </div>
     <nav class="sidebar-nav" id="sidebar-nav"></nav>
     <div class="sidebar-footer">
@@ -2949,6 +2963,24 @@ function toggleDarkMode(){
   applyDarkMode(light);
 }
 
+function toggleSidebar(){
+  const sb=document.getElementById('sidebar');
+  const main=document.getElementById('main');
+  const toggle=document.getElementById('sidebar-toggle');
+  const hidden=sb.classList.toggle('hidden');
+  main.classList.toggle('sidebar-hidden',hidden);
+  toggle.classList.toggle('visible',hidden);
+  localStorage.setItem('st_sidebar_hidden',hidden?'1':'0');
+}
+function applySidebarState(){
+  const hidden=localStorage.getItem('st_sidebar_hidden')==='1';
+  if(hidden){
+    document.getElementById('sidebar').classList.add('hidden');
+    document.getElementById('main').classList.add('sidebar-hidden');
+    document.getElementById('sidebar-toggle').classList.add('visible');
+  }
+}
+
 // ── GOAL SETTINGS ─────────────────────────────────────────────────────────────
 function loadGoals(){
   try{const g=localStorage.getItem('st_goals');if(g)return JSON.parse(g);}catch(e){}
@@ -3280,6 +3312,7 @@ async function syncFromCloud(){
   if(!localStorage.getItem('st_hours'))localStorage.setItem('st_hours',JSON.stringify({}));
 
   applyDarkMode(localStorage.getItem('st_light')==='1');
+  applySidebarState();
   // Deep link support: open specific page via URL hash e.g. #log
   const hash=window.location.hash.replace('#','');
   const validPages=['dashboard','schedule','log','progress','graduation','timer','history','todos'];
