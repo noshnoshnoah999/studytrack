@@ -2495,11 +2495,16 @@ function renderGraduation(){
   const neededPace=remaining/weeksToTarget;
 
   // ── Expected % today (based on Oct 31 2027 deadline) ─────────────────────
-  // Fixed program start: Sept 1 2025 (beginning of school year)
+  // Start the expected curve from base hours % (what was already done Sept 1 2025)
+  // rather than 0%, since you had teacher-reported hours before the app started.
+  const totalBase=subjs.reduce((a,s)=>a+(s.base||0),0);
+  const basePct=TOTAL_REQ>0?Math.min(100,totalBase/TOTAL_REQ*100):0;
   const startDate=new Date('2025-09-01T12:00:00');
   const totalDays=Math.max(1,(targetDate-startDate)/(1000*60*60*24));
   const daysElapsed=Math.max(0,(now-startDate)/(1000*60*60*24));
-  const expectedPct=Math.min(100,daysElapsed/totalDays*100);
+  const progress=Math.min(1,daysElapsed/totalDays); // 0→1 from startDate to targetDate
+  // Expected rises linearly from basePct to 100% over the program duration
+  const expectedPct=Math.min(100,basePct+progress*(100-basePct));
   const pctDiff=pct-expectedPct;
   const pctDiffStr=(pctDiff>=0?'+':'')+pctDiff.toFixed(1)+'%';
   const scheduleAhead=pctDiff>=0;
