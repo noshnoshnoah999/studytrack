@@ -1,8 +1,8 @@
 // StudyTrack Widget — paste into Scriptable
 // Shows today's hours, streak, next/current block
 
-const SB_URL = "YOUR_SUPABASE_URL";   // ← paste your Supabase URL
-const SB_KEY = "YOUR_SUPABASE_ANON_KEY"; // ← paste your anon key
+const SB_URL = "https://epaiazxcdcseijkhrncm.supabase.co";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVwYWlhenhjZGNzZWlqa2hybmNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwMjQ0MzQsImV4cCI6MjA5MjYwMDQzNH0.h2t_kFLZ_YPvuJlzPPiyXVbOnW4Ub_52hdaYosMoOus";
 
 // ── Colours (Ember theme — warm cream) ─────────────────────────────────────
 const C = {
