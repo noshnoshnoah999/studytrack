@@ -2614,25 +2614,16 @@ function renderGraduation(){
   const weeksToGrad=Math.round(Math.max(0,(targetDate-now)/(1000*60*60*24*7)));
   const onTrack=pace>=neededPace;
   const paceStatus=paceIsGoal?'Based on your '+fmtH(pace)+'/week goal':'Current pace: '+fmtH(pace)+'/week';
-  const showEstDate=localStorage.getItem('st_show_est_date')!=='0';
   document.getElementById('grad-est-card').innerHTML=
     '<div class="grad-est-card">'+
       '<div class="grad-est-left">'+
-        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
+        '<div style="margin-bottom:6px">'+
           '<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px">Est. at current pace</div>'+
-          '<button onclick="toggleEstDate()" style="background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:6px;font-size:11px;font-weight:600;color:var(--text3);background:var(--bg3)" title="Show/hide estimated date">'+
-            (showEstDate?'Hide':'Show')+
-          '</button>'+
         '</div>'+
-        (showEstDate?
-          '<div class="grad-est-date">'+estDateStr+'</div>'+
-          (diffDays!==null?'<div style="font-size:12px;font-weight:700;margin-top:5px;color:'+(ahead?'var(--ok)':'var(--err)')+'">'+
-            (ahead?'✓ '+diffDays+'d ahead of target':'⚠ '+Math.abs(diffDays)+'d behind target')+
-          '</div>':'')
-        :
-          '<div style="font-size:20px;font-weight:800;color:var(--text3);letter-spacing:2px">••••••</div>'+
-          '<div style="font-size:12px;color:var(--text3);margin-top:4px">Date hidden</div>'
-        )+
+        '<div class="grad-est-date">'+estDateStr+'</div>'+
+        (diffDays!==null?'<div style="font-size:12px;font-weight:700;margin-top:5px;color:'+(ahead?'var(--ok)':'var(--err)')+'">'+
+          (ahead?'✓ '+diffDays+'d ahead of target':'⚠ '+Math.abs(diffDays)+'d behind target')+
+        '</div>':'')+
         '<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">'+
           '<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:4px">Official target</div>'+
           '<div style="font-size:22px;font-weight:800;color:var(--text2);letter-spacing:-0.5px;line-height:1">Oct 31, 2027</div>'+
