@@ -2548,8 +2548,8 @@ function renderGraduation(){
   // Hours currently behind/ahead in absolute terms
   const hoursBehind=Math.max(0,(expectedPct-pct)/100*TOTAL_REQ);
   const hoursAhead=Math.max(0,(pct-expectedPct)/100*TOTAL_REQ);
-  // Spread any deficit over the next 14 days, add a 30-min buffer to get ahead
-  const catchUp=hoursBehind/14;
+  // Spread deficit evenly across remaining days — realistic, not a sprint
+  const catchUp=hoursBehind/daysLeft;
   const toStayOnTrack=Math.max(0,dailyMinimum);
   const toGetAhead=toStayOnTrack+catchUp+0.5;
   // Today's hours already logged
