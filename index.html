@@ -529,6 +529,32 @@ a{color:inherit;text-decoration:none}
 .sync-dot.idle{background:var(--text3)}
 @keyframes syncpulse{0%,100%{opacity:1}50%{opacity:0.3}}
 .sync-label{font-size:11px;color:var(--text3)}
+
+/* ── TO-DO ──────────────────────────────────────────────────────── */
+.todo-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.todo-header h2{font-size:22px;font-weight:800;letter-spacing:-0.5px}
+.todo-add-btn{display:flex;align-items:center;gap:6px;background:var(--o);color:#fff;font-size:13px;font-weight:700;padding:8px 16px;border-radius:10px;border:none;cursor:pointer}
+.todo-add-btn:hover{background:var(--od)}
+.todo-section-label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px;margin:18px 0 8px}
+.todo-section-label:first-child{margin-top:0}
+.todo-item{display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:6px;transition:opacity 0.2s}
+.todo-item.done-item{opacity:0.45}
+.todo-check{width:20px;height:20px;min-width:20px;border-radius:6px;border:2px solid var(--text3);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0}
+.todo-check.checked{background:var(--ok);border-color:var(--ok)}
+.todo-check.checked::after{content:'✓';color:#fff;font-size:12px;font-weight:800}
+.todo-overdue .todo-check{border-color:var(--err)}
+.todo-body{flex:1;min-width:0}
+.todo-text{font-size:14px;font-weight:500;color:var(--text);line-height:1.4}
+.todo-item.done-item .todo-text{text-decoration:line-through;color:var(--text3)}
+.todo-meta{display:flex;gap:6px;margin-top:4px;flex-wrap:wrap}
+.todo-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:100px;display:inline-flex;align-items:center;gap:3px}
+.todo-badge.date{background:var(--bg3);color:var(--text2)}
+.todo-badge.time{background:var(--ol);color:var(--o)}
+.todo-badge.overdue{background:var(--errl);color:var(--err)}
+.todo-badge.today{background:var(--okl);color:var(--ok)}
+.todo-del{background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:2px 4px;border-radius:6px;transition:color 0.15s;flex-shrink:0}
+.todo-del:hover{color:var(--err)}
+.todo-empty{text-align:center;padding:32px 0;color:var(--text3);font-size:14px}
 </style>
 </head>
 <body>
@@ -567,6 +593,10 @@ a{color:inherit;text-decoration:none}
       <div class="nav-item" data-page="graduation" onclick="showPage('graduation')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
         Graduation
+      </div>
+      <div class="nav-item" data-page="todos" onclick="showPage('todos')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        To-Do
       </div>
     </nav>
     <div class="sidebar-footer">
@@ -714,6 +744,18 @@ a{color:inherit;text-decoration:none}
       <div id="hist-entries"></div>
     </div>
 
+    <!-- PAGE: TO-DO -->
+    <div class="page" id="page-todos">
+      <div class="todo-header">
+        <h2>To-Do</h2>
+        <button class="todo-add-btn" onclick="openTodoModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Task
+        </button>
+      </div>
+      <div id="todo-list"></div>
+    </div>
+
   </main>
 
   <!-- BOTTOM NAV (mobile) -->
@@ -745,6 +787,10 @@ a{color:inherit;text-decoration:none}
     <div class="bn-item" data-page="graduation" onclick="showPage('graduation')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
       Grad
+    </div>
+    <div class="bn-item" data-page="todos" onclick="showPage('todos')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      To-Do
     </div>
   </nav>
 </div>
@@ -880,6 +926,33 @@ a{color:inherit;text-decoration:none}
       <button class="btn-save" onclick="saveSubject()">Save Subject</button>
       <button class="btn-danger" id="sm-delete-btn" onclick="deleteSubjectFromModal()" style="display:none">Delete Subject</button>
       <button class="btn-cancel" onclick="closeModal('subj-modal-overlay')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- TODO MODAL -->
+<div class="modal-overlay" id="todo-modal-overlay" onclick="handleOverlayClick(event,'todo-modal-overlay')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="todo-modal-title">Add Task</div>
+    <input type="hidden" id="todo-edit-id">
+    <div class="form-group">
+      <label class="form-label">Task</label>
+      <input type="text" class="form-input" id="todo-text" placeholder="What do you need to do?" autocomplete="off">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label class="form-label">Date (optional)</label>
+        <input type="date" class="form-input" id="todo-date" oninput="onTodoDateChange()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Time (optional)</label>
+        <input type="time" class="form-input" id="todo-time" id="todo-time" disabled style="opacity:0.4">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-save" onclick="saveTodoModal()">Save Task</button>
+      <button class="btn-cancel" onclick="closeModal('todo-modal-overlay')">Cancel</button>
     </div>
   </div>
 </div>
@@ -1123,6 +1196,172 @@ function loadSessions(){
   return[];
 }
 function saveSessions(s){localStorage.setItem('st_sessions',JSON.stringify(s));sbPush('st_sessions',s);}
+
+// ── TO-DO ──────────────────────────────────────────────────────────────────────
+function loadTodos(){
+  try{const s=localStorage.getItem('st_todos');if(s)return JSON.parse(s);}catch(e){}
+  return[];
+}
+function saveTodos(t){localStorage.setItem('st_todos',JSON.stringify(t));sbPush('st_todos',t);}
+
+function renderTodos(){
+  const todos=loadTodos();
+  const el=document.getElementById('todo-list');
+  if(!el)return;
+
+  const now=new Date();
+  const todayDate=now.toISOString().slice(0,10);
+
+  // Partition
+  const overdue=[],today=[],upcoming=[],someday=[],done=[];
+  todos.forEach(t=>{
+    if(t.done){done.push(t);return;}
+    if(!t.date){someday.push(t);return;}
+    if(t.date<todayDate){overdue.push(t);return;}
+    if(t.date===todayDate){today.push(t);return;}
+    upcoming.push(t);
+  });
+
+  // Sort upcoming by date+time
+  upcoming.sort((a,b)=>(a.date+(a.time||'99:99')).localeCompare(b.date+(b.time||'99:99')));
+  // Sort today by time
+  today.sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99'));
+
+  function fmtDate(d){
+    const [y,m,day]=d.split('-');
+    const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return months[+m-1]+' '+parseInt(day);
+  }
+  function fmtTime(t){
+    if(!t)return'';
+    const [h,m]=t.split(':');
+    const hr=+h; const ampm=hr>=12?'pm':'am';
+    return (hr%12||12)+':'+m+ampm;
+  }
+  function isOverdueTime(t){
+    if(!t.date||!t.time)return false;
+    const dt=new Date(t.date+'T'+t.time);
+    return dt<now;
+  }
+
+  function makeTodo(t){
+    const overdueTime=!t.done&&isOverdueTime(t);
+    const isODDate=!t.done&&t.date&&t.date<todayDate;
+    const showOrange=!t.done&&t.date===todayDate;
+    return`<div class="todo-item${t.done?' done-item':''}${isODDate||overdueTime?' todo-overdue':''}">
+      <div class="todo-check${t.done?' checked':''}" onclick="toggleTodo('${t.id}')"></div>
+      <div class="todo-body">
+        <div class="todo-text">${escHtml(t.text)}</div>
+        ${(t.date||t.time)?`<div class="todo-meta">
+          ${t.date?`<span class="todo-badge ${isODDate||overdueTime?'overdue':showOrange?'today':'date'}">${isODDate||overdueTime?'⚠ ':showOrange?'● ':''}${fmtDate(t.date)}</span>`:''}
+          ${t.time?`<span class="todo-badge time">${fmtTime(t.time)}</span>`:''}
+        </div>`:''}
+      </div>
+      <button class="todo-del" onclick="deleteTodo('${t.id}')" title="Delete">×</button>
+    </div>`;
+  }
+
+  let html='';
+  if(!overdue.length&&!today.length&&!upcoming.length&&!someday.length&&!done.length){
+    html='<div class="todo-empty">No tasks yet — add one above ✓</div>';
+  }else{
+    if(overdue.length){html+='<div class="todo-section-label" style="color:var(--err)">⚠ Overdue</div>'+overdue.map(makeTodo).join('');}
+    if(today.length){html+='<div class="todo-section-label" style="color:var(--ok)">● Today</div>'+today.map(makeTodo).join('');}
+    if(upcoming.length){html+='<div class="todo-section-label">Upcoming</div>'+upcoming.map(makeTodo).join('');}
+    if(someday.length){html+='<div class="todo-section-label">No Date</div>'+someday.map(makeTodo).join('');}
+    if(done.length){
+      html+='<div class="todo-section-label">Completed ('+done.length+')</div>';
+      html+=done.slice().reverse().slice(0,10).map(makeTodo).join('');
+      if(done.length>10)html+='<div style="font-size:12px;color:var(--text3);text-align:center;padding:6px">+'+(done.length-10)+' more completed</div>';
+    }
+  }
+  el.innerHTML=html;
+}
+
+function toggleTodo(id){
+  const todos=loadTodos();
+  const t=todos.find(x=>x.id===id);
+  if(t){t.done=!t.done;t.doneAt=t.done?new Date().toISOString():null;}
+  saveTodos(todos);
+  renderTodos();
+}
+
+function deleteTodo(id){
+  const todos=loadTodos().filter(x=>x.id!==id);
+  saveTodos(todos);
+  renderTodos();
+}
+
+function openTodoModal(editId){
+  const overlay=document.getElementById('todo-modal-overlay');
+  document.getElementById('todo-modal-title').textContent=editId?'Edit Task':'Add Task';
+  document.getElementById('todo-edit-id').value=editId||'';
+  document.getElementById('todo-text').value='';
+  document.getElementById('todo-date').value='';
+  const timeEl=document.getElementById('todo-time');
+  timeEl.value='';
+  timeEl.disabled=true;
+  timeEl.style.opacity='0.4';
+  if(editId){
+    const t=loadTodos().find(x=>x.id===editId);
+    if(t){
+      document.getElementById('todo-text').value=t.text;
+      document.getElementById('todo-date').value=t.date||'';
+      if(t.date){timeEl.disabled=false;timeEl.style.opacity='1';}
+      timeEl.value=t.time||'';
+    }
+  }
+  overlay.classList.add('active');
+  setTimeout(()=>document.getElementById('todo-text').focus(),100);
+}
+
+function onTodoDateChange(){
+  const date=document.getElementById('todo-date').value;
+  const timeEl=document.getElementById('todo-time');
+  timeEl.disabled=!date;
+  timeEl.style.opacity=date?'1':'0.4';
+  if(!date)timeEl.value='';
+}
+
+function saveTodoModal(){
+  const text=(document.getElementById('todo-text').value||'').trim();
+  if(!text)return;
+  const editId=document.getElementById('todo-edit-id').value;
+  const date=document.getElementById('todo-date').value||null;
+  const time=document.getElementById('todo-time').value||null;
+  const todos=loadTodos();
+  if(editId){
+    const t=todos.find(x=>x.id===editId);
+    if(t){t.text=text;t.date=date;t.time=time;}
+  }else{
+    todos.push({id:genId(),text,date,time,done:false,createdAt:new Date().toISOString()});
+  }
+  saveTodos(todos);
+  closeModal('todo-modal-overlay');
+  showPage('todos');
+  renderTodos();
+}
+
+// In-app todo notification check (when app is open)
+function checkTodoNotifs(){
+  if(!('Notification' in window)||Notification.permission!=='granted')return;
+  const todos=loadTodos();
+  const now=new Date();
+  const key='todo_notif_sent';
+  let sent={};
+  try{sent=JSON.parse(localStorage.getItem(key)||'{}');}catch(e){}
+  todos.filter(t=>!t.done&&t.date&&t.time).forEach(t=>{
+    const dt=new Date(t.date+'T'+t.time);
+    const diffMs=dt-now;
+    // Fire when within 1 minute of due time
+    if(diffMs>=-60000&&diffMs<=60000&&!sent[t.id]){
+      sent[t.id]=true;
+      localStorage.setItem(key,JSON.stringify(sent));
+      new Notification('📋 Task due now',{body:t.text,icon:'/studytrack/icon-192.png'});
+    }
+  });
+}
+
 function loadHours(){
   try{const s=localStorage.getItem('st_hours');if(s)return JSON.parse(s);}catch(e){}
   return{};
@@ -1174,6 +1413,7 @@ function showPage(id){
   else if(id==='progress')renderProgress();
   else if(id==='graduation')renderGraduation();
   else if(id==='timer')renderTimerPage();
+  else if(id==='todos')renderTodos();
   updateSidebar();
 }
 
@@ -3013,7 +3253,7 @@ async function sbPull(key){
 async function syncFromCloud(){
   setSyncUI('syncing','Syncing…');
   try{
-    const KEYS=['st_subjs','st_sched','st_sessions','st_hours','st_goals','st_streak'];
+    const KEYS=['st_subjs','st_sched','st_sessions','st_hours','st_goals','st_streak','st_todos'];
     const rows=await Promise.all(KEYS.map(k=>sbPull(k)));
     let updated=false;
     KEYS.forEach((k,i)=>{
@@ -3049,7 +3289,7 @@ async function syncFromCloud(){
   applyDarkMode(localStorage.getItem('st_light')==='1');
   // Deep link support: open specific page via URL hash e.g. #log
   const hash=window.location.hash.replace('#','');
-  const validPages=['dashboard','schedule','log','progress','graduation','timer','history'];
+  const validPages=['dashboard','schedule','log','progress','graduation','timer','history','todos'];
   showPage(validPages.includes(hash)?hash:'dashboard');
   syncFromCloud();
   updateNotifBtn();
@@ -3082,6 +3322,8 @@ async function syncFromCloud(){
   setInterval(()=>{if(document.getElementById('page-dashboard').classList.contains('active'))renderNowNext();},60000);
   // Refresh schedule NOW indicator every minute while on schedule page
   setInterval(()=>{if(document.getElementById('page-schedule').classList.contains('active'))renderSchedule();},60000);
+  // Check todo due times every minute (in-app notification)
+  setInterval(checkTodoNotifs, 60000);
 })();
 </script>
 </body>
