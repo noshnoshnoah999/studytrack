@@ -7,7 +7,7 @@ on:
 
 jobs:
   notify:
-    runs-on: ubuntu-lates
+    runs-on: ubuntu-latest
     steps:
       - name: Send study notifications
         env:
@@ -24,7 +24,7 @@ jobs:
           const SB_URL = process.env.SB_URL;
           const SB_KEY = process.env.SB_KEY;
           const HDR = {
-            'apikey': SB_URL ? SB_KEY : '',
+            'apikey': SB_KEY,
             'Authorization': 'Bearer ' + SB_KEY,
             'Content-Type': 'application/json'
           };
@@ -35,10 +35,13 @@ jobs:
             process.env.VAPID_PRIVATE
           );
 
-          // ‚îÄ‚îÄ Supabase helpers ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
+          // ── Supabase helpers ───────────────────────────────────────────────
           async function sbGet(key) {
             try {
-              const r = await fetch(`${SB_URL}/rest/v1/study_data?key=eq.${key}&select=value`, { headers: HDR });
+              const r = await fetch(
+                `${SB_URL}/rest/v1/study_data?key=eq.${key}&select=value`,
+                { headers: HDR }
+              );
               if (!r.ok) { console.error('sbGet ' + key + ' failed: ' + r.status); return null; }
               const rows = await r.json();
               if (!rows || !rows[0]) return null;
@@ -53,12 +56,12 @@ jobs:
               await fetch(`${SB_URL}/rest/v1/study_data`, {
                 method: 'POST',
                 headers: { ...HDR, 'Prefer': 'resolution=merge-duplicates' },
-                body: JSON.stringify({ key, value: JSON.stringify(val), updated_at: new Date().toISOString() })
+                body: JSON.stringify({ key, value: val, updated_at: new Date().toISOString() })
               });
             } catch(e) {}
           }
 
-          // ‚îÄ‚îÄ Utilities ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
+          // ── Utilities ──────────────────────────────────────────────────────
           function toMins(t) {
             if (!t) return 0;
             const [h, m] = t.split(':');
@@ -74,26 +77,35 @@ jobs:
             return `${mins}m`;
           }
 
-          // ‚îÄ‚îÄ Send helper ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
+          // ── Send helper ────────────────────────────────────────────────────
           async function send(sub, title, body, tag, extra={}) {
             try {
               await webpush.sendNotification(sub, JSON.stringify({
                 title, body, tag, url: '/studytrack/', ...extra
               }));
-              console.log(`‚úì [${tag}] ${title} ‚Äî ${body}`);
+              console.log(`[OK] [${tag}] ${title} - ${body}`);
             } catch(e) {
-              console.error(`‚úó [${tag}] ${e.statusCode || e.message}`);
+              if (e.statusCode === 410 || e.statusCode === 404) {
+                console.log(`[GONE] subscription expired, skipping`);
+              } else {
+                console.error(`[ERR] [${tag}] ${e.statusCode || e.message}`);
+              }
             }
           }
 
-          // ‚îÄ‚îÄ Main ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
+          // ── Main ───────────────────────────────────────────────────────────
           (async () => {
-            // Current time in Perth (AWST UTC+8)
+            // Current time in Perth (AWST = UTC+8)
             const nowDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'Australia/Perth' }));
             const dow     = nowDate.getDay();
             const nowMins = nowDate.getHours() * 60 + nowDate.getMinutes();
+            // Build todayStr from Perth date fields (not toISOString which is UTC)
+            const todayStr =
+              nowDate.getFullYear() + '-' +
+              String(nowDate.getMonth() + 1).padStart(2, '0') + '-' +
+              String(nowDate.getDate()).padStart(2, '0');
             const DAY = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-            console.log(`${DAY[dow]} ${nowDate.toLocaleTimeString()} (${nowMins}m)`);
+            console.log(`${DAY[dow]} ${nowDate.toLocaleTimeString('en-AU')} Perth | ${nowMins}m | ${todayStr}`);
 
             // Is current time within a window around target?
             function near(targetMins, lo=2, hi=5) {
@@ -111,7 +123,7 @@ jobs:
               sbGet('st_todos')
             ]);
 
-            if (!subsRaw) { console.log('No push subscriptions'); return; }
+            if (!subsRaw) { console.log('No push subscriptions found'); return; }
             const subs = Array.isArray(subsRaw) ? subsRaw : [subsRaw];
             console.log(`Sending to ${subs.length} device(s)`);
 
@@ -126,9 +138,9 @@ jobs:
               .filter(b => b.day === dow)
               .sort((a, b) => toMins(a.start) - toMins(b.start));
 
-            const subjects  = subjectsRaw  || [];
-            const sessions  = sessionsRaw  || [];
-            const hours     = hoursRaw     || {};
+            const subjects = subjectsRaw || [];
+            const sessions = sessionsRaw || [];
+            const hours    = hoursRaw    || {};
 
             // Helper: total logged for a subject
             function getLogged(id) {
@@ -139,8 +151,9 @@ jobs:
             }
 
             // Today's total hours
-            const todayStr = nowDate.toISOString().slice(0, 10);
-            const todayH = sessions.filter(s => s.date === todayStr).reduce((a, s) => a + s.hours, 0);
+            const todayH = sessions
+              .filter(s => s.date === todayStr)
+              .reduce((a, s) => a + s.hours, 0);
 
             // Weekly hours (last 7 days)
             const weekAgo = new Date(nowDate); weekAgo.setDate(weekAgo.getDate() - 6);
@@ -155,11 +168,10 @@ jobs:
               .reduce((a, s) => a + s.hours, 0);
             const weeklyAvg = monthH / 4;
 
-            // Daily goal (default 6.3h)
-            const dailyGoal = 6.3;
-            const weeklyGoal = 44;
+            const dailyGoal  = 6.3;
+            const weeklyGoal = 31.5;
 
-            // ‚îÄ‚îÄ 1a. Block starting in 5‚Äì15 min ‚Äî heads up ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
+            // ── 1a. Block starting in 5–15 min — heads up ─────────────────
             const startingSoon = todayBlocks.filter(b =>
               b.type === 'study' &&
               toMins(b.start) - nowMins >= 5 &&
@@ -168,13 +180,13 @@ jobs:
             for (const bl of startingSoon) {
               const minsAway = toMins(bl.start) - nowMins;
               await sendAll(
-                `üìö Starting in ${minsAway}min`,
-                `${bl.label} ¬∑ ${bl.start}‚Äì${bl.end}`,
+                `Starting in ${minsAway}min`,
+                `${bl.label} · ${bl.start}–${bl.end}`,
                 `soon-${bl.id}`
               );
             }
 
-            // ‚îÄ‚îÄ 1b. Block just started (0‚Äì4 min ago) ‚Äî Start Timer ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
+            // ── 1b. Block just started (0–4 min ago) — Start Timer ────────
             const justStarted = todayBlocks.filter(b =>
               b.type === 'study' &&
               nowMins >= toMins(b.start) &&
@@ -182,14 +194,14 @@ jobs:
             );
             for (const bl of justStarted) {
               await sendAll(
-                `üü¢ Time to study ‚Äî ${bl.label}`,
-                `${bl.start}‚Äì${bl.end} ¬∑ Tap to start your timer`,
+                `Time to study — ${bl.label}`,
+                `${bl.start}–${bl.end} · Tap to start your timer`,
                 `started-${bl.id}`,
                 { type: 'block-start', subjectId: bl.subjectId || null, blockStart: bl.start }
               );
             }
 
-            // ‚îÄ‚îÄ 2. Study block ending in 5 min ‚Äî log reminder ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
+            // ── 2. Study block ending in 3–8 min — log reminder ───────────
             const endingSoon = todayBlocks.filter(b =>
               b.type === 'study' &&
               toMins(b.end) - nowMins >= 3 &&
@@ -197,14 +209,14 @@ jobs:
             );
             for (const bl of endingSoon) {
               await sendAll(
-                `‚è± ${bl.label} ending soon`,
-                `Finishes at ${bl.end} ¬∑ Don't forget to log your session!`,
+                `${bl.label} ending soon`,
+                `Finishes at ${bl.end} · Don't forget to log your session!`,
                 `end-${bl.id}`,
                 { type: 'block-end', subjectId: bl.subjectId || null, blockStart: bl.start }
               );
             }
 
-            // ‚îÄ‚îÄ 3. Break ending in 2 min ‚Äî next block preview ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
+            // ── 3. Break ending in 0–5 min — next block preview ──────────
             const breakEndingSoon = todayBlocks.filter(b =>
               b.type === 'break' &&
               toMins(b.end) - nowMins >= 0 &&
@@ -213,32 +225,26 @@ jobs:
             for (const bl of breakEndingSoon) {
               const nextBlock = todayBlocks.find(b => toMins(b.start) >= toMins(bl.end) && b.type === 'study');
               await sendAll(
-                '‚òï Break ending soon',
+                'Break ending soon',
                 nextBlock ? `Up next: ${nextBlock.label} at ${nextBlock.start}` : 'Break wrapping up',
                 `break-end-${bl.id}`
               );
             }
 
-            // ‚îÄ‚îÄ 4. Morning summary ‚Äî 8:30am (split into 2 notifications) ‚îÄ‚îÄ
+            // ── 4. Morning summary — 8:30am ───────────────────────────────
             if (near(8 * 60 + 30)) {
               const studyBlocks = todayBlocks.filter(b => b.type === 'study');
-              const allBlocks   = todayBlocks.filter(b => b.type === 'study' || b.type === 'break');
               const scheduledH  = studyBlocks.reduce((a, b) => a + (toMins(b.end) - toMins(b.start)) / 60, 0);
 
               if (studyBlocks.length === 0) {
-                await sendAll( 'üåÖ Good morning!', 'No study blocks scheduled today ¬∑ rest up!', 'morning-summary');
+                await sendAll('Good morning!', 'No study blocks today — rest up!', 'morning-summary');
               } else {
-                // Notification 1: schedule overview
-                const blockLines = allBlocks
-                  .map(b => `${b.type === 'break' ? '‚òï' : 'üìñ'} ${b.start}‚Äì${b.end} ${b.label}`)
-                  .join('\n');
                 await sendAll(
-                  `üåÖ Good morning! ${studyBlocks.length} blocks today ¬∑ ${fmtH(scheduledH)}`,
-                  blockLines,
+                  `Good morning! ${studyBlocks.length} blocks today · ${fmtH(scheduledH)}`,
+                  studyBlocks.map(b => `${b.start}–${b.end} ${b.label}`).join('\n'),
                   'morning-schedule'
                 );
 
-                // Notification 2: subject focus ‚Äî most behind subjects
                 const subjectStats = subjects
                   .filter(s => !s.done && !s.passive && s.req > 0)
                   .map(s => {
@@ -251,74 +257,66 @@ jobs:
 
                 const top3 = subjectStats.slice(0, 3);
                 const focusBody = top3
-                  .map(s => `${s.name} ¬∑ ${Math.round(s.pct)}% ¬∑ ${fmtH(s.left)} left`)
+                  .map(s => `${s.name} · ${Math.round(s.pct)}% · ${fmtH(s.left)} left`)
                   .join('\n');
 
-                // Check if any on today's schedule
                 const todaySubjectIds = studyBlocks.map(b => b.subjectId).filter(Boolean);
-                const todayScheduled = subjectStats
+                const todayScheduled  = subjectStats
                   .filter(s => todaySubjectIds.includes(s.id))
                   .map(s => s.name);
 
                 const focusTitle = todayScheduled.length
-                  ? `üéØ Today: ${todayScheduled.join(', ')}`
-                  : 'üéØ Most behind subjects';
+                  ? `Today: ${todayScheduled.join(', ')}`
+                  : 'Most behind subjects';
 
-                await sendAll( focusTitle, focusBody, 'morning-focus');
+                await sendAll(focusTitle, focusBody, 'morning-focus');
               }
             }
 
-            // ‚îÄ‚îÄ 5. Daily wrap-up ‚Äî 6pm ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
+            // ── 5. Daily wrap-up — 6pm ────────────────────────────────────
             if (near(18 * 60)) {
               const remaining = Math.max(0, dailyGoal - todayH);
               const body = todayH >= dailyGoal
-                ? `‚úì Target hit! You studied ${fmtH(todayH)} today üéâ`
-                : `${fmtH(todayH)} logged ¬∑ ${fmtH(remaining)} to hit today's target`;
-              await sendAll( 'üìä Daily wrap-up', body, 'daily-wrapup');
+                ? `Target hit! You studied ${fmtH(todayH)} today`
+                : `${fmtH(todayH)} logged · ${fmtH(remaining)} to go`;
+              await sendAll('Daily wrap-up', body, 'daily-wrapup');
             }
 
-            // ‚îÄ‚îÄ 6. Monday morning ‚Äî weekly preview ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
+            // ── 6. Monday morning — weekly preview ────────────────────────
             if (dow === 1 && near(8 * 60)) {
               await sendAll(
-                'üìÖ New week!',
-                `Goal: ${fmtH(weeklyGoal)} this week ¬∑ You averaged ${fmtH(weeklyAvg)}/week recently`,
+                'New week!',
+                `Goal: ${fmtH(weeklyGoal)} this week · You averaged ${fmtH(weeklyAvg)}/week recently`,
                 'monday-preview'
               );
             }
 
-            // ‚îÄ‚îÄ 8. Sunday evening ‚Äî weekly recap ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
+            // ── 7. Sunday evening — weekly recap ─────────────────────────
             if (dow === 0 && near(18 * 60)) {
               const hitTarget = sessions
-                .filter(s => {
-                  const d = new Date(s.date);
-                  return d >= weekAgo && d <= nowDate;
-                })
+                .filter(s => new Date(s.date) >= weekAgo && new Date(s.date) <= nowDate)
                 .reduce((map, s) => { map[s.date] = (map[s.date] || 0) + s.hours; return map; }, {});
               const daysHit = Object.values(hitTarget).filter(h => h >= dailyGoal).length;
               await sendAll(
-                'üìÜ Weekly recap',
-                `${fmtH(weekH)} this week ¬∑ ${daysHit}/7 days hit target`,
+                'Weekly recap',
+                `${fmtH(weekH)} this week · ${daysHit}/7 days hit target`,
                 'weekly-recap'
               );
             }
 
-            // ‚îÄ‚îÄ 9. Subject complete ‚Äî first time only ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
+            // ── 8. Subject complete — first time only ─────────────────────
             const alreadyNotified = notifDone || [];
             const newlyDone = subjects.filter(s =>
               s.done && !alreadyNotified.includes(s.id)
             );
             for (const s of newlyDone) {
-              await sendAll(
-                'üéâ Subject complete!',
-                `${s.name} is done ¬∑ Great work!`,
-                `done-${s.id}`
-              );
+              await sendAll('Subject complete!', `${s.name} is done · Great work!`, `done-${s.id}`);
             }
             if (newlyDone.length) {
               await sbSet('notif_done_subjs', [...alreadyNotified, ...newlyDone.map(s => s.id)]);
             }
 
-            // ‚îÄ‚îÄ 10. Subject behind ‚Äî once a day at 9am ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
+            // ── 9. Subjects falling behind — 9am ─────────────────────────
             if (near(9 * 60)) {
               const avgPct = subjects
                 .filter(s => !s.done && s.req > 0)
@@ -334,19 +332,19 @@ jobs:
 
               if (wayBehind.length) {
                 await sendAll(
-                  '‚ö†Ô∏è Subjects falling behind',
-                  wayBehind.map(s => `${s.name} (${Math.round(s.pct)}%)`).join(' ¬∑ '),
+                  'Subjects falling behind',
+                  wayBehind.map(s => `${s.name} (${Math.round(s.pct)}%)`).join(' · '),
                   'behind-subjects'
                 );
               }
             }
-            // To-Do reminders
+
+            // ── 10. To-Do reminders ───────────────────────────────────────
             const todos = todosRaw || [];
             for (const t of todos.filter(t => !t.done && t.date && t.time)) {
-              const [tHour, tMin] = t.time.split(':').map(Number);
-              const todoMins = tHour * 60 + tMin;
+              const todoMins = toMins(t.time);
               if (t.date === todayStr && near(todoMins, 2, 7)) {
-                await sendAll(`📋 Task due now`, t.text, `todo-${t.id}`);
+                await sendAll('Task due now', t.text, `todo-${t.id}`);
               }
             }
           })();
