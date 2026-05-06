@@ -42,6 +42,7 @@ a{color:inherit;text-decoration:none}
 #sidebar.hidden{transform:translateX(-210px)}
 #main{margin-left:210px;flex:1;min-height:100%;display:flex;flex-direction:column;transition:margin-left 0.25s cubic-bezier(.4,0,.2,1)}
 #main.sidebar-hidden{margin-left:0}
+#main.sidebar-hidden .page{max-width:1100px}
 #sidebar-toggle{position:fixed;top:16px;left:16px;z-index:200;background:var(--bg2);border:1px solid var(--border);border-radius:9px;width:34px;height:34px;display:none;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);transition:all 0.15s}
 #sidebar-toggle:hover{color:var(--text);background:var(--bg3)}
 #sidebar-toggle.visible{display:flex}
@@ -2773,9 +2774,8 @@ function renderGraduation(){
   const targetDate=new Date('2027-10-31');
   const diffDays=estDate?Math.round((targetDate-estDate)/(1000*60*60*24)):null;
   const ahead=diffDays!==null&&diffDays>0;
-  // Hours needed per week to finish by Oct 2027
-  const weeksToTarget=Math.max(1,(targetDate-now)/(1000*60*60*24*7));
-  const neededPace=remaining/weeksToTarget;
+  // Required pace: teacher's standard = 6.3h/day × 5 days/week
+  const neededPace=goals.daily*5;
 
   // ── Expected % today (based on Oct 31 2027 deadline) ─────────────────────
   // Start the expected curve from base hours % (what was already done Sept 1 2025)
@@ -2924,7 +2924,7 @@ function renderGraduation(){
       '</div>'+
     '</div>'+
     '<div class="grad-need">'+
-      '📌 Minimum to finish by Oct 31, 2027: <strong>'+fmtH(neededPace)+'/week</strong> · <strong>'+fmtH(neededPace/7)+'/day</strong>'+
+      '📌 Required: <strong>'+fmtH(goals.daily)+'/day × 5 days = '+fmtH(neededPace)+'/week</strong> (teacher\'s standard)'+
     '</div>';
 
   // ── Card 3: Milestones (hours-based, estimated dates) ─────────────────────
