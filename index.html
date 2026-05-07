@@ -3649,10 +3649,20 @@ async function syncFromCloud(){
     stopTimerAndLog();
     history.replaceState(null,'','/studytrack/');
   }
-  // Refresh now/next banner every minute
-  setInterval(()=>{if(document.getElementById('page-dashboard').classList.contains('active'))renderNowNext();},60000);
-  // Refresh schedule NOW indicator every minute while on schedule page
-  setInterval(()=>{if(document.getElementById('page-schedule').classList.contains('active'))renderSchedule();},60000);
+  // Refresh now/next banner every minute — pull latest overrides first so cross-device changes appear
+  setInterval(async()=>{
+    if(!document.getElementById('page-dashboard').classList.contains('active'))return;
+    const row=await sbPull('st_sched_overrides');
+    if(row&&row.value!==undefined)localStorage.setItem('st_sched_overrides',JSON.stringify(row.value));
+    renderNowNext();
+  },60000);
+  // Refresh schedule NOW indicator every minute — pull latest overrides first
+  setInterval(async()=>{
+    if(!document.getElementById('page-schedule').classList.contains('active'))return;
+    const row=await sbPull('st_sched_overrides');
+    if(row&&row.value!==undefined)localStorage.setItem('st_sched_overrides',JSON.stringify(row.value));
+    renderSchedule();
+  },60000);
   // Check todo due times every minute (in-app notification)
   setInterval(checkTodoNotifs, 60000);
 })();
