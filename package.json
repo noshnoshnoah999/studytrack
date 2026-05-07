@@ -1,0 +1,15 @@
+{
+  "name": "studytrack-notify",
+  "version": "1.0.0",
+  "description": "StudyTrack push notification cron",
+  "main": "notify.js",
+  "scripts": {
+    "start": "node notify.js"
+  },
+  "dependencies": {
+    "web-push": "^3.6.7"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
