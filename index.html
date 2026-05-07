@@ -464,6 +464,10 @@ a{color:inherit;text-decoration:none}
 .timer-df-block-time{font-size:15px;font-weight:800;color:var(--text)}
 .timer-df-prog-wrap{position:absolute;bottom:0;left:0;right:0;height:4px;background:var(--border)}
 .timer-df-prog-fill{height:100%;transition:width 1s linear}
+.pomo-toggle-btn{display:inline-flex;align-items:center;gap:8px;padding:9px 20px;border-radius:100px;font-size:13px;font-weight:700;border:2px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;margin-top:8px;transition:all 0.2s}
+.pomo-toggle-btn.on{border-color:var(--err);color:var(--err);background:var(--errl)}
+.pomo-phase-badge{padding:5px 16px;border-radius:100px;font-size:11px;font-weight:800;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:4px;display:inline-block}
+.pomo-sessions{font-size:14px;color:var(--text2);margin-bottom:16px;font-weight:600}
 
 /* NOW / NEXT BANNER */
 .now-next-banner{display:flex;flex-direction:column;gap:6px;padding:13px 16px;border-radius:12px;margin-bottom:12px;border:none;cursor:default}
@@ -2493,6 +2497,28 @@ let timerStart=null;
 let timerStartWallClock=null;
 let timerSubjectId=null;
 const SUBJ_COLORS_T={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',el4:'#475569',am_hist:'#b45309',jp_exch:'#7c3aed'};
+let pomodoroMode=false;
+let pomodoroPhase='work';
+let pomodoroCount=0;
+let pomodoroEndMs=null;
+const POMO_WORK=25*60,POMO_SHORT=5*60,POMO_LONG=15*60;
+function fmtCountdown(secs){const m=Math.floor(Math.max(0,secs)/60),s=Math.max(0,secs)%60;return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');}
+function togglePomodoroMode(){pomodoroMode=!pomodoroMode;renderTimerPage();}
+function showPomodoroNotif(title,body){if('Notification'in window&&Notification.permission==='granted'){try{new Notification(title,{body,icon:'/studytrack/icon.png',tag:'pomodoro'});}catch(e){}}}
+function pomodoroPhaseComplete(){
+  if(pomodoroPhase==='work'){
+    pomodoroCount++;
+    pomodoroPhase='break';
+    const len=pomodoroCount%4===0?POMO_LONG:POMO_SHORT;
+    pomodoroEndMs=Date.now()+len*1000;
+    showPomodoroNotif('🍅 Time for a break!',pomodoroCount%4===0?'15 min long break — you earned it!':'5 min break — step away from the screen');
+  }else{
+    pomodoroPhase='work';
+    pomodoroEndMs=Date.now()+POMO_WORK*1000;
+    showPomodoroNotif('☕ Break over — back to work!','25 min focus session starting now');
+  }
+  renderTimerPage();
+}
 
 function timerElapsedSecs(){return timerStart?Math.floor((Date.now()-timerStart)/1000):0;}
 
@@ -2502,11 +2528,15 @@ function timerFmtClock(secs){
 }
 
 function timerTick(){
-  const el=document.getElementById('tp-clock');
-  if(el)el.textContent=timerFmtClock(timerElapsedSecs());
-  // Also update log-page display if visible
-  const el2=document.getElementById('timer-display');
-  if(el2)el2.textContent=timerFmtClock(timerElapsedSecs());
+  if(pomodoroMode&&pomodoroEndMs){
+    const remaining=Math.ceil((pomodoroEndMs-Date.now())/1000);
+    const el=document.getElementById('tp-clock');if(el)el.textContent=fmtCountdown(remaining);
+    const el2=document.getElementById('timer-display');if(el2)el2.textContent=fmtCountdown(remaining);
+    if(remaining<=0){pomodoroPhaseComplete();return;}
+  }else{
+    const el=document.getElementById('tp-clock');if(el)el.textContent=timerFmtClock(timerElapsedSecs());
+    const el2=document.getElementById('timer-display');if(el2)el2.textContent=timerFmtClock(timerElapsedSecs());
+  }
 }
 
 function renderTimerPage(){
@@ -2588,7 +2618,8 @@ function renderTimerPage(){
           <span style="width:9px;height:9px;border-radius:50%;background:${subjColor};display:inline-block"></span>
           ${escHtml(currentSubj?currentSubj.name:'Studying')}
         </div>
-        <div class="timer-df-clock" id="tp-clock" style="color:${subjColor}">${timerFmtClock(elapsed)}</div>
+        ${pomodoroMode?`<div class="pomo-phase-badge" style="background:${pomodoroPhase==='work'?'var(--errl)':'var(--okl)'};color:${pomodoroPhase==='work'?'var(--err)':'var(--ok)'}">${pomodoroPhase==='work'?'🍅 Focus':'☕ Break'}</div><div class="pomo-sessions">${'🍅'.repeat(Math.min(pomodoroCount,8))} ${pomodoroCount} session${pomodoroCount!==1?'s':''} done</div>`:''}
+        <div class="timer-df-clock" id="tp-clock" style="color:${pomodoroMode?(pomodoroPhase==='work'?'var(--err)':'var(--ok)'):subjColor}">${pomodoroMode&&pomodoroEndMs?fmtCountdown(Math.ceil((pomodoroEndMs-Date.now())/1000)):timerFmtClock(elapsed)}</div>
         <button class="timer-df-stop" onclick="timerPageToggle()">⏹ Stop</button>
         ${progHtml}
       </div>`;
@@ -2607,10 +2638,11 @@ function renderTimerPage(){
         <div class="timer-sub-progress">${currentSubj?`${fmtH(todaySubjH)} logged today · ${Math.round(pct)}% overall`:''}</div>
         <div class="timer-controls">
           <button class="timer-btn-main ${stopped?'done':'idle'}" onclick="timerPageToggle()">
-            ${stopped?'▶ New Session':'▶ Start'}
+            ${stopped?'▶ New Session':pomodoroMode?'🍅 Start Pomodoro':'▶ Start'}
           </button>
           ${stopped?'<button class="timer-btn-reset" onclick="timerPageReset()">Reset</button>':''}
         </div>
+        ${!stopped?`<button class="pomo-toggle-btn ${pomodoroMode?'on':''}" onclick="togglePomodoroMode()">🍅 ${pomodoroMode?'Pomodoro ON · 25/5 min':'Pomodoro mode'}</button>`:''}
         <div class="timer-stat-row">
           <div class="timer-stat"><div class="timer-stat-val">${fmtH(todaySubjH)}</div><div class="timer-stat-lbl">Today</div></div>
           <div class="timer-stat"><div class="timer-stat-val">${Math.round(pct)}%</div><div class="timer-stat-lbl">done</div></div>
@@ -2657,6 +2689,7 @@ function timerPageToggle(){
     // Start
     timerStart=Date.now();
     timerStartWallClock=new Date();
+    if(pomodoroMode){pomodoroPhase='work';pomodoroCount=0;pomodoroEndMs=Date.now()+POMO_WORK*1000;}
     timerInterval=setInterval(timerTick,1000);
     renderTimerPage();
   }
@@ -2667,6 +2700,7 @@ function timerPageReset(){
   timerInterval=null;
   timerStart=null;
   timerStartWallClock=null;
+  pomodoroPhase='work';pomodoroCount=0;pomodoroEndMs=null;
   renderTimerPage();
 }
 
