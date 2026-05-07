@@ -416,19 +416,23 @@ a{color:inherit;text-decoration:none}
 @media(max-width:768px){
   #sidebar{display:none}
   #main{margin-left:0;width:100vw;overflow-x:hidden}
-  .page{padding:16px 16px calc(88px + env(safe-area-inset-bottom)) 16px;width:100vw;overflow-x:hidden}
+  .page{padding:calc(env(safe-area-inset-top) + 16px) 16px calc(88px + env(safe-area-inset-bottom)) 16px;width:100vw;overflow-x:hidden}
   #bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);padding:10px 0 calc(10px + env(safe-area-inset-bottom));z-index:100}
   .bn-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 0;transition:color 0.15s;color:var(--text3);font-size:10px;font-weight:600;letter-spacing:0.2px}
   .bn-item.active{color:var(--o)}
   .bn-item svg{width:22px;height:22px;flex-shrink:0}
-  .stats-strip{grid-template-columns:1fr 1fr}
+  .stats-strip{grid-template-columns:repeat(3,1fr)}
   .stat-chips{grid-template-columns:1fr 1fr}
   .two-col{grid-template-columns:1fr}
   .log-layout{display:block}
   #log-form-card [style*="grid-template-columns"]{grid-template-columns:1fr!important}
+  .sched-header{flex-wrap:wrap;gap:8px}
   .sched-header h2,.prog-header h2{font-size:18px}
+  .sched-header>div{flex-wrap:wrap;gap:6px}
+  .btn-toggle-edit{font-size:12px;padding:7px 12px}
   .card{padding:16px}
-  .stat-val{font-size:18px}
+  .stat-val{font-size:16px}
+  .stat-label{font-size:9px}
   .today-big{font-size:40px}
   .prog-header{flex-wrap:wrap;gap:8px}
   .greeting-text h1{font-size:20px}
@@ -649,7 +653,7 @@ a{color:inherit;text-decoration:none}
         <div style="display:flex;gap:8px;align-items:center">
           <button class="btn-notif" id="btn-notif" onclick="toggleNotifications()" title="Enable notifications">🔕</button>
           <button class="btn-toggle-edit" id="btn-override-day" onclick="startOverrideEdit()" title="Override just this day" style="background:var(--bg3);color:var(--text2);border:1px solid var(--border)">One-off</button>
-          <button class="btn-toggle-edit" id="btn-edit-sched" onclick="toggleEditMode()">Edit Schedule</button>
+          <button class="btn-toggle-edit" id="btn-edit-sched" onclick="toggleEditMode()">Edit</button>
         </div>
       </div>
       <div id="sched-content"></div>
@@ -1619,7 +1623,7 @@ function toggleEditMode(){
   scheduleOverrideEdit=false;
   scheduleEditMode=!scheduleEditMode;
   const btn=document.getElementById('btn-edit-sched');
-  btn.textContent=scheduleEditMode?'Done':'Edit Schedule';
+  btn.textContent=scheduleEditMode?'Done':'Edit';
   btn.classList.toggle('active',scheduleEditMode);
   renderSchedule();
 }
@@ -1658,7 +1662,7 @@ function selectScheduleDay(dow){
   scheduleOverrideEdit=false;
   scheduleEditMode=false;
   const btn=document.getElementById('btn-edit-sched');
-  if(btn){btn.textContent='Edit Schedule';btn.classList.remove('active');}
+  if(btn){btn.textContent='Edit';btn.classList.remove('active');}
   renderSchedule();
 }
 
