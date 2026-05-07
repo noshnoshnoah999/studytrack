@@ -1,5 +1,5 @@
 // StudyTrack Widget — paste into Scriptable
-// Shows today's hours, streak, next/current block
+// Shows today's hours, next/current block
 
 const SB_URL = "https://epaiazxcdcseijkhrncm.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVwYWlhenhjZGNzZWlqa2hybmNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwMjQ0MzQsImV4cCI6MjA5MjYwMDQzNH0.h2t_kFLZ_YPvuJlzPPiyXVbOnW4Ub_52hdaYosMoOus";
@@ -56,10 +56,9 @@ function fmtAmPm(t) {
 }
 
 // ── Load data ────────────────────────────────────────────────────────────────
-const [sessions, goals, streak, schedule] = await Promise.all([
+const [sessions, goals, schedule] = await Promise.all([
   sbGet("st_sessions"),
   sbGet("st_goals"),
-  sbGet("st_streak"),
   sbGet("st_sched"),
 ]);
 
@@ -72,7 +71,6 @@ const todaySessions = (sessions||[]).filter(s => s.date === today);
 const todayH = todaySessions.reduce((a,s) => a + s.hours, 0);
 const dailyGoal = (goals && goals.daily) || 6.3;
 const pct = Math.min(1, todayH / dailyGoal);
-const streakCount = (streak && streak.count) || 0;
 
 // Next / current block
 const todayBlocks = (schedule||[])
@@ -172,10 +170,6 @@ if (size === "small") {
   goalLbl.textColor = C.text2;
 
   left.addSpacer(6);
-
-  const streakEl = left.addText(`🔥 ${streakCount} day streak`);
-  streakEl.font = Font.mediumSystemFont(12);
-  streakEl.textColor = streakCount > 0 ? C.accent : C.text3;
 
   row.addSpacer();
 
