@@ -1052,13 +1052,11 @@ function todayDow(){return new Date().getDay();}
 function renderNowNext(){
   const el=document.getElementById('now-next-banner');
   if(!el)return;
-  const schedule=loadSchedule();
   const subjs=loadSubjects();
   const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',el4:'#475569',am_hist:'#b45309',jp_exch:'#7c3aed'};
   const now=new Date();
-  const dow=now.getDay();
   const nowMins=now.getHours()*60+now.getMinutes();
-  const dayBlocks=schedule.filter(b=>b.day===dow).sort((a,b)=>toMins(a.start)-toMins(b.start));
+  const dayBlocks=getTodayActualBlocks().sort((a,b)=>toMins(a.start)-toMins(b.start));
 
   // Find currently active block
   const active=dayBlocks.find(b=>nowMins>=toMins(b.start)&&nowMins<toMins(b.end));
@@ -1609,6 +1607,14 @@ function saveOverrides(o){
   localStorage.setItem('st_sched_overrides',JSON.stringify(o));
   sbPush('st_sched_overrides',o);
 }
+// Returns today's actual blocks — override if one exists, else weekly schedule
+function getTodayActualBlocks(){
+  const dow=new Date().getDay();
+  const overrides=loadOverrides();
+  const ds=todayStr();
+  if(overrides[ds])return overrides[ds];
+  return loadSchedule().filter(b=>b.day===dow);
+}
 // Get the calendar date string for the currently selected schedule day
 function selDateStr(){
   const now=new Date();
@@ -2141,8 +2147,8 @@ function renderLog(){
   // ── Smart suggestions: past study/class/work blocks not yet logged ─────────
   // Work blocks only appear if there's still an incomplete elective to log toward
   const hasActiveElective=subjs.some(s=>['el1','el2','el3','el4'].includes(s.id)&&!s.done&&getLogged(s.id)<s.req);
-  const pastUnlogged=schedule
-    .filter(b=>b.day===dow&&(b.subjectId||(b.type==='work'&&hasActiveElective))&&nowMins>toMins(b.end))
+  const pastUnlogged=getTodayActualBlocks()
+    .filter(b=>(b.subjectId||(b.type==='work'&&hasActiveElective))&&nowMins>toMins(b.end))
     .filter(b=>{
       if(b.type==='work'){
         // Work blocks: check by start time + date (no subjectId)
@@ -2183,7 +2189,7 @@ function renderLog(){
   // ── Legacy class prompts (kept for class-type blocks) ─────────────────────
   // (merged into pastUnlogged above, so no separate display needed)
 
-  const todayBlocks=schedule.filter(b=>b.day===dow).sort((a,b)=>toMins(a.start)-toMins(b.start));
+  const todayBlocks=getTodayActualBlocks().sort((a,b)=>toMins(a.start)-toMins(b.start));
   const activeBlock=todayBlocks.find(b=>b.type==='study'&&nowMins>=toMins(b.start)&&nowMins<toMins(b.end));
   const nextBlock=todayBlocks.find(b=>b.type==='study'&&toMins(b.start)>nowMins);
   const schedBlock=activeBlock||nextBlock;
@@ -2463,13 +2469,7 @@ function archiveOldSessions(){
   const keep=sessions.filter(s=>s.date>=cutoffStr);
   if(!old.length)return;
 
-  // Absorb old session hours into st_hours so totals don't change
-  const hours=loadHours();
-  old.forEach(s=>{
-    if(s.subjectId) hours[s.subjectId]=(hours[s.subjectId]||0)+s.hours;
-  });
-
-  saveHours(hours);
+  // st_hours already contains these sessions' hours (added at log time) — just remove from session list
   saveSessions(keep); // saveSessions already calls sbPush internally
 
   const count=old.length;
@@ -2546,7 +2546,7 @@ function renderTimerPage(){
   const now=new Date();
   const dow=now.getDay();
   const nowMins=now.getHours()*60+now.getMinutes();
-  const todayBlocks=schedule.filter(b=>b.day===dow).sort((a,b)=>toMins(a.start)-toMins(b.start));
+  const todayBlocks=getTodayActualBlocks().sort((a,b)=>toMins(a.start)-toMins(b.start));
   const activeBlock=todayBlocks.find(b=>b.type==='study'&&nowMins>=toMins(b.start)&&nowMins<toMins(b.end));
   const nextBlock=todayBlocks.find(b=>b.type==='study'&&toMins(b.start)>nowMins);
   const schedBlock=activeBlock||nextBlock;
@@ -2564,7 +2564,7 @@ function renderTimerPage(){
   const sessions=loadSessions();
   function getLogged(id){
     const s=subjs.find(x=>x.id===id);if(!s)return 0;
-    return(s.base||0)+(hours[id]||0)+sessions.filter(x=>x.subjectId===id).reduce((a,x)=>a+x.hours,0);
+    return(s.base||0)+(hours[id]||0);
   }
   const logged=currentSubj?getLogged(currentSubj.id):0;
   const req=currentSubj?currentSubj.req:0;
@@ -3318,10 +3318,8 @@ function renderFocusCard(){
   const el=document.getElementById('focus-card');
   if(!el)return;
 
-  // Get today's scheduled study blocks
-  const sched=loadSchedule();
-  const todayDow=new Date().getDay();
-  const todayBlocks=sched.filter(b=>b.day===todayDow&&b.type==='study'&&b.subjectId);
+  // Get today's scheduled study blocks (override-aware)
+  const todayBlocks=getTodayActualBlocks().filter(b=>b.type==='study'&&b.subjectId);
 
   // Build scheduled hours per subject today
   const schedMap={};
@@ -3504,9 +3502,7 @@ function scheduleNotifications(){
   if(!('Notification' in window)||Notification.permission!=='granted'||localStorage.getItem('st_notif')!=='1')return;
   notifTimers.forEach(t=>clearTimeout(t));
   notifTimers=[];
-  const schedule=loadSchedule();
-  const today=todayDow();
-  const blocks=schedule.filter(b=>b.day===today&&b.type==='study');
+  const blocks=getTodayActualBlocks().filter(b=>b.type==='study');
   const now=new Date();
   const nowMins=now.getHours()*60+now.getMinutes();
   blocks.forEach(bl=>{
@@ -3617,7 +3613,7 @@ async function syncFromCloud(){
   applySidebarState();
   // Deep link support: open specific page via URL hash e.g. #log
   const hash=window.location.hash.replace('#','');
-  const validPages=['dashboard','schedule','log','progress','graduation','timer','history','todos'];
+  const validPages=['dashboard','schedule','log','progress','graduation','timer','history'];
   showPage(validPages.includes(hash)?hash:'dashboard');
   syncFromCloud();
   updateNotifBtn();

@@ -126,8 +126,7 @@ async function send(sub, title, body, tag, extra = {}) {
   function getLogged(id) {
     const s = subjects.find(x => x.id === id);
     if (!s) return 0;
-    return (s.base || 0) + (hours[id] || 0) +
-      sessions.filter(x => x.subjectId === id).reduce((a, x) => a + x.hours, 0);
+    return (s.base || 0) + (hours[id] || 0);
   }
 
   const todayH = sessions
