@@ -75,16 +75,17 @@ async function send(sub, title, body, tag, extra = {}) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 (async () => {
-  // Current time in Perth (AWST = UTC+8)
-  const nowDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'Australia/Perth' }));
-  const dow     = nowDate.getDay();
-  const nowMins = nowDate.getHours() * 60 + nowDate.getMinutes();
+  // Current time in Perth (AWST = UTC+8, no DST)
+  // Use direct UTC offset math — avoids toLocaleString parsing bugs on Linux
+  const nowDate = new Date(Date.now() + 8 * 3600000);
+  const dow     = nowDate.getUTCDay();
+  const nowMins = nowDate.getUTCHours() * 60 + nowDate.getUTCMinutes();
   const todayStr =
-    nowDate.getFullYear() + '-' +
-    String(nowDate.getMonth() + 1).padStart(2, '0') + '-' +
-    String(nowDate.getDate()).padStart(2, '0');
+    nowDate.getUTCFullYear() + '-' +
+    String(nowDate.getUTCMonth() + 1).padStart(2, '0') + '-' +
+    String(nowDate.getUTCDate()).padStart(2, '0');
   const DAY = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  console.log(`${DAY[dow]} ${nowDate.toLocaleTimeString('en-AU')} Perth | ${nowMins}m | ${todayStr}`);
+  console.log(`${DAY[dow]} ${nowDate.getUTCHours()}:${String(nowDate.getUTCMinutes()).padStart(2,'0')} Perth | ${nowMins}m | ${todayStr}`);
 
   function near(targetMins, lo = 2, hi = 5) {
     return nowMins >= targetMins - lo && nowMins < targetMins + hi;
