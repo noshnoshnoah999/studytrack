@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>StudyTrack</title>
+<!-- PWA / iOS Home Screen -->
+<link rel="manifest" href="/studytrack/manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="StudyTrack">
+<meta name="theme-color" content="#0f1923">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -3471,7 +3478,13 @@ async function subscribePush(){
 }
 
 async function toggleNotifications(){
-  if(!('Notification' in window)){alert('Notifications are not supported in this browser.\n\nAdd the app to your home screen from Safari for notification support.');return;}
+  if(!('Notification' in window)){
+    const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+    alert(isIOS
+      ?'To get notifications on iPhone:\n\n1. Tap the Share button (box with arrow) in Safari\n2. Tap "Add to Home Screen"\n3. Open StudyTrack from your Home Screen\n4. Then tap 🔔 to enable notifications'
+      :'Notifications are not supported in this browser.');
+    return;
+  }
   const already=Notification.permission==='granted'&&localStorage.getItem('st_notif')==='1';
   if(already){
     localStorage.setItem('st_notif','0');
@@ -3615,10 +3628,17 @@ async function syncFromCloud(){
   syncFromCloud();
   updateNotifBtn();
   scheduleNotifications();
-  // Register service worker for background push notifications
+  // Register service worker and re-subscribe this device if notifications already granted
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/studytrack/sw.js',{scope:'/studytrack/'})
-      .then(reg=>console.log('SW registered',reg.scope))
+      .then(reg=>{
+        console.log('SW registered',reg.scope);
+        // Re-subscribe push for THIS device on every load if permission already granted
+        // This ensures iPhone registers its own subscription when opened from Home Screen
+        if('Notification' in window&&Notification.permission==='granted'&&localStorage.getItem('st_notif')==='1'){
+          subscribePush().then(ok=>{if(ok)console.log('Push re-subscribed for this device');});
+        }
+      })
       .catch(err=>console.warn('SW registration failed',err));
     // Listen for notification actions
     navigator.serviceWorker.addEventListener('message',e=>{
