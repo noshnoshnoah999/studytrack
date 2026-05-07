@@ -1266,7 +1266,7 @@ function renderTodos(){
   if(!el)return;
 
   const now=new Date();
-  const todayDate=now.toISOString().slice(0,10);
+  const todayDate=todayStr();
 
   // Partition
   const overdue=[],today=[],upcoming=[],someday=[],done=[];
@@ -1432,7 +1432,7 @@ function getLogged(subjectId){
   const hours=loadHours();
   const s=subjs.find(x=>x.id===subjectId);
   if(!s)return 0;
-  return s.base+(hours[subjectId]||0);
+  return(s.base||0)+(hours[subjectId]||0);
 }
 
 function getTodayH(){
@@ -1450,7 +1450,7 @@ function getWeekH(){
 function getTotalLogged(){
   const subjs=loadSubjects();
   const hours=loadHours();
-  return subjs.reduce((a,s)=>a+s.base+(hours[s.id]||0),0);
+  return subjs.reduce((a,s)=>a+(s.base||0)+(hours[s.id]||0),0);
 }
 
 // ── NAVIGATION ────────────────────────────────────────────────────────────────
@@ -2136,13 +2136,10 @@ function renderLog(){
   const subjs=loadSubjects();
   const available=subjs.filter(s=>!s.done);
 
-  const schedule=loadSchedule();
   const now=new Date();
-  const dow=now.getDay();
   const nowMins=now.getHours()*60+now.getMinutes();
   const todayStr2=todayStr();
   const sessions=loadSessions();
-  const dismissed=JSON.parse(localStorage.getItem('st_dismissed_class_prompts')||'[]');
 
   // ── Smart suggestions: past study/class/work blocks not yet logged ─────────
   // Work blocks only appear if there's still an incomplete elective to log toward
@@ -2151,8 +2148,8 @@ function renderLog(){
     .filter(b=>(b.subjectId||(b.type==='work'&&hasActiveElective))&&nowMins>toMins(b.end))
     .filter(b=>{
       if(b.type==='work'){
-        // Work blocks: check by start time + date (no subjectId)
-        return!sessions.find(s=>s.date===todayStr2&&s.start===b.start&&(!s.subjectId||s.subjectId===''));
+        // Work blocks may be logged toward an elective — consider logged if any session exists at this start time today
+        return!sessions.find(s=>s.date===todayStr2&&s.start===b.start);
       }
       return!sessions.find(s=>s.subjectId===b.subjectId&&s.date===todayStr2&&s.start===b.start);
     })
@@ -2328,7 +2325,7 @@ function renderHistory(){
 
   // Archive banner — show if there are sessions older than 4 months
   const cutoff=new Date(); cutoff.setMonth(cutoff.getMonth()-4);
-  const cutoffStr=cutoff.toISOString().slice(0,10);
+  const cutoffStr=cutoff.getFullYear()+'-'+String(cutoff.getMonth()+1).padStart(2,'0')+'-'+String(cutoff.getDate()).padStart(2,'0');
   const archivable=sessions.filter(s=>s.date<cutoffStr);
   const bannerEl=document.getElementById('hist-archive-banner');
   if(bannerEl){
@@ -2463,7 +2460,7 @@ function toggleHistMonth(bodyId, headerEl){
 
 function archiveOldSessions(){
   const cutoff=new Date(); cutoff.setMonth(cutoff.getMonth()-4);
-  const cutoffStr=cutoff.toISOString().slice(0,10);
+  const cutoffStr=cutoff.getFullYear()+'-'+String(cutoff.getMonth()+1).padStart(2,'0')+'-'+String(cutoff.getDate()).padStart(2,'0');
   const sessions=loadSessions();
   const old=sessions.filter(s=>s.date<cutoffStr);
   const keep=sessions.filter(s=>s.date>=cutoffStr);
@@ -2482,6 +2479,7 @@ function deleteHistEntry(id){
   const sessions=loadSessions();
   const s=sessions.find(x=>x.id===id);
   if(!s)return;
+  if(!confirm('Delete this session?'))return;
   const updated=sessions.filter(x=>x.id!==id);
   const hoursStore=loadHours();
   if(s.subjectId)hoursStore[s.subjectId]=Math.max(0,(hoursStore[s.subjectId]||0)-s.hours);
@@ -2489,6 +2487,7 @@ function deleteHistEntry(id){
   saveHours(hoursStore);
   renderHistory();
   renderLogEntries();
+  updateSidebar();
 }
 
 // ── SESSION TIMER ─────────────────────────────────────────────────────────────
@@ -2542,9 +2541,7 @@ function timerTick(){
 function renderTimerPage(){
   const subjs=loadSubjects();
   const available=subjs.filter(s=>!s.done);
-  const schedule=loadSchedule();
   const now=new Date();
-  const dow=now.getDay();
   const nowMins=now.getHours()*60+now.getMinutes();
   const todayBlocks=getTodayActualBlocks().sort((a,b)=>toMins(a.start)-toMins(b.start));
   const activeBlock=todayBlocks.find(b=>b.type==='study'&&nowMins>=toMins(b.start)&&nowMins<toMins(b.end));
@@ -2755,7 +2752,8 @@ function timerPageLog(){
   const notes=document.getElementById('tp-notes')?document.getElementById('tp-notes').value:'';
   const startStr=fmt(timerStartWallClock);
   const endStr=fmt(endTime);
-  const diffMins=toMins(endStr)-toMins(startStr);
+  let diffMins=toMins(endStr)-toMins(startStr);
+  if(diffMins<0)diffMins+=1440; // handle midnight crossing
   if(diffMins<=0){alert('Session too short to log.');return;}
   const hrs=diffMins/60;
   const sessions=loadSessions();
@@ -2765,6 +2763,7 @@ function timerPageLog(){
   hoursStore[timerSubjectId]=(hoursStore[timerSubjectId]||0)+hrs;
   saveHours(hoursStore);
   timerPageReset();
+  updateSidebar();
   showToast('✓ Session logged! '+fmtH(hrs));
 }
 
@@ -3226,7 +3225,10 @@ function renderGraduation(){
 
 // ── MODAL UTILS ───────────────────────────────────────────────────────────────
 function closeModal(overlayId){
-  document.getElementById(overlayId).classList.remove('open');
+  const el=document.getElementById(overlayId);
+  el.classList.remove('open');
+  // Clear override-mode flag so the block modal doesn't misbehave on next open
+  if(overlayId==='block-modal-overlay')delete el.dataset.overrideMode;
 }
 
 function handleOverlayClick(e,overlayId){
@@ -3401,7 +3403,7 @@ function renderWeeklySummary(){
       '<div style="font-size:13px;font-weight:700;color:var(--o)">'+fmtH(weekTotal)+'</div>'+
     '</div>'+
     '<div class="week-sum-grid">'+bars+'</div>'+
-    '<div style="font-size:12px;color:var(--text2);margin-top:4px">'+hit+' of 7 days this week hit target · '+fmtH(goals.weekly)+' weekly goal</div>';
+    '<div style="font-size:12px;color:var(--text2);margin-top:4px">'+hit+' of '+thisWeekDays.length+' days this week hit target · '+fmtH(goals.weekly)+' weekly goal</div>';
   renderWeekCombined();
 }
 
