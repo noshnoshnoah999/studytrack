@@ -13,7 +13,6 @@ const C = {
   text2:   new Color("#7a5c3e"),  // medium brown
   text3:   new Color("#b09070"),  // muted label
   ok:      new Color("#5a8a60"),  // green for on-track
-  bar_bg:  new Color("#e8e1d5"),  // progress bar track
 };
 
 // ── Fetch from Supabase ──────────────────────────────────────────────────────
@@ -99,32 +98,8 @@ if (size === "small") {
   w.addSpacer(2);
 
   const goalText = w.addText(`of ${fmtH(dailyGoal)} goal`);
-  goalText.font = Font.systemFont(11);
+  goalText.font = Font.systemFont(15);
   goalText.textColor = C.text2;
-
-  w.addSpacer(8);
-
-  // Progress bar — use fixed pixel width (small widget inner ≈ 121pt)
-  const BAR_W = 121;
-  const BAR_H = 7;
-  const fillW = Math.max(BAR_H, Math.round(pct * BAR_W)); // min = corner radius
-
-  const barOuter = w.addStack();
-  barOuter.layoutHorizontally();
-  barOuter.backgroundColor = C.bar_bg;
-  barOuter.cornerRadius = Math.floor(BAR_H / 2);
-  barOuter.size = new Size(BAR_W, BAR_H);
-
-  const barFill = barOuter.addStack();
-  barFill.backgroundColor = pct >= 1 ? C.ok : C.accent;
-  barFill.cornerRadius = Math.floor(BAR_H / 2);
-  barFill.size = new Size(fillW, BAR_H);
-
-  w.addSpacer(4);
-
-  const pctLabel = w.addText(`${Math.round(pct * 100)}%`);
-  pctLabel.font = Font.systemFont(10);
-  pctLabel.textColor = C.text3;
 
   w.addSpacer();
 
@@ -166,7 +141,7 @@ if (size === "small") {
   bigHours.textColor = todayH >= dailyGoal ? C.ok : C.text;
 
   const goalLbl = left.addText(`of ${fmtH(dailyGoal)} goal`);
-  goalLbl.font = Font.systemFont(12);
+  goalLbl.font = Font.systemFont(15);
   goalLbl.textColor = C.text2;
 
   left.addSpacer(6);
@@ -198,26 +173,6 @@ if (size === "small") {
     freeEl.font = Font.systemFont(13);
     freeEl.textColor = C.text3;
   }
-
-  w.addSpacer(10);
-
-  // Progress bar (full width)
-  const barOuter = w.addStack();
-  barOuter.layoutHorizontally();
-  barOuter.backgroundColor = C.bar_bg;
-  barOuter.cornerRadius = 4;
-
-  const barFill = barOuter.addStack();
-  barFill.backgroundColor = pct >= 1 ? C.ok : C.accent;
-  barFill.cornerRadius = 4;
-  barFill.addSpacer();
-  barOuter.addSpacer();
-
-  w.addSpacer(6);
-
-  const pctText = w.addText(`${Math.round(pct*100)}% of daily goal · ${todaySessions.length} session${todaySessions.length!==1?"s":""} logged`);
-  pctText.font = Font.systemFont(11);
-  pctText.textColor = C.text2;
 
 } else {
   // Lock screen (accessoryCircular / accessoryRectangular)
