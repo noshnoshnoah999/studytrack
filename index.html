@@ -419,12 +419,7 @@ a{color:inherit;text-decoration:none}
   .sched-header h2,.prog-header h2{font-size:18px}
   .sched-header>div{flex-wrap:wrap;gap:6px}
   .btn-toggle-edit{font-size:12px;padding:7px 12px}
-  .now-next-banner{flex-wrap:wrap;row-gap:4px}
-  .nnb-name{font-size:13px;order:3;width:100%;margin-top:-2px}
-  .nnb-time{font-size:11px;order:2}
-  .nnb-label{order:1}
-  .nnb-dot{order:0}
-  .nnb-quicklog{order:4;margin-left:auto;padding:5px 14px;font-size:12px}
+  .nnb-quicklog{padding:5px 14px;font-size:12px}
   .card{padding:16px}
   .stat-val{font-size:16px}
   .stat-label{font-size:9px}
@@ -472,7 +467,9 @@ a{color:inherit;text-decoration:none}
 .timer-df-prog-fill{height:100%;transition:width 1s linear}
 
 /* NOW / NEXT BANNER */
-.now-next-banner{display:flex;align-items:center;gap:8px;padding:13px 16px;border-radius:12px;margin-bottom:12px;border:none;cursor:default;overflow:hidden}
+.now-next-banner{display:flex;flex-direction:column;gap:6px;padding:13px 16px;border-radius:12px;margin-bottom:12px;border:none;cursor:default}
+.nnb-row1{display:flex;align-items:center;gap:8px}
+.nnb-row2{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .nnb-quicklog{margin-left:auto;flex-shrink:0;padding:6px 14px;border-radius:100px;font-size:12px;font-weight:700;border:none;cursor:pointer;background:var(--o);color:#fff;transition:opacity 0.15s}
 .nnb-quicklog:hover{opacity:0.85}
 .log-form-card{transition:border-color 0.2s,box-shadow 0.2s}
@@ -1073,11 +1070,15 @@ function renderNowNext(){
       '<button class="nnb-quicklog" onclick="quickLog(\''+active.subjectId+'\',\''+active.start+'\')">⚡ Quick Log</button>':'';
     el.innerHTML=
       '<div class="now-next-banner '+cls+'">'+
-        '<div class="nnb-dot" style="background:'+(isBreak?'var(--text3)':color)+'"></div>'+
-        '<span class="nnb-label">'+lbl+'</span>'+
-        '<span class="nnb-name">'+escHtml(active.label)+'</span>'+
-        '<span class="nnb-time">ends '+active.end+' · '+durStr(endsIn)+' left</span>'+
-        qlBtn+
+        '<div class="nnb-row1">'+
+          '<div class="nnb-dot" style="background:'+(isBreak?'var(--text3)':color)+'"></div>'+
+          '<span class="nnb-label">'+lbl+'</span>'+
+          '<span class="nnb-time">ends '+active.end+' · '+durStr(endsIn)+' left</span>'+
+        '</div>'+
+        '<div class="nnb-row2">'+
+          '<span class="nnb-name">'+escHtml(active.label)+'</span>'+
+          qlBtn+
+        '</div>'+
       '</div>';
     return;
   }
@@ -1090,10 +1091,14 @@ function renderNowNext(){
     const startsIn=toMins(next.start)-nowMins;
     el.innerHTML=
       '<div class="now-next-banner is-next">'+
-        '<div class="nnb-dot" style="background:'+color+'"></div>'+
-        '<span class="nnb-label">Next Up</span>'+
-        '<span class="nnb-name">'+escHtml(next.label)+'</span>'+
-        '<span class="nnb-time">'+next.start+' · in '+durStr(startsIn)+'</span>'+
+        '<div class="nnb-row1">'+
+          '<div class="nnb-dot" style="background:'+color+'"></div>'+
+          '<span class="nnb-label">Next Up</span>'+
+          '<span class="nnb-time">'+next.start+' · in '+durStr(startsIn)+'</span>'+
+        '</div>'+
+        '<div class="nnb-row2">'+
+          '<span class="nnb-name">'+escHtml(next.label)+'</span>'+
+        '</div>'+
       '</div>';
     return;
   }
