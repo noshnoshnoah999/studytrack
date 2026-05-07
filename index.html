@@ -1311,6 +1311,7 @@ function renderTodos(){
           ${t.time?`<span class="todo-badge time">${fmtTime(t.time)}</span>`:''}
         </div>`:''}
       </div>
+      <button class="todo-del" onclick="openTodoModal('${t.id}')" title="Edit" style="font-size:13px;margin-right:2px">✎</button>
       <button class="todo-del" onclick="deleteTodo('${t.id}')" title="Delete">×</button>
     </div>`;
   }
@@ -1394,7 +1395,6 @@ function saveTodoModal(){
   }
   saveTodos(todos);
   closeModal('todo-modal-overlay');
-  showPage('todos');
   renderTodos();
 }
 
