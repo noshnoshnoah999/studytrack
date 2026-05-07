@@ -108,16 +108,11 @@ a{color:inherit;text-decoration:none}
 /* STAT STRIP (legacy, used in dashboard) */
 .stats-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
 .stat-card{background:var(--bg2);border-radius:var(--radius);padding:16px 18px;border:none}
-.stat-card.accent-orange{}
-.stat-card.accent-green{}
-.stat-card.accent-amber{}
-.stat-card.accent-streak{}
 .stat-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px}
 .stat-val{font-size:22px;font-weight:800;color:var(--text);letter-spacing:-0.5px}
 .stat-val.orange{color:var(--o)}
 .stat-val.green{color:var(--ok)}
 .stat-val.amber{color:#f59e0b}
-.streak-badge{display:inline-flex;align-items:center;gap:4px;font-size:22px;font-weight:800;letter-spacing:-0.5px;color:var(--o)}
 
 /* TWO COL */
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
@@ -295,13 +290,6 @@ a{color:inherit;text-decoration:none}
 .log-suggest-chip:hover{background:var(--bg3)}
 .log-suggest-time{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.2px}
 .log-suggest-name{font-size:14px;font-weight:700;color:var(--text)}
-.class-prompt{display:flex;align-items:center;gap:12px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:12px 14px;margin-bottom:14px}
-.class-prompt-icon{font-size:20px;flex-shrink:0}
-.class-prompt-text{flex:1;min-width:0}
-.class-prompt-title{font-size:13px;font-weight:700;color:var(--text)}
-.class-prompt-sub{font-size:12px;color:var(--text2);margin-top:1px}
-.class-prompt-btn{flex-shrink:0;background:#6366f1;color:#fff;border:none;border-radius:100px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer}
-.class-prompt-dismiss{flex-shrink:0;background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:0 2px;line-height:1}
 .form-group{margin-bottom:14px}
 .form-label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;display:block}
 .form-input{width:100%;border:none;border-radius:10px;padding:11px 14px;background:var(--bg3);font-size:14px;color:var(--text);transition:all 0.15s}
@@ -951,7 +939,7 @@ a{color:inherit;text-decoration:none}
       </div>
       <div class="form-group">
         <label class="form-label">Time (optional)</label>
-        <input type="time" class="form-input" id="todo-time" id="todo-time" disabled style="opacity:0.4">
+        <input type="time" class="form-input" id="todo-time" disabled style="opacity:0.4">
       </div>
     </div>
     <div class="modal-actions">
@@ -2119,6 +2107,15 @@ function deleteOverrideBlock(blockId){
 // ── Log subject colours ───────────────────────────────────────────────────────
 const LOG_SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',el4:'#475569',am_hist:'#b45309',jp_exch:'#7c3aed'};
 
+// ── SHARED UTILITIES ─────────────────────────────────────────────────────────
+function showToast(msg,color){
+  const t=document.createElement('div');
+  t.style.cssText='position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:'+(color||'var(--ok)')+';color:#fff;padding:10px 22px;border-radius:20px;font-weight:700;font-size:14px;z-index:9999;white-space:nowrap;pointer-events:none';
+  t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),2500);
+}
+
 // ── LOG ───────────────────────────────────────────────────────────────────────
 function renderLog(){
   const subjs=loadSubjects();
@@ -2201,14 +2198,15 @@ function renderLog(){
   sel.innerHTML=opts;
   if(prev&&available.find(s=>s.id===prev))sel.value=prev;
 
-  // Keep timer subject dropdown in sync
-  const tsel=document.getElementById('timer-subject');
-  const tprev=tsel.value;
-  tsel.innerHTML=opts;
-  if(tprev&&available.find(s=>s.id===tprev))tsel.value=tprev;
-  else if(schedSubj&&!tprev)tsel.value=schedSubj.id; // auto-select schedule subject
-  // Only pre-fill log subject from timer if log subject isn't already set
-  if(tsel.value&&!sel.value)sel.value=tsel.value;
+  // Keep timer subject dropdown in sync (only exists if timer page rendered)
+  const tsel=document.getElementById('tp-subject');
+  if(tsel){
+    const tprev=tsel.value;
+    tsel.innerHTML=opts;
+    if(tprev&&available.find(s=>s.id===tprev))tsel.value=tprev;
+    else if(schedSubj&&!tprev)tsel.value=schedSubj.id;
+    if(tsel.value&&!sel.value)sel.value=tsel.value;
+  }
 
   const dateIn=document.getElementById('log-date');
   dateIn.value=todayStr();
@@ -2258,29 +2256,6 @@ function autofillFromBlock(subjectId,start,end){
   document.getElementById('log-form-card')&&document.getElementById('log-form-card').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-function autofillClassLog(subjectId,start,end,label,blockId){
-  const sel=document.getElementById('log-subject');
-  if(sel)sel.value=subjectId;
-  setLogTime('log-start',start);
-  setLogTime('log-end',end);
-  const ld=document.getElementById('log-date');
-  const ln=document.getElementById('log-notes');
-  if(ld)ld.value=todayStr();
-  if(ln)ln.value=label;
-  updateLogDuration();
-  // Dismiss the prompt
-  const key=todayStr()+'_'+blockId;
-  dismissClassPrompt(key,blockId);
-  // Scroll to form
-  document.getElementById('log-subject')&&document.getElementById('log-subject').scrollIntoView({behavior:'smooth',block:'center'});
-}
-
-function dismissClassPrompt(key,blockId){
-  const dismissed=JSON.parse(localStorage.getItem('st_dismissed_class_prompts')||'[]');
-  if(!dismissed.includes(key)){dismissed.push(key);localStorage.setItem('st_dismissed_class_prompts',JSON.stringify(dismissed));}
-  const el=document.getElementById('cp-'+blockId);
-  if(el)el.remove();
-}
 
 function renderLogEntries(){
   const sessions=loadSessions();
@@ -2496,8 +2471,13 @@ function archiveOldSessions(){
 
 function deleteHistEntry(id){
   const sessions=loadSessions();
-  const updated=sessions.filter(s=>s.id!==id);
-  saveSessions(updated); // saveSessions already calls sbPush internally
+  const s=sessions.find(x=>x.id===id);
+  if(!s)return;
+  const updated=sessions.filter(x=>x.id!==id);
+  const hoursStore=loadHours();
+  if(s.subjectId)hoursStore[s.subjectId]=Math.max(0,(hoursStore[s.subjectId]||0)-s.hours);
+  saveSessions(updated);
+  saveHours(hoursStore);
   renderHistory();
   renderLogEntries();
 }
@@ -2742,19 +2722,13 @@ function timerPageLog(){
   const sessions=loadSessions();
   sessions.push({id:genId(),subjectId:timerSubjectId,date:ds,hours:hrs,start:startStr,end:endStr,notes});
   saveSessions(sessions);
+  const hoursStore=loadHours();
+  hoursStore[timerSubjectId]=(hoursStore[timerSubjectId]||0)+hrs;
+  saveHours(hoursStore);
   timerPageReset();
-  // Show confirmation
-  const el=document.getElementById('timer-page-inner');
-  const toast=document.createElement('div');
-  toast.style.cssText='position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--ok);color:#fff;padding:10px 22px;border-radius:20px;font-weight:700;font-size:14px;z-index:999;white-space:nowrap';
-  toast.textContent='✓ Session logged! '+fmtH(hrs);
-  document.body.appendChild(toast);
-  setTimeout(()=>toast.remove(),2500);
+  showToast('✓ Session logged! '+fmtH(hrs));
 }
 
-// Legacy log-page timer toggle (kept for backward compat)
-function timerToggle(){timerPageToggle();}
-function timerReset(){timerPageReset();}
 
 // ── Split time input helpers ──────────────────────────────────────────────────
 function timeSplitBack(e, prevId){
@@ -2864,11 +2838,6 @@ function deleteEntry(id){
 }
 
 // ── PROGRESS ──────────────────────────────────────────────────────────────────
-function toggleEstDate(){
-  const current=localStorage.getItem('st_show_est_date')!=='0';
-  localStorage.setItem('st_show_est_date',current?'0':'1');
-  renderGraduation();
-}
 
 function buildClaudeUrl(subj){
   const prompt=
@@ -3299,7 +3268,7 @@ function openGoalSettings(){
   document.getElementById('goal-modal-overlay').classList.add('open');
 }
 
-// ── STREAK ────────────────────────────────────────────────────────────────────
+// ── UTILITIES ─────────────────────────────────────────────────────────────────
 function isWeekday(dateObj){ const d=dateObj.getDay(); return d>=1&&d<=5; }
 
 // ── FOCUS TODAY ───────────────────────────────────────────────────────────────
