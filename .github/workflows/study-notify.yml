@@ -1,8 +1,6 @@
 name: Study Notifications
 
 on:
-  schedule:
-    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -190,11 +188,11 @@ jobs:
               );
             }
 
-            // ── 1b. Block just started (0–4 min ago) — Start Timer ────────
+            // ── 1b. Block just started (0–7 min ago) — Start Timer ────────
             const justStarted = todayBlocks.filter(b =>
               b.type === 'study' &&
               nowMins >= toMins(b.start) &&
-              nowMins < toMins(b.start) + 5
+              nowMins < toMins(b.start) + 7
             );
             for (const bl of justStarted) {
               await sendAll(
