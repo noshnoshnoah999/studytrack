@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StudyTrack</title>
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
@@ -404,8 +404,8 @@ a{color:inherit;text-decoration:none}
 @media(max-width:768px){
   #sidebar{display:none}
   #main{margin-left:0;width:100vw;overflow-x:hidden}
-  .page{padding:calc(16px + env(safe-area-inset-top)) 16px calc(100px + env(safe-area-inset-bottom)) 16px;width:100vw;overflow-x:hidden}
-  #bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);padding:10px 0 max(10px,env(safe-area-inset-bottom));z-index:100}
+  .page{padding:16px 16px 100px 16px;width:100vw;overflow-x:hidden}
+  #bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);padding:10px 0;z-index:100}
   .bn-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 0;transition:color 0.15s;color:var(--text3);font-size:10px;font-weight:600;letter-spacing:0.2px}
   .bn-item.active{color:var(--o)}
   .bn-item svg{width:22px;height:22px;flex-shrink:0}
@@ -648,6 +648,16 @@ a{color:inherit;text-decoration:none}
         </div>
       </div>
       <div id="sched-content"></div>
+      <div style="margin-top:24px">
+        <div class="todo-header">
+          <h2 style="font-size:18px">To-Do</h2>
+          <button class="todo-add-btn" onclick="openTodoModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Task
+          </button>
+        </div>
+        <div id="todo-list"></div>
+      </div>
     </div>
 
     <!-- PAGE: LOG -->
@@ -748,16 +758,6 @@ a{color:inherit;text-decoration:none}
     </div>
 
     <!-- PAGE: TO-DO -->
-    <div class="page" id="page-todos">
-      <div class="todo-header">
-        <h2>To-Do</h2>
-        <button class="todo-add-btn" onclick="openTodoModal()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Add Task
-        </button>
-      </div>
-      <div id="todo-list"></div>
-    </div>
 
   </main>
 
@@ -961,12 +961,11 @@ const NAV_ITEMS=[
   {id:'timer',     label:'Timer',     short:'Timer',      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'},
   {id:'history',   label:'History',   short:'History',    icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>'},
   {id:'graduation',label:'Graduation',short:'Grad',       icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>'},
-  {id:'todos',     label:'To-Do',     short:'To-Do',      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>'},
 ];
 const DEFAULT_NAV_ORDER=NAV_ITEMS.map(n=>n.id);
 
 function loadNavOrder(){
-  try{const s=localStorage.getItem('st_nav_order');if(s){const o=JSON.parse(s);if(Array.isArray(o)&&o.length===NAV_ITEMS.length)return o;}}catch(e){}
+  try{const s=localStorage.getItem('st_nav_order');if(s){const o=JSON.parse(s).filter(id=>NAV_ITEMS.find(n=>n.id===id));if(o.length===NAV_ITEMS.length)return o;}}catch(e){}
   return [...DEFAULT_NAV_ORDER];
 }
 function saveNavOrder(o){localStorage.setItem('st_nav_order',JSON.stringify(o));}
@@ -1462,13 +1461,12 @@ function showPage(id){
   });
   buildNav();
   if(id==='dashboard')renderDashboard();
-  else if(id==='schedule')renderSchedule();
+  else if(id==='schedule'){renderSchedule();renderTodos();}
   else if(id==='log')renderLog();
   else if(id==='history')renderHistory();
   else if(id==='progress')renderProgress();
   else if(id==='graduation')renderGraduation();
   else if(id==='timer')renderTimerPage();
-  else if(id==='todos')renderTodos();
   updateSidebar();
 }
 
