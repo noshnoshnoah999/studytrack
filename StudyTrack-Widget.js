@@ -98,8 +98,9 @@ if (size === "small") {
   w.addSpacer(2);
 
   const goalText = w.addText(`of ${fmtH(dailyGoal)} goal`);
-  goalText.font = Font.systemFont(15);
+  goalText.font = Font.systemFont(13);
   goalText.textColor = C.text2;
+  goalText.minimumScaleFactor = 0.7;
 
   w.addSpacer();
 
@@ -141,8 +142,9 @@ if (size === "small") {
   bigHours.textColor = todayH >= dailyGoal ? C.ok : C.text;
 
   const goalLbl = left.addText(`of ${fmtH(dailyGoal)} goal`);
-  goalLbl.font = Font.systemFont(15);
+  goalLbl.font = Font.systemFont(14);
   goalLbl.textColor = C.text2;
+  goalLbl.minimumScaleFactor = 0.7;
 
   left.addSpacer(6);
 
