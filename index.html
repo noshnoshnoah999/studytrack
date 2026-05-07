@@ -3566,6 +3566,7 @@ async function syncFromCloud(){
     const KEYS=['st_subjs','st_sched','st_sessions','st_hours','st_goals','st_todos','st_sched_overrides'];
     const rows=await Promise.all(KEYS.map(k=>sbPull(k)));
     let updated=false;
+    let localOnlySessions=[]; // sessions we have locally that cloud didn't know about
     KEYS.forEach((k,i)=>{
       if(rows[i]&&rows[i].value!==undefined){
         if(k==='st_sessions'){
@@ -3574,7 +3575,10 @@ async function syncFromCloud(){
           const cloud=Array.isArray(rows[i].value)?rows[i].value:[];
           const merged=[...cloud];
           for(const ls of local){
-            if(!merged.find(cs=>cs.id===ls.id))merged.push(ls);
+            if(!merged.find(cs=>cs.id===ls.id)){
+              merged.push(ls);
+              localOnlySessions.push(ls); // track so we can patch st_hours below
+            }
           }
           // If local had sessions cloud didn't, push the merged set back
           if(merged.length>cloud.length)sbPush('st_sessions',merged);
@@ -3585,6 +3589,17 @@ async function syncFromCloud(){
         updated=true;
       }
     });
+    // After the loop, st_hours from cloud is now in localStorage.
+    // If we merged local-only sessions, their hours may not be in the cloud st_hours —
+    // add them now so subject totals stay correct.
+    if(localOnlySessions.length){
+      const hoursStore=JSON.parse(localStorage.getItem('st_hours')||'{}');
+      localOnlySessions.forEach(s=>{
+        if(s.subjectId)hoursStore[s.subjectId]=(hoursStore[s.subjectId]||0)+s.hours;
+      });
+      localStorage.setItem('st_hours',JSON.stringify(hoursStore));
+      sbPush('st_hours',hoursStore);
+    }
     // Patch el3 base to match teacher report — subjects only, never touch sessions
     try{
       const subjs=JSON.parse(localStorage.getItem('st_subjs')||'[]');
