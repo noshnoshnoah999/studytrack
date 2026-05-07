@@ -3336,7 +3336,7 @@ function renderFocusCard(){
   const scheduled=Object.keys(schedMap)
     .map(id=>{
       const s=subjs.find(x=>x.id===id);
-      const logged=s?(s.base+(hours[s.id]||0)):0;
+      const logged=s?((s.base||0)+(hours[s.id]||0)):0;
       const pct=s&&s.req>0?logged/s.req*100:100;
       if(!s||s.done||pct>=100)return null;
       const left=Math.max(0,s.req-logged);
