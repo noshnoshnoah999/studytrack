@@ -94,12 +94,8 @@ const size = config.widgetFamily || "small";
 if (size === "small") {
   // ── SMALL WIDGET ───────────────────────────────────────────────────────────
   // Today's hours — big number
-  const hoursRow = w.addStack();
-  hoursRow.layoutHorizontally();
-  hoursRow.centerAlignContent();
-
-  const hoursText = hoursRow.addText(fmtH(todayH));
-  hoursText.font = Font.boldSystemFont(26);
+  const hoursText = w.addText(fmtH(todayH));
+  hoursText.font = Font.boldSystemFont(28);
   hoursText.textColor = todayH >= dailyGoal ? C.ok : C.text;
 
   w.addSpacer(2);
@@ -110,64 +106,51 @@ if (size === "small") {
 
   w.addSpacer(8);
 
-  // Progress bar
-  const barStack = w.addStack();
-  barStack.layoutHorizontally();
-  barStack.size = new Size(0, 5);
-  barStack.cornerRadius = 3;
-  barStack.backgroundColor = C.bar_bg;
+  // Progress bar — use fixed pixel width (small widget inner ≈ 121pt)
+  const BAR_W = 121;
+  const BAR_H = 7;
+  const fillW = Math.max(BAR_H, Math.round(pct * BAR_W)); // min = corner radius
 
-  const fill = barStack.addStack();
-  fill.layoutHorizontally();
-  fill.size = new Size(0, 5);
-  // We can't set width as fraction in Scriptable, use spacers
-  // Draw filled portion by nesting stacks
-  barStack.removeAllSubWidgets && barStack.removeAllSubWidgets();
+  const barOuter = w.addStack();
+  barOuter.layoutHorizontally();
+  barOuter.backgroundColor = C.bar_bg;
+  barOuter.cornerRadius = Math.floor(BAR_H / 2);
+  barOuter.size = new Size(BAR_W, BAR_H);
 
-  // Simple filled bar via two nested stacks
-  const barWrap = w.addStack();
-  barWrap.layoutHorizontally();
-  barWrap.backgroundColor = C.bar_bg;
-  barWrap.cornerRadius = 3;
+  const barFill = barOuter.addStack();
+  barFill.backgroundColor = pct >= 1 ? C.ok : C.accent;
+  barFill.cornerRadius = Math.floor(BAR_H / 2);
+  barFill.size = new Size(fillW, BAR_H);
 
-  if (pct > 0) {
-    const filled = barWrap.addStack();
-    filled.backgroundColor = pct >= 1 ? C.ok : C.accent;
-    filled.cornerRadius = 3;
-    filled.addSpacer();
-    // Scriptable hack: use spacer ratio
-    barWrap.addSpacer();
-  }
+  w.addSpacer(4);
 
-  w.addSpacer(8);
-
-  // Streak
-  const streakStack = w.addStack();
-  streakStack.layoutHorizontally();
-  streakStack.centerAlignContent();
-  const fireText = streakStack.addText("🔥 ");
-  fireText.font = Font.systemFont(12);
-  const streakText = streakStack.addText(`${streakCount} day streak`);
-  streakText.font = Font.mediumSystemFont(12);
-  streakText.textColor = streakCount > 0 ? C.accent : C.text3;
+  const pctLabel = w.addText(`${Math.round(pct * 100)}%`);
+  pctLabel.font = Font.systemFont(10);
+  pctLabel.textColor = C.text3;
 
   w.addSpacer();
 
   // Next / now block
   if (focusBlock) {
-    const label = activeBlock ? "NOW" : "NEXT";
+    const label = activeBlock ? "● NOW" : "● NEXT";
     const labelEl = w.addText(label);
     labelEl.font = Font.boldSystemFont(9);
     labelEl.textColor = C.accent;
 
+    w.addSpacer(2);
+
     const blockName = w.addText(focusBlock.label || "Study");
-    blockName.font = Font.mediumSystemFont(12);
+    blockName.font = Font.mediumSystemFont(13);
     blockName.textColor = C.text;
     blockName.lineLimit = 1;
 
     const blockTime = w.addText(`${fmtAmPm(focusBlock.start)} – ${fmtAmPm(focusBlock.end)}`);
     blockTime.font = Font.systemFont(10);
     blockTime.textColor = C.text2;
+  } else {
+    const freeEl = w.addText("No blocks today");
+    freeEl.font = Font.systemFont(11);
+    freeEl.textColor = C.text3;
   }
 
 } else if (size === "medium") {
