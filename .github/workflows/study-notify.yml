@@ -106,7 +106,7 @@ jobs:
             console.log(`${DAY[dow]} ${nowDate.getUTCHours()}:${String(nowDate.getUTCMinutes()).padStart(2,'0')} Perth | ${nowMins}m | ${todayStr}`);
 
             // Is current time within a window around target?
-            function near(targetMins, lo=2, hi=5) {
+            function near(targetMins, lo=1, hi=2) {
               return nowMins >= targetMins - lo && nowMins < targetMins + hi;
             }
 
@@ -173,26 +173,25 @@ jobs:
             const dailyGoal  = 6.3;
             const weeklyGoal = 31.5;
 
-            // ── 1a. Block starting in 5–15 min — heads up ─────────────────
+            // ── 1a. Block starting in ~10 min (9–11 min window) ───────────
             const startingSoon = todayBlocks.filter(b =>
               b.type === 'study' &&
-              toMins(b.start) - nowMins >= 5 &&
-              toMins(b.start) - nowMins <= 15
+              toMins(b.start) - nowMins >= 9 &&
+              toMins(b.start) - nowMins <= 11
             );
             for (const bl of startingSoon) {
-              const minsAway = toMins(bl.start) - nowMins;
               await sendAll(
-                `Starting in ${minsAway}min`,
+                `Starting in 10min`,
                 `${bl.label} · ${bl.start}–${bl.end}`,
                 `soon-${bl.id}`
               );
             }
 
-            // ── 1b. Block just started (0–7 min ago) — Start Timer ────────
+            // ── 1b. Block just started (0–2 min ago) — Start Timer ────────
             const justStarted = todayBlocks.filter(b =>
               b.type === 'study' &&
               nowMins >= toMins(b.start) &&
-              nowMins < toMins(b.start) + 7
+              nowMins < toMins(b.start) + 2
             );
             for (const bl of justStarted) {
               await sendAll(
@@ -203,11 +202,11 @@ jobs:
               );
             }
 
-            // ── 2. Study block ending in 3–8 min — log reminder ───────────
+            // ── 2. Study block ending in ~5 min (4–6 min window) ─────────
             const endingSoon = todayBlocks.filter(b =>
               b.type === 'study' &&
-              toMins(b.end) - nowMins >= 3 &&
-              toMins(b.end) - nowMins <= 8
+              toMins(b.end) - nowMins >= 4 &&
+              toMins(b.end) - nowMins <= 6
             );
             for (const bl of endingSoon) {
               await sendAll(
@@ -218,11 +217,11 @@ jobs:
               );
             }
 
-            // ── 3. Break ending in 0–5 min — next block preview ──────────
+            // ── 3. Break ending in 0–2 min — next block preview ──────────
             const breakEndingSoon = todayBlocks.filter(b =>
               b.type === 'break' &&
               toMins(b.end) - nowMins >= 0 &&
-              toMins(b.end) - nowMins <= 5
+              toMins(b.end) - nowMins <= 2
             );
             for (const bl of breakEndingSoon) {
               const nextBlock = todayBlocks.find(b => toMins(b.start) >= toMins(bl.end) && b.type === 'study');
