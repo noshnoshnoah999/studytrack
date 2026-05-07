@@ -91,14 +91,15 @@ async function send(sub, title, body, tag, extra = {}) {
     return nowMins >= targetMins - lo && nowMins < targetMins + hi;
   }
 
-  const [schedule, subjectsRaw, sessionsRaw, hoursRaw, subsRaw, notifDone, todosRaw] = await Promise.all([
+  const [schedule, subjectsRaw, sessionsRaw, hoursRaw, subsRaw, notifDone, todosRaw, overridesRaw] = await Promise.all([
     sbGet('st_sched'),
     sbGet('st_subjs'),
     sbGet('st_sessions'),
     sbGet('st_hours'),
     sbGet('push_subscriptions'),
     sbGet('notif_done_subjs'),
-    sbGet('st_todos')
+    sbGet('st_todos'),
+    sbGet('st_sched_overrides')
   ]);
 
   if (!subsRaw) { console.log('No push subscriptions found'); return; }
@@ -111,9 +112,12 @@ async function send(sub, title, body, tag, extra = {}) {
     }
   }
 
-  const todayBlocks = (schedule || [])
-    .filter(b => b.day === dow)
+  // Use one-off override for today if it exists, otherwise use weekly schedule
+  const overrides = overridesRaw || {};
+  const hasOverride = !!overrides[todayStr];
+  const todayBlocks = (hasOverride ? overrides[todayStr] : (schedule || []).filter(b => b.day === dow))
     .sort((a, b) => toMins(a.start) - toMins(b.start));
+  console.log(`Schedule source: ${hasOverride ? 'override for ' + todayStr : 'weekly (day ' + dow + ')'} | ${todayBlocks.length} blocks`);
 
   const subjects = subjectsRaw || [];
   const sessions = sessionsRaw || [];
