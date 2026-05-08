@@ -3399,7 +3399,13 @@ function _renderGradSection(){
 
 function _renderGradEstCard(){
   const v=_gradSharedVars();
-  const {remaining,pace,paceIsGoal,estDateStr,estDate,targetDate,ahead,neededPace,recentH,MONTHS,now}=v;
+  const {remaining,pace,paceIsGoal,estDateStr,estDate,targetDate,ahead,neededPace,recentH,MONTHS,now,sessions,subjs}=v;
+  // Future subjects = not done, 0 base hours, and no sessions logged yet
+  const loggedBySubj={};
+  sessions.forEach(s=>{if(s.subjectId)loggedBySubj[s.subjectId]=(loggedBySubj[s.subjectId]||0)+s.hours;});
+  const futureSubjs=subjs.filter(s=>!s.done&&(s.base||0)===0&&!(loggedBySubj[s.id]>0));
+  const futureH=futureSubjs.reduce((a,s)=>a+s.req,0);
+  const futureNames=futureSubjs.map(s=>s.name).join(', ');
   const weeksToGrad=Math.round(Math.max(0,(targetDate-now)/(1000*60*60*24*7)));
   const onTrack=ahead;
   const targetWeeksLeft=TEACHER_WEEKLY>0?remaining/TEACHER_WEEKLY:null;
@@ -3449,6 +3455,12 @@ function _renderGradEstCard(){
     '<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--ok)">'+
       '✓ You\'re on track to graduate before Oct 2027 at your current pace of '+fmtH(pace)+'/week.'+
     '</div>'
+    )+
+    (futureH>0?
+    '<div style="margin-top:10px;background:var(--bg3);border-radius:10px;padding:11px 14px;font-size:12px;color:var(--text2);border:1px solid var(--border)">'+
+      '<span style="font-weight:700;color:var(--text)">ℹ Includes '+fmtH(futureH)+'h from '+futureSubjs.length+' future subject'+(futureSubjs.length!==1?'s':'')+' not yet started</span>'+
+      '<div style="margin-top:3px;color:var(--text3)">'+futureNames+'</div>'+
+    '</div>':''
     );
 }
 
