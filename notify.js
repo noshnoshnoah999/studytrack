@@ -96,7 +96,7 @@ async function send(sub, title, body, tag, extra = {}, ttl = 120, urgency = 'hig
     return nowMins >= targetMins - lo && nowMins < targetMins + hi;
   }
 
-  const [schedule, subjectsRaw, sessionsRaw, hoursRaw, subsRaw, notifDone, todosRaw, overridesRaw] = await Promise.all([
+  const [schedule, subjectsRaw, sessionsRaw, hoursRaw, subsRaw, notifDone, todosRaw, overridesRaw, goalsRaw] = await Promise.all([
     sbGet('st_sched'),
     sbGet('st_subjs'),
     sbGet('st_sessions'),
@@ -104,7 +104,8 @@ async function send(sub, title, body, tag, extra = {}, ttl = 120, urgency = 'hig
     sbGet('push_subscriptions'),
     sbGet('notif_done_subjs'),
     sbGet('st_todos'),
-    sbGet('st_sched_overrides')
+    sbGet('st_sched_overrides'),
+    sbGet('st_goals')
   ]);
 
   if (!subsRaw) { console.log('No push subscriptions found'); return; }
@@ -149,8 +150,11 @@ async function send(sub, title, body, tag, extra = {}, ttl = 120, urgency = 'hig
     .reduce((a, s) => a + s.hours, 0);
   const weeklyAvg = monthH / 4;
 
-  const dailyGoal  = 6.3;
-  const weeklyGoal = 31.5;
+  // Use user's personal goal from settings (falls back to teacher's standard)
+  const goals       = goalsRaw || {};
+  const dailyGoal   = goals.daily      || 6.3;
+  const daysPerWeek = goals.daysPerWeek || 5;
+  const weeklyGoal  = goals.weekly     || (dailyGoal * daysPerWeek);
 
   // ── 1a. Block starting in 5–15 min ────────────────────────────────────────
   const startingSoon = todayBlocks.filter(b =>

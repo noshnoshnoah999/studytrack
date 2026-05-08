@@ -812,14 +812,19 @@ a{color:inherit;text-decoration:none}
   <div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
     <div class="modal-title">Goals & Settings</div>
+    <div style="font-size:11px;color:var(--text3);background:var(--bg3);border-radius:8px;padding:8px 12px;margin-bottom:14px">📌 Teacher's standard: <strong style="color:var(--text2)">6h 18m/day · 5 days/week = 31.5h/week</strong></div>
     <div class="form-group">
-      <label class="form-label">Daily Hour Target</label>
-      <input type="number" class="form-input" id="goal-daily" placeholder="6.3" min="1" max="16" step="0.1">
+      <label class="form-label">Your daily goal</label>
+      <input type="number" class="form-input" id="goal-daily" placeholder="6.3" min="0.5" max="16" step="0.1" oninput="updateGoalWeekly()">
       <div style="font-size:12px;color:var(--text2);margin-top:4px" id="goal-daily-current"></div>
     </div>
     <div class="form-group">
-      <label class="form-label">Weekly Hour Target</label>
-      <input type="number" class="form-input" id="goal-weekly" placeholder="31.5" min="1" max="80" step="0.5">
+      <label class="form-label">Study days per week</label>
+      <input type="number" class="form-input" id="goal-days-per-week" placeholder="5" min="1" max="7" step="1" oninput="updateGoalWeekly()">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Weekly target (auto-calculated)</label>
+      <input type="number" class="form-input" id="goal-weekly" placeholder="31.5" min="1" max="80" step="0.5" style="opacity:0.6" readonly>
     </div>
     <div class="form-group" style="margin-top:6px">
       <label class="form-label">Theme</label>
@@ -3148,11 +3153,29 @@ function renderPlan(){
   const remaining=Math.max(0,TOTAL_REQ-totalLogged);
   const targetDate=new Date('2027-10-31');
   const daysLeft=Math.max(1,(targetDate-now)/(1000*60*60*24));
-  const teacherTarget=goals.daily; // teacher's recommended daily hours
+  const personalTarget=goals.daily;       // what YOU want to do per day
+  const daysPerWeek=goals.daysPerWeek||5; // days per week you plan to study
 
-  // Bare minimum to finish exactly on time
+  // Bare minimum to finish exactly on time (across all calendar days)
   const bareMinimum=remaining/daysLeft;
-  const baseTarget=Math.max(bareMinimum,teacherTarget);
+  // Personal base: your goal or the bare minimum, whichever is higher
+  const baseTarget=Math.max(bareMinimum,personalTarget);
+
+  // Estimated finish dates for comparison
+  const weeklyPersonal=personalTarget*daysPerWeek;
+  const weeklyTeacher=TEACHER_DAILY*TEACHER_DAYS;
+  function estFinish(weeklyH){
+    if(weeklyH<=0)return null;
+    const weeksNeeded=remaining/weeklyH;
+    const d=new Date(now);d.setDate(now.getDate()+Math.round(weeksNeeded*7));return d;
+  }
+  const finishAtPersonal=estFinish(weeklyPersonal);
+  const finishAtTeacher=estFinish(weeklyTeacher);
+  const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function fmtDate(d){return d?MONTHS[d.getMonth()]+' '+d.getFullYear():'—';}
+  const targetDate2=new Date('2027-10-31');
+  const personalOnTime=finishAtPersonal&&finishAtPersonal<=targetDate2;
+  const teacherOnTime=finishAtTeacher&&finishAtTeacher<=targetDate2;
 
   // ── Helper: get hours logged on any date string ────────────────────────────
   function hoursOn(dStr){
@@ -3251,7 +3274,7 @@ function renderPlan(){
         const projRemaining=Math.max(0,remaining-daysFromToday*smartTarget);
         const projDaysLeft=Math.max(1,daysLeft-daysFromToday);
         const projBareMin=projRemaining/projDaysLeft;
-        const projBase=Math.max(projBareMin,teacherTarget);
+        const projBase=Math.max(projBareMin,personalTarget);
         // Deficit: each day that smartTarget is hit, catchUp amount is paid off
         // After 7 days the whole recentDeficit is fully absorbed
         const deficitLeft=Math.max(0,recentDeficit-daysFromToday*catchUp);
@@ -3296,7 +3319,7 @@ function renderPlan(){
         '<div class="plan-smart-num">'+fmtH(smartTarget)+'</div>'+
         '<div style="padding-bottom:8px;font-size:13px;color:var(--text2);font-weight:600">recommended today</div>'+
       '</div>'+
-      '<div class="plan-teacher-ref">📌 Teacher\'s standard: '+fmtH(teacherTarget)+'/day</div>'+
+      '<div class="plan-teacher-ref">Your goal: <strong style="color:var(--text2)">'+fmtH(personalTarget)+'/day · '+daysPerWeek+' days/week = '+fmtH(weeklyPersonal)+'/week</strong> · <span style="color:var(--text3)">Teacher\'s standard: '+fmtH(TEACHER_DAILY)+'/day</span></div>'+
       // Today progress bar
       '<div style="margin:14px 0">'+
         '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:5px">'+
@@ -3324,7 +3347,40 @@ function renderPlan(){
         '<span>'+feedbackText+'</span>'+
       '</div>'+
     '</div>'+
-    // Card 2: Calendar
+    // Card 2: Pace comparison
+    '<div class="card" style="margin-bottom:16px">'+
+      '<div class="card-title">Pace Comparison</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
+        // Personal goal column
+        '<div style="background:var(--bg3);border-radius:10px;padding:14px;border:1.5px solid '+(personalOnTime?'var(--ok)':'var(--err)')+'">'+
+          '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Your goal</div>'+
+          '<div style="font-size:17px;font-weight:900;color:var(--text);letter-spacing:-0.5px">'+fmtH(personalTarget)+'/day</div>'+
+          '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+daysPerWeek+' days · '+fmtH(weeklyPersonal)+'/wk</div>'+
+          '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">'+
+            '<div style="font-size:11px;color:var(--text3)">Est. finish</div>'+
+            '<div style="font-size:14px;font-weight:800;color:'+(personalOnTime?'var(--ok)':'var(--err)')+'">'+fmtDate(finishAtPersonal)+'</div>'+
+            '<div style="font-size:11px;font-weight:600;color:'+(personalOnTime?'var(--ok)':'var(--err)')+'">'+
+              (personalOnTime?'✓ Graduates on time':'⚠ Misses Oct 2027')+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+        // Teacher's standard column
+        '<div style="background:var(--bg3);border-radius:10px;padding:14px;border:1.5px solid '+(teacherOnTime?'var(--ok)':'var(--err)')+'">'+
+          '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Teacher\'s standard</div>'+
+          '<div style="font-size:17px;font-weight:900;color:var(--text);letter-spacing:-0.5px">'+fmtH(TEACHER_DAILY)+'/day</div>'+
+          '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+TEACHER_DAYS+' days · '+fmtH(TEACHER_WEEKLY)+'/wk</div>'+
+          '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">'+
+            '<div style="font-size:11px;color:var(--text3)">Est. finish</div>'+
+            '<div style="font-size:14px;font-weight:800;color:'+(teacherOnTime?'var(--ok)':'var(--err)')+'">'+fmtDate(finishAtTeacher)+'</div>'+
+            '<div style="font-size:11px;font-weight:600;color:'+(teacherOnTime?'var(--ok)':'var(--err)')+'">'+
+              (teacherOnTime?'✓ Graduates on time':'⚠ Misses Oct 2027')+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="margin-top:10px;font-size:11px;color:var(--text3);text-align:center">Change your goal in <span style="color:var(--o);cursor:pointer;font-weight:600" onclick="openGoalSettings()">Settings ⚙</span></div>'+
+    '</div>'+
+    // Card 3: Calendar
     '<div class="card" style="margin-bottom:16px">'+
       '<div class="card-title">Study Calendar</div>'+
       '<div style="font-size:12px;color:var(--text3);margin-bottom:12px">Past days show actual hours logged · Future shows projected recommended hours (assumes you hit today\'s target each day — numbers drop as deficit is paid off)</div>'+
@@ -3365,8 +3421,8 @@ function renderGraduation(){
   const targetDate=new Date('2027-10-31');
   const diffDays=estDate?Math.round((targetDate-estDate)/(1000*60*60*24)):null;
   const ahead=diffDays!==null&&diffDays>0;
-  // Required pace: teacher's standard = 6.3h/day × 5 days/week
-  const neededPace=goals.daily*5;
+  // Required pace: teacher's fixed standard (not user's personal goal)
+  const neededPace=TEACHER_WEEKLY;
 
   // ── Expected % today (based on Oct 31 2027 deadline) ─────────────────────
   // Start the expected curve from base hours % (what was already done Sept 1 2025)
@@ -3425,7 +3481,7 @@ function renderGraduation(){
   // Spread deficit evenly across remaining days — realistic, not a sprint
   const catchUp=hoursBehind/daysLeft;
   // Base is your daily goal, not just the bare graduation minimum
-  const toStayOnTrack=Math.max(dailyMinimum,goals.daily);
+  const toStayOnTrack=Math.max(dailyMinimum,goals.daily); // uses personal goal
   const toGetAhead=toStayOnTrack+catchUp;
   // Today's hours already logged
   const todayStr2=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
@@ -3515,7 +3571,7 @@ function renderGraduation(){
       '</div>'+
     '</div>'+
     '<div class="grad-need">'+
-      '📌 Required: <strong>'+fmtH(goals.daily)+'/day × 5 days = '+fmtH(neededPace)+'/week</strong> (teacher\'s standard)'+
+      '📌 Teacher\'s standard: <strong>'+fmtH(TEACHER_DAILY)+'/day × '+TEACHER_DAYS+' days = '+fmtH(TEACHER_WEEKLY)+'/week</strong> · Your goal: <strong>'+fmtH(goals.daily)+'/day × '+(goals.daysPerWeek||5)+' days = '+fmtH(goals.weekly)+'/week</strong>'+
     '</div>';
 
   // ── Card 3: Milestones (hours-based, estimated dates) ─────────────────────
@@ -3630,14 +3686,24 @@ function applySidebarState(){
 }
 
 // ── GOAL SETTINGS ─────────────────────────────────────────────────────────────
+const TEACHER_DAILY=6.3; // teacher's fixed standard — never changes
+const TEACHER_DAYS=5;
+const TEACHER_WEEKLY=TEACHER_DAILY*TEACHER_DAYS; // 31.5
+
 function loadGoals(){
-  try{const g=localStorage.getItem('st_goals');if(g)return JSON.parse(g);}catch(e){}
-  return{daily:6.3,weekly:31.5};
+  try{const g=localStorage.getItem('st_goals');if(g){const p=JSON.parse(g);if(!p.daysPerWeek)p.daysPerWeek=5;return p;}}catch(e){}
+  return{daily:6.3,daysPerWeek:5,weekly:31.5};
+}
+function updateGoalWeekly(){
+  const daily=parseFloat(document.getElementById('goal-daily').value)||6.3;
+  const days=parseInt(document.getElementById('goal-days-per-week').value)||5;
+  document.getElementById('goal-weekly').value=(daily*days).toFixed(1);
 }
 function saveGoalSettings(){
   const daily=parseFloat(document.getElementById('goal-daily').value)||6.3;
-  const weekly=parseFloat(document.getElementById('goal-weekly').value)||31.5;
-  const g={daily,weekly};
+  const daysPerWeek=parseInt(document.getElementById('goal-days-per-week').value)||5;
+  const weekly=daily*daysPerWeek;
+  const g={daily,daysPerWeek,weekly};
   localStorage.setItem('st_goals',JSON.stringify(g));
   sbPush('st_goals',g);
   closeModal('goal-modal-overlay');
@@ -3647,9 +3713,10 @@ function saveGoalSettings(){
 function openGoalSettings(){
   const g=loadGoals();
   document.getElementById('goal-daily').value=g.daily;
+  document.getElementById('goal-days-per-week').value=g.daysPerWeek||5;
   document.getElementById('goal-weekly').value=g.weekly;
   const lbl=document.getElementById('goal-daily-current');
-  if(lbl)lbl.textContent='Currently '+fmtH(g.daily)+'/day';
+  if(lbl)lbl.textContent='Currently '+fmtH(g.daily)+'/day · '+fmtH(g.weekly)+'/week';
   renderNavReorder();
   updateThemeSwatches();
   document.getElementById('goal-modal-overlay').classList.add('open');
