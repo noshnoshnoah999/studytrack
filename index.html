@@ -2500,20 +2500,27 @@ let pomodoroMode=false;
 let pomodoroPhase='work';
 let pomodoroCount=0;
 let pomodoroEndMs=null;
+let pomodoroWorkMs=0;      // accumulated milliseconds of work-phase time
+let pomodoroPhaseStart=null; // when the current phase began
 const POMO_WORK=25*60,POMO_SHORT=5*60,POMO_LONG=15*60;
 function fmtCountdown(secs){const m=Math.floor(Math.max(0,secs)/60),s=Math.max(0,secs)%60;return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');}
 function togglePomodoroMode(){pomodoroMode=!pomodoroMode;renderTimerPage();}
 function showPomodoroNotif(title,body){if('Notification'in window&&Notification.permission==='granted'){try{new Notification(title,{body,icon:'/studytrack/icon.png',tag:'pomodoro'});}catch(e){}}}
 function pomodoroPhaseComplete(){
+  const now=Date.now();
   if(pomodoroPhase==='work'){
+    // Bank the work time before switching to break
+    if(pomodoroPhaseStart)pomodoroWorkMs+=now-pomodoroPhaseStart;
     pomodoroCount++;
     pomodoroPhase='break';
     const len=pomodoroCount%4===0?POMO_LONG:POMO_SHORT;
-    pomodoroEndMs=Date.now()+len*1000;
+    pomodoroEndMs=now+len*1000;
+    pomodoroPhaseStart=now;
     showPomodoroNotif('🍅 Time for a break!',pomodoroCount%4===0?'15 min long break — you earned it!':'5 min break — step away from the screen');
   }else{
     pomodoroPhase='work';
-    pomodoroEndMs=Date.now()+POMO_WORK*1000;
+    pomodoroEndMs=now+POMO_WORK*1000;
+    pomodoroPhaseStart=now;
     showPomodoroNotif('☕ Break over — back to work!','25 min focus session starting now');
   }
   renderTimerPage();
@@ -2615,7 +2622,7 @@ function renderTimerPage(){
           <span style="width:9px;height:9px;border-radius:50%;background:${subjColor};display:inline-block"></span>
           ${escHtml(currentSubj?currentSubj.name:'Studying')}
         </div>
-        ${pomodoroMode?`<div class="pomo-phase-badge" style="background:${pomodoroPhase==='work'?'var(--errl)':'var(--okl)'};color:${pomodoroPhase==='work'?'var(--err)':'var(--ok)'}">${pomodoroPhase==='work'?'🍅 Focus':'☕ Break'}</div><div class="pomo-sessions">${'🍅'.repeat(Math.min(pomodoroCount,8))} ${pomodoroCount} session${pomodoroCount!==1?'s':''} done</div>`:''}
+        ${pomodoroMode?`<div class="pomo-phase-badge" style="background:${pomodoroPhase==='work'?'var(--errl)':'var(--okl)'};color:${pomodoroPhase==='work'?'var(--err)':'var(--ok)'}">${pomodoroPhase==='work'?'🍅 Focus':'☕ Break'}</div><div class="pomo-sessions">${'🍅'.repeat(Math.min(pomodoroCount,8))} ${pomodoroCount} session${pomodoroCount!==1?'s':''} done · ${fmtH((pomodoroWorkMs+(pomodoroPhase==='work'&&pomodoroPhaseStart?Date.now()-pomodoroPhaseStart:0))/3600000)} studied</div>`:''}
         <div class="timer-df-clock" id="tp-clock" style="color:${pomodoroMode?(pomodoroPhase==='work'?'var(--err)':'var(--ok)'):subjColor}">${pomodoroMode&&pomodoroEndMs?fmtCountdown(Math.ceil((pomodoroEndMs-Date.now())/1000)):timerFmtClock(elapsed)}</div>
         <button class="timer-df-stop" onclick="timerPageToggle()">⏹ Stop</button>
         ${progHtml}
@@ -2686,7 +2693,7 @@ function timerPageToggle(){
     // Start
     timerStart=Date.now();
     timerStartWallClock=new Date();
-    if(pomodoroMode){pomodoroPhase='work';pomodoroCount=0;pomodoroEndMs=Date.now()+POMO_WORK*1000;}
+    if(pomodoroMode){pomodoroPhase='work';pomodoroCount=0;pomodoroWorkMs=0;pomodoroPhaseStart=Date.now();pomodoroEndMs=Date.now()+POMO_WORK*1000;}
     timerInterval=setInterval(timerTick,1000);
     renderTimerPage();
   }
@@ -2697,7 +2704,7 @@ function timerPageReset(){
   timerInterval=null;
   timerStart=null;
   timerStartWallClock=null;
-  pomodoroPhase='work';pomodoroCount=0;pomodoroEndMs=null;
+  pomodoroPhase='work';pomodoroCount=0;pomodoroEndMs=null;pomodoroWorkMs=0;pomodoroPhaseStart=null;
   renderTimerPage();
 }
 
@@ -2752,10 +2759,18 @@ function timerPageLog(){
   const notes=document.getElementById('tp-notes')?document.getElementById('tp-notes').value:'';
   const startStr=fmt(timerStartWallClock);
   const endStr=fmt(endTime);
-  let diffMins=toMins(endStr)-toMins(startStr);
-  if(diffMins<0)diffMins+=1440; // handle midnight crossing
-  if(diffMins<=0){alert('Session too short to log.');return;}
-  const hrs=diffMins/60;
+  let hrs;
+  if(pomodoroMode){
+    // Only count work-phase time — add current phase time if still in work phase
+    const workMs=pomodoroWorkMs+(pomodoroPhase==='work'&&pomodoroPhaseStart?Date.now()-pomodoroPhaseStart:0);
+    hrs=workMs/3600000;
+    if(hrs<=0.005){alert('No work time to log yet.');return;}
+  }else{
+    let diffMins=toMins(endStr)-toMins(startStr);
+    if(diffMins<0)diffMins+=1440; // handle midnight crossing
+    if(diffMins<=0){alert('Session too short to log.');return;}
+    hrs=diffMins/60;
+  }
   const sessions=loadSessions();
   sessions.push({id:genId(),subjectId:timerSubjectId,date:ds,hours:hrs,start:startStr,end:endStr,notes});
   saveSessions(sessions);
@@ -3602,16 +3617,6 @@ async function syncFromCloud(){
       localStorage.setItem('st_hours',JSON.stringify(hoursStore));
       sbPush('st_hours',hoursStore);
     }
-    // Patch el3 base to match teacher report — subjects only, never touch sessions
-    try{
-      const subjs=JSON.parse(localStorage.getItem('st_subjs')||'[]');
-      const el3=subjs.find(s=>s.id==='el3');
-      if(el3&&el3.base!==132.7){
-        el3.base=132.7;
-        localStorage.setItem('st_subjs',JSON.stringify(subjs));
-        sbPush('st_subjs',subjs);
-      }
-    }catch(e){}
     setSyncUI('synced','Synced ✓');
     if(updated)showPage(currentPage);
   }catch(e){
