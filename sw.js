@@ -15,12 +15,20 @@ self.addEventListener('push',e=>{
   let data;
   try{data=e.data.json();}catch(err){data={title:'StudyTrack',body:e.data.text()};}
 
-  // Client-side stale check — if the notification has an expiresAt timestamp
-  // and we're past it, silently drop it. This handles cases where the push
-  // server or OS queued the message past the intended delivery window
-  // (e.g. Mac/iOS sleeping, Focus mode, DND) even when TTL was set server-side.
-  if(data.expiresAt&&Date.now()>data.expiresAt){
-    console.log('[SW] Stale notification dropped (expired '+Math.round((Date.now()-data.expiresAt)/1000)+'s ago):',data.tag);
+  // Client-side stale check — drop notifications that arrived too late.
+  // Two mechanisms:
+  //   1. expiresAt (explicit deadline set per-notification): always respected.
+  //   2. sentAt fallback: for time-sensitive notification types, drop if
+  //      delivered more than 20 minutes after it was sent — even if expiresAt
+  //      is missing (e.g. old queued messages from before the fix was deployed).
+  const now=Date.now();
+  if(data.expiresAt&&now>data.expiresAt){
+    console.log('[SW] Stale (expiresAt, expired '+Math.round((now-data.expiresAt)/1000)+'s ago):',data.tag);
+    return;
+  }
+  const TIME_SENSITIVE=['soon-','started-','end-','break-end-','todo-'];
+  if(data.sentAt&&TIME_SENSITIVE.some(p=>(data.tag||'').startsWith(p))&&now>data.sentAt+20*60*1000){
+    console.log('[SW] Stale (sentAt, '+Math.round((now-data.sentAt)/60000)+'min late):',data.tag);
     return;
   }
 

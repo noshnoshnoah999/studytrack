@@ -63,9 +63,11 @@ function fmtH(h) {
 // urgency: 'high' bypasses iOS/Android battery-saving delivery delays.
 async function send(sub, title, body, tag, extra = {}, ttl = 120, urgency = 'high') {
   try {
+    // sentAt: real UTC ms so the service worker can drop stale deliveries
+    // even when the payload has no expiresAt (e.g. morning/evening summaries)
     await webpush.sendNotification(
       sub,
-      JSON.stringify({ title, body, tag, url: '/studytrack/', ...extra }),
+      JSON.stringify({ title, body, tag, url: '/studytrack/', sentAt: Date.now(), ...extra }),
       { TTL: ttl, urgency }
     );
     console.log(`[OK] [${tag}] ${title} - ${body}`);
