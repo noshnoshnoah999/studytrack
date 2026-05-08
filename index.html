@@ -1828,7 +1828,6 @@ function renderDashboard(){
   renderWeekCombined();
 
   // Needs attention
-  const subjs=loadSubjects();
   const attention=subjs
     .map(s=>{
       const logged=getLogged(s.id);
