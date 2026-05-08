@@ -656,6 +656,24 @@ input:checked+.notif-slider:before{transform:translateX(18px);background:#fff}
 .quick-log-fab{position:fixed;bottom:80px;left:16px;width:48px;height:48px;border-radius:50%;background:var(--o);color:#fff;font-size:26px;font-weight:300;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:150;box-shadow:0 4px 16px rgba(249,115,22,0.45);transition:transform 0.15s,opacity 0.15s;line-height:1}
 .quick-log-fab:hover{transform:scale(1.08)}
 .quick-log-fab.hidden{opacity:0;pointer-events:none}
+
+/* ── ANIMATIONS ──────────────────────────────────────────────────────────── */
+@keyframes pageIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.page.active{animation:pageIn 0.2s ease}
+@keyframes cardIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.card{animation:cardIn 0.25s ease both}
+button:active{transform:scale(0.96);transition:transform 0.08s}
+@keyframes toastIn{from{opacity:0;transform:translateY(20px) scale(0.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes toastOut{from{opacity:1;transform:translateY(0) scale(1)}to{opacity:0;transform:translateY(20px) scale(0.95)}}
+@keyframes barGrow{from{width:0%}to{width:var(--w)}}
+
+/* ── IN-APP BANNER ───────────────────────────────────────────────────────── */
+@keyframes bannerIn{from{opacity:0;transform:translateX(-50%) translateY(-60px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@keyframes bannerOut{from{opacity:1;transform:translateX(-50%) translateY(0)}to{opacity:0;transform:translateX(-50%) translateY(-60px)}}
+#inapp-banner{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:500;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:12px 18px;max-width:340px;width:calc(100% - 32px);box-shadow:0 8px 32px rgba(0,0,0,0.4);display:none;flex-direction:column;gap:4px}
+#inapp-banner.show{display:flex;animation:bannerIn 0.3s cubic-bezier(0.34,1.56,0.64,1)}
+#inapp-banner-title{font-size:13px;font-weight:700;color:var(--text)}
+#inapp-banner-body{font-size:12px;color:var(--text2)}
 </style>
 </head>
 <body>
@@ -686,6 +704,10 @@ input:checked+.notif-slider:before{transform:translateX(18px);background:#fff}
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
         <div class="sidebar-footer-label" style="margin-bottom:0">Today's Progress</div>
         <div style="display:flex;gap:2px">
+          <button id="notif-bell-sb" onclick="openNotifCenter()" style="position:relative;background:none;border:1px solid var(--border);border-radius:9px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2)" title="Notifications">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span class="notif-badge" style="position:absolute;top:-4px;right:-4px;background:var(--err);color:#fff;font-size:9px;font-weight:800;border-radius:100px;padding:1px 4px;display:none;min-width:14px;text-align:center"></span>
+          </button>
           <button class="btn-dark" onclick="openNotifSettings()" title="Notification settings">🔔</button>
           <button class="btn-dark" onclick="toggleExportPanel()" title="Export data">⬇️</button>
           <button class="btn-dark" onclick="openGoalSettings()" title="Settings">⚙️</button>
@@ -716,6 +738,10 @@ input:checked+.notif-slider:before{transform:translateX(18px);background:#fff}
           <p style="font-size:11px;color:var(--text3);margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px" id="greeting-date"></p>
         </div>
         <div style="display:flex;gap:4px;align-items:center" id="mobile-top-bar">
+          <button id="notif-bell-mb" onclick="openNotifCenter()" style="position:relative;background:none;border:1px solid var(--border);border-radius:9px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2)" title="Notifications">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span class="notif-badge" style="position:absolute;top:-4px;right:-4px;background:var(--err);color:#fff;font-size:9px;font-weight:800;border-radius:100px;padding:1px 4px;display:none;min-width:14px;text-align:center"></span>
+          </button>
           <button class="btn-dark" onclick="openGoalSettings()" title="Settings">⚙️</button>
         </div>
       </div>
@@ -1871,8 +1897,8 @@ function renderDashboard(){
     '<div class="dash-hero">'+
     '<div class="dash-hero-label">Today\'s Study Hours</div>'+
     '<div class="dash-hero-row">'+
-      '<div class="dash-hero-num">'+heroNum+'</div>'+
-      '<div class="dash-hero-right"><div class="dash-hero-target"><strong>'+Math.round(todayPct)+'%</strong> complete</div></div>'+
+      '<div class="dash-hero-num" id="dash-hero-num-el">'+heroNum+'</div>'+
+      '<div class="dash-hero-right"><div class="dash-hero-target"><strong id="dash-hero-pct-el">'+Math.round(todayPct)+'%</strong> complete</div></div>'+
     '</div>'+
     '<div class="dash-hero-bar-wrap"><div class="dash-hero-bar-fill'+(todayH>=target&&!isWknd?' green':'')+'" style="width:'+todayPct+'%;background:'+barColor+'"></div></div>'+
     '<div class="dash-hero-footer">'+
@@ -1880,6 +1906,8 @@ function renderDashboard(){
       '<span class="dash-hero-right-val">'+rightLabel+'</span>'+
     '</div>'+
     '</div>';
+  // Count-up for today's % stat
+  animateCount(document.getElementById('dash-hero-pct-el'),Math.round(todayPct),0,'%');
 
   // Stats strip — 4 cards (2×2 on mobile, 4-col on desktop)
   const fmtCr=n=>n%1===0?n+'cr':(Math.floor(n)+'½'+'cr'); // e.g. "12½cr" or "3cr"
@@ -2477,9 +2505,26 @@ const LOG_SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',englis
 function showToast(msg,color){
   const t=document.createElement('div');
   t.style.cssText='position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:'+(color||'var(--ok)')+';color:#fff;padding:10px 22px;border-radius:20px;font-weight:700;font-size:14px;z-index:9999;white-space:nowrap;pointer-events:none';
+  t.style.animation='toastIn 0.2s ease both';
   t.textContent=msg;
   document.body.appendChild(t);
-  setTimeout(()=>t.remove(),2500);
+  setTimeout(()=>{
+    t.style.animation='toastOut 0.2s ease forwards';
+    setTimeout(()=>t.remove(),200);
+  },2300);
+}
+
+// ── ANIMATE COUNT ─────────────────────────────────────────────────────────────
+function animateCount(el,target,decimals,suffix){
+  if(!el)return;
+  const dur=600,steps=30,interval=dur/steps;
+  let step=0;
+  const timer=setInterval(()=>{
+    step++;
+    const val=target*(step/steps);
+    el.textContent=val.toFixed(decimals)+(suffix||'');
+    if(step>=steps){el.textContent=target.toFixed(decimals)+(suffix||'');clearInterval(timer);}
+  },interval);
 }
 
 // ── LOG ───────────────────────────────────────────────────────────────────────
@@ -4725,6 +4770,10 @@ async function syncFromCloud(){
   },60000);
   // Check todo due times every minute (in-app notification)
   setInterval(checkTodoNotifs, 60000);
+  // Check schedule-based in-app notifications every minute
+  setInterval(checkInAppNotifs, 60000);
+  checkInAppNotifs(); // run once on load
+  updateNotifBell(); // initialise badge count on load
 })();
 
 // ── Jump nav & back-to-top ────────────────────────────────────────────────
@@ -4801,6 +4850,8 @@ const NOTIF_TYPES=[
   {id:'weekly_recap',  label:'Weekly recap',           desc:'Sunday evening progress summary'},
   {id:'subj_complete', label:'Subject complete',       desc:'First time you finish a subject'},
   {id:'falling_behind',label:'Falling behind alert',   desc:'When subjects need urgent attention'},
+  {id:'target_hit',    label:'Daily target hit 🎯',    desc:'Celebrate when you hit your daily goal',    inAppOnly:true},
+  {id:'streak_warn',   label:'Streak at risk 🔥',      desc:'Evening reminder if daily target not yet met', inAppOnly:true},
 ];
 
 function loadNotifPrefs(){
@@ -4815,17 +4866,28 @@ function openNotifSettings(){
   const prefs=loadNotifPrefs();
   const list=document.getElementById('notif-prefs-list');
   if(list){
-    list.innerHTML=NOTIF_TYPES.map(t=>`
-      <div class="notif-pref-row">
-        <div class="notif-pref-body">
-          <div class="notif-pref-label">${escHtml(t.label)}</div>
-          <div class="notif-pref-desc">${escHtml(t.desc)}</div>
-        </div>
-        <label class="notif-toggle">
-          <input type="checkbox" id="notif-chk-${t.id}" ${prefs[t.id]!==false?'checked':''} onchange="onNotifToggle('${t.id}',this.checked)">
-          <span class="notif-slider"></span>
-        </label>
-      </div>`).join('');
+    const header='<div style="display:grid;grid-template-columns:1fr 60px 60px;gap:8px;margin-bottom:8px;padding:0 2px">'+
+      '<div></div>'+
+      '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;text-align:center">Push</div>'+
+      '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;text-align:center">In-app</div>'+
+    '</div>';
+    const rows=NOTIF_TYPES.map(t=>{
+      const pushChecked=prefs[t.id]!==false?'checked':'';
+      const inappChecked=prefs['inapp_'+t.id]!==false?'checked':'';
+      const pushToggle=t.inAppOnly
+        ?'<div style="display:flex;justify-content:center"><label class="notif-toggle" style="opacity:0.3;pointer-events:none"><input type="checkbox" disabled><span class="notif-slider"></span></label></div>'
+        :'<div style="display:flex;justify-content:center"><label class="notif-toggle"><input type="checkbox" id="notif-chk-'+t.id+'" '+pushChecked+' onchange="onNotifToggle(\''+t.id+'\',this.checked)"><span class="notif-slider"></span></label></div>';
+      const inappToggle='<div style="display:flex;justify-content:center"><label class="notif-toggle"><input type="checkbox" id="notif-chk-inapp-'+t.id+'" '+inappChecked+' onchange="onNotifToggle(\'inapp_'+t.id+'\',this.checked)"><span class="notif-slider"></span></label></div>';
+      return'<div style="display:grid;grid-template-columns:1fr 60px 60px;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">'+
+        '<div>'+
+          '<div style="font-size:13px;font-weight:600;color:var(--text)">'+escHtml(t.label)+'</div>'+
+          '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+escHtml(t.desc)+'</div>'+
+        '</div>'+
+        pushToggle+
+        inappToggle+
+      '</div>';
+    }).join('');
+    list.innerHTML=header+rows;
   }
   document.getElementById('notif-settings-modal-overlay').classList.add('open');
 }
@@ -4882,9 +4944,148 @@ function submitQuickLog(){
   if(currentPage==='log')renderLog();
   if(currentPage==='history')renderHistory();
 }
+
+// ── IN-APP NOTIFICATIONS ──────────────────────────────────────────────────────
+function loadInAppNotifs(){
+  try{return JSON.parse(localStorage.getItem('st_inapp_notifs')||'[]');}catch(e){return[];}
+}
+function saveInAppNotifs(arr){
+  localStorage.setItem('st_inapp_notifs',JSON.stringify(arr.slice(-30)));
+}
+function addInAppNotif(title,body,type){
+  if(!isInAppEnabled(type))return;
+  const arr=loadInAppNotifs();
+  arr.push({id:genId(),title,body,time:Date.now(),read:false,type});
+  saveInAppNotifs(arr);
+  updateNotifBell();
+  showInAppBanner(title,body);
+}
+function isInAppEnabled(type){
+  const p=loadNotifPrefs();
+  return p['inapp_'+type]!==false;
+}
+
+// In-app banner
+let _bannerTimer=null;
+function showInAppBanner(title,body){
+  const el=document.getElementById('inapp-banner');
+  if(!el)return;
+  document.getElementById('inapp-banner-title').textContent=title;
+  document.getElementById('inapp-banner-body').textContent=body;
+  el.style.animation='';
+  el.classList.add('show');
+  clearTimeout(_bannerTimer);
+  _bannerTimer=setTimeout(()=>dismissBanner(),5000);
+}
+function dismissBanner(){
+  const el=document.getElementById('inapp-banner');
+  if(!el)return;
+  el.style.animation='bannerOut 0.25s ease forwards';
+  setTimeout(()=>{el.classList.remove('show');el.style.animation='';},250);
+  clearTimeout(_bannerTimer);
+}
+
+// Notification bell badge
+function updateNotifBell(){
+  const unread=loadInAppNotifs().filter(n=>!n.read).length;
+  document.querySelectorAll('.notif-badge').forEach(el=>{
+    el.style.display=unread>0?'block':'none';
+    el.textContent=unread>9?'9+':String(unread);
+  });
+}
+
+// Notification center
+function openNotifCenter(){
+  const notifs=loadInAppNotifs().slice().reverse();
+  const arr=loadInAppNotifs().map(n=>({...n,read:true}));
+  saveInAppNotifs(arr);
+  updateNotifBell();
+  const el=document.getElementById('notif-center-list');
+  if(!notifs.length){
+    el.innerHTML='<div style="text-align:center;padding:32px;color:var(--text3);font-size:13px">No notifications yet</div>';
+  }else{
+    el.innerHTML=notifs.map(n=>{
+      const ago=_timeAgo(n.time);
+      return'<div style="background:var(--bg3);border-radius:10px;padding:12px 14px'+(n.read?'':';border-left:3px solid var(--o)')+'">'+
+        '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px">'+escHtml(n.title)+'</div>'+
+        '<div style="font-size:12px;color:var(--text2);margin-bottom:4px">'+escHtml(n.body)+'</div>'+
+        '<div style="font-size:11px;color:var(--text3)">'+ago+'</div>'+
+      '</div>';
+    }).join('');
+  }
+  document.getElementById('notif-center-overlay').classList.add('open');
+}
+function clearAllNotifs(){
+  saveInAppNotifs([]);
+  updateNotifBell();
+  openNotifCenter();
+}
+function _timeAgo(ms){
+  const diff=Date.now()-ms;
+  const m=Math.floor(diff/60000);
+  if(m<1)return'Just now';
+  if(m<60)return m+'m ago';
+  const h=Math.floor(m/60);
+  if(h<24)return h+'h ago';
+  return Math.floor(h/24)+'d ago';
+}
+
+// Schedule-based in-app notification checks
+function checkInAppNotifs(){
+  const now=new Date();
+  const sched=loadSchedule();
+  const dayBlocks=sched.filter(b=>b.day===now.getDay());
+  const nowMin=now.getHours()*60+now.getMinutes();
+
+  // Block starting soon (8-12 min away)
+  dayBlocks.filter(b=>b.type==='study').forEach(b=>{
+    const [bh,bm]=b.start.split(':').map(Number);
+    const startMin=bh*60+bm;
+    const diff=startMin-nowMin;
+    if(diff>=8&&diff<=12){
+      const key='block_soon_'+b.id+'_'+now.toDateString();
+      if(!sessionStorage.getItem(key)){
+        sessionStorage.setItem(key,'1');
+        const subjs=loadSubjects();
+        const subj=subjs.find(s=>s.id===b.subjectId);
+        const name=subj?subj.name:(b.label||'Study block');
+        addInAppNotif('⏰ Starting soon',name+' starts in ~'+diff+' minutes','block_soon');
+      }
+    }
+  });
+
+  // Target hit for today
+  const goals=loadGoals();
+  const todayH=getTodayH();
+  const key2='target_hit_'+now.toDateString();
+  if(todayH>=goals.daily&&!sessionStorage.getItem(key2)){
+    sessionStorage.setItem(key2,'1');
+    addInAppNotif('🎯 Daily target hit!','You\'ve logged '+fmtH(todayH)+' today. Great work!','target_hit');
+  }
+
+  // Streak reminder at 8pm if target not hit
+  if(now.getHours()===20&&now.getMinutes()<5){
+    const key3='streak_warn_'+now.toDateString();
+    if(todayH<goals.daily&&!sessionStorage.getItem(key3)){
+      sessionStorage.setItem(key3,'1');
+      const needed=goals.daily-todayH;
+      addInAppNotif('🔥 Streak at risk','You still need '+fmtH(needed)+' today to keep your streak','streak_warn');
+    }
+  }
+}
+
 </script>
 <button class="back-to-top" id="btn-back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
 <button class="quick-log-fab" id="quick-log-fab" onclick="openQuickLog()" title="Quick log session">＋</button>
+<div id="inapp-banner">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+    <div>
+      <div id="inapp-banner-title"></div>
+      <div id="inapp-banner-body"></div>
+    </div>
+    <button onclick="dismissBanner()" style="background:none;border:none;color:var(--text3);font-size:18px;line-height:1;cursor:pointer;flex-shrink:0">×</button>
+  </div>
+</div>
 
 <!-- NOTIFICATION SETTINGS MODAL -->
 <div class="modal-overlay" id="notif-settings-modal-overlay" onclick="handleOverlayClick(event,'notif-settings-modal-overlay')">
@@ -4896,6 +5097,19 @@ function submitQuickLog(){
       <button class="btn-save" onclick="saveNotifPrefs()">Save &amp; Sync</button>
       <button class="btn-cancel" onclick="closeModal('notif-settings-modal-overlay')" style="margin-top:8px">Cancel</button>
     </div>
+  </div>
+</div>
+
+<!-- NOTIFICATION CENTER MODAL -->
+<div class="modal-overlay" id="notif-center-overlay" onclick="handleOverlayClick(event,'notif-center-overlay')">
+  <div class="modal-sheet" style="max-height:75vh;display:flex;flex-direction:column" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="modal-title" style="margin-bottom:0">Notifications</div>
+      <button onclick="clearAllNotifs()" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;padding:4px 8px">Clear all</button>
+    </div>
+    <div id="notif-center-list" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px"></div>
+    <button class="btn-cancel" onclick="closeModal('notif-center-overlay')" style="margin-top:16px">Close</button>
   </div>
 </div>
 
