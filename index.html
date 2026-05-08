@@ -633,6 +633,29 @@ a{color:inherit;text-decoration:none}
 .todo-del{background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:2px 4px;border-radius:6px;transition:color 0.15s;flex-shrink:0}
 .todo-del:hover{color:var(--err)}
 .todo-empty{text-align:center;padding:32px 0;color:var(--text3);font-size:14px}
+
+/* NOTIFICATION TOGGLE */
+.notif-toggle{position:relative;display:inline-block;width:42px;height:24px}
+.notif-toggle input{opacity:0;width:0;height:0}
+.notif-slider{position:absolute;cursor:pointer;inset:0;background:var(--bg4);border-radius:24px;transition:0.2s}
+.notif-slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background:var(--text2);border-radius:50%;transition:0.2s}
+input:checked+.notif-slider{background:var(--o)}
+input:checked+.notif-slider:before{transform:translateX(18px);background:#fff}
+.notif-pref-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)}
+.notif-pref-row:last-child{border-bottom:none}
+.notif-pref-body{flex:1;min-width:0}
+.notif-pref-label{font-size:14px;font-weight:600;color:var(--text)}
+.notif-pref-desc{font-size:12px;color:var(--text2);margin-top:2px}
+
+/* EXPORT PANEL */
+.export-panel{margin-top:8px;background:var(--bg3);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px}
+.export-btn{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--bg2);border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;color:var(--text2);text-align:left;transition:background 0.15s;width:100%}
+.export-btn:hover{background:var(--bg4);color:var(--text)}
+
+/* QUICK LOG FAB */
+.quick-log-fab{position:fixed;bottom:80px;left:16px;width:48px;height:48px;border-radius:50%;background:var(--o);color:#fff;font-size:26px;font-weight:300;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:150;box-shadow:0 4px 16px rgba(249,115,22,0.45);transition:transform 0.15s,opacity 0.15s;line-height:1}
+.quick-log-fab:hover{transform:scale(1.08)}
+.quick-log-fab.hidden{opacity:0;pointer-events:none}
 </style>
 </head>
 <body>
@@ -663,6 +686,8 @@ a{color:inherit;text-decoration:none}
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
         <div class="sidebar-footer-label" style="margin-bottom:0">Today's Progress</div>
         <div style="display:flex;gap:2px">
+          <button class="btn-dark" onclick="openNotifSettings()" title="Notification settings">🔔</button>
+          <button class="btn-dark" onclick="toggleExportPanel()" title="Export data">⬇️</button>
           <button class="btn-dark" onclick="openGoalSettings()" title="Settings">⚙️</button>
         </div>
       </div>
@@ -671,6 +696,12 @@ a{color:inherit;text-decoration:none}
       <div class="sync-row">
         <div class="sync-dot idle" id="sync-dot-sb"></div>
         <span class="sync-label" id="sync-label-sb">Connecting…</span>
+      </div>
+      <div id="export-panel" style="display:none">
+        <div class="export-panel">
+          <button class="export-btn" onclick="exportJSON()">📦 Export JSON (Full Backup)</button>
+          <button class="export-btn" onclick="exportCSV()">📄 Export Sessions CSV</button>
+        </div>
       </div>
     </div>
   </aside>
@@ -823,6 +854,10 @@ a{color:inherit;text-decoration:none}
     <div class="page" id="page-history">
       <div class="hist-header">
         <h2>History</h2>
+        <div style="display:flex;gap:8px">
+          <button class="btn-add" style="background:var(--bg3);color:var(--text2);font-size:12px;padding:8px 14px" onclick="exportJSON()">📦 JSON</button>
+          <button class="btn-add" style="background:var(--bg3);color:var(--text2);font-size:12px;padding:8px 14px" onclick="exportCSV()">📄 CSV</button>
+        </div>
       </div>
       <div class="hist-controls">
         <select class="form-input hist-filter" id="hist-subject-filter" onchange="renderHistory()">
@@ -1775,6 +1810,8 @@ function showPage(id){
   else if(id==='timeline'){currentPage='graduation';showPage('graduation');return;}
   else if(id==='timer')renderTimerPage();
   updateSidebar();
+  const fab=document.getElementById('quick-log-fab');
+  if(fab)fab.classList.toggle('hidden',id==='log'||id==='timer');
 }
 
 // ── SIDEBAR ───────────────────────────────────────────────────────────────────
@@ -4702,7 +4739,200 @@ function _updateBackToTop(){
 }
 window.addEventListener('scroll',_updateBackToTop,{passive:true});
 document.addEventListener('scroll',_updateBackToTop,{passive:true});
+
+// ── DATA EXPORT ───────────────────────────────────────────────────────────────
+function toggleExportPanel(){
+  const p=document.getElementById('export-panel');
+  if(p)p.style.display=p.style.display==='none'?'block':'none';
+}
+
+function downloadFile(content,filename,mimeType){
+  const blob=new Blob([content],{type:mimeType});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=filename;a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportJSON(){
+  const today=todayStr();
+  const data={
+    version:1,
+    exported:new Date().toISOString(),
+    subjects:JSON.parse(localStorage.getItem('st_subjs')||'[]'),
+    sessions:JSON.parse(localStorage.getItem('st_sessions')||'[]'),
+    goals:JSON.parse(localStorage.getItem('st_goals')||'{}'),
+    schedule:JSON.parse(localStorage.getItem('st_sched')||'[]'),
+    todos:JSON.parse(localStorage.getItem('st_todos')||'[]')
+  };
+  downloadFile(JSON.stringify(data,null,2),'studytrack-backup-'+today+'.json','application/json');
+  showToast('Backup downloaded');
+  const p=document.getElementById('export-panel');
+  if(p)p.style.display='none';
+}
+
+function exportCSV(){
+  const today=todayStr();
+  const subjects=JSON.parse(localStorage.getItem('st_subjs')||'[]');
+  const sessions=JSON.parse(localStorage.getItem('st_sessions')||'[]');
+  const subjMap={};
+  subjects.forEach(s=>{subjMap[s.id]=s.name;});
+  const rows=[['Date','Subject','Hours','Notes']];
+  sessions.forEach(s=>{
+    const name=subjMap[s.subjectId]||s.subjectId||'';
+    const notes=(s.notes||'').replace(/"/g,'""');
+    rows.push([s.date,'"'+name+'"',s.hours!=null?s.hours:'','"'+notes+'"']);
+  });
+  const csv=rows.map(r=>r.join(',')).join('\n');
+  downloadFile(csv,'studytrack-sessions-'+today+'.csv','text/csv');
+  showToast('CSV downloaded');
+  const p=document.getElementById('export-panel');
+  if(p)p.style.display='none';
+}
+
+// ── NOTIFICATION PREFERENCES ──────────────────────────────────────────────────
+const NOTIF_TYPES=[
+  {id:'block_soon',    label:'Block starting soon',    desc:'~10 min before a study block starts'},
+  {id:'block_end',     label:'Block ending reminder',  desc:'When a study block is ending — log prompt'},
+  {id:'break_end',     label:'Break ending',           desc:'When a break between blocks is almost over'},
+  {id:'morning',       label:'Morning summary',        desc:'Daily overview at 8:30am'},
+  {id:'wrapup',        label:'Daily wrap-up',          desc:'Evening summary at 6pm'},
+  {id:'weekly_preview',label:'Weekly preview',         desc:'Monday morning schedule overview'},
+  {id:'weekly_recap',  label:'Weekly recap',           desc:'Sunday evening progress summary'},
+  {id:'subj_complete', label:'Subject complete',       desc:'First time you finish a subject'},
+  {id:'falling_behind',label:'Falling behind alert',   desc:'When subjects need urgent attention'},
+];
+
+function loadNotifPrefs(){
+  try{return JSON.parse(localStorage.getItem('st_notif_prefs')||'{}');}catch(e){return{};}
+}
+function isNotifEnabled(id){
+  const p=loadNotifPrefs();
+  return p[id]!==false;
+}
+
+function openNotifSettings(){
+  const prefs=loadNotifPrefs();
+  const list=document.getElementById('notif-prefs-list');
+  if(list){
+    list.innerHTML=NOTIF_TYPES.map(t=>`
+      <div class="notif-pref-row">
+        <div class="notif-pref-body">
+          <div class="notif-pref-label">${escHtml(t.label)}</div>
+          <div class="notif-pref-desc">${escHtml(t.desc)}</div>
+        </div>
+        <label class="notif-toggle">
+          <input type="checkbox" id="notif-chk-${t.id}" ${prefs[t.id]!==false?'checked':''} onchange="onNotifToggle('${t.id}',this.checked)">
+          <span class="notif-slider"></span>
+        </label>
+      </div>`).join('');
+  }
+  document.getElementById('notif-settings-modal-overlay').classList.add('open');
+}
+
+function onNotifToggle(id,checked){
+  const prefs=loadNotifPrefs();
+  prefs[id]=checked;
+  localStorage.setItem('st_notif_prefs',JSON.stringify(prefs));
+}
+
+function saveNotifPrefs(){
+  const prefs=loadNotifPrefs();
+  sbPush('st_notif_prefs',prefs);
+  closeModal('notif-settings-modal-overlay');
+  showToast('Notification preferences saved');
+}
+
+// ── QUICK LOG FAB ─────────────────────────────────────────────────────────────
+function openQuickLog(){
+  const subjs=loadSubjects().filter(s=>!s.done&&!s.extraCredit);
+  const sel=document.getElementById('ql-subject');
+  sel.innerHTML=subjs.map(s=>'<option value="'+s.id+'">'+escHtml(s.name)+'</option>').join('');
+  const now=new Date();
+  document.getElementById('ql-date').value=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  const pad=n=>String(n).padStart(2,'0');
+  document.getElementById('ql-end').value=pad(now.getHours())+':'+pad(now.getMinutes());
+  const start=new Date(now.getTime()-60*60*1000);
+  document.getElementById('ql-start').value=pad(start.getHours())+':'+pad(start.getMinutes());
+  document.getElementById('ql-notes').value='';
+  document.getElementById('quick-log-modal-overlay').classList.add('open');
+}
+
+function submitQuickLog(){
+  const subjectId=document.getElementById('ql-subject').value;
+  const start=document.getElementById('ql-start').value;
+  const end=document.getElementById('ql-end').value;
+  const date=document.getElementById('ql-date').value;
+  const notes=document.getElementById('ql-notes').value.trim();
+  if(!subjectId||!start||!end||!date){showToast('Please fill in all fields');return;}
+  const [sh,sm]=start.split(':').map(Number);
+  const [eh,em]=end.split(':').map(Number);
+  const hrs=((eh*60+em)-(sh*60+sm))/60;
+  if(hrs<=0){showToast('End time must be after start time');return;}
+  const sessions=loadSessions();
+  sessions.push({id:genId(),subjectId,date,start,end,hours:parseFloat(hrs.toFixed(2)),notes});
+  localStorage.setItem('st_sessions',JSON.stringify(sessions));
+  sbPush('st_sessions',sessions);
+  closeModal('quick-log-modal-overlay');
+  showToast('✓ Logged '+fmtH(hrs)+' · '+date);
+  updateSidebar();
+  if(currentPage==='dashboard')renderDashboard();
+  if(currentPage==='progress')renderProgress();
+  if(currentPage==='graduation')renderGraduationPage();
+  if(currentPage==='log')renderLog();
+  if(currentPage==='history')renderHistory();
+}
 </script>
 <button class="back-to-top" id="btn-back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<button class="quick-log-fab" id="quick-log-fab" onclick="openQuickLog()" title="Quick log session">＋</button>
+
+<!-- NOTIFICATION SETTINGS MODAL -->
+<div class="modal-overlay" id="notif-settings-modal-overlay" onclick="handleOverlayClick(event,'notif-settings-modal-overlay')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🔔 Notification Settings</div>
+    <div id="notif-prefs-list"></div>
+    <div style="margin-top:16px">
+      <button class="btn-save" onclick="saveNotifPrefs()">Save &amp; Sync</button>
+      <button class="btn-cancel" onclick="closeModal('notif-settings-modal-overlay')" style="margin-top:8px">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- QUICK LOG MODAL -->
+<div class="modal-overlay" id="quick-log-modal-overlay" onclick="handleOverlayClick(event,'quick-log-modal-overlay')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Quick Log</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label class="form-label">Subject</label>
+        <select id="ql-subject" class="form-input"></select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label class="form-label">Start time</label>
+          <input type="time" id="ql-start" class="form-input">
+        </div>
+        <div>
+          <label class="form-label">End time</label>
+          <input type="time" id="ql-end" class="form-input">
+        </div>
+      </div>
+      <div>
+        <label class="form-label">Date</label>
+        <input type="date" id="ql-date" class="form-input">
+      </div>
+      <div>
+        <label class="form-label">Notes (optional)</label>
+        <input type="text" id="ql-notes" class="form-input" placeholder="What did you work on?">
+      </div>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:8px">
+      <button class="btn-cancel" onclick="closeModal('quick-log-modal-overlay')">Cancel</button>
+      <button class="btn-save" onclick="submitQuickLog()">Log Session</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
