@@ -745,6 +745,7 @@ a{color:inherit;text-decoration:none}
         <h2>Subjects</h2>
         <div style="display:flex;gap:8px">
           <button class="btn-add" style="background:var(--bg3);color:var(--text2);font-size:12px;padding:8px 14px" onclick="openCoachReport()">📋 Coach Report</button>
+          <button class="btn-add" id="btn-hide-done" style="background:var(--bg3);color:var(--text2);font-size:12px;padding:8px 14px" onclick="toggleHideDone()">Hide done</button>
           <button class="btn-add" onclick="openSubjectModal(null)">＋ Add Subject</button>
         </div>
       </div>
@@ -2960,12 +2961,35 @@ function buildClaudeUrl(subj){
   return'https://claude.ai/new?q='+encodeURIComponent(prompt);
 }
 
+function toggleHideDone(){
+  const cur=localStorage.getItem('st_hide_done')==='1';
+  localStorage.setItem('st_hide_done',cur?'0':'1');
+  renderProgress();
+}
+
 function renderProgress(){
-  const subjs=loadSubjects();
+  const allSubjs=loadSubjects();
   const el=document.getElementById('subjects-list');
-  if(!subjs.length){el.innerHTML='<div class="empty-state">No subjects yet. Add one above.</div>';return;}
+  if(!allSubjs.length){el.innerHTML='<div class="empty-state">No subjects yet. Add one above.</div>';return;}
+
+  const hideDone=localStorage.getItem('st_hide_done')==='1';
+  const btn=document.getElementById('btn-hide-done');
+  if(btn){btn.textContent=hideDone?'Show done':'Hide done';btn.style.background=hideDone?'var(--ol)':'var(--bg3)';btn.style.color=hideDone?'var(--o)':'var(--text2)';}
+
+  // Sort: active subjects first, done subjects last
+  const active=allSubjs.filter(s=>!s.done&&!(getLogged(s.id)>=s.req&&s.req>0));
+  const done=allSubjs.filter(s=>s.done||(getLogged(s.id)>=s.req&&s.req>0));
+  const subjs=hideDone?active:[...active,...done];
+
   const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',el2:'#94a3b8',el3:'#64748b',el4:'#475569',am_hist:'#b45309',jp_exch:'#7c3aed'};
-  el.innerHTML=subjs.map(s=>{
+  // Add a divider label before done subjects when showing both
+  const subjsWithDivider=hideDone?subjs:[
+    ...active,
+    ...(done.length?[{_divider:true}]:[]),
+    ...done
+  ];
+  const rows=subjsWithDivider.map(s=>{
+    if(s._divider)return'<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px;padding:14px 2px 6px">Completed</div>';
     const logged=getLogged(s.id);
     const pct=s.req>0?Math.min(100,logged/s.req*100):100;
     const subjColor=SUBJ_COLORS[s.id]||'var(--o)';
@@ -2995,6 +3019,12 @@ function renderProgress(){
       '</button>'+
     '</div>';
   }).join('');
+
+  // If hiding done subjects, add a footer showing how many are hidden
+  const hiddenFooter=hideDone&&done.length?
+    '<div style="text-align:center;padding:12px;font-size:12px;color:var(--text3);cursor:pointer" onclick="toggleHideDone()">'+done.length+' completed subject'+(done.length>1?'s':'')+' hidden · tap to show</div>':'';
+
+  el.innerHTML=rows+hiddenFooter;
 }
 
 // ── SUBJECT MODAL ─────────────────────────────────────────────────────────────
