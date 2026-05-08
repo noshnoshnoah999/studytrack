@@ -58,11 +58,16 @@ function fmtH(h) {
 }
 
 // ── Send helper ───────────────────────────────────────────────────────────────
-async function send(sub, title, body, tag, extra = {}) {
+// ttl: seconds the push server keeps the message if device unreachable.
+//      Short TTL = stale notifications are dropped rather than delivered late.
+// urgency: 'high' bypasses iOS/Android battery-saving delivery delays.
+async function send(sub, title, body, tag, extra = {}, ttl = 120, urgency = 'high') {
   try {
-    await webpush.sendNotification(sub, JSON.stringify({
-      title, body, tag, url: '/studytrack/', ...extra
-    }));
+    await webpush.sendNotification(
+      sub,
+      JSON.stringify({ title, body, tag, url: '/studytrack/', ...extra }),
+      { TTL: ttl, urgency }
+    );
     console.log(`[OK] [${tag}] ${title} - ${body}`);
   } catch(e) {
     if (e.statusCode === 410 || e.statusCode === 404) {
@@ -106,9 +111,9 @@ async function send(sub, title, body, tag, extra = {}) {
   const subs = Array.isArray(subsRaw) ? subsRaw : [subsRaw];
   console.log(`Sending to ${subs.length} device(s)`);
 
-  async function sendAll(title, body, tag, extra = {}) {
+  async function sendAll(title, body, tag, extra = {}, ttl = 120, urgency = 'high') {
     for (const sub of subs) {
-      await send(sub, title, body, tag, extra);
+      await send(sub, title, body, tag, extra, ttl, urgency);
     }
   }
 
@@ -155,10 +160,14 @@ async function send(sub, title, body, tag, extra = {}) {
   );
   for (const bl of startingSoon) {
     const minsAway = toMins(bl.start) - nowMins;
+    // TTL: expire just before the block actually starts — never deliver stale
+    const ttl = Math.max(30, (minsAway - 2) * 60);
     await sendAll(
       `Starting in ${minsAway}min`,
       `${bl.label} · ${bl.start}–${bl.end}`,
-      `soon-${bl.id}`
+      `soon-${bl.id}`,
+      {},
+      ttl
     );
   }
 
@@ -169,11 +178,13 @@ async function send(sub, title, body, tag, extra = {}) {
     nowMins < toMins(b.start) + 5
   );
   for (const bl of justStarted) {
+    // TTL: drop after 3 min — if not delivered by then it's too late
     await sendAll(
       `Time to study — ${bl.label}`,
       `${bl.start}–${bl.end} · Tap to start your timer`,
       `started-${bl.id}`,
-      { type: 'block-start', subjectId: bl.subjectId || null, blockStart: bl.start }
+      { type: 'block-start', subjectId: bl.subjectId || null, blockStart: bl.start },
+      180
     );
   }
 
@@ -184,11 +195,13 @@ async function send(sub, title, body, tag, extra = {}) {
     toMins(b.end) - nowMins <= 8
   );
   for (const bl of endingSoon) {
+    const minsToEnd = toMins(bl.end) - nowMins;
     await sendAll(
       `${bl.label} ending soon`,
       `Finishes at ${bl.end} · Don't forget to log your session!`,
       `end-${bl.id}`,
-      { type: 'block-end', subjectId: bl.subjectId || null, blockStart: bl.start }
+      { type: 'block-end', subjectId: bl.subjectId || null, blockStart: bl.start },
+      Math.max(30, (minsToEnd - 1) * 60)
     );
   }
 
@@ -199,11 +212,14 @@ async function send(sub, title, body, tag, extra = {}) {
     toMins(b.end) - nowMins <= 5
   );
   for (const bl of breakEndingSoon) {
+    const minsToBreakEnd = toMins(bl.end) - nowMins;
     const nextBlock = todayBlocks.find(b => toMins(b.start) >= toMins(bl.end) && b.type === 'study');
     await sendAll(
       'Break ending soon',
       nextBlock ? `Up next: ${nextBlock.label} at ${nextBlock.start}` : 'Break wrapping up',
-      `break-end-${bl.id}`
+      `break-end-${bl.id}`,
+      {},
+      Math.max(30, minsToBreakEnd * 60)
     );
   }
 
@@ -213,12 +229,14 @@ async function send(sub, title, body, tag, extra = {}) {
     const scheduledH  = studyBlocks.reduce((a, b) => a + (toMins(b.end) - toMins(b.start)) / 60, 0);
 
     if (studyBlocks.length === 0) {
-      await sendAll('Good morning!', 'No study blocks today — rest up!', 'morning-summary');
+      await sendAll('Good morning!', 'No study blocks today — rest up!', 'morning-summary', {}, 3600);
     } else {
       await sendAll(
         `Good morning! ${studyBlocks.length} blocks today · ${fmtH(scheduledH)}`,
         studyBlocks.map(b => `${b.start}–${b.end} ${b.label}`).join('\n'),
-        'morning-schedule'
+        'morning-schedule',
+        {},
+        3600
       );
 
       const subjectStats = subjects
@@ -245,7 +263,7 @@ async function send(sub, title, body, tag, extra = {}) {
         ? `Today: ${todayScheduled.join(', ')}`
         : 'Most behind subjects';
 
-      await sendAll(focusTitle, focusBody, 'morning-focus');
+      await sendAll(focusTitle, focusBody, 'morning-focus', {}, 3600);
     }
   }
 
@@ -255,7 +273,7 @@ async function send(sub, title, body, tag, extra = {}) {
     const body = todayH >= dailyGoal
       ? `Target hit! You studied ${fmtH(todayH)} today`
       : `${fmtH(todayH)} logged · ${fmtH(remaining)} to go`;
-    await sendAll('Daily wrap-up', body, 'daily-wrapup');
+    await sendAll('Daily wrap-up', body, 'daily-wrapup', {}, 3600);
   }
 
   // ── 6. Monday morning — weekly preview ───────────────────────────────────
@@ -263,7 +281,9 @@ async function send(sub, title, body, tag, extra = {}) {
     await sendAll(
       'New week!',
       `Goal: ${fmtH(weeklyGoal)} this week · You averaged ${fmtH(weeklyAvg)}/week recently`,
-      'monday-preview'
+      'monday-preview',
+      {},
+      3600
     );
   }
 
@@ -276,7 +296,9 @@ async function send(sub, title, body, tag, extra = {}) {
     await sendAll(
       'Weekly recap',
       `${fmtH(weekH)} this week · ${daysHit}/7 days hit target`,
-      'weekly-recap'
+      'weekly-recap',
+      {},
+      3600
     );
   }
 
@@ -284,7 +306,7 @@ async function send(sub, title, body, tag, extra = {}) {
   const alreadyNotified = notifDone || [];
   const newlyDone = subjects.filter(s => s.done && !alreadyNotified.includes(s.id));
   for (const s of newlyDone) {
-    await sendAll('Subject complete!', `${s.name} is done · Great work!`, `done-${s.id}`);
+    await sendAll('Subject complete!', `${s.name} is done · Great work!`, `done-${s.id}`, {}, 3600);
   }
   if (newlyDone.length) {
     await sbSet('notif_done_subjs', [...alreadyNotified, ...newlyDone.map(s => s.id)]);
@@ -308,7 +330,9 @@ async function send(sub, title, body, tag, extra = {}) {
       await sendAll(
         'Subjects falling behind',
         wayBehind.map(s => `${s.name} (${Math.round(s.pct)}%)`).join(' · '),
-        'behind-subjects'
+        'behind-subjects',
+        {},
+        3600
       );
     }
   }
@@ -318,7 +342,8 @@ async function send(sub, title, body, tag, extra = {}) {
   for (const t of todos.filter(t => !t.done && t.date && t.time)) {
     const todoMins = toMins(t.time);
     if (t.date === todayStr && near(todoMins, 2, 7)) {
-      await sendAll('Task due now', t.text, `todo-${t.id}`);
+      // TTL: drop after 5 min — task reminder is useless if delivered much later
+      await sendAll('Task due now', t.text, `todo-${t.id}`, {}, 300);
     }
   }
 })();
