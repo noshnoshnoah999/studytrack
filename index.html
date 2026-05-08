@@ -717,7 +717,10 @@ a{color:inherit;text-decoration:none}
     <div class="page" id="page-progress">
       <div class="prog-header">
         <h2>Subjects</h2>
-        <button class="btn-add" onclick="openSubjectModal(null)">＋ Add Subject</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn-add" style="background:var(--bg3);color:var(--text2);font-size:12px;padding:8px 14px" onclick="openCoachReport()">📋 Coach Report</button>
+          <button class="btn-add" onclick="openSubjectModal(null)">＋ Add Subject</button>
+        </div>
       </div>
       <div class="card">
         <div id="subjects-list"></div>
@@ -921,6 +924,20 @@ a{color:inherit;text-decoration:none}
       <button class="btn-save" onclick="saveSubject()">Save Subject</button>
       <button class="btn-danger" id="sm-delete-btn" onclick="deleteSubjectFromModal()" style="display:none">Delete Subject</button>
       <button class="btn-cancel" onclick="closeModal('subj-modal-overlay')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- COACH REPORT MODAL -->
+<div class="modal-overlay" id="coach-modal-overlay" onclick="handleOverlayClick(event,'coach-modal-overlay')">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="max-height:85vh;display:flex;flex-direction:column">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📋 Coach Report — Update Baselines</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.5">Enter the official hours your coach reported for each subject. These are the <em>total hours already completed</em> — not additional hours. Leave blank to keep current value.</div>
+    <div id="coach-report-list" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px;padding-right:2px"></div>
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn-save" onclick="saveCoachReport()">Save All</button>
+      <button class="btn-cancel" onclick="closeModal('coach-modal-overlay')">Cancel</button>
     </div>
   </div>
 </div>
@@ -2999,6 +3016,57 @@ function deleteSubjectFromModal(){
   saveSubjects(subjs);
   closeModal('subj-modal-overlay');
   renderProgress();
+}
+
+// ── COACH REPORT ──────────────────────────────────────────────────────────────
+function openCoachReport(){
+  const subjs=loadSubjects();
+  const el=document.getElementById('coach-report-list');
+  el.innerHTML=subjs.map(s=>{
+    const logged=(s.base||0)+(loadHours()[s.id]||0);
+    return`<div style="display:flex;align-items:center;gap:10px;background:var(--bg3);border-radius:10px;padding:10px 14px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(s.name)}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:1px">Currently ${fmtH(logged)} of ${fmtH(s.req)} · baseline ${fmtH(s.base||0)}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.4px">Coach total</div>
+        <input type="number" min="0" max="999" step="0.1"
+          data-subj-id="${s.id}"
+          placeholder="${(s.base||0).toFixed(1)}"
+          style="width:72px;background:var(--bg4);border:1px solid var(--border);border-radius:8px;padding:5px 8px;font-size:14px;font-weight:700;color:var(--text);text-align:right">
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('coach-modal-overlay').classList.add('open');
+}
+
+function saveCoachReport(){
+  const subjs=loadSubjects();
+  const hours=loadHours();
+  let changed=0;
+  document.querySelectorAll('#coach-report-list input[data-subj-id]').forEach(inp=>{
+    const val=inp.value.trim();
+    if(val==='')return; // blank = keep current
+    const newBase=parseFloat(val);
+    if(isNaN(newBase)||newBase<0)return;
+    const s=subjs.find(x=>x.id===inp.dataset.subjId);
+    if(!s)return;
+    const oldBase=s.base||0;
+    if(Math.abs(newBase-oldBase)<0.01)return; // no change
+    // Adjust st_hours so the delta doesn't double-count
+    // New total should be newBase; existing sessions are in st_hours already
+    // We only adjust the base — st_hours stays as accumulated session hours
+    s.base=Math.round(newBase*10)/10;
+    changed++;
+  });
+  if(!changed){closeModal('coach-modal-overlay');return;}
+  saveSubjects(subjs);
+  closeModal('coach-modal-overlay');
+  renderProgress();
+  renderDashboard();
+  updateSidebar();
+  showToast('✓ Updated '+changed+' subject'+(changed!==1?'s':'')+' from coach report');
 }
 
 // ── GRADUATION ────────────────────────────────────────────────────────────────
