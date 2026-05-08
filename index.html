@@ -1795,9 +1795,9 @@ function renderDashboard(){
   const gradSubjs=subjs.filter(s=>!s.extraCredit);
   const totalReq=gradSubjs.reduce((a,s)=>a+s.req,0);
   const remaining=Math.max(0,totalReq-totalLogged);
-  // Credits: 150h = 1 credit, 75h = 0.5 credit (graduation subjects only)
-  const totalCredits=gradSubjs.reduce((a,s)=>a+s.req/150,0);
-  const earnedCredits=gradSubjs.filter(s=>s.done||getLogged(s.id)>=s.req).reduce((a,s)=>a+s.req/150,0);
+  // Credits: use official 24-credit total; add 4.5 transferred credits to earned
+  const totalCredits=GRAD_TOTAL_CREDITS; // 24.0 — full official requirement
+  const earnedCredits=GRAD_TRANSFER_CREDITS+gradSubjs.filter(s=>s.done||getLogged(s.id)>=s.req).reduce((a,s)=>a+s.req/150,0);
   const creditsLeft=Math.max(0,totalCredits-earnedCredits);
   const todayH=getTodayH();
   const weekH=getWeekH();
@@ -3928,7 +3928,7 @@ function renderGraduation(){
       '<div class="grad-stats-row">'+
         '<div class="grad-stat"><div class="grad-stat-val">'+fmtH(totalLogged)+'</div><div class="grad-stat-lbl">Logged</div></div>'+
         '<div class="grad-stat"><div class="grad-stat-val">'+fmtH(remaining)+'</div><div class="grad-stat-lbl">Remaining</div></div>'+
-        '<div class="grad-stat"><div class="grad-stat-val">'+TOTAL_REQ+'h</div><div class="grad-stat-lbl">Required</div></div>'+
+        '<div class="grad-stat"><div class="grad-stat-val">'+GRAD_TOTAL_CREDITS+'cr</div><div class="grad-stat-lbl">Total Credits</div></div>'+
       '</div>'+
     '</div>';
 
@@ -4086,6 +4086,12 @@ function applySidebarState(){
 const TEACHER_DAILY=6.2; // teacher's fixed standard — never changes
 const TEACHER_DAYS=5;
 const TEACHER_WEEKLY=TEACHER_DAILY*TEACHER_DAYS; // 31.0
+
+// Official graduation totals (from TIHS requirements spreadsheet)
+// Total: 24.0 credits. Transferred from old school: 4.5 credits.
+// That leaves 19.5 to earn at TIHS, of which EL1+EL2+EL3=3cr are now complete → 16.5 left.
+const GRAD_TOTAL_CREDITS=24.0;
+const GRAD_TRANSFER_CREDITS=4.5; // English9(1) + Lab Sci(1) + Soc.Studies.Elect.(0.5) + CTE(1) + Electives(1)
 
 function loadGoals(){
   try{const g=localStorage.getItem('st_goals');if(g){const p=JSON.parse(g);if(!p.daysPerWeek)p.daysPerWeek=5;return p;}}catch(e){}
