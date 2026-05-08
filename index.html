@@ -3437,8 +3437,11 @@ function renderTimeline(){
     if(!active.length)break;
     const total=active.reduce((a,s)=>a+rem[s.id],0);
     if(total<=0)break;
+    // Equal distribution — each active subject gets an equal share of weekly hours.
+    // Subjects with fewer hours left finish first, giving distinct completion dates.
+    const share=weeklyH/active.length;
     active.forEach(s=>{
-      rem[s.id]=Math.max(0,rem[s.id]-(rem[s.id]/total)*weeklyH);
+      rem[s.id]=Math.max(0,rem[s.id]-share);
       if(rem[s.id]<=0&&!completedAt[s.id]){
         const d=new Date(simDate);d.setDate(d.getDate()+7);
         completedAt[s.id]=d;
