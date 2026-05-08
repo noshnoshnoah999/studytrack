@@ -3421,15 +3421,12 @@ function renderTimeline(){
   // ── Simulation: week-by-week, distribute goal hours among active subjects ────
   const rem={};
   subjs.forEach(s=>{rem[s.id]=Math.max(0,s.req-((s.base||0)+(hoursMap[s.id]||0)));});
-
   const completedAt={};
   subjs.forEach(s=>{
     if(s.done||rem[s.id]<=0){completedAt[s.id]=new Date(now-86400000);rem[s.id]=0;}
   });
-
   const weeklyH=goals.daily*(goals.daysPerWeek||5);
   const simDate=new Date(now);
-
   for(let w=0;w<300;w++){
     const active=subjs.filter(s=>{
       if(completedAt[s.id])return false;
@@ -3455,125 +3452,89 @@ function renderTimeline(){
   const finishDate=futureDates.length?new Date(Math.max(...futureDates.map(d=>d.getTime()))):new Date(now);
   const deadline=new Date('2027-10-31');
   const bufferDays=Math.round((deadline-finishDate)/86400000);
-  const bufferMonths=Math.round(Math.abs(bufferDays)/30.4);
+  const bufferMonths=Math.abs(Math.round(bufferDays/30.4));
   const monthsToFinish=Math.round((finishDate-now)/86400000/30.4);
-  const onTime=finishDate<deadline;
+  const onTime=finishDate<=deadline;
   const finishStr=MON[finishDate.getMonth()]+' '+finishDate.getFullYear();
 
-  // ── Active right now (not done, prereq satisfied) ────────────────────────────
-  const activeNow=subjs.filter(s=>{
-    const logged=(s.base||0)+(hoursMap[s.id]||0);
-    if(s.done||logged>=s.req)return false;
-    const p=PREREQS[s.id];
-    if(!p)return true;
-    const prereq=subjs.find(x=>x.id===p);
-    if(!prereq)return true;
-    const prereqLogged=(prereq.base||0)+(hoursMap[prereq.id]||0);
-    return prereq.done||prereqLogged>=prereq.req;
-  });
-
-  // ── Group future completions by month ─────────────────────────────────────────
-  const byMonth={};
-  subjs.forEach(s=>{
-    const d=completedAt[s.id];
-    if(!d||d<=now)return;
-    const key=d.getFullYear()*100+d.getMonth();
-    if(!byMonth[key])byMonth[key]={date:d,items:[]};
-    // Unlocks?
-    const unlock=Object.keys(PREREQS).find(uid=>PREREQS[uid]===s.id);
-    const unlockSubj=unlock?subjs.find(x=>x.id===unlock):null;
-    byMonth[key].items.push({subj:s,unlock:unlockSubj&&!unlockSubj.done?unlockSubj:null});
-  });
-  const sortedKeys=Object.keys(byMonth).sort((a,b)=>+a-+b);
+  // ── Build ordered subject list (done first, then by completion date) ──────────
+  // Split into: already done, active (can study now), locked (prereq not met)
+  const done=subjs.filter(s=>s.done||(completedAt[s.id]&&completedAt[s.id]<=now));
+  const future=subjs
+    .filter(s=>!s.done&&(!completedAt[s.id]||completedAt[s.id]>now))
+    .sort((a,b)=>{
+      const da=completedAt[a.id]?completedAt[a.id].getTime():Infinity;
+      const db=completedAt[b.id]?completedAt[b.id].getTime():Infinity;
+      return da-db;
+    });
 
   // ── Render ───────────────────────────────────────────────────────────────────
   let html='';
 
-  // Summary card
-  html+='<div class="card" style="margin-bottom:20px;text-align:center">'+
-    '<div style="font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">At '+fmtH(goals.daily)+'/day · '+( goals.daysPerWeek||5)+' days/week</div>'+
-    '<div style="font-size:32px;font-weight:800;color:var(--text1);margin-bottom:6px">🎓 '+escHtml(finishStr)+'</div>'+
-    '<div style="font-size:15px;font-weight:700;color:'+(onTime?'var(--ok)':'#ef4444')+';margin-bottom:4px">'+
-      (onTime?'✓ '+bufferMonths+' month'+(bufferMonths!==1?'s':'')+' ahead of the Oct 2027 deadline':'⚠ Behind Oct 2027 deadline by '+bufferMonths+' months')+
+  // ── Summary card ─────────────────────────────────────────────────────────────
+  html+='<div class="card" style="margin-bottom:16px">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">'+
+      '<div>'+
+        '<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Estimated finish</div>'+
+        '<div style="font-size:26px;font-weight:900;color:var(--text);line-height:1">🎓 '+escHtml(finishStr)+'</div>'+
+        '<div style="font-size:13px;color:var(--text3);margin-top:4px">'+monthsToFinish+' months from now</div>'+
+      '</div>'+
+      '<div style="text-align:right">'+
+        '<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Oct 2027 deadline</div>'+
+        '<div style="font-size:15px;font-weight:800;color:'+(onTime?'var(--ok)':'var(--err)')+'">'+
+          (onTime?'✓ '+bufferMonths+'mo ahead':'⚠ '+bufferMonths+'mo late')+
+        '</div>'+
+        '<div style="font-size:12px;color:var(--text3);margin-top:2px">at '+fmtH(goals.daily)+'/day · '+(goals.daysPerWeek||5)+'d/wk</div>'+
+      '</div>'+
     '</div>'+
-    '<div style="font-size:13px;color:var(--text3)">'+monthsToFinish+' months from now</div>'+
   '</div>';
 
-  // Active now chips
-  if(activeNow.length){
-    html+='<div style="margin-bottom:20px">'+
-      '<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">▶ Working on right now</div>'+
-      '<div style="display:flex;flex-wrap:wrap;gap:7px">';
-    activeNow.forEach(s=>{
-      const logged=(s.base||0)+(hoursMap[s.id]||0);
-      const pct=Math.round(logged/s.req*100);
-      const col=COLORS[s.id]||'var(--o)';
-      const left=Math.max(0,s.req-logged);
-      html+='<div style="background:'+col+'18;border:1.5px solid '+col+'55;border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600;color:'+col+';line-height:1.3">'+
-        escHtml(s.name)+'<br><span style="font-weight:400;color:'+col+'99;font-size:11px">'+pct+'% · '+fmtH(left)+' left</span>'+
-      '</div>';
-    });
-    html+='</div></div>';
+  // ── Subject rows ─────────────────────────────────────────────────────────────
+  html+='<div class="card" style="padding:0;overflow:hidden">';
+
+  // Done subjects (collapsed header)
+  if(done.length){
+    html+='<div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">'+
+      '<span style="width:8px;height:8px;border-radius:50%;background:var(--ok);flex-shrink:0;display:inline-block"></span>'+
+      '<span style="font-size:12px;font-weight:700;color:var(--ok)">'+done.length+' subject'+(done.length!==1?'s':'')+' complete</span>'+
+      '<span style="font-size:12px;color:var(--text3);margin-left:auto">EL1 · EL2 · EL3 · ...</span>'+
+    '</div>';
   }
 
-  // Timeline
-  html+='<div style="position:relative;padding-left:28px">'+
-    // Vertical line
-    '<div style="position:absolute;left:8px;top:8px;bottom:0;width:2px;background:var(--bg3)"></div>';
+  // Future subjects
+  future.forEach((s,idx)=>{
+    const col=COLORS[s.id]||'var(--o)';
+    const logged=(s.base||0)+(hoursMap[s.id]||0);
+    const pct=s.req>0?Math.min(100,logged/s.req*100):0;
+    const left=Math.max(0,s.req-logged);
+    const isLocked=isSubjPrereqLocked(s.id,subjs);
+    const estDate=completedAt[s.id];
+    const estStr=estDate&&estDate>now?(MON[estDate.getMonth()]+' '+estDate.getFullYear()):'—';
+    const moAway=estDate&&estDate>now?Math.round((estDate-now)/86400000/30.4):null;
+    const isLast=idx===future.length-1;
 
-  // NOW dot
-  html+='<div style="position:relative;margin-bottom:28px">'+
-    '<div style="position:absolute;left:-28px;top:1px;width:18px;height:18px;background:var(--o);border-radius:50%;border:3px solid var(--bg1);box-shadow:0 0 0 4px var(--o)33"></div>'+
-    '<div style="font-size:13px;font-weight:800;color:var(--o);letter-spacing:0.3px;margin-bottom:3px">NOW · '+MON[now.getMonth()]+' '+now.getFullYear()+'</div>'+
-    '<div style="font-size:12px;color:var(--text3)">'+activeNow.length+' subject'+(activeNow.length!==1?'s':'')+' being studied in parallel</div>'+
-  '</div>';
-
-  // Month milestones
-  sortedKeys.forEach(key=>{
-    const m=byMonth[key];
-    const monthsAway=Math.round((m.date-now)/86400000/30.4);
-    const label=MON[m.date.getMonth()]+' '+m.date.getFullYear();
-
-    html+='<div style="position:relative;margin-bottom:28px">'+
-      '<div style="position:absolute;left:-28px;top:1px;width:18px;height:18px;background:var(--bg3);border:3px solid var(--bg1);border-radius:50%"></div>'+
-      '<div style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:8px">'+
-        escHtml(label)+'<span style="font-weight:400;color:var(--text3);font-size:12px"> · '+monthsAway+'mo</span>'+
+    html+='<div style="padding:13px 16px;'+(isLast?'':'border-bottom:1px solid var(--border)')+';display:flex;align-items:center;gap:12px;'+(isLocked?'opacity:0.5':'')+'">'+
+      // Color dot
+      '<div style="width:10px;height:10px;border-radius:50%;background:'+col+';flex-shrink:0"></div>'+
+      // Name + progress
+      '<div style="flex:1;min-width:0">'+
+        '<div style="display:flex;align-items:baseline;gap:6px;margin-bottom:5px">'+
+          '<span style="font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(s.name)+'</span>'+
+          (isLocked?'<span style="font-size:10px;font-weight:700;color:var(--text3)">🔒 locked</span>':'<span style="font-size:11px;color:var(--text3)">'+fmtH(left)+' left</span>')+
+        '</div>'+
+        '<div style="height:4px;background:var(--bg3);border-radius:100px;overflow:hidden">'+
+          '<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:100px;transition:width 0.4s"></div>'+
+        '</div>'+
       '</div>'+
-      '<div style="display:flex;flex-direction:column;gap:7px">';
-
-    m.items.forEach(({subj:s,unlock:u})=>{
-      const col=COLORS[s.id]||'var(--o)';
-      html+='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+
-        '<div style="background:'+col+'18;border:1.5px solid '+col+'55;border-radius:20px;padding:4px 11px;font-size:12px;font-weight:600;color:'+col+'">✓ '+escHtml(s.name)+'</div>';
-      if(u){
-        const uc=COLORS[u.id]||'var(--o)';
-        html+='<span style="color:var(--text3);font-size:12px">→</span>'+
-          '<div style="background:var(--bg3);border-radius:20px;padding:4px 11px;font-size:12px;font-weight:600;color:var(--text2)">🔓 '+escHtml(u.name)+' unlocked</div>';
-      }
-      html+='</div>';
-    });
-
-    html+='</div></div>';
+      // Est date
+      '<div style="text-align:right;flex-shrink:0">'+
+        '<div style="font-size:13px;font-weight:700;color:'+(isLocked?'var(--text3)':'var(--text2)')+'">'+escHtml(estStr)+'</div>'+
+        (moAway!==null?'<div style="font-size:11px;color:var(--text3)">'+moAway+'mo</div>':'')+
+      '</div>'+
+    '</div>';
   });
 
-  // Graduation dot
-  html+='<div style="position:relative;margin-bottom:28px">'+
-    '<div style="position:absolute;left:-28px;top:1px;width:18px;height:18px;background:#22c55e;border:3px solid var(--bg1);border-radius:50%;box-shadow:0 0 0 4px #22c55e33"></div>'+
-    '<div style="font-size:13px;font-weight:800;color:#22c55e;margin-bottom:3px">🎓 All done · '+escHtml(finishStr)+'</div>'+
-    '<div style="font-size:12px;color:var(--text3)">All graduation requirements complete</div>'+
-  '</div>';
-
-  // Deadline dot
-  const deadlineMonthsFromNow=Math.round((deadline-now)/86400000/30.4);
-  html+='<div style="position:relative;margin-bottom:8px">'+
-    '<div style="position:absolute;left:-28px;top:1px;width:18px;height:18px;background:var(--text3);border:3px solid var(--bg1);border-radius:50%"></div>'+
-    '<div style="font-size:13px;font-weight:800;color:var(--text3);margin-bottom:3px">Deadline · Oct 2027</div>'+
-    '<div style="font-size:12px;color:var(--text3)">'+
-      (onTime?'🟢 '+bufferMonths+' month'+(bufferMonths!==1?'s':'')+' buffer':'🔴 Behind by '+bufferMonths+' months')+
-    '</div>'+
-  '</div>';
-
-  html+='</div>'; // close timeline container
+  html+='</div>'; // close card
   el.innerHTML=html;
 }
 
