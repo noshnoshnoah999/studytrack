@@ -754,6 +754,14 @@ a{color:inherit;text-decoration:none}
       </div>
     </div>
 
+    <!-- PAGE: TIMELINE -->
+    <div class="page" id="page-timeline">
+      <div class="greeting-row">
+        <div class="greeting-text"><h1>Timeline</h1></div>
+      </div>
+      <div id="timeline-inner"></div>
+    </div>
+
     <!-- PAGE: PLAN -->
     <div class="page" id="page-plan">
       <div class="greeting-row">
@@ -1028,6 +1036,7 @@ const NAV_ITEMS=[
   {id:'history',   label:'History',   short:'History',    icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>'},
   {id:'graduation',label:'Graduation',short:'Grad',       icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>'},
   {id:'plan',      label:'Plan',      short:'Plan',       icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>'},
+  {id:'timeline',  label:'Timeline',  short:'Timeline',   icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><polyline points="17 7 12 2 7 7"/><line x1="5" y1="9" x2="12" y2="9"/><line x1="5" y1="14" x2="19" y2="14"/><line x1="12" y1="22" x2="19" y2="17"/></svg>'},
 ];
 const DEFAULT_NAV_ORDER=NAV_ITEMS.map(n=>n.id);
 
@@ -1609,6 +1618,7 @@ function showPage(id){
   else if(id==='progress')renderProgress();
   else if(id==='graduation')renderGraduation();
   else if(id==='plan')renderPlan();
+  else if(id==='timeline')renderTimeline();
   else if(id==='timer')renderTimerPage();
   updateSidebar();
 }
@@ -3248,6 +3258,176 @@ function saveCoachReport(){
 
 // ── GRADUATION ────────────────────────────────────────────────────────────────
 // ── PLAN PAGE ─────────────────────────────────────────────────────────────────
+// ── TIMELINE ──────────────────────────────────────────────────────────────────
+function renderTimeline(){
+  const el=document.getElementById('timeline-inner');
+  if(!el)return;
+  const subjs=loadSubjects();
+  const hoursMap=loadHours();
+  const goals=loadGoals();
+  const COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',english_11:'#60a5fa',english_12:'#93c5fd',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',geometry:'#a855f7',algebra2:'#7c3aed',el2:'#94a3b8',el3:'#64748b',el4:'#475569'};
+  const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const now=new Date();
+
+  // ── Simulation: week-by-week, distribute goal hours among active subjects ────
+  const rem={};
+  subjs.forEach(s=>{rem[s.id]=Math.max(0,s.req-((s.base||0)+(hoursMap[s.id]||0)));});
+
+  const completedAt={};
+  subjs.forEach(s=>{
+    if(s.done||rem[s.id]<=0){completedAt[s.id]=new Date(now-86400000);rem[s.id]=0;}
+  });
+
+  const weeklyH=goals.daily*(goals.daysPerWeek||5);
+  const simDate=new Date(now);
+
+  for(let w=0;w<300;w++){
+    const active=subjs.filter(s=>{
+      if(completedAt[s.id])return false;
+      if(rem[s.id]<=0)return false;
+      const p=PREREQS[s.id];
+      return!(p&&!completedAt[p]);
+    });
+    if(!active.length)break;
+    const total=active.reduce((a,s)=>a+rem[s.id],0);
+    if(total<=0)break;
+    active.forEach(s=>{
+      rem[s.id]=Math.max(0,rem[s.id]-(rem[s.id]/total)*weeklyH);
+      if(rem[s.id]<=0&&!completedAt[s.id]){
+        const d=new Date(simDate);d.setDate(d.getDate()+7);
+        completedAt[s.id]=d;
+      }
+    });
+    simDate.setDate(simDate.getDate()+7);
+  }
+
+  // ── Summary numbers ───────────────────────────────────────────────────────────
+  const futureDates=Object.values(completedAt).filter(d=>d>now);
+  const finishDate=futureDates.length?new Date(Math.max(...futureDates.map(d=>d.getTime()))):new Date(now);
+  const deadline=new Date('2027-10-31');
+  const bufferDays=Math.round((deadline-finishDate)/86400000);
+  const bufferMonths=Math.round(Math.abs(bufferDays)/30.4);
+  const monthsToFinish=Math.round((finishDate-now)/86400000/30.4);
+  const onTime=finishDate<deadline;
+  const finishStr=MON[finishDate.getMonth()]+' '+finishDate.getFullYear();
+
+  // ── Active right now (not done, prereq satisfied) ────────────────────────────
+  const activeNow=subjs.filter(s=>{
+    const logged=(s.base||0)+(hoursMap[s.id]||0);
+    if(s.done||logged>=s.req)return false;
+    const p=PREREQS[s.id];
+    if(!p)return true;
+    const prereq=subjs.find(x=>x.id===p);
+    if(!prereq)return true;
+    const prereqLogged=(prereq.base||0)+(hoursMap[prereq.id]||0);
+    return prereq.done||prereqLogged>=prereq.req;
+  });
+
+  // ── Group future completions by month ─────────────────────────────────────────
+  const byMonth={};
+  subjs.forEach(s=>{
+    const d=completedAt[s.id];
+    if(!d||d<=now)return;
+    const key=d.getFullYear()*100+d.getMonth();
+    if(!byMonth[key])byMonth[key]={date:d,items:[]};
+    // Unlocks?
+    const unlock=Object.keys(PREREQS).find(uid=>PREREQS[uid]===s.id);
+    const unlockSubj=unlock?subjs.find(x=>x.id===unlock):null;
+    byMonth[key].items.push({subj:s,unlock:unlockSubj&&!unlockSubj.done?unlockSubj:null});
+  });
+  const sortedKeys=Object.keys(byMonth).sort((a,b)=>+a-+b);
+
+  // ── Render ───────────────────────────────────────────────────────────────────
+  let html='';
+
+  // Summary card
+  html+='<div class="card" style="margin-bottom:20px;text-align:center">'+
+    '<div style="font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">At '+fmtH(goals.daily)+'/day · '+( goals.daysPerWeek||5)+' days/week</div>'+
+    '<div style="font-size:32px;font-weight:800;color:var(--text1);margin-bottom:6px">🎓 '+escHtml(finishStr)+'</div>'+
+    '<div style="font-size:15px;font-weight:700;color:'+(onTime?'var(--ok)':'#ef4444')+';margin-bottom:4px">'+
+      (onTime?'✓ '+bufferMonths+' month'+(bufferMonths!==1?'s':'')+' ahead of the Oct 2027 deadline':'⚠ Behind Oct 2027 deadline by '+bufferMonths+' months')+
+    '</div>'+
+    '<div style="font-size:13px;color:var(--text3)">'+monthsToFinish+' months from now</div>'+
+  '</div>';
+
+  // Active now chips
+  if(activeNow.length){
+    html+='<div style="margin-bottom:20px">'+
+      '<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">▶ Working on right now</div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:7px">';
+    activeNow.forEach(s=>{
+      const logged=(s.base||0)+(hoursMap[s.id]||0);
+      const pct=Math.round(logged/s.req*100);
+      const col=COLORS[s.id]||'var(--o)';
+      const left=Math.max(0,s.req-logged);
+      html+='<div style="background:'+col+'18;border:1.5px solid '+col+'55;border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600;color:'+col+';line-height:1.3">'+
+        escHtml(s.name)+'<br><span style="font-weight:400;color:'+col+'99;font-size:11px">'+pct+'% · '+fmtH(left)+' left</span>'+
+      '</div>';
+    });
+    html+='</div></div>';
+  }
+
+  // Timeline
+  html+='<div style="position:relative;padding-left:28px">'+
+    // Vertical line
+    '<div style="position:absolute;left:8px;top:8px;bottom:0;width:2px;background:var(--bg3)"></div>';
+
+  // NOW dot
+  html+='<div style="position:relative;margin-bottom:28px">'+
+    '<div style="position:absolute;left:-28px;top:1px;width:18px;height:18px;background:var(--o);border-radius:50%;border:3px solid var(--bg1);box-shadow:0 0 0 4px var(--o)33"></div>'+
+    '<div style="font-size:13px;font-weight:800;color:var(--o);letter-spacing:0.3px;margin-bottom:3px">NOW · '+MON[now.getMonth()]+' '+now.getFullYear()+'</div>'+
+    '<div style="font-size:12px;color:var(--text3)">'+activeNow.length+' subject'+(activeNow.length!==1?'s':'')+' being studied in parallel</div>'+
+  '</div>';
+
+  // Month milestones
+  sortedKeys.forEach(key=>{
+    const m=byMonth[key];
+    const monthsAway=Math.round((m.date-now)/86400000/30.4);
+    const label=MON[m.date.getMonth()]+' '+m.date.getFullYear();
+
+    html+='<div style="position:relative;margin-bottom:28px">'+
+      '<div style="position:absolute;left:-28px;top:1px;width:18px;height:18px;background:var(--bg3);border:3px solid var(--bg1);border-radius:50%"></div>'+
+      '<div style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:8px">'+
+        escHtml(label)+'<span style="font-weight:400;color:var(--text3);font-size:12px"> · '+monthsAway+'mo</span>'+
+      '</div>'+
+      '<div style="display:flex;flex-direction:column;gap:7px">';
+
+    m.items.forEach(({subj:s,unlock:u})=>{
+      const col=COLORS[s.id]||'var(--o)';
+      html+='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+
+        '<div style="background:'+col+'18;border:1.5px solid '+col+'55;border-radius:20px;padding:4px 11px;font-size:12px;font-weight:600;color:'+col+'">✓ '+escHtml(s.name)+'</div>';
+      if(u){
+        const uc=COLORS[u.id]||'var(--o)';
+        html+='<span style="color:var(--text3);font-size:12px">→</span>'+
+          '<div style="background:var(--bg3);border-radius:20px;padding:4px 11px;font-size:12px;font-weight:600;color:var(--text2)">🔓 '+escHtml(u.name)+' unlocked</div>';
+      }
+      html+='</div>';
+    });
+
+    html+='</div></div>';
+  });
+
+  // Graduation dot
+  html+='<div style="position:relative;margin-bottom:28px">'+
+    '<div style="position:absolute;left:-28px;top:1px;width:18px;height:18px;background:#22c55e;border:3px solid var(--bg1);border-radius:50%;box-shadow:0 0 0 4px #22c55e33"></div>'+
+    '<div style="font-size:13px;font-weight:800;color:#22c55e;margin-bottom:3px">🎓 All done · '+escHtml(finishStr)+'</div>'+
+    '<div style="font-size:12px;color:var(--text3)">All graduation requirements complete</div>'+
+  '</div>';
+
+  // Deadline dot
+  const deadlineMonthsFromNow=Math.round((deadline-now)/86400000/30.4);
+  html+='<div style="position:relative;margin-bottom:8px">'+
+    '<div style="position:absolute;left:-28px;top:1px;width:18px;height:18px;background:var(--text3);border:3px solid var(--bg1);border-radius:50%"></div>'+
+    '<div style="font-size:13px;font-weight:800;color:var(--text3);margin-bottom:3px">Deadline · Oct 2027</div>'+
+    '<div style="font-size:12px;color:var(--text3)">'+
+      (onTime?'🟢 '+bufferMonths+' month'+(bufferMonths!==1?'s':'')+' buffer':'🔴 Behind by '+bufferMonths+' months')+
+    '</div>'+
+  '</div>';
+
+  html+='</div>'; // close timeline container
+  el.innerHTML=html;
+}
+
 function renderPlan(){
   const sessions=loadSessions();
   const subjs=loadSubjects();
@@ -4168,7 +4348,7 @@ async function syncFromCloud(){
   applySidebarState();
   // Deep link support: open specific page via URL hash e.g. #log
   const hash=window.location.hash.replace('#','');
-  const validPages=['dashboard','schedule','log','progress','graduation','plan','timer','history'];
+  const validPages=['dashboard','schedule','log','progress','graduation','plan','timeline','timer','history'];
   showPage(validPages.includes(hash)?hash:'dashboard');
   syncFromCloud();
   updateNotifBtn();
