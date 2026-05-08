@@ -98,7 +98,7 @@ async function send(sub, title, body, tag, extra = {}, ttl = 120, urgency = 'hig
     return nowMins >= targetMins - lo && nowMins < targetMins + hi;
   }
 
-  const [schedule, subjectsRaw, sessionsRaw, hoursRaw, subsRaw, notifDone, todosRaw, overridesRaw, goalsRaw] = await Promise.all([
+  const [schedule, subjectsRaw, sessionsRaw, hoursRaw, subsRaw, notifDone, todosRaw, overridesRaw, goalsRaw, sentTodosRaw] = await Promise.all([
     sbGet('st_sched'),
     sbGet('st_subjs'),
     sbGet('st_sessions'),
@@ -107,7 +107,8 @@ async function send(sub, title, body, tag, extra = {}, ttl = 120, urgency = 'hig
     sbGet('notif_done_subjs'),
     sbGet('st_todos'),
     sbGet('st_sched_overrides'),
-    sbGet('st_goals')
+    sbGet('st_goals'),
+    sbGet('notif_sent_todos_' + todayStr)   // tracks which todos fired today
   ]);
 
   if (!subsRaw) { console.log('No push subscriptions found'); return; }
@@ -351,12 +352,21 @@ async function send(sub, title, body, tag, extra = {}, ttl = 120, urgency = 'hig
   }
 
   // ── 10. To-Do reminders ───────────────────────────────────────────────────
+  // sentTodos: IDs already notified today — prevents duplicate fires across
+  // multiple cron runs and across multiple stored push subscriptions.
   const todos = todosRaw || [];
+  const sentTodos = Array.isArray(sentTodosRaw) ? sentTodosRaw : [];
+  const newlySentTodos = [];
   for (const t of todos.filter(t => !t.done && t.date && t.time)) {
     const todoMins = toMins(t.time);
-    if (t.date === todayStr && near(todoMins, 2, 7)) {
+    if (t.date === todayStr && near(todoMins, 2, 7) && !sentTodos.includes(t.id)) {
       // TTL: drop after 5 min — task reminder is useless if delivered much later
-      await sendAll('Task due now', t.text, `todo-${t.id}`, {}, 300);
+      await sendAll('Task due now', t.text, `todo-${t.id}`, { sentAt: Date.now() }, 300);
+      newlySentTodos.push(t.id);
     }
+  }
+  // Persist sent list so subsequent cron runs skip already-fired todos today
+  if (newlySentTodos.length) {
+    await sbSet('notif_sent_todos_' + todayStr, [...sentTodos, ...newlySentTodos]);
   }
 })();
