@@ -1276,28 +1276,37 @@ function daysBetween(a,b){
 
 // ── DEFAULT DATA ──────────────────────────────────────────────────────────────
 const DEFAULT_SUBJECTS=[
-  {id:'japanese',    name:'Japanese',            req:150, base:31.3,  passive:false, locked:false, done:false},
+  // Foreign Language — 2 credits = 300h
+  {id:'japanese',    name:'Japanese',            req:300, base:31.3,  passive:false, locked:false, done:false},
+  // Social Studies
   {id:'cwp',         name:'CWP / World History', req:75,  base:13.2,  passive:false, locked:false, done:false},
-  // English: 3 credits (Grade 10 transferred from old school, need 10→11→12 in order)
+  // English: Grade 10→11→12 in order, 1 credit (150h) each
   {id:'english',     name:'English Grade 10',    req:150, base:3.3,   passive:false, locked:false, done:false},
   {id:'english_11',  name:'English Grade 11',    req:150, base:0,     passive:false, locked:false, done:false},
   {id:'english_12',  name:'English Grade 12',    req:150, base:0,     passive:false, locked:false, done:false},
+  // Electives — 3 credits required, 1 credit transferred (EL1+EL2+EL3 satisfy requirement)
   {id:'el1',         name:'Electives 1',         req:150, base:150.1, passive:true,  locked:false, done:true },
+  {id:'el2',         name:'Electives 2',         req:150, base:151.4, passive:true,  locked:false, done:true },
+  {id:'el3',         name:'Electives 3',         req:150, base:152,   passive:true,  locked:false, done:true },
+  // EL4 = extra credit — improves GPA but does NOT count toward graduation hours/credits
+  {id:'el4',         name:'Electives 4',         req:75,  base:6.6,   passive:true,  locked:false, done:false, extraCredit:true},
+  // History
   {id:'wa_hist',     name:'WA State History',    req:75,  base:6.7,   passive:false, locked:false, done:false},
-  {id:'fine_art',    name:'Fine Art / Film',     req:150, base:28.9,  passive:true,  locked:false, done:false},
   {id:'us_hist',     name:'US History',          req:150, base:18.8,  passive:false, locked:false, done:false},
-  {id:'pe',          name:'PE / Cardio',         req:150, base:34.5,  passive:true,  locked:false, done:false},
-  {id:'health',      name:'Health Science',      req:75,  base:3.3,   passive:false, locked:false, done:false},
   {id:'civics',      name:'Civics',              req:75,  base:1.7,   passive:false, locked:false, done:false},
-  {id:'science',     name:'Science',             req:75,  base:0,     passive:false, locked:false, done:false},
-  {id:'lab_sci',     name:'Lab Science',         req:75,  base:0,     passive:true,  locked:false, done:false},
-  // Maths: 3 credits, must be done in order (Algebra 1 → Geometry → Algebra 2)
+  // Art — 2 credits = 300h
+  {id:'fine_art',    name:'Fine Art / Film',     req:300, base:28.9,  passive:true,  locked:false, done:false},
+  // PE — 1.5 credits = 225h
+  {id:'pe',          name:'PE / Cardio',         req:225, base:34.5,  passive:true,  locked:false, done:false},
+  // Health
+  {id:'health',      name:'Health Science',      req:75,  base:3.3,   passive:false, locked:false, done:false},
+  // Science — 1 credit each remaining
+  {id:'science',     name:'Science',             req:150, base:0,     passive:false, locked:false, done:false},
+  {id:'lab_sci',     name:'Lab Science',         req:150, base:0,     passive:true,  locked:false, done:false},
+  // Maths: 1 credit each, must be done in order (Algebra 1 → Geometry → Algebra 2)
   {id:'algebra1',    name:'Algebra 1',           req:150, base:0,     passive:false, locked:false, done:false},
   {id:'geometry',    name:'Geometry',            req:150, base:0,     passive:false, locked:false, done:false},
   {id:'algebra2',    name:'Algebra 2',           req:150, base:0,     passive:false, locked:false, done:false},
-  {id:'el2',         name:'Electives 2',         req:150, base:151.4, passive:true,  locked:false, done:true },
-  {id:'el3',         name:'Electives 3',         req:150, base:152,   passive:true,  locked:false, done:true }, // completed
-  {id:'el4',         name:'Electives 4',         req:75,  base:6.6,   passive:true,  locked:false, done:false},
 ];
 
 // Prerequisite chains — a subject is locked until its prereq is marked done
@@ -1323,6 +1332,31 @@ function isSubjPrereqLocked(id, subjs){
 // One-time data migration: fixes existing stored subjects to match new structure.
 // Runs once per device; migration flag stored in localStorage so it never repeats.
 function runMigrations(){
+  // ── Migration v6: official graduation credit sheet corrections ────────────
+  // Japanese & Fine Art → 300h (2 credits each); PE → 225h (1.5 credits);
+  // Science & Lab Science → 150h (1 credit each); EL4 → extraCredit flag
+  if(!localStorage.getItem('st_migration_v6')){
+    try{
+      const raw=localStorage.getItem('st_subjs');
+      if(raw){
+        const subjs=JSON.parse(raw);
+        let changed=false;
+        [['japanese',300],['fine_art',300],['pe',225],['science',150],['lab_sci',150]].forEach(([id,req])=>{
+          const s=subjs.find(x=>x.id===id);
+          if(s&&s.req!==req){s.req=req;changed=true;}
+        });
+        // Mark EL4 as extraCredit (doesn't count toward graduation)
+        const el4=subjs.find(s=>s.id==='el4');
+        if(el4&&!el4.extraCredit){el4.extraCredit=true;changed=true;}
+        if(changed){
+          localStorage.setItem('st_subjs',JSON.stringify(subjs));
+          sbPush('st_subjs',subjs);
+          console.log('[Migration v6] Official credit sheet applied');
+        }
+      }
+    }catch(e){console.warn('[Migration v6] Error:',e);}
+    localStorage.setItem('st_migration_v6','1');
+  }
   // ── Migration v5: teacher progress report corrections (May 2026) ──────────
   if(!localStorage.getItem('st_migration_v5')){
     try{
@@ -1701,7 +1735,8 @@ function getWeekH(){
 }
 
 function getTotalLogged(){
-  const subjs=loadSubjects();
+  // Excludes extraCredit subjects — only counts hours that matter for graduation
+  const subjs=loadSubjects().filter(s=>!s.extraCredit);
   const hours=loadHours();
   return subjs.reduce((a,s)=>a+(s.base||0)+(hours[s.id]||0),0);
 }
@@ -1756,11 +1791,13 @@ function renderDashboard(){
 
   const totalLogged=getTotalLogged();
   const subjs=loadSubjects();
-  const totalReq=subjs.reduce((a,s)=>a+s.req,0);
+  // Graduation calculations exclude extraCredit subjects
+  const gradSubjs=subjs.filter(s=>!s.extraCredit);
+  const totalReq=gradSubjs.reduce((a,s)=>a+s.req,0);
   const remaining=Math.max(0,totalReq-totalLogged);
-  // Credits: 150h = 1 credit, 75h = 0.5 credit
-  const totalCredits=subjs.reduce((a,s)=>a+s.req/150,0);
-  const earnedCredits=subjs.filter(s=>s.done||getLogged(s.id)>=s.req).reduce((a,s)=>a+s.req/150,0);
+  // Credits: 150h = 1 credit, 75h = 0.5 credit (graduation subjects only)
+  const totalCredits=gradSubjs.reduce((a,s)=>a+s.req/150,0);
+  const earnedCredits=gradSubjs.filter(s=>s.done||getLogged(s.id)>=s.req).reduce((a,s)=>a+s.req/150,0);
   const creditsLeft=Math.max(0,totalCredits-earnedCredits);
   const todayH=getTodayH();
   const weekH=getWeekH();
@@ -3207,12 +3244,13 @@ function renderProgress(){
     const subjColor=locked?'var(--text3)':(SUBJ_COLORS[s.id]||'var(--o)');
     const barBg=s.done?'linear-gradient(90deg,var(--ok),#34d399)':pct>=100?'linear-gradient(90deg,var(--ok),#34d399)':'linear-gradient(90deg,'+subjColor+','+subjColor+'cc)';
     const tags=[];
+    if(s.extraCredit)tags.push('<span class="tag" style="background:rgba(168,85,247,0.15);color:#a855f7">★ Extra Credit</span>');
     if(s.done||pct>=100)tags.push('<span class="tag done">✓ Done</span>');
     if(locked){
       const prereqName=(allSubjs.find(x=>x.id===PREREQS[s.id])||{}).name||'previous subject';
       tags.push('<span class="tag locked" style="background:#f1f5f9;color:#64748b">🔒 Complete '+escHtml(prereqName)+' first</span>');
     } else if(logged===0&&!(s.done||pct>=100))tags.push('<span class="tag zero">Not started</span>');
-    if(s.passive&&pct<100&&!locked)tags.push('<span class="tag passive">Passive</span>');
+    if(s.passive&&pct<100&&!locked&&!s.extraCredit)tags.push('<span class="tag passive">Passive</span>');
     const askClaudeBtn=!locked&&logged===0&&!(s.done||pct>=100)?
       '<a class="btn-ask-claude" href="'+buildClaudeUrl(s)+'" target="_blank" rel="noopener" title="Ask Claude how to start">'+
         '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>'+
@@ -3373,7 +3411,7 @@ function saveCoachReport(){
 function renderTimeline(){
   const el=document.getElementById('timeline-inner');
   if(!el)return;
-  const subjs=loadSubjects();
+  const subjs=loadSubjects().filter(s=>!s.extraCredit);
   const hoursMap=loadHours();
   const goals=loadGoals();
   const COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',english_11:'#60a5fa',english_12:'#93c5fd',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',geometry:'#a855f7',algebra2:'#7c3aed',el2:'#94a3b8',el3:'#64748b',el4:'#475569'};
@@ -3541,7 +3579,7 @@ function renderTimeline(){
 
 function renderPlan(){
   const sessions=loadSessions();
-  const subjs=loadSubjects();
+  const subjs=loadSubjects().filter(s=>!s.extraCredit);
   const goals=loadGoals();
   const now=new Date();
   const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
@@ -3814,7 +3852,7 @@ function renderPlan(){
 
 function renderGraduation(){
   const sessions=loadSessions();
-  const subjs=loadSubjects();
+  const subjs=loadSubjects().filter(s=>!s.extraCredit);
   const hours=loadHours();
   const goals=loadGoals();
   const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
@@ -4080,7 +4118,7 @@ let _latestRecDaily=TEACHER_DAILY;
 function computeGoalRec(){
   try{
     const sessions=loadSessions();
-    const subjs=loadSubjects();
+    const subjs=loadSubjects().filter(s=>!s.extraCredit);
     const goals=loadGoals();
     const daysPerWeek=goals.daysPerWeek||5;
     const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
