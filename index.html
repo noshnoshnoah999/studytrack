@@ -644,6 +644,12 @@ a{color:inherit;text-decoration:none}
       </button>
     </div>
     <nav class="sidebar-nav" id="sidebar-nav"></nav>
+    <!-- Recommendation prompt — only shown when rec changed since last accepted -->
+    <div id="sb-rec-prompt" onclick="openGoalSettings()" style="display:none;margin:0 8px 8px;background:var(--ol);border:1.5px solid var(--o);border-radius:10px;padding:10px 12px;cursor:pointer">
+      <div style="font-size:10px;font-weight:700;color:var(--o);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px">✦ Recommendation updated</div>
+      <div id="sb-rec-text" style="font-size:13px;font-weight:700;color:var(--text1)"></div>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px">Tap ⚙ to review →</div>
+    </div>
     <div class="sidebar-footer">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
         <div class="sidebar-footer-label" style="margin-bottom:0">Today's Progress</div>
@@ -1696,6 +1702,7 @@ function updateSidebar(){
   const pct=Math.min(100,todayH/target*100);
   document.getElementById('sb-bar').style.width=pct+'%';
   document.getElementById('sb-val').textContent=wknd?fmtH(todayH)+' today (weekend)':fmtH(todayH)+' / '+fmtH(target);
+  updateRecPrompt();
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
@@ -4018,12 +4025,48 @@ function saveGoalSettings(){
   const g={daily,daysPerWeek,weekly};
   localStorage.setItem('st_goals',JSON.stringify(g));
   sbPush('st_goals',g);
+  // Dismiss the recommendation — user has reviewed and saved a goal
+  localStorage.setItem('st_rec_dismissed',_latestRecDaily.toFixed(2));
   closeModal('goal-modal-overlay');
   renderDashboard();
   updateSidebar();
+  updateRecPrompt();
   if(currentPage==='plan')renderPlan();
   if(currentPage==='graduation')renderGraduation();
 }
+// Latest computed recommendation (updated on load and after sync)
+let _latestRecDaily=TEACHER_DAILY;
+
+function computeGoalRec(){
+  try{
+    const sessions=loadSessions();
+    const subjs=loadSubjects();
+    const goals=loadGoals();
+    const daysPerWeek=goals.daysPerWeek||5;
+    const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
+    const totalLogged=getTotalLogged();
+    const remaining=Math.max(0,TOTAL_REQ-totalLogged);
+    const daysLeft=Math.max(1,(new Date('2027-10-31')-Date.now())/(1000*60*60*24));
+    const bareMin=remaining/Math.max(1,(daysLeft/7)*daysPerWeek);
+    const cutoffStr=new Date(Date.now()-28*24*3600000).toISOString().slice(0,10);
+    const recent28=sessions.filter(s=>s.date>=cutoffStr).reduce((a,s)=>a+s.hours,0);
+    const actualDaily=recent28>0?(recent28/4)/daysPerWeek:null;
+    let rec=Math.max(bareMin,TEACHER_DAILY);
+    if(actualDaily&&actualDaily>rec)rec=actualDaily;
+    _latestRecDaily=Math.min(10,Math.ceil(rec*2)/2);
+  }catch(e){_latestRecDaily=TEACHER_DAILY;}
+}
+
+function updateRecPrompt(){
+  const dismissed=parseFloat(localStorage.getItem('st_rec_dismissed')||'0');
+  const changed=Math.abs(_latestRecDaily-dismissed)>0.09;
+  const prompt=document.getElementById('sb-rec-prompt');
+  const txt=document.getElementById('sb-rec-text');
+  if(!prompt)return;
+  prompt.style.display=changed?'block':'none';
+  if(changed&&txt)txt.textContent=fmtH(_latestRecDaily)+'/day recommended';
+}
+
 // stored so "use recommended" button can apply it
 let _goalRec={daily:6.2,daysPerWeek:5};
 
@@ -4078,14 +4121,19 @@ function openGoalSettings(){
 
     const recCard=document.getElementById('goal-rec-card');
     const recText=document.getElementById('goal-rec-text');
+    const dismissed=parseFloat(localStorage.getItem('st_rec_dismissed')||'0');
+    const recChanged=Math.abs(recDaily-dismissed)>0.09;
     if(recCard&&recText){
-      recText.innerHTML=
-        '<strong style="font-size:18px;color:var(--text1)">'+fmtH(recDaily)+'/day</strong>'+
-        ' · '+daysPerWeek+' days/week = '+fmtH(recDaily*daysPerWeek)+'/week<br>'+
-        '<span style="font-size:12px;color:var(--text3)">'+why+'</span>';
-      recCard.style.display='block';
-      // Highlight if recommendation differs from current goal
-      recCard.style.borderColor=Math.abs(recDaily-g.daily)>0.1?'var(--o)':'var(--text3)';
+      if(recChanged){
+        recText.innerHTML=
+          '<strong style="font-size:18px;color:var(--text1)">'+fmtH(recDaily)+'/day</strong>'+
+          ' · '+daysPerWeek+' days/week = '+fmtH(recDaily*daysPerWeek)+'/week<br>'+
+          '<span style="font-size:12px;color:var(--text3)">'+why+'</span>';
+        recCard.style.display='block';
+        recCard.style.borderColor=Math.abs(recDaily-g.daily)>0.1?'var(--o)':'var(--text3)';
+      } else {
+        recCard.style.display='none'; // user already accepted this recommendation
+      }
     }
   }catch(e){console.warn('Goal rec error',e);}
 
@@ -4098,6 +4146,11 @@ function useRecommendedGoal(){
   updateGoalWeekly();
   const lbl=document.getElementById('goal-daily-current');
   if(lbl)lbl.textContent='Set to '+fmtH(_goalRec.daily)+'/day · '+fmtH(_goalRec.daily*_goalRec.daysPerWeek)+'/week';
+  // Mark as accepted — hide card and sidebar prompt
+  localStorage.setItem('st_rec_dismissed',_goalRec.daily.toFixed(2));
+  const recCard=document.getElementById('goal-rec-card');
+  if(recCard)recCard.style.display='none';
+  updateRecPrompt();
 }
 
 // ── UTILITIES ─────────────────────────────────────────────────────────────────
@@ -4394,6 +4447,8 @@ async function syncFromCloud(){
       sbPush('st_hours',hoursStore);
     }
     setSyncUI('synced','Synced ✓');
+    computeGoalRec(); // recompute after fresh cloud data
+    updateRecPrompt();
     if(updated)showPage(currentPage);
   }catch(e){
     setSyncUI('error','Offline');
@@ -4405,6 +4460,7 @@ async function syncFromCloud(){
   if(!localStorage.getItem('st_subjs'))localStorage.setItem('st_subjs',JSON.stringify(JSON.parse(JSON.stringify(DEFAULT_SUBJECTS))));
   if(!localStorage.getItem('st_sched'))localStorage.setItem('st_sched',JSON.stringify(makeDefaultSchedule()));
   runMigrations(); // one-time data fixes (runs immediately before any render)
+  computeGoalRec(); // compute before first render so sidebar prompt is correct
   if(!localStorage.getItem('st_sessions'))localStorage.setItem('st_sessions',JSON.stringify([]));
   if(!localStorage.getItem('st_hours'))localStorage.setItem('st_hours',JSON.stringify({}));
 
