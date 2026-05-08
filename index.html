@@ -431,10 +431,24 @@ a{color:inherit;text-decoration:none}
   #sidebar{display:none}
   #main{margin-left:0;width:100vw;overflow-x:hidden}
   .page{padding:16px 16px 100px 16px;width:100vw;overflow-x:hidden}
-  #bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);padding:10px 0;z-index:100}
-  .bn-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 0;transition:color 0.15s;color:var(--text3);font-size:10px;font-weight:600;letter-spacing:0.2px}
+  #bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);padding:10px 0 calc(10px + env(safe-area-inset-bottom));z-index:100;transition:transform 0.32s cubic-bezier(0.4,0,0.2,1)}
+  #bottom-nav.bn-hidden{transform:translateY(110%)}
+  .bn-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:4px 2px;transition:color 0.15s;color:var(--text3);font-size:10px;font-weight:600;letter-spacing:0.2px;min-width:0}
   .bn-item.active{color:var(--o)}
-  .bn-item svg{width:22px;height:22px;flex-shrink:0}
+  .bn-item svg{width:24px;height:24px;flex-shrink:0}
+  /* Floating pill to restore nav when hidden */
+  #bn-restore{display:none;position:fixed;bottom:16px;right:16px;z-index:101;background:var(--bg2);border:1.5px solid var(--border);border-radius:100px;padding:9px 16px;font-size:13px;font-weight:700;color:var(--text2);box-shadow:0 4px 20px rgba(0,0,0,0.18);cursor:pointer;align-items:center;gap:6px;transition:opacity 0.2s}
+  #bn-restore.visible{display:flex}
+  /* More sheet overlay */
+  #mobile-more-overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.4);backdrop-filter:blur(2px)}
+  #mobile-more-overlay.open{display:block}
+  #mobile-more-sheet{position:absolute;bottom:0;left:0;right:0;background:var(--bg2);border-radius:20px 20px 0 0;padding:8px 20px calc(20px + env(safe-area-inset-bottom));box-shadow:0 -8px 40px rgba(0,0,0,0.15)}
+  .bn-more-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:8px auto 18px}
+  .bn-more-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+  .bn-more-item{display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--bg3);border-radius:14px;padding:14px 8px;cursor:pointer;color:var(--text2);font-size:11px;font-weight:700;letter-spacing:0.2px;transition:background 0.15s;border:1.5px solid transparent}
+  .bn-more-item.active{color:var(--o);border-color:var(--o);background:var(--ol)}
+  .bn-more-item svg{width:26px;height:26px}
+  .bn-more-hide{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:var(--bg3);border:none;border-radius:14px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer}
   .stats-strip{grid-template-columns:repeat(3,1fr)}
   .stat-chips{grid-template-columns:1fr 1fr}
   .two-col{grid-template-columns:1fr}
@@ -814,6 +828,24 @@ a{color:inherit;text-decoration:none}
   <nav id="bottom-nav"></nav>
 </div>
 
+<!-- MOBILE MORE SHEET -->
+<div id="mobile-more-overlay" onclick="closeMobileMore()">
+  <div id="mobile-more-sheet" onclick="event.stopPropagation()">
+    <div class="bn-more-handle"></div>
+    <div class="bn-more-grid" id="mobile-more-grid"></div>
+    <button class="bn-more-hide" onclick="hideMobileNav()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      Hide navigation
+    </button>
+  </div>
+</div>
+
+<!-- FLOATING NAV RESTORE (mobile, shown when nav hidden) -->
+<button id="bn-restore" onclick="showMobileNav()">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  Menu
+</button>
+
 <!-- GOAL SETTINGS MODAL -->
 <div class="modal-overlay" id="goal-modal-overlay" onclick="handleOverlayClick(event,'goal-modal-overlay')">
   <div class="modal-sheet" onclick="event.stopPropagation()">
@@ -1056,9 +1088,41 @@ function buildNav(){
   const sb=document.getElementById('sidebar-nav');
   if(sb)sb.innerHTML=items.map(n=>`<div class="nav-item${n.id===page?' active':''}" data-page="${n.id}" onclick="showPage('${n.id}')">${n.icon}${n.label}</div>`).join('');
 
-  // Bottom nav
+  // Bottom nav — show first 5 items + "···" More button
   const bn=document.getElementById('bottom-nav');
-  if(bn)bn.innerHTML=items.map(n=>`<div class="bn-item${n.id===page?' active':''}" data-page="${n.id}" onclick="showPage('${n.id}')">${n.icon}${n.short}</div>`).join('');
+  if(bn){
+    const primary=items.slice(0,5);
+    const hasMore=items.length>5;
+    const moreActive=items.slice(5).some(n=>n.id===page);
+    bn.innerHTML=primary.map(n=>`<div class="bn-item${n.id===page?' active':''}" data-page="${n.id}" onclick="showPage('${n.id}')">${n.icon}${n.short}</div>`).join('')+
+      (hasMore?`<div class="bn-item${moreActive?' active':''}" onclick="openMobileMore()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>More</div>`:'');
+    // Maintain hidden state across nav rebuilds
+    if(localStorage.getItem('st_bn_hidden')==='1'){bn.classList.add('bn-hidden');document.getElementById('bn-restore').classList.add('visible');}
+    else{bn.classList.remove('bn-hidden');document.getElementById('bn-restore').classList.remove('visible');}
+  }
+  // Populate the More sheet grid
+  const grid=document.getElementById('mobile-more-grid');
+  if(grid){
+    grid.innerHTML=items.map(n=>`<div class="bn-more-item${n.id===page?' active':''}" onclick="showPage('${n.id}');closeMobileMore()">${n.icon}${n.short}</div>`).join('');
+  }
+}
+
+function openMobileMore(){
+  document.getElementById('mobile-more-overlay').classList.add('open');
+}
+function closeMobileMore(){
+  document.getElementById('mobile-more-overlay').classList.remove('open');
+}
+function hideMobileNav(){
+  closeMobileMore();
+  localStorage.setItem('st_bn_hidden','1');
+  document.getElementById('bottom-nav').classList.add('bn-hidden');
+  document.getElementById('bn-restore').classList.add('visible');
+}
+function showMobileNav(){
+  localStorage.setItem('st_bn_hidden','0');
+  document.getElementById('bottom-nav').classList.remove('bn-hidden');
+  document.getElementById('bn-restore').classList.remove('visible');
 }
 
 function renderNavReorder(){
