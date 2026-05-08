@@ -778,38 +778,41 @@ a{color:inherit;text-decoration:none}
           <button class="btn-add" onclick="openSubjectModal(null)">＋ Add</button>
         </div>
       </div>
-      <!-- Section jump nav -->
       <div class="progress-jump-nav">
         <button class="jump-pill" onclick="jumpTo('sec-today')">📅 Today</button>
-        <button class="jump-pill" onclick="jumpTo('sec-grad')">🎓 Graduation</button>
+        <button class="jump-pill" onclick="jumpTo('sec-grad')">🎓 Overview</button>
         <button class="jump-pill" onclick="jumpTo('sec-subjects')">📚 Subjects</button>
-        <button class="jump-pill" onclick="jumpTo('sec-estimates')">📊 Estimates</button>
-        <button class="jump-pill" onclick="jumpTo('sec-timeline')">🗓 Timeline</button>
-        <button class="jump-pill" onclick="jumpTo('sec-milestones')">⭐ Milestones</button>
-        <button class="jump-pill" onclick="jumpTo('sec-calendar')">📆 Calendar</button>
       </div>
-      <!-- Daily plan: today's target + pace comparison + calendar -->
       <div id="sec-today"></div>
       <div id="plan-inner" style="margin-bottom:0"></div>
-      <!-- Graduation overview (% complete, bar, stats) -->
       <div id="sec-grad" style="scroll-margin-top:16px"></div>
       <div class="card" style="margin-bottom:16px" id="grad-progress-card"></div>
-      <!-- Subject list -->
       <div id="sec-subjects" style="scroll-margin-top:16px"></div>
-      <div class="card" style="margin-bottom:16px">
+      <div class="card" style="margin-bottom:80px">
         <div id="subjects-list"></div>
       </div>
-      <!-- Graduation estimates -->
-      <div id="sec-estimates" style="scroll-margin-top:16px"></div>
-      <div class="card" id="grad-est-card" style="margin-bottom:16px"></div>
-      <!-- Subject completion timeline -->
-      <div id="sec-timeline" style="scroll-margin-top:16px"></div>
-      <div id="timeline-inner" style="margin-bottom:16px"></div>
-      <!-- Milestones -->
-      <div id="sec-milestones" style="scroll-margin-top:16px"></div>
-      <div class="card" id="grad-milestones-card" style="margin-bottom:80px"></div>
     </div>
 
+    <!-- PAGE: GRADUATION -->
+    <div class="page" id="page-graduation">
+      <div class="prog-header">
+        <h2>Graduation</h2>
+      </div>
+      <div class="progress-jump-nav">
+        <button class="jump-pill" onclick="jumpTo('gsec-estimates')">📊 Estimates</button>
+        <button class="jump-pill" onclick="jumpTo('gsec-timeline')">🗓 Timeline</button>
+        <button class="jump-pill" onclick="jumpTo('gsec-milestones')">⭐ Milestones</button>
+        <button class="jump-pill" onclick="jumpTo('gsec-calendar')">📆 Calendar</button>
+      </div>
+      <div id="gsec-estimates" style="scroll-margin-top:16px"></div>
+      <div class="card" id="grad-est-card" style="margin-bottom:16px"></div>
+      <div id="gsec-timeline" style="scroll-margin-top:16px"></div>
+      <div id="timeline-inner" style="margin-bottom:16px"></div>
+      <div id="gsec-milestones" style="scroll-margin-top:16px"></div>
+      <div class="card" id="grad-milestones-card" style="margin-bottom:16px"></div>
+      <div id="gsec-calendar" style="scroll-margin-top:16px"></div>
+      <div id="grad-calendar-inner" style="margin-bottom:80px"></div>
+    </div>
 
     <!-- PAGE: TIMER -->
     <div class="page" id="page-timer">
@@ -1081,6 +1084,7 @@ const NAV_ITEMS=[
   {id:'schedule',  label:'Schedule',  short:'Schedule',   icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'},
   {id:'log',       label:'Log Hours', short:'Log',        icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>'},
   {id:'progress',  label:'Progress',  short:'Progress',   icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>'},
+  {id:'graduation', label:'Graduation', short:'Grad', icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>'},
   {id:'timer',     label:'Timer',     short:'Timer',      icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'},
   {id:'history',   label:'History',   short:'History',    icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>'},
 ];
@@ -1766,9 +1770,9 @@ function showPage(id){
   else if(id==='log')renderLog();
   else if(id==='history')renderHistory();
   else if(id==='progress')renderProgress();
-  else if(id==='graduation'){currentPage='progress';showPage('progress');return;}
+  else if(id==='graduation')renderGraduationPage();
   else if(id==='plan'){currentPage='progress';showPage('progress');return;}
-  else if(id==='timeline'){currentPage='progress';showPage('progress');return;}
+  else if(id==='timeline'){currentPage='graduation';showPage('graduation');return;}
   else if(id==='timer')renderTimerPage();
   updateSidebar();
 }
@@ -2800,6 +2804,7 @@ function deleteHistEntry(id){
   updateSidebar();
   if(currentPage==='dashboard')renderDashboard();
   if(currentPage==='progress')renderProgress();
+  if(currentPage==='graduation')renderGraduationPage();
 }
 
 // ── SESSION TIMER ─────────────────────────────────────────────────────────────
@@ -3094,6 +3099,7 @@ function timerPageLog(){
   showToast('✓ Session logged! '+fmtH(hrs));
   if(currentPage==='dashboard')renderDashboard();
   if(currentPage==='progress')renderProgress();
+  if(currentPage==='graduation')renderGraduationPage();
 }
 
 
@@ -3190,6 +3196,7 @@ function logSession(){
   updateSidebar();
   if(currentPage==='dashboard')renderDashboard();
   if(currentPage==='progress')renderProgress();
+  if(currentPage==='graduation')renderGraduationPage();
 }
 
 function deleteEntry(id){
@@ -3206,6 +3213,7 @@ function deleteEntry(id){
   updateSidebar();
   if(currentPage==='dashboard')renderDashboard();
   if(currentPage==='progress')renderProgress();
+  if(currentPage==='graduation')renderGraduationPage();
 }
 
 // ── PROGRESS ──────────────────────────────────────────────────────────────────
@@ -3241,7 +3249,6 @@ function renderProgress(){
   const el=document.getElementById('subjects-list');
   if(!allSubjs.length){
     el.innerHTML='<div class="empty-state">No subjects yet. Add one above.</div>';
-    _renderGradEstCard();renderTimeline();_renderMilestones();
     return;
   }
 
@@ -3316,11 +3323,6 @@ function renderProgress(){
     '<div style="text-align:center;padding:12px;font-size:12px;color:var(--text3);cursor:pointer" onclick="toggleHideDone()">'+done.length+' completed subject'+(done.length>1?'s':'')+' hidden · tap to show</div>':'';
 
   el.innerHTML=rows+hiddenFooter;
-
-  // ── 3. Graduation estimates + 4. Timeline + 5. Milestones ─────────────────
-  _renderGradEstCard();
-  renderTimeline();
-  _renderMilestones();
 }
 
 function _gradSharedVars(){
@@ -4023,18 +4025,86 @@ function renderPlan(){
         '</div>'+
       '</div>'+
       '<div style="margin-top:10px;font-size:11px;color:var(--text3);text-align:center">Change your goal in <span style="color:var(--o);cursor:pointer;font-weight:600" onclick="openGoalSettings()">Settings ⚙</span></div>'+
-    '</div>'+
-    // Card 3: Calendar
-    '<div id="sec-calendar" style="scroll-margin-top:16px"></div>'+
-    '<div class="card" style="margin-bottom:16px">'+
-      '<div class="card-title">Study Calendar</div>'+
-      '<div style="font-size:12px;color:var(--text3);margin-bottom:12px">Past days show actual hours logged · Future shows projected recommended hours (assumes you hit today\'s target each day — numbers drop as deficit is paid off)</div>'+
-      legendHtml+
-      calHtml+
     '</div>';
 }
 
-function renderGraduation(){renderProgress();}
+function _renderStudyCalendar(targetElId){
+  const el=document.getElementById(targetElId);
+  if(!el)return;
+  const sessions=loadSessions();
+  const subjs=loadSubjects().filter(s=>!s.extraCredit);
+  const goals=loadGoals();
+  const now=new Date();
+  const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
+  const totalLogged=getTotalLogged();
+  const remaining=Math.max(0,TOTAL_REQ-totalLogged);
+  const personalTarget=goals.daily;
+  const daysPerWeek=goals.daysPerWeek||5;
+  const targetDate=new Date('2027-10-31');
+  const daysLeft=Math.max(1,(targetDate-now)/(1000*60*60*24));
+  const weeksLeft=daysLeft/7;
+  const studyDaysLeft=weeksLeft*daysPerWeek;
+  const bareMinimum=remaining/Math.max(1,studyDaysLeft);
+  const baseTarget=Math.max(bareMinimum,personalTarget);
+  function hoursOn(dStr){return sessions.filter(s=>s.date===dStr).reduce((a,s)=>a+s.hours,0);}
+  function dateStr(offset){const d=new Date(now);d.setDate(now.getDate()+offset);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+  let recentDeficit=0;
+  for(let i=1;i<=7;i++){recentDeficit+=Math.max(0,baseTarget-hoursOn(dateStr(-i)));}
+  const catchUp=recentDeficit/7;
+  const todayStr=dateStr(0);
+  const MONTH_NAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const DOW=['Su','Mo','Tu','We','Th','Fr','Sa'];
+  function buildCal(year,month){
+    const daysInMonth=new Date(year,month+1,0).getDate();
+    const firstDow=new Date(year,month,1).getDay();
+    let cells='';
+    for(let i=0;i<firstDow;i++)cells+='<div></div>';
+    for(let d=1;d<=daysInMonth;d++){
+      const dStr=year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      let cls='',val='';
+      if(dStr<todayStr){
+        const h=hoursOn(dStr);
+        if(h===0){cls='missed';val='—';}
+        else if(h>=baseTarget){cls='hit';val=fmtH(h);}
+        else{cls='partial';val=fmtH(h);}
+      }else if(dStr===todayStr){
+        const h=hoursOn(dStr);cls='today';val=h>0?fmtH(h):'·';
+      }else{
+        const daysFromToday=Math.round((new Date(dStr)-now)/(1000*60*60*24));
+        const deficitLeft=Math.max(0,recentDeficit-daysFromToday*catchUp);
+        const dayTarget=Math.min(10,baseTarget+deficitLeft/7);
+        cls='future';val=fmtH(dayTarget);
+      }
+      cells+='<div class="plan-cal-cell '+cls+'"><div class="plan-cal-day">'+d+'</div><div class="plan-cal-val">'+val+'</div></div>';
+    }
+    return'<div class="plan-cal-wrap" style="margin-bottom:20px">'+
+      '<div class="plan-cal-header"><span class="plan-cal-month">'+MONTH_NAMES[month]+' '+year+'</span></div>'+
+      '<div class="plan-cal-grid">'+DOW.map(x=>'<div class="plan-cal-dow">'+x+'</div>').join('')+cells+'</div>'+
+    '</div>';
+  }
+  const curMonth=now.getMonth(),curYear=now.getFullYear();
+  const prevM=curMonth===0?11:curMonth-1,prevY=curMonth===0?curYear-1:curYear;
+  const nextM=curMonth===11?0:curMonth+1,nextY=curMonth===11?curYear+1:curYear;
+  const calHtml=buildCal(prevY,prevM)+buildCal(curYear,curMonth)+buildCal(nextY,nextM);
+  const legendHtml='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">'+
+    '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:3px;background:rgba(0,200,150,0.18);display:inline-block"></span>Hit target</span>'+
+    '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:3px;background:rgba(249,115,22,0.15);display:inline-block"></span>Partial</span>'+
+    '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:3px;background:rgba(255,77,106,0.12);display:inline-block"></span>Missed</span>'+
+    '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:3px;background:var(--bg3);display:inline-block"></span>Projected</span>'+
+  '</div>';
+  el.innerHTML='<div class="card" style="margin-bottom:16px">'+
+    '<div class="card-title">Study Calendar</div>'+
+    '<div style="font-size:12px;color:var(--text3);margin-bottom:12px">Past days show actual hours logged · Future shows projected recommended hours</div>'+
+    legendHtml+calHtml+
+  '</div>';
+}
+
+function renderGraduationPage(){
+  _renderGradEstCard();
+  renderTimeline();
+  _renderMilestones();
+  _renderStudyCalendar('grad-calendar-inner');
+}
 
 // ── MODAL UTILS ───────────────────────────────────────────────────────────────
 function closeModal(overlayId){
@@ -4129,8 +4199,8 @@ function saveGoalSettings(){
   renderDashboard();
   updateSidebar();
   updateRecPrompt();
-  if(currentPage==='plan')renderPlan();
-  if(currentPage==='graduation'||currentPage==='progress'||currentPage==='plan')renderProgress();
+  if(currentPage==='progress')renderProgress();
+  if(currentPage==='graduation')renderGraduationPage();
 }
 // Latest computed recommendation (updated on load and after sync)
 let _latestRecDaily=TEACHER_DAILY;
@@ -4566,7 +4636,7 @@ async function syncFromCloud(){
   applySidebarState();
   // Deep link support: open specific page via URL hash e.g. #log
   const hash=window.location.hash.replace('#','');
-  const validPages=['dashboard','schedule','log','progress','graduation','plan','timeline','timer','history'];
+  const validPages=['dashboard','schedule','log','progress','graduation','timer','history'];
   showPage(validPages.includes(hash)?hash:'dashboard');
   syncFromCloud();
   updateNotifBtn();
