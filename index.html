@@ -1023,6 +1023,14 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
       <label class="form-label">Label</label>
       <input type="text" class="form-input" id="bm-label" placeholder="e.g. Japanese Study">
     </div>
+    <div class="form-group">
+      <label class="form-label">Repeats</label>
+      <select class="form-input" id="bm-recurrence">
+        <option value="weekly">Every week</option>
+        <option value="biweekly_a">Every 2 weeks — Week A</option>
+        <option value="biweekly_b">Every 2 weeks — Week B</option>
+      </select>
+    </div>
     <div id="bm-locked-group">
       <div class="toggle-row">
         <div>
@@ -1986,13 +1994,32 @@ function saveOverrides(o){
   localStorage.setItem('st_sched_overrides',JSON.stringify(o));
   sbPush('st_sched_overrides',o);
 }
+// Returns 0 (even/Week A) or 1 (odd/Week B) for any given date using ISO week number
+function getWeekParity(date){
+  const d=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));
+  d.setUTCDate(d.getUTCDate()+4-(d.getUTCDay()||7));
+  const yearStart=new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  return Math.ceil((((d-yearStart)/86400000)+1)/7)%2; // 0=even(A), 1=odd(B)
+}
+// Filter schedule blocks for a specific date, respecting recurrence rules
+function getBlocksForDate(date,schedule){
+  const dow=date.getDay();
+  const parity=getWeekParity(date);
+  return schedule.filter(b=>{
+    if(b.day!==dow)return false;
+    if(!b.recurrence||b.recurrence==='weekly')return true;
+    if(b.recurrence==='biweekly_a')return parity===0;
+    if(b.recurrence==='biweekly_b')return parity===1;
+    return true;
+  });
+}
 // Returns today's actual blocks — override if one exists, else weekly schedule
 function getTodayActualBlocks(){
-  const dow=new Date().getDay();
+  const now=new Date();
   const overrides=loadOverrides();
   const ds=todayStr();
   if(overrides[ds])return overrides[ds];
-  return loadSchedule().filter(b=>b.day===dow);
+  return getBlocksForDate(now,loadSchedule());
 }
 // Get the calendar date string for the currently selected schedule day
 function selDateStr(){
@@ -2019,7 +2046,8 @@ function startOverrideEdit(){
   const ds=selDateStr();
   const overrides=loadOverrides();
   if(!overrides[ds]){
-    const weekly=loadSchedule().filter(b=>b.day===scheduleDay).map(b=>({...b,id:genId()}));
+    const dsObj=new Date(ds+'T00:00:00');
+    const weekly=getBlocksForDate(dsObj,loadSchedule()).map(b=>({...b,id:genId()}));
     overrides[ds]=weekly;
     saveOverrides(overrides);
   }
@@ -2065,11 +2093,23 @@ function renderSchedule(){
 
   const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',english_11:'#60a5fa',english_12:'#93c5fd',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',geometry:'#a855f7',algebra2:'#7c3aed',el2:'#94a3b8',el3:'#64748b',el4:'#475569',am_hist:'#b45309',jp_exch:'#7c3aed'};
   const DAY_SHORT={0:'Sun',1:'Mon',2:'Tue',3:'Wed',4:'Thu',5:'Fri',6:'Sat'};
+  // Week parity for selected day
+  const selDs=selDateStr();
+  const selDateObj=new Date(selDs+'T00:00:00');
+  const selParity=getWeekParity(selDateObj);
+  const weekLabel=selParity===0?'Week A':'Week B';
+  const weekBadgeHtml='<span style="font-size:11px;font-weight:700;color:var(--text3);background:var(--bg3);border:1px solid var(--border);border-radius:100px;padding:3px 10px;margin-left:8px">📅 '+weekLabel+'</span>';
+  // Helper to get biweekly tag for a block
+  function recurrenceTag(bl){
+    if(!bl.recurrence||bl.recurrence==='weekly')return'';
+    const lbl=bl.recurrence==='biweekly_a'?'Week A':'Week B';
+    return'<span style="font-size:10px;font-weight:700;color:var(--o);background:var(--ol);border-radius:6px;padding:1px 6px;margin-left:5px">↻ '+lbl+'</span>';
+  }
 
   // Build day tabs (always shown)
   const now2=new Date();
   const overrides=loadOverrides();
-  const tabHtml='<div class="day-tabs">'+DAY_ORDER.map(dow=>{
+  const tabHtml='<div style="display:flex;align-items:center;margin-bottom:4px"><div class="day-tabs" style="margin-bottom:0;flex:1">'+DAY_ORDER.map(dow=>{
     const isToday=dow===tdow;
     const isSelected=dow===scheduleDay;
     const todayDow=now2.getDay();
@@ -2084,7 +2124,7 @@ function renderSchedule(){
       '<span class="day-tab-name">'+DAY_SHORT[dow]+(hasOverride?'<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:'+(isSelected?'#fff':'var(--o)')+';margin-left:3px;vertical-align:middle;margin-bottom:2px"></span>':'')+'</span>'+
       '<span class="day-tab-num">'+dateNum+'</span>'+
     '</button>';
-  }).join('')+'</div>';
+  }).join('')+'</div>'+weekBadgeHtml+'</div>';
 
   if(scheduleOverrideEdit){
     const ds=selDateStr();
@@ -2124,7 +2164,8 @@ function renderSchedule(){
     // In edit mode show selected day + add button
     DAY_ORDER.forEach(dow=>{
       if(dow!==scheduleDay)return;
-      const blocks=schedule.filter(b=>b.day===dow).sort((a,b)=>toMins(a.start)-toMins(b.start));
+      const _selDate=selDateStr();const _selDateObj=new Date(_selDate+'T00:00:00');
+      const blocks=getBlocksForDate(_selDateObj,schedule).sort((a,b)=>toMins(a.start)-toMins(b.start));
       html+='<div class="sched-day-block">'+
         '<div class="edit-day-header">'+
           '<div class="edit-day-name">'+DAY_NAMES[dow]+'</div>'+
@@ -2137,7 +2178,7 @@ function renderSchedule(){
           const dotColor=bl.type==='work'?'#d97706':bl.type==='break'?'#9ca3af':bl.type==='class'?'#6366f1':bl.locked?'var(--o)':(SUBJ_COLORS[bl.subjectId]||'var(--o)');
           html+='<div class="block-card">'+
             '<div class="block-dot" style="background:'+dotColor+'"></div>'+
-            '<div class="block-info">'+escHtml(bl.label)+'<div class="block-meta">'+bl.start+'–'+bl.end+'</div></div>'+
+            '<div class="block-info">'+escHtml(bl.label)+recurrenceTag(bl)+'<div class="block-meta">'+bl.start+'–'+bl.end+'</div></div>'+
             '<div class="block-actions">'+
               '<button class="btn-icon" title="Edit" onclick="openBlockModal(\''+bl.id+'\')">'+
                 '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'+
@@ -2159,7 +2200,8 @@ function renderSchedule(){
     const isSat=dow===6;
     const ds=selDateStr();
     const hasOverride=!!overrides[ds];
-    const blocks=(hasOverride?overrides[ds]:schedule.filter(b=>b.day===dow)).sort((a,b)=>toMins(a.start)-toMins(b.start));
+    const _dsObj=new Date(ds+'T00:00:00');
+    const blocks=(hasOverride?overrides[ds]:getBlocksForDate(_dsObj,schedule)).sort((a,b)=>toMins(a.start)-toMins(b.start));
     let html=tabHtml;
     if(hasOverride){
       html+='<div style="background:var(--ol);border:1px solid var(--od2);border-radius:12px;padding:8px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">'+
@@ -2290,6 +2332,7 @@ function renderSchedule(){
                 '<div class="tl-card-top">'+
                   '<span class="tl-card-name" style="color:'+(isPast?'var(--text2)':'var(--text)')+'">'+escHtml(bl.label)+'</span>'+
                   (badge?badge+' ':'')+'<span class="tl-card-dur" style="background:'+color+'18;color:'+color+'">'+durStr(dur)+'</span>'+
+                  recurrenceTag(bl)+
                 '</div>'+
                 '<div class="tl-card-sub">'+(isActive?timeRange+' · '+durStr(minsLeft)+' left':subLine)+'</div>'+
                 (isActive?'<div class="tl-prog"><div class="tl-prog-fill" style="width:'+progPct+'%;background:'+color+'"></div></div>':'')+
@@ -2332,6 +2375,7 @@ function openBlockModal(blockId,defaultDay){
       if(bl.subjectId)document.getElementById('bm-subject').value=bl.subjectId;
       document.getElementById('bm-label').value=bl.label||'';
       document.getElementById('bm-locked').checked=bl.locked||false;
+      document.getElementById('bm-recurrence').value=bl.recurrence||'weekly';
     }
   } else {
     document.getElementById('bm-day').value=defaultDay!==null?defaultDay:1;
@@ -2345,6 +2389,7 @@ function openBlockModal(blockId,defaultDay){
     document.getElementById('bm-subject').value=subjs[0]?subjs[0].id:'';
     document.getElementById('bm-label').value='';
     document.getElementById('bm-locked').checked=false;
+    document.getElementById('bm-recurrence').value='weekly';
   }
   updateBlockModalFields();
   document.getElementById('block-modal-overlay').classList.add('open');
@@ -2379,13 +2424,14 @@ function saveBlock(){
   const subjectId=type==='study'?document.getElementById('bm-subject').value:null;
   const label=document.getElementById('bm-label').value.trim()||(type==='work'?'Work':'Break');
   const locked=type==='study'?document.getElementById('bm-locked').checked:false;
+  const recurrence=document.getElementById('bm-recurrence').value||'weekly';
   if(!start||!end){alert('Please enter start and end times.');return;}
   if(toMins(end)<=toMins(start)){alert('End time must be after start time.');return;}
   if(currentBlockId){
     const idx=schedule.findIndex(b=>b.id===currentBlockId);
-    if(idx>=0)schedule[idx]={id:currentBlockId,day,start,end,type,subjectId,label,locked};
+    if(idx>=0)schedule[idx]={id:currentBlockId,day,start,end,type,subjectId,label,locked,recurrence};
   } else {
-    schedule.push({id:genId(),day,start,end,type,subjectId,label,locked});
+    schedule.push({id:genId(),day,start,end,type,subjectId,label,locked,recurrence});
   }
   saveSchedule(schedule);
   closeModal('block-modal-overlay');
