@@ -3709,6 +3709,8 @@ function saveGoalSettings(){
   closeModal('goal-modal-overlay');
   renderDashboard();
   updateSidebar();
+  if(currentPage==='plan')renderPlan();
+  if(currentPage==='graduation')renderGraduation();
 }
 function openGoalSettings(){
   const g=loadGoals();
