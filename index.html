@@ -3898,42 +3898,61 @@ function renderGraduation(){
 
   // ── Card 2: Graduation target date ────────────────────────────────────────
   const weeksToGrad=Math.round(Math.max(0,(targetDate-now)/(1000*60*60*24*7)));
-  // "On track" = estimated finish is before graduation deadline, not pace>=teacher
   const onTrack=ahead;
+  // Teacher-target estimate
+  const targetWeeksLeft=TEACHER_WEEKLY>0?remaining/TEACHER_WEEKLY:null;
+  let targetEstDate=null,targetEstStr='—';
+  if(targetWeeksLeft!==null){
+    targetEstDate=new Date(now);targetEstDate.setDate(now.getDate()+Math.round(targetWeeksLeft*7));
+    targetEstStr=MONTHS[targetEstDate.getMonth()]+' '+targetEstDate.getFullYear();
+  }
+  const targetOnTime=targetEstDate&&targetEstDate<=targetDate;
   const currentPaceLabel=paceIsGoal?'Goal pace':'Your recent pace';
   document.getElementById('grad-est-card').innerHTML=
-    '<div class="grad-est-card">'+
-      '<div class="grad-est-left">'+
-        '<div style="margin-bottom:6px">'+
-          '<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px">Est. at current pace</div>'+
+    // Two-column estimate comparison
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'+
+      // Col 1 — current pace
+      '<div style="background:var(--bg3);border-radius:12px;padding:14px;border:2px solid '+(onTrack?'var(--ok)':'var(--err)')+'">'+
+        '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px">'+currentPaceLabel+'</div>'+
+        '<div style="font-size:11px;font-weight:700;color:'+(onTrack?'var(--ok)':'var(--err)')+';margin-bottom:4px">'+fmtH(pace)+'/wk</div>'+
+        '<div style="font-size:24px;font-weight:900;color:'+(onTrack?'var(--ok)':'var(--err)')+';letter-spacing:-0.5px;line-height:1.1">'+estDateStr+'</div>'+
+        '<div style="font-size:11px;font-weight:700;margin-top:6px;color:'+(onTrack?'var(--ok)':'var(--err)')+'">'+
+          (onTrack?'✓ Before deadline':'⚠ After deadline')+
         '</div>'+
-        '<div class="grad-est-date">'+estDateStr+'</div>'+
-        (diffDays!==null?'<div style="font-size:12px;font-weight:700;margin-top:5px;color:'+(ahead?'var(--ok)':'var(--err)')+'">'+
-          (ahead?'✓ '+diffDays+'d ahead of target':'⚠ '+Math.abs(diffDays)+'d behind target')+
-        '</div>':'')+
-        '<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">'+
-          '<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:4px">Official target</div>'+
-          '<div style="font-size:22px;font-weight:800;color:var(--text2);letter-spacing:-0.5px;line-height:1">Oct 31, 2027</div>'+
-          '<div style="font-size:12px;color:var(--text3);margin-top:3px">'+weeksToGrad+' weeks remaining</div>'+
-        '</div>'+
+        (!paceIsGoal&&recentH>0?'<div style="font-size:10px;color:var(--text3);margin-top:4px">Based on '+fmtH(recentH)+'h logged<br>in last 28 days</div>':'<div style="font-size:10px;color:var(--text3);margin-top:4px">Using your weekly<br>goal (no recent data)</div>')+
       '</div>'+
-      '<div class="grad-est-right">'+
-        '<div class="grad-est-tag '+(onTrack?'ahead':'behind')+'">'+(onTrack?'✓ On track':'⚠ Behind pace')+'</div>'+
-        '<div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">'+
-          '<div style="text-align:right">'+
-            '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">'+currentPaceLabel+'</div>'+
-            '<div style="font-size:16px;font-weight:800;color:'+(onTrack?'var(--ok)':'var(--err)')+'">'+fmtH(pace)+'/wk</div>'+
-          '</div>'+
-          '<div style="text-align:right">'+
-            '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">Min. to graduate</div>'+
-            '<div style="font-size:16px;font-weight:800;color:var(--text2)">'+fmtH(neededPace)+'/wk</div>'+
-          '</div>'+
+      // Col 2 — teacher target pace
+      '<div style="background:var(--bg3);border-radius:12px;padding:14px;border:2px solid '+(targetOnTime?'var(--ok)':'var(--od2)')+'">'+
+        '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px">Teacher\'s target</div>'+
+        '<div style="font-size:11px;font-weight:700;color:var(--o);margin-bottom:4px">'+fmtH(TEACHER_WEEKLY)+'/wk</div>'+
+        '<div style="font-size:24px;font-weight:900;color:'+(targetOnTime?'var(--ok)':'var(--text)')+';letter-spacing:-0.5px;line-height:1.1">'+targetEstStr+'</div>'+
+        '<div style="font-size:11px;font-weight:700;margin-top:6px;color:'+(targetOnTime?'var(--ok)':'var(--text2)')+'">'+
+          (targetOnTime?'✓ On time':'→ Meets standard')+
         '</div>'+
+        '<div style="font-size:10px;color:var(--text3);margin-top:4px">'+fmtH(TEACHER_DAILY)+'/day<br>× '+TEACHER_DAYS+' days/week</div>'+
       '</div>'+
     '</div>'+
-    '<div class="grad-need">'+
-      '📌 Teacher\'s standard: <strong>'+fmtH(TEACHER_DAILY)+'/day × '+TEACHER_DAYS+' days = '+fmtH(TEACHER_WEEKLY)+'/week</strong> · Your goal: <strong>'+fmtH(goals.daily)+'/day × '+(goals.daysPerWeek||5)+' days = '+fmtH(goals.weekly)+'/week</strong>'+
-    '</div>';
+    // Official deadline row
+    '<div style="background:var(--bg3);border-radius:10px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+      '<div>'+
+        '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px">Official deadline</div>'+
+        '<div style="font-size:20px;font-weight:800;color:var(--text);letter-spacing:-0.5px">Oct 31, 2027</div>'+
+      '</div>'+
+      '<div style="text-align:right">'+
+        '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px">Time left</div>'+
+        '<div style="font-size:20px;font-weight:800;color:var(--text)">'+weeksToGrad+' wks</div>'+
+      '</div>'+
+    '</div>'+
+    // Pace gap callout (only if behind)
+    (!onTrack?
+    '<div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--err)">'+
+      '⚡ To graduate by Oct 2027 you need <strong>'+fmtH(neededPace)+'/week</strong> — you\'re currently at <strong>'+fmtH(pace)+'/week</strong>. '+
+      'That\'s <strong>'+fmtH(Math.max(0,neededPace-pace))+'/week more</strong> (about '+fmtH(Math.max(0,neededPace-pace)/TEACHER_DAYS)+'/day extra).'+
+    '</div>':
+    '<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--ok)">'+
+      '✓ You\'re on track to graduate before Oct 2027 at your current pace of '+fmtH(pace)+'/week.'+
+    '</div>'
+    );
 
   // ── Card 3: Milestones (hours-based, estimated dates) ─────────────────────
   const MILESTONES=[
