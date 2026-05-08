@@ -3155,8 +3155,10 @@ function renderPlan(){
   const personalTarget=goals.daily;       // what YOU want to do per day
   const daysPerWeek=goals.daysPerWeek||5; // days per week you plan to study
 
-  // Bare minimum to finish exactly on time (across all calendar days)
-  const bareMinimum=remaining/daysLeft;
+  // Bare minimum daily hours — scale by study days/week, not all calendar days
+  const weeksLeft=daysLeft/7;
+  const studyDaysLeft=weeksLeft*daysPerWeek;
+  const bareMinimum=remaining/Math.max(1,studyDaysLeft);
   // Personal base: your goal or the bare minimum, whichever is higher
   const baseTarget=Math.max(bareMinimum,personalTarget);
 
@@ -3168,13 +3170,20 @@ function renderPlan(){
     const weeksNeeded=remaining/weeklyH;
     const d=new Date(now);d.setDate(now.getDate()+Math.round(weeksNeeded*7));return d;
   }
+  // Actual pace: same method as Graduation page (last 28 days / 4 weeks)
+  const cutoff28=new Date(now);cutoff28.setDate(now.getDate()-28);
+  const cutoff28Str=cutoff28.getFullYear()+'-'+String(cutoff28.getMonth()+1).padStart(2,'0')+'-'+String(cutoff28.getDate()).padStart(2,'0');
+  const recentH28=sessions.filter(s=>s.date>=cutoff28Str).reduce((a,s)=>a+s.hours,0);
+  const actualWeeklyPace=recentH28>=1?recentH28/4:null; // null = not enough data
   const finishAtPersonal=estFinish(weeklyPersonal);
   const finishAtTeacher=estFinish(weeklyTeacher);
+  const finishAtActual=actualWeeklyPace?estFinish(actualWeeklyPace):null;
   const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   function fmtDate(d){return d?MONTHS[d.getMonth()]+' '+d.getFullYear():'—';}
   const targetDate2=new Date('2027-10-31');
   const personalOnTime=finishAtPersonal&&finishAtPersonal<=targetDate2;
   const teacherOnTime=finishAtTeacher&&finishAtTeacher<=targetDate2;
+  const actualOnTime=finishAtActual&&finishAtActual<=targetDate2;
 
   // ── Helper: get hours logged on any date string ────────────────────────────
   function hoursOn(dStr){
@@ -3349,30 +3358,48 @@ function renderPlan(){
     // Card 2: Pace comparison
     '<div class="card" style="margin-bottom:16px">'+
       '<div class="card-title">Pace Comparison</div>'+
+      // Actual pace row — full width, most important
+      '<div style="background:var(--bg3);border-radius:10px;padding:14px;margin-bottom:10px;border:1.5px solid '+(finishAtActual?(actualOnTime?'var(--ok)':'var(--err)'):'var(--border)')+'">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between">'+
+          '<div>'+
+            '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Your actual pace (last 28 days)</div>'+
+            (actualWeeklyPace?
+              '<div style="font-size:20px;font-weight:900;color:var(--text)">'+fmtH(actualWeeklyPace)+'/wk</div>':
+              '<div style="font-size:14px;font-weight:700;color:var(--text3)">Not enough data yet</div>'
+            )+
+          '</div>'+
+          '<div style="text-align:right">'+
+            '<div style="font-size:11px;color:var(--text3)">Est. finish</div>'+
+            '<div style="font-size:16px;font-weight:800;color:'+(finishAtActual?(actualOnTime?'var(--ok)':'var(--err)'):'var(--text3)')+'">'+fmtDate(finishAtActual)+'</div>'+
+            (finishAtActual?'<div style="font-size:11px;font-weight:600;color:'+(actualOnTime?'var(--ok)':'var(--err)')+'">'+
+              (actualOnTime?'✓ On time':'⚠ Misses Oct 2027')+'</div>':'<div style="font-size:11px;color:var(--text3)">Keep logging to see</div>')+
+          '</div>'+
+        '</div>'+
+      '</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
         // Personal goal column
         '<div style="background:var(--bg3);border-radius:10px;padding:14px;border:1.5px solid '+(personalOnTime?'var(--ok)':'var(--err)')+'">'+
           '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Your goal</div>'+
-          '<div style="font-size:17px;font-weight:900;color:var(--text);letter-spacing:-0.5px">'+fmtH(personalTarget)+'/day</div>'+
-          '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+daysPerWeek+' days · '+fmtH(weeklyPersonal)+'/wk</div>'+
-          '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">'+
+          '<div style="font-size:15px;font-weight:900;color:var(--text)">'+fmtH(personalTarget)+'/day</div>'+
+          '<div style="font-size:11px;color:var(--text3);margin-top:1px">'+daysPerWeek+'d · '+fmtH(weeklyPersonal)+'/wk</div>'+
+          '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">'+
             '<div style="font-size:11px;color:var(--text3)">Est. finish</div>'+
-            '<div style="font-size:14px;font-weight:800;color:'+(personalOnTime?'var(--ok)':'var(--err)')+'">'+fmtDate(finishAtPersonal)+'</div>'+
-            '<div style="font-size:11px;font-weight:600;color:'+(personalOnTime?'var(--ok)':'var(--err)')+'">'+
-              (personalOnTime?'✓ Graduates on time':'⚠ Misses Oct 2027')+
+            '<div style="font-size:13px;font-weight:800;color:'+(personalOnTime?'var(--ok)':'var(--err)')+'">'+fmtDate(finishAtPersonal)+'</div>'+
+            '<div style="font-size:10px;font-weight:600;color:'+(personalOnTime?'var(--ok)':'var(--err)')+'">'+
+              (personalOnTime?'✓ On time':'⚠ Misses')+
             '</div>'+
           '</div>'+
         '</div>'+
         // Teacher's standard column
         '<div style="background:var(--bg3);border-radius:10px;padding:14px;border:1.5px solid '+(teacherOnTime?'var(--ok)':'var(--err)')+'">'+
           '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Teacher\'s standard</div>'+
-          '<div style="font-size:17px;font-weight:900;color:var(--text);letter-spacing:-0.5px">'+fmtH(TEACHER_DAILY)+'/day</div>'+
-          '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+TEACHER_DAYS+' days · '+fmtH(TEACHER_WEEKLY)+'/wk</div>'+
-          '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">'+
+          '<div style="font-size:15px;font-weight:900;color:var(--text)">'+fmtH(TEACHER_DAILY)+'/day</div>'+
+          '<div style="font-size:11px;color:var(--text3);margin-top:1px">'+TEACHER_DAYS+'d · '+fmtH(TEACHER_WEEKLY)+'/wk</div>'+
+          '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">'+
             '<div style="font-size:11px;color:var(--text3)">Est. finish</div>'+
-            '<div style="font-size:14px;font-weight:800;color:'+(teacherOnTime?'var(--ok)':'var(--err)')+'">'+fmtDate(finishAtTeacher)+'</div>'+
-            '<div style="font-size:11px;font-weight:600;color:'+(teacherOnTime?'var(--ok)':'var(--err)')+'">'+
-              (teacherOnTime?'✓ Graduates on time':'⚠ Misses Oct 2027')+
+            '<div style="font-size:13px;font-weight:800;color:'+(teacherOnTime?'var(--ok)':'var(--err)')+'">'+fmtDate(finishAtTeacher)+'</div>'+
+            '<div style="font-size:10px;font-weight:600;color:'+(teacherOnTime?'var(--ok)':'var(--err)')+'">'+
+              (teacherOnTime?'✓ On time':'⚠ Misses')+
             '</div>'+
           '</div>'+
         '</div>'+
@@ -3470,14 +3497,10 @@ function renderGraduation(){
       '</div>'+
     '</div>';
 
-  // ── Variables still needed for Card 2 ────────────────────────────────────
-  const daysLeft=Math.max(1,(targetDate-now)/(1000*60*60*24));
-  const hoursBehind=Math.max(0,(expectedPct-pct)/100*TOTAL_REQ);
-  const hoursAhead=Math.max(0,(pct-expectedPct)/100*TOTAL_REQ);
-
   // ── Card 2: Graduation target date ────────────────────────────────────────
   const weeksToGrad=Math.round(Math.max(0,(targetDate-now)/(1000*60*60*24*7)));
-  const onTrack=pace>=neededPace;
+  // "On track" = estimated finish is before graduation deadline, not pace>=teacher
+  const onTrack=ahead;
   const currentPaceLabel=paceIsGoal?'Goal pace':'Your recent pace';
   document.getElementById('grad-est-card').innerHTML=
     '<div class="grad-est-card">'+

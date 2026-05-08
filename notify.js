@@ -139,9 +139,13 @@ async function send(sub, title, body, tag, extra = {}, ttl = 120, urgency = 'hig
     .filter(s => s.date === todayStr)
     .reduce((a, s) => a + s.hours, 0);
 
-  const weekAgo = new Date(nowDate); weekAgo.setDate(weekAgo.getDate() - 6);
+  // Mon–Sun calendar week (matches dashboard week bar chart)
+  const dowNum = nowDate.getUTCDay(); // 0=Sun,1=Mon...
+  const daysSinceMon = (dowNum + 6) % 7;
+  const monOfWeek = new Date(nowDate); monOfWeek.setUTCDate(nowDate.getUTCDate() - daysSinceMon);
+  const monStr = monOfWeek.getUTCFullYear() + '-' + String(monOfWeek.getUTCMonth()+1).padStart(2,'0') + '-' + String(monOfWeek.getUTCDate()).padStart(2,'0');
   const weekH = sessions
-    .filter(s => new Date(s.date) >= weekAgo)
+    .filter(s => s.date >= monStr && s.date <= todayStr)
     .reduce((a, s) => a + s.hours, 0);
 
   const monthAgo = new Date(nowDate); monthAgo.setDate(monthAgo.getDate() - 28);
