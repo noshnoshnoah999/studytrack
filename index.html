@@ -652,7 +652,7 @@ a{color:inherit;text-decoration:none}
         </div>
       </div>
       <div class="sidebar-footer-bar"><div class="sidebar-footer-fill" id="sb-bar" style="width:0%"></div></div>
-      <div class="sidebar-footer-val" id="sb-val">0h / 6h 18m</div>
+      <div class="sidebar-footer-val" id="sb-val">0h / 6h 12m</div>
       <div class="sync-row">
         <div class="sync-dot idle" id="sync-dot-sb"></div>
         <span class="sync-label" id="sync-label-sb">Connecting…</span>
@@ -851,7 +851,7 @@ a{color:inherit;text-decoration:none}
   <div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
     <div class="modal-title">Goals & Settings</div>
-    <div style="font-size:11px;color:var(--text3);background:var(--bg3);border-radius:8px;padding:8px 12px;margin-bottom:14px">📌 Teacher's standard: <strong style="color:var(--text2)">6h 18m/day · 5 days/week = 31.5h/week</strong></div>
+    <div style="font-size:11px;color:var(--text3);background:var(--bg3);border-radius:8px;padding:8px 12px;margin-bottom:14px">📌 Teacher's standard: <strong style="color:var(--text2)">6h 12m/day · 5 days/week = 31h/week</strong></div>
     <!-- Recommended goal card -->
     <div id="goal-rec-card" style="background:var(--bg3);border-radius:10px;padding:12px 14px;margin-bottom:14px;border:1.5px solid var(--o);display:none">
       <div style="font-size:11px;font-weight:700;color:var(--o);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">✦ Recommended for you</div>
@@ -860,7 +860,7 @@ a{color:inherit;text-decoration:none}
     </div>
     <div class="form-group">
       <label class="form-label">Your daily goal</label>
-      <input type="number" class="form-input" id="goal-daily" placeholder="6.3" min="0.5" max="16" step="0.1" oninput="updateGoalWeekly()">
+      <input type="number" class="form-input" id="goal-daily" placeholder="6.2" min="0.5" max="16" step="0.1" oninput="updateGoalWeekly()">
       <div style="font-size:12px;color:var(--text2);margin-top:4px" id="goal-daily-current"></div>
     </div>
     <div class="form-group">
@@ -869,7 +869,7 @@ a{color:inherit;text-decoration:none}
     </div>
     <div class="form-group">
       <label class="form-label">Weekly target (auto-calculated)</label>
-      <input type="number" class="form-input" id="goal-weekly" placeholder="31.5" min="1" max="80" step="0.5" style="opacity:0.6" readonly>
+      <input type="number" class="form-input" id="goal-weekly" placeholder="31" min="1" max="80" step="0.5" style="opacity:0.6" readonly>
     </div>
     <div class="form-group" style="margin-top:6px">
       <label class="form-label">Theme</label>
@@ -3998,21 +3998,21 @@ function applySidebarState(){
 }
 
 // ── GOAL SETTINGS ─────────────────────────────────────────────────────────────
-const TEACHER_DAILY=6.3; // teacher's fixed standard — never changes
+const TEACHER_DAILY=6.2; // teacher's fixed standard — never changes
 const TEACHER_DAYS=5;
-const TEACHER_WEEKLY=TEACHER_DAILY*TEACHER_DAYS; // 31.5
+const TEACHER_WEEKLY=TEACHER_DAILY*TEACHER_DAYS; // 31.0
 
 function loadGoals(){
   try{const g=localStorage.getItem('st_goals');if(g){const p=JSON.parse(g);if(!p.daysPerWeek)p.daysPerWeek=5;return p;}}catch(e){}
-  return{daily:6.3,daysPerWeek:5,weekly:31.5};
+  return{daily:6.2,daysPerWeek:5,weekly:31.0};
 }
 function updateGoalWeekly(){
-  const daily=parseFloat(document.getElementById('goal-daily').value)||6.3;
+  const daily=parseFloat(document.getElementById('goal-daily').value)||6.2;
   const days=parseInt(document.getElementById('goal-days-per-week').value)||5;
   document.getElementById('goal-weekly').value=(daily*days).toFixed(1);
 }
 function saveGoalSettings(){
-  const daily=parseFloat(document.getElementById('goal-daily').value)||6.3;
+  const daily=parseFloat(document.getElementById('goal-daily').value)||6.2;
   const daysPerWeek=parseInt(document.getElementById('goal-days-per-week').value)||5;
   const weekly=daily*daysPerWeek;
   const g={daily,daysPerWeek,weekly};
@@ -4025,7 +4025,7 @@ function saveGoalSettings(){
   if(currentPage==='graduation')renderGraduation();
 }
 // stored so "use recommended" button can apply it
-let _goalRec={daily:6.3,daysPerWeek:5};
+let _goalRec={daily:6.2,daysPerWeek:5};
 
 function openGoalSettings(){
   const g=loadGoals();

@@ -159,7 +159,7 @@ async function send(sub, title, body, tag, extra = {}, ttl = 120, urgency = 'hig
 
   // Use user's personal goal from settings (falls back to teacher's standard)
   const goals       = goalsRaw || {};
-  const dailyGoal   = goals.daily      || 6.3;
+  const dailyGoal   = goals.daily      || 6.2;
   const daysPerWeek = goals.daysPerWeek || 5;
   const weeklyGoal  = goals.weekly     || (dailyGoal * daysPerWeek);
 
