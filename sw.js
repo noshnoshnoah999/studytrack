@@ -15,6 +15,15 @@ self.addEventListener('push',e=>{
   let data;
   try{data=e.data.json();}catch(err){data={title:'StudyTrack',body:e.data.text()};}
 
+  // Client-side stale check — if the notification has an expiresAt timestamp
+  // and we're past it, silently drop it. This handles cases where the push
+  // server or OS queued the message past the intended delivery window
+  // (e.g. Mac/iOS sleeping, Focus mode, DND) even when TTL was set server-side.
+  if(data.expiresAt&&Date.now()>data.expiresAt){
+    console.log('[SW] Stale notification dropped (expired '+Math.round((Date.now()-data.expiresAt)/1000)+'s ago):',data.tag);
+    return;
+  }
+
   const actions=[];
   if(data.type==='block-start'&&data.subjectId){
     actions.push({action:'start-timer',title:'▶ Start Timer'});

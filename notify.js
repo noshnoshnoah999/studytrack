@@ -160,6 +160,10 @@ async function send(sub, title, body, tag, extra = {}, ttl = 120, urgency = 'hig
   const daysPerWeek = goals.daysPerWeek || 5;
   const weeklyGoal  = goals.weekly     || (dailyGoal * daysPerWeek);
 
+  // Helper: ms timestamp when notification becomes stale (for client-side drop)
+  // Uses real UTC Date.now() — service worker also uses Date.now() so no TZ issue
+  function expiresIn(mins) { return Date.now() + mins * 60 * 1000; }
+
   // ── 1a. Block starting in 5–15 min ────────────────────────────────────────
   const startingSoon = todayBlocks.filter(b =>
     b.type === 'study' &&
@@ -168,13 +172,13 @@ async function send(sub, title, body, tag, extra = {}, ttl = 120, urgency = 'hig
   );
   for (const bl of startingSoon) {
     const minsAway = toMins(bl.start) - nowMins;
-    // TTL: expire just before the block actually starts — never deliver stale
     const ttl = Math.max(30, (minsAway - 2) * 60);
+    // expiresAt: 2 min before block starts so stale delivery is always dropped
     await sendAll(
       `Starting in ${minsAway}min`,
       `${bl.label} · ${bl.start}–${bl.end}`,
       `soon-${bl.id}`,
-      {},
+      { expiresAt: expiresIn(minsAway - 2) },
       ttl
     );
   }
@@ -186,12 +190,11 @@ async function send(sub, title, body, tag, extra = {}, ttl = 120, urgency = 'hig
     nowMins < toMins(b.start) + 5
   );
   for (const bl of justStarted) {
-    // TTL: drop after 3 min — if not delivered by then it's too late
     await sendAll(
       `Time to study — ${bl.label}`,
       `${bl.start}–${bl.end} · Tap to start your timer`,
       `started-${bl.id}`,
-      { type: 'block-start', subjectId: bl.subjectId || null, blockStart: bl.start },
+      { type: 'block-start', subjectId: bl.subjectId || null, blockStart: bl.start, expiresAt: expiresIn(3) },
       180
     );
   }
@@ -208,7 +211,7 @@ async function send(sub, title, body, tag, extra = {}, ttl = 120, urgency = 'hig
       `${bl.label} ending soon`,
       `Finishes at ${bl.end} · Don't forget to log your session!`,
       `end-${bl.id}`,
-      { type: 'block-end', subjectId: bl.subjectId || null, blockStart: bl.start },
+      { type: 'block-end', subjectId: bl.subjectId || null, blockStart: bl.start, expiresAt: expiresIn(minsToEnd) },
       Math.max(30, (minsToEnd - 1) * 60)
     );
   }
@@ -226,7 +229,7 @@ async function send(sub, title, body, tag, extra = {}, ttl = 120, urgency = 'hig
       'Break ending soon',
       nextBlock ? `Up next: ${nextBlock.label} at ${nextBlock.start}` : 'Break wrapping up',
       `break-end-${bl.id}`,
-      {},
+      { expiresAt: expiresIn(minsToBreakEnd + 2) },
       Math.max(30, minsToBreakEnd * 60)
     );
   }
