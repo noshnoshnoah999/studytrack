@@ -776,7 +776,7 @@ a{color:inherit;text-decoration:none}
         <div id="subjects-list"></div>
       </div>
       <!-- Graduation estimates + subject completion dates + milestones -->
-      <div id="grad-est-card" style="margin-bottom:16px"></div>
+      <div class="card" id="grad-est-card" style="margin-bottom:16px"></div>
       <div id="timeline-inner" style="margin-bottom:16px"></div>
       <div class="card" id="grad-milestones-card"></div>
     </div>
@@ -1319,9 +1319,45 @@ function isSubjPrereqLocked(id, subjs){
 // One-time data migration: fixes existing stored subjects to match new structure.
 // Runs once per device; migration flag stored in localStorage so it never repeats.
 function runMigrations(){
+  // IMPORTANT: v5 must run BEFORE v6 — v6 has the final correct values and must win.
+  // ── Migration v5: teacher progress report corrections (May 2026) ──────────
+  if(!localStorage.getItem('st_migration_v5')){
+    try{
+      const raw=localStorage.getItem('st_subjs');
+      if(raw){
+        const subjs=JSON.parse(raw);
+        let changed=false;
+        // Fine Art, US History, PE: teacher confirmed 150h required (not 75h)
+        // Note: v6 (below) will further correct fine_art→300 and pe→225 on this same run.
+        [['fine_art',150],['us_hist',150],['pe',150]].forEach(([id,req])=>{
+          const s=subjs.find(x=>x.id===id);
+          if(s&&s.req!==req){s.req=req;changed=true;}
+        });
+        // EL4: teacher shows 75h required with ~6.6h logged
+        const el4=subjs.find(s=>s.id==='el4');
+        if(el4){
+          if(el4.req!==75){el4.req=75;changed=true;}
+          if((el4.base||0)<6.6){el4.base=6.6;changed=true;}
+        }
+        // Civics: teacher shows 1.7h logged (was 0)
+        const civ=subjs.find(s=>s.id==='civics');
+        if(civ&&(civ.base||0)<1.7){civ.base=1.7;changed=true;}
+        // Health: teacher shows 3.3h logged (was 2h)
+        const hlt=subjs.find(s=>s.id==='health');
+        if(hlt&&(hlt.base||0)<3.3){hlt.base=3.3;changed=true;}
+        if(changed){
+          localStorage.setItem('st_subjs',JSON.stringify(subjs));
+          // Note: sbPush called after v6 runs to avoid double-push
+          console.log('[Migration v5] Subject requirements updated from teacher report (May 2026)');
+        }
+      }
+    }catch(e){console.warn('[Migration v5] Error:',e);}
+    localStorage.setItem('st_migration_v5','1');
+  }
   // ── Migration v6: official graduation credit sheet corrections ────────────
   // Japanese & Fine Art → 300h (2 credits each); PE → 225h (1.5 credits);
-  // Science & Lab Science → 150h (1 credit each); EL4 → extraCredit flag
+  // Science & Lab Science → 150h (1 credit each); EL4 → extraCredit flag.
+  // Runs AFTER v5 so these authoritative values always win.
   if(!localStorage.getItem('st_migration_v6')){
     try{
       const raw=localStorage.getItem('st_subjs');
@@ -1343,39 +1379,6 @@ function runMigrations(){
       }
     }catch(e){console.warn('[Migration v6] Error:',e);}
     localStorage.setItem('st_migration_v6','1');
-  }
-  // ── Migration v5: teacher progress report corrections (May 2026) ──────────
-  if(!localStorage.getItem('st_migration_v5')){
-    try{
-      const raw=localStorage.getItem('st_subjs');
-      if(raw){
-        const subjs=JSON.parse(raw);
-        let changed=false;
-        // Fine Art, US History, PE: teacher confirmed 150h required (not 75h)
-        [['fine_art',150],['us_hist',150],['pe',150]].forEach(([id,req])=>{
-          const s=subjs.find(x=>x.id===id);
-          if(s&&s.req!==req){s.req=req;changed=true;}
-        });
-        // EL4: teacher shows 75h required with ~6.6h logged
-        const el4=subjs.find(s=>s.id==='el4');
-        if(el4){
-          if(el4.req!==75){el4.req=75;changed=true;}
-          if((el4.base||0)<6.6){el4.base=6.6;changed=true;}
-        }
-        // Civics: teacher shows 1.7h logged (was 0)
-        const civ=subjs.find(s=>s.id==='civics');
-        if(civ&&(civ.base||0)<1.7){civ.base=1.7;changed=true;}
-        // Health: teacher shows 3.3h logged (was 2h)
-        const hlt=subjs.find(s=>s.id==='health');
-        if(hlt&&(hlt.base||0)<3.3){hlt.base=3.3;changed=true;}
-        if(changed){
-          localStorage.setItem('st_subjs',JSON.stringify(subjs));
-          sbPush('st_subjs',subjs);
-          console.log('[Migration v5] Subject requirements updated from teacher report (May 2026)');
-        }
-      }
-    }catch(e){console.warn('[Migration v5] Error:',e);}
-    localStorage.setItem('st_migration_v5','1');
   }
   // ── Migration v4: English/Maths chains, EL3 complete ─────────────────────
   if(localStorage.getItem('st_migration_v4')) return;
@@ -2774,6 +2777,8 @@ function deleteHistEntry(id){
   renderHistory();
   renderLogEntries();
   updateSidebar();
+  if(currentPage==='dashboard')renderDashboard();
+  if(currentPage==='progress')renderProgress();
 }
 
 // ── SESSION TIMER ─────────────────────────────────────────────────────────────
@@ -3066,6 +3071,8 @@ function timerPageLog(){
   timerPageReset();
   updateSidebar();
   showToast('✓ Session logged! '+fmtH(hrs));
+  if(currentPage==='dashboard')renderDashboard();
+  if(currentPage==='progress')renderProgress();
 }
 
 
@@ -3160,6 +3167,8 @@ function logSession(){
   document.getElementById('log-duration').textContent='';
   renderLogEntries();
   updateSidebar();
+  if(currentPage==='dashboard')renderDashboard();
+  if(currentPage==='progress')renderProgress();
 }
 
 function deleteEntry(id){
@@ -3174,6 +3183,8 @@ function deleteEntry(id){
   saveHours(hoursStore);
   renderLogEntries();
   updateSidebar();
+  if(currentPage==='dashboard')renderDashboard();
+  if(currentPage==='progress')renderProgress();
 }
 
 // ── PROGRESS ──────────────────────────────────────────────────────────────────
@@ -3205,7 +3216,11 @@ function renderProgress(){
   // ── 2. Subject list ───────────────────────────────────────────────────────
   const allSubjs=loadSubjects();
   const el=document.getElementById('subjects-list');
-  if(!allSubjs.length){el.innerHTML='<div class="empty-state">No subjects yet. Add one above.</div>';return;}
+  if(!allSubjs.length){
+    el.innerHTML='<div class="empty-state">No subjects yet. Add one above.</div>';
+    _renderGradEstCard();renderTimeline();_renderMilestones();
+    return;
+  }
 
   const hideDone=localStorage.getItem('st_hide_done')==='1';
   const btn=document.getElementById('btn-hide-done');
