@@ -1284,11 +1284,11 @@ const DEFAULT_SUBJECTS=[
   {id:'english_12',  name:'English Grade 12',    req:150, base:0,     passive:false, locked:false, done:false},
   {id:'el1',         name:'Electives 1',         req:150, base:150.1, passive:true,  locked:false, done:true },
   {id:'wa_hist',     name:'WA State History',    req:75,  base:6.7,   passive:false, locked:false, done:false},
-  {id:'fine_art',    name:'Fine Art / Film',     req:75,  base:28.9,  passive:true,  locked:false, done:false},
-  {id:'us_hist',     name:'US History',          req:75,  base:18.8,  passive:false, locked:false, done:false},
-  {id:'pe',          name:'PE / Cardio',         req:75,  base:34.5,  passive:true,  locked:false, done:false},
-  {id:'health',      name:'Health Science',      req:75,  base:2,     passive:false, locked:false, done:false},
-  {id:'civics',      name:'Civics',              req:75,  base:0,     passive:false, locked:false, done:false},
+  {id:'fine_art',    name:'Fine Art / Film',     req:150, base:28.9,  passive:true,  locked:false, done:false},
+  {id:'us_hist',     name:'US History',          req:150, base:18.8,  passive:false, locked:false, done:false},
+  {id:'pe',          name:'PE / Cardio',         req:150, base:34.5,  passive:true,  locked:false, done:false},
+  {id:'health',      name:'Health Science',      req:75,  base:3.3,   passive:false, locked:false, done:false},
+  {id:'civics',      name:'Civics',              req:75,  base:1.7,   passive:false, locked:false, done:false},
   {id:'science',     name:'Science',             req:75,  base:0,     passive:false, locked:false, done:false},
   {id:'lab_sci',     name:'Lab Science',         req:75,  base:0,     passive:true,  locked:false, done:false},
   // Maths: 3 credits, must be done in order (Algebra 1 → Geometry → Algebra 2)
@@ -1297,7 +1297,7 @@ const DEFAULT_SUBJECTS=[
   {id:'algebra2',    name:'Algebra 2',           req:150, base:0,     passive:false, locked:false, done:false},
   {id:'el2',         name:'Electives 2',         req:150, base:151.4, passive:true,  locked:false, done:true },
   {id:'el3',         name:'Electives 3',         req:150, base:152,   passive:true,  locked:false, done:true }, // completed
-  {id:'el4',         name:'Electives 4',         req:150, base:0,     passive:true,  locked:false, done:false},
+  {id:'el4',         name:'Electives 4',         req:75,  base:6.6,   passive:true,  locked:false, done:false},
 ];
 
 // Prerequisite chains — a subject is locked until its prereq is marked done
@@ -1323,6 +1323,40 @@ function isSubjPrereqLocked(id, subjs){
 // One-time data migration: fixes existing stored subjects to match new structure.
 // Runs once per device; migration flag stored in localStorage so it never repeats.
 function runMigrations(){
+  // ── Migration v5: teacher progress report corrections (May 2026) ──────────
+  if(!localStorage.getItem('st_migration_v5')){
+    try{
+      const raw=localStorage.getItem('st_subjs');
+      if(raw){
+        const subjs=JSON.parse(raw);
+        let changed=false;
+        // Fine Art, US History, PE: teacher confirmed 150h required (not 75h)
+        [['fine_art',150],['us_hist',150],['pe',150]].forEach(([id,req])=>{
+          const s=subjs.find(x=>x.id===id);
+          if(s&&s.req!==req){s.req=req;changed=true;}
+        });
+        // EL4: teacher shows 75h required with ~6.6h logged
+        const el4=subjs.find(s=>s.id==='el4');
+        if(el4){
+          if(el4.req!==75){el4.req=75;changed=true;}
+          if((el4.base||0)<6.6){el4.base=6.6;changed=true;}
+        }
+        // Civics: teacher shows 1.7h logged (was 0)
+        const civ=subjs.find(s=>s.id==='civics');
+        if(civ&&(civ.base||0)<1.7){civ.base=1.7;changed=true;}
+        // Health: teacher shows 3.3h logged (was 2h)
+        const hlt=subjs.find(s=>s.id==='health');
+        if(hlt&&(hlt.base||0)<3.3){hlt.base=3.3;changed=true;}
+        if(changed){
+          localStorage.setItem('st_subjs',JSON.stringify(subjs));
+          sbPush('st_subjs',subjs);
+          console.log('[Migration v5] Subject requirements updated from teacher report (May 2026)');
+        }
+      }
+    }catch(e){console.warn('[Migration v5] Error:',e);}
+    localStorage.setItem('st_migration_v5','1');
+  }
+  // ── Migration v4: English/Maths chains, EL3 complete ─────────────────────
   if(localStorage.getItem('st_migration_v4')) return;
   try{
     const raw=localStorage.getItem('st_subjs');
