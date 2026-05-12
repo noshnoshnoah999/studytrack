@@ -371,6 +371,7 @@ a{color:inherit;text-decoration:none}
 .plan-cal-cell.hit{background:rgba(0,200,150,0.18)}
 .plan-cal-cell.partial{background:rgba(249,115,22,0.15)}
 .plan-cal-cell.miss{background:rgba(255,77,106,0.12)}
+.plan-cal-cell.miss-zero{background:rgba(180,180,180,0.13)}
 .plan-cal-cell.zero{background:var(--bg3);opacity:0.5}
 .plan-cal-day{font-size:10px;font-weight:600;color:var(--text3);line-height:1}
 .plan-cal-cell.today-cell .plan-cal-day{color:rgba(255,255,255,0.8)}
@@ -380,6 +381,7 @@ a{color:inherit;text-decoration:none}
 .plan-cal-cell.hit .plan-cal-val{color:var(--ok)}
 .plan-cal-cell.partial .plan-cal-val{color:var(--o)}
 .plan-cal-cell.miss .plan-cal-val{color:var(--err)}
+.plan-cal-cell.miss-zero .plan-cal-val{color:var(--text3)}
 
 /* GRADUATION PAGE */
 .grad-hero{text-align:center;padding:8px 0 24px}
@@ -921,6 +923,7 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
         </div>
         <div id="todo-list"></div>
       </div>
+      <div id="schedule-calendar-inner" style="margin-top:8px;margin-bottom:80px"></div>
     </div>
 
     <!-- PAGE: LOG -->
@@ -933,7 +936,7 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
           <div class="card-title" style="margin-bottom:0">Log a Session</div>
           <div style="display:flex;gap:6px;align-items:center">
             <button onclick="clearLogForm()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:12px;color:var(--text3);cursor:pointer;font-family:inherit" title="Clear form">Clear</button>
-            <button class="btn-import-workout" onclick="openWorkoutImport()">📸 Import Workout</button>
+            <button class="btn-import-workout" onclick="openWorkoutImport()">📸 Import</button>
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
@@ -1028,16 +1031,13 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
         <button class="jump-pill" onclick="jumpTo('gsec-estimates')">📊 Estimates</button>
         <button class="jump-pill" onclick="jumpTo('gsec-timeline')">🗓 Timeline</button>
         <button class="jump-pill" onclick="jumpTo('gsec-milestones')">⭐ Milestones</button>
-        <button class="jump-pill" onclick="jumpTo('gsec-calendar')">📆 Calendar</button>
       </div>
       <div id="gsec-estimates" style="scroll-margin-top:16px"></div>
       <div class="card" id="grad-est-card" style="margin-bottom:16px"></div>
       <div id="gsec-timeline" style="scroll-margin-top:16px"></div>
       <div id="timeline-inner" style="margin-bottom:16px"></div>
       <div id="gsec-milestones" style="scroll-margin-top:16px"></div>
-      <div class="card" id="grad-milestones-card" style="margin-bottom:16px"></div>
-      <div id="gsec-calendar" style="scroll-margin-top:16px"></div>
-      <div id="grad-calendar-inner" style="margin-bottom:80px"></div>
+      <div class="card" id="grad-milestones-card" style="margin-bottom:80px"></div>
     </div>
 
     <!-- PAGE: TIMER -->
@@ -1321,7 +1321,8 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
 <div class="modal-overlay" id="template-modal-overlay" onclick="handleOverlayClick(event,'template-modal-overlay')">
   <div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
-    <div class="modal-title">Save Quick Template</div>
+    <input type="hidden" id="tpl-edit-id">
+    <div class="modal-title" id="tpl-modal-title">New Template</div>
     <div class="form-group">
       <label class="form-label">Subject</label>
       <select class="form-input" id="tpl-subject"></select>
@@ -1334,9 +1335,16 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
       <label class="form-label">Label (optional)</label>
       <input type="text" class="form-input" id="tpl-name" placeholder="e.g. Japanese · 1.5h">
     </div>
+    <div class="form-group">
+      <label class="form-label">Pre-filled note (optional)</label>
+      <input type="text" class="form-input" id="tpl-note" placeholder="e.g. chapter 3 review">
+    </div>
     <div class="modal-actions">
-      <button class="btn-save" onclick="saveTemplate()">Save Template</button>
+      <button class="btn-save" onclick="saveTemplate()">Save</button>
       <button class="btn-cancel" onclick="closeModal('template-modal-overlay')">Cancel</button>
+    </div>
+    <div id="tpl-delete-row" style="display:none;margin-top:10px;text-align:center">
+      <button onclick="deleteTemplateFromModal()" style="background:none;border:none;color:var(--err);font-size:13px;cursor:pointer;font-family:inherit;text-decoration:underline">Delete this template</button>
     </div>
   </div>
 </div>
@@ -1345,8 +1353,8 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
 <div class="modal-overlay" id="workout-import-overlay" onclick="handleOverlayClick(event,'workout-import-overlay')">
   <div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
-    <div class="modal-title">Import Workout</div>
-    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Strava · Runna · any fitness app</div>
+    <div class="modal-title">Import Screenshot</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Strava · Runna · King of Time</div>
 
     <div id="workout-upload-area">
       <!-- Paste target — hidden contenteditable so native paste (Cmd+V / long-press) works -->
@@ -1892,15 +1900,17 @@ function renderTemplates(){
       const subj=subjs.find(s=>s.id===t.subjectId);
       const color=(LOG_SUBJ_COLORS_REF[t.subjectId]||'var(--o)');
       const label=t.name||(subj?subj.name:'?')+' · '+fmtH(t.durationH);
-      return '<button class="template-chip" onclick="applyTemplate(\''+t.id+'\')" oncontextmenu="event.preventDefault();deleteTemplate(\''+t.id+'\')">'+
+      const noteHint=t.note?'<span style="font-size:9px;opacity:0.7;margin-left:2px">✎</span>':'';
+      return '<button class="template-chip" onclick="applyTemplate(\''+t.id+'\')" oncontextmenu="event.preventDefault();openEditTemplate(\''+t.id+'\')">'+
         '<span class="template-chip-dot" style="background:'+color+'"></span>'+
-        '<span>'+escHtml(label)+'</span>'+
+        '<span>'+escHtml(label)+noteHint+'</span>'+
       '</button>';
     }).join('');
   }
   el.innerHTML=
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
       '<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px">Quick Templates</div>'+
+      '<span style="font-size:10px;color:var(--text3)">Hold to edit</span>'+
     '</div>'+
     '<div class="template-row">'+
       chipsHtml+
@@ -1908,13 +1918,31 @@ function renderTemplates(){
     '</div>';
 }
 
-function openAddTemplate(){
-  const subjs=loadSubjects().filter(s=>!s.done);
+function _openTemplateModal(subjs,t){
   const sel=document.getElementById('tpl-subject');
   if(sel)sel.innerHTML=subjs.map(s=>'<option value="'+s.id+'">'+escHtml(s.name)+'</option>').join('');
-  document.getElementById('tpl-duration').value='';
-  document.getElementById('tpl-name').value='';
+  document.getElementById('tpl-edit-id').value=t?t.id:'';
+  document.getElementById('tpl-modal-title').textContent=t?'Edit Template':'New Template';
+  document.getElementById('tpl-subject').value=t?t.subjectId:(subjs[0]?subjs[0].id:'');
+  document.getElementById('tpl-duration').value=t?t.durationH:'';
+  document.getElementById('tpl-name').value=t?t.name:'';
+  document.getElementById('tpl-note').value=t?(t.note||''):'';
+  const delRow=document.getElementById('tpl-delete-row');
+  if(delRow)delRow.style.display=t?'block':'none';
   document.getElementById('template-modal-overlay').classList.add('open');
+}
+
+function openAddTemplate(){
+  const subjs=loadSubjects().filter(s=>!s.done);
+  _openTemplateModal(subjs,null);
+}
+
+function openEditTemplate(id){
+  const templates=loadTemplates();
+  const t=templates.find(x=>x.id===id);
+  if(!t)return;
+  const subjs=loadSubjects();
+  _openTemplateModal(subjs,t);
 }
 
 function saveTemplate(){
@@ -1925,12 +1953,19 @@ function saveTemplate(){
   const subj=subjs.find(s=>s.id===subjectId);
   const rawName=(document.getElementById('tpl-name').value||'').trim();
   const name=rawName||(subj?subj.name:'?')+' · '+fmtH(durationH);
+  const note=(document.getElementById('tpl-note').value||'').trim();
+  const editId=document.getElementById('tpl-edit-id').value;
   const templates=loadTemplates();
-  templates.push({id:genId(),name,subjectId,durationH});
+  if(editId){
+    const idx=templates.findIndex(x=>x.id===editId);
+    if(idx>-1)templates[idx]={...templates[idx],name,subjectId,durationH,note};
+  }else{
+    templates.push({id:genId(),name,subjectId,durationH,note});
+  }
   saveTemplates(templates);
   closeModal('template-modal-overlay');
   renderTemplates();
-  showToast('Template saved ✓');
+  showToast(editId?'Template updated ✓':'Template saved ✓');
 }
 
 function applyTemplate(id){
@@ -1956,6 +1991,9 @@ function applyTemplate(id){
   setLogTime('log-end',endStr);
   updateLogDuration();
   updateLogFormColour();
+  // Fill pre-filled note if set
+  const notesEl=document.getElementById('log-notes');
+  if(notesEl&&t.note)notesEl.value=t.note;
   // Scroll form into view
   const card=document.getElementById('log-form-card');
   if(card)card.scrollIntoView({behavior:'smooth',block:'start'});
@@ -1967,6 +2005,13 @@ function deleteTemplate(id){
   saveTemplates(templates);
   renderTemplates();
   showToast('Template removed');
+}
+
+function deleteTemplateFromModal(){
+  const editId=document.getElementById('tpl-edit-id').value;
+  if(!editId)return;
+  deleteTemplate(editId);
+  closeModal('template-modal-overlay');
 }
 
 // ── WORKOUT IMPORT ────────────────────────────────────────────────────────────
@@ -1996,7 +2041,7 @@ async function analyseWorkoutImage(base64,mimeType){
         max_tokens:120,
         messages:[{role:'user',content:[
           {type:'image',source:{type:'base64',media_type:mimeType,data:base64}},
-{type:'text',text:'This is a workout screenshot from Strava, Runna, or a similar fitness app. Extract the details carefully.\n\nToday\'s date is '+new Date().toISOString().slice(0,10)+' (use this year if the screenshot says "Today" without a year).\n\nFormat clues:\n- Runna shows: "10 May 2026 at 19:11 - 19:55" — date, startTime AND endTime directly.\n- Strava shows: "Today at 17:28" with a Time field like "9m 45s" — use startTime + FLOORED minutes to get endTime. IMPORTANT: 9m 45s → 9 minutes (drop the seconds, do NOT round up). So 17:19 + 9m = 17:28, not 17:29.\n- Activity names: "Walk Run", "Walk-Run", "Run", "Easy Run", "Interval Run" → Run. "Ride", "Cycle", "Virtual Ride" → Cycle.\n\nReturn ONLY valid JSON, no markdown:\n{"date":"YYYY-MM-DD","startTime":"HH:MM","endTime":"HH:MM","durationMinutes":number,"activity":"Cycle|Run|Walk","timeLabel":"Morning|Afternoon|Evening|Night"}\n\nRules:\n- date: YYYY-MM-DD. If screenshot says "Today", use today\'s date above.\n- startTime/endTime: 24h HH:MM\n- durationMinutes: integer — FLOOR the seconds off (9m 45s → 9, never round up)\n- endTime = startTime + durationMinutes exactly, no rounding\n- timeLabel: Morning<12:00, Afternoon 12-17, Evening 17-21, Night>21\n- Only use null if truly not visible.'}
+{type:'text',text:'This screenshot is from a fitness app (Strava/Runna) OR a work time-tracking app (King of Time / KOT).\n\nToday\'s date is '+new Date().toISOString().slice(0,10)+'.\n\nDetect which app it is and extract accordingly:\n\n— KING OF TIME (shows "KING OF TIME" logo, "Work details", date like "2026/05/10(Sun)", table with Clock-in / Clock-out columns):\n  • date: parse YYYY/MM/DD from the header\n  • startTime: Clock-in value\n  • endTime: Clock-out value\n  • Ignore Start break / End break columns entirely\n  • activity: "Work"\n\n— Strava (shows "Today at HH:MM", Time field like "9m 45s"):\n  • startTime from the timestamp; endTime = startTime + FLOORED minutes (9m 45s → 9 min, never round up)\n  • activity: Cycle / Run / Walk\n\n— Runna (shows "DD Mon YYYY at HH:MM - HH:MM"):\n  • startTime and endTime directly from the range\n  • activity: Run\n\nActivity normalisation: "Walk Run"/"Easy Run"/"Interval Run" → Run. "Ride"/"Virtual Ride"/"Cycling" → Cycle.\n\nReturn ONLY valid JSON, no markdown:\n{"date":"YYYY-MM-DD","startTime":"HH:MM","endTime":"HH:MM","durationMinutes":number,"activity":"Cycle|Run|Walk|Work","timeLabel":"Morning|Afternoon|Evening|Night"}\n\nRules:\n- date: YYYY-MM-DD\n- startTime/endTime: 24h HH:MM\n- durationMinutes: integer, floor seconds (never round up)\n- timeLabel: Morning <12:00, Afternoon 12-17, Evening 17-21, Night >21\n- null only if truly not visible'}
         ]}]
       })
     });
@@ -2191,39 +2236,50 @@ async function useWorkoutResult(){
   if(!_workoutResult)return;
   const result=_workoutResult;
   const subjs=loadSubjects();
-  // Find PE subject
-  const peSubj=subjs.find(s=>s.id==='pe')||subjs.find(s=>s.name&&s.name.toLowerCase().includes('pe'));
-  const peId=peSubj?peSubj.id:(subjs[0]?subjs[0].id:'');
-  // Set form fields
+  const isKOT=result.activity==='Work';
+  // Select subject: Electives 4 for KOT, PE for workouts
   const sel=document.getElementById('log-subject');
-  if(sel&&peId)sel.value=peId;
+  if(sel){
+    if(isKOT){
+      const el4Subj=subjs.find(s=>s.id==='el4')||subjs.find(s=>s.name&&s.name.toLowerCase().includes('elective')&&s.extraCredit);
+      if(el4Subj)sel.value=el4Subj.id;
+    }else{
+      const peSubj=subjs.find(s=>s.id==='pe')||subjs.find(s=>s.name&&s.name.toLowerCase().includes('pe'));
+      const peId=peSubj?peSubj.id:(subjs[0]?subjs[0].id:'');
+      if(peId)sel.value=peId;
+    }
+  }
   const ld=document.getElementById('log-date');
   if(ld&&result.date)ld.value=result.date;
   if(result.startTime)setLogTime('log-start',result.startTime);
   if(result.endTime)setLogTime('log-end',result.endTime);
-  const activityLabel=result.timeLabel&&result.activity?(result.timeLabel+' '+result.activity):(result.activity||'Workout');
   updateLogDuration();
   updateLogFormColour();
-  // Build title: "11th May - Evening Cycle"
-  const fullMonths=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  function ordinal(n){const s=['th','st','nd','rd'];const v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
-  let dayLabel='';
-  if(result.date){
-    try{
-      const parts=result.date.split('-');
-      const d=new Date(+parts[0],+parts[1]-1,+parts[2]);
-      dayLabel=ordinal(+parts[2])+' '+fullMonths[d.getMonth()];
-    }catch(e){}
-  }
-  const title=dayLabel?(dayLabel+' - '+activityLabel):activityLabel;
-  // Set notes to full title
+  // Notes: blank for KOT, descriptive title for workouts
   const notesEl=document.getElementById('log-notes');
-  if(notesEl)notesEl.value=title;
-  try{
-    await navigator.clipboard.writeText(title);
-    showToast('✓ Copied "'+title+'" — just press Submit');
-  }catch(e){
-    showToast('Ready — '+title);
+  if(isKOT){
+    if(notesEl)notesEl.value='';
+    showToast('KOT shift imported — check times and submit');
+  }else{
+    const activityLabel=result.timeLabel&&result.activity?(result.timeLabel+' '+result.activity):(result.activity||'Workout');
+    const fullMonths=['January','February','March','April','May','June','July','August','September','October','November','December'];
+    function ordinal(n){const s=['th','st','nd','rd'];const v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
+    let dayLabel='';
+    if(result.date){
+      try{
+        const parts=result.date.split('-');
+        const d=new Date(+parts[0],+parts[1]-1,+parts[2]);
+        dayLabel=ordinal(+parts[2])+' '+fullMonths[d.getMonth()];
+      }catch(e){}
+    }
+    const title=dayLabel?(dayLabel+' - '+activityLabel):activityLabel;
+    if(notesEl)notesEl.value=title;
+    try{
+      await navigator.clipboard.writeText(title);
+      showToast('✓ Copied "'+title+'" — just press Submit');
+    }catch(e){
+      showToast('Ready — '+title);
+    }
   }
   closeModal('workout-import-overlay');
   const card=document.getElementById('log-form-card');
@@ -2466,7 +2522,7 @@ function showPage(id){
   window.scrollTo(0,0);
   _updateBackToTop();
   if(id==='dashboard')renderDashboard();
-  else if(id==='schedule'){renderSchedule();renderTodos();}
+  else if(id==='schedule'){renderSchedule();renderTodos();_renderStudyCalendar('schedule-calendar-inner');}
   else if(id==='log'){renderLog();renderTemplates();}
   else if(id==='history')renderHistory();
   else if(id==='progress')renderProgress();
@@ -5032,10 +5088,11 @@ function _renderStudyCalendar(targetElId){
   const catchUp=recentDeficit/7;
   const todayStr=dateStr(0);
   const MONTH_NAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const DOW=['Su','Mo','Tu','We','Th','Fr','Sa'];
+  const DOW=['Mo','Tu','We','Th','Fr','Sa','Su'];
   function buildCal(year,month){
     const daysInMonth=new Date(year,month+1,0).getDate();
-    const firstDow=new Date(year,month,1).getDay();
+    // Mon=0, Sun=6 — shift JS getDay() which is Sun=0
+    const firstDow=(new Date(year,month,1).getDay()+6)%7;
     let cells='';
     for(let i=0;i<firstDow;i++)cells+='<div></div>';
     for(let d=1;d<=daysInMonth;d++){
@@ -5043,11 +5100,25 @@ function _renderStudyCalendar(targetElId){
       let cls='',val='';
       if(dStr<todayStr){
         const h=hoursOn(dStr);
-        if(h===0){cls='missed';val='—';}
-        else if(h>=baseTarget){cls='hit';val=fmtH(h);}
-        else{cls='partial';val=fmtH(h);}
+        if(h===0){
+          // No hours at all
+          cls='miss-zero';val='—';
+        }else if(h>=personalTarget&&h>=bareMinimum){
+          // Both personal goal AND graduation pace met
+          cls='hit';val=fmtH(h);
+        }else if(h>=bareMinimum){
+          // Graduation pace met but below personal goal
+          cls='partial';val=fmtH(h);
+        }else{
+          // Below graduation pace (neither goal met)
+          cls='miss';val=fmtH(h);
+        }
       }else if(dStr===todayStr){
-        const h=hoursOn(dStr);cls='today';val=h>0?fmtH(h):'·';
+        const h=hoursOn(dStr);
+        let todayCls='today-cell';
+        const val2=h>0?fmtH(h):'·';
+        cells+='<div class="plan-cal-cell '+todayCls+'"><div class="plan-cal-day">'+d+'</div><div class="plan-cal-val">'+val2+'</div></div>';
+        continue;
       }else{
         const daysFromToday=Math.round((new Date(dStr)-now)/(1000*60*60*24));
         const deficitLeft=Math.max(0,recentDeficit-daysFromToday*catchUp);
@@ -5066,9 +5137,10 @@ function _renderStudyCalendar(targetElId){
   const nextM=curMonth===11?0:curMonth+1,nextY=curMonth===11?curYear+1:curYear;
   const calHtml=buildCal(prevY,prevM)+buildCal(curYear,curMonth)+buildCal(nextY,nextM);
   const legendHtml='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">'+
-    '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:3px;background:rgba(0,200,150,0.18);display:inline-block"></span>Hit target</span>'+
-    '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:3px;background:rgba(249,115,22,0.15);display:inline-block"></span>Partial</span>'+
-    '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:3px;background:rgba(255,77,106,0.12);display:inline-block"></span>Missed</span>'+
+    '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:3px;background:rgba(0,200,150,0.18);display:inline-block"></span>Both goals met</span>'+
+    '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:3px;background:rgba(249,115,22,0.15);display:inline-block"></span>Graduation pace only</span>'+
+    '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:3px;background:rgba(255,77,106,0.12);display:inline-block"></span>Below pace</span>'+
+    '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:3px;background:rgba(180,180,180,0.13);display:inline-block"></span>No study</span>'+
     '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:3px;background:var(--bg3);display:inline-block"></span>Projected</span>'+
   '</div>';
   el.innerHTML='<div class="card" style="margin-bottom:16px">'+
@@ -5082,7 +5154,6 @@ function renderGraduationPage(){
   _renderGradEstCard();
   renderTimeline();
   _renderMilestones();
-  _renderStudyCalendar('grad-calendar-inner');
   markCardsDone();
 }
 
@@ -5403,7 +5474,7 @@ function renderWeeklySummary(){
       '<div style="font-size:13px;font-weight:700;color:var(--o)">'+fmtH(weekTotal)+'</div>'+
     '</div>'+
     '<div class="week-sum-grid">'+bars+'</div>'+
-    '<div style="font-size:12px;color:var(--text2);margin-top:4px">'+hit+' of '+thisWeekDays.length+' days this week hit target · '+fmtH(goals.weekly)+' weekly goal</div>';
+    '';
   renderWeekCombined();
 }
 
