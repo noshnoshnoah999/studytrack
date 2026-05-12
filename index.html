@@ -2045,7 +2045,7 @@ function handleWorkoutFile(event){
     const preview=document.getElementById('workout-img-preview');
     if(preview){preview.src=dataUrl;preview.style.display='block';}
     document.getElementById('workout-drop-zone')?.classList.add('has-image');
-    document.getElementById('workout-analyse-btn').style.display='block';
+    runWorkoutAnalysis();
   });
 }
 
@@ -2063,8 +2063,7 @@ async function pasteWorkoutFromClipboard(){
           const preview=document.getElementById('workout-img-preview');
           if(preview){preview.src=dataUrl;preview.style.display='block';}
           document.getElementById('workout-drop-zone')?.classList.add('has-image');
-          document.getElementById('workout-analyse-btn').style.display='block';
-          showToast('Image pasted ✓');
+          runWorkoutAnalysis();
         });
         return;
       }
@@ -2076,13 +2075,10 @@ async function pasteWorkoutFromClipboard(){
 async function runWorkoutAnalysis(){
   if(!_workoutImageBase64){showToast('No image selected','var(--err)');return;}
   const spinner=document.getElementById('workout-spinner');
-  const analyseBtn=document.getElementById('workout-analyse-btn');
   if(spinner)spinner.style.display='block';
-  if(analyseBtn)analyseBtn.style.display='none';
   const result=await analyseWorkoutImage(_workoutImageBase64,_workoutImageMime||'image/jpeg');
   if(spinner)spinner.style.display='none';
   if(!result){
-    if(analyseBtn)analyseBtn.style.display='block';
     return;
   }
   _workoutResult=result;
