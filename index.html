@@ -1281,7 +1281,42 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
   <div class="modal-sheet" onclick="event.stopPropagation()" style="max-height:85vh;display:flex;flex-direction:column">
     <div class="modal-handle"></div>
     <div class="modal-title">📋 Coach Report — Update Baselines</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.5">Enter the official hours your coach reported for each subject. These are the <em>total hours already completed</em> — not additional hours. Leave blank to keep current value.</div>
+
+    <!-- AI scan section -->
+    <div id="coach-scan-area" style="margin-bottom:14px">
+      <button onclick="toggleCoachScan()" style="width:100%;background:var(--bg3);border:1.5px dashed var(--border);border-radius:10px;padding:10px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">
+        <span>📸</span> Scan teacher's screenshot
+      </button>
+      <div id="coach-scan-expand" style="display:none;margin-top:10px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <button onclick="document.getElementById('coach-img-input').click()" style="background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;padding:12px 8px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:4px">
+            <span style="font-size:22px">📂</span>Choose Photo
+          </button>
+          <button onclick="focusCoachPaste()" style="background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;padding:12px 8px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:4px">
+            <span style="font-size:22px">📋</span>Paste Image
+          </button>
+        </div>
+        <input type="file" id="coach-img-input" accept="image/*" style="display:none" onchange="handleCoachImage(event)">
+        <div id="coach-paste-target" contenteditable="true" style="position:absolute;opacity:0;width:1px;height:1px;overflow:hidden;pointer-events:none" aria-hidden="true"></div>
+        <!-- Model picker -->
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <label style="flex:1;display:flex;align-items:center;gap:6px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text2)">
+            <input type="radio" name="coach-model" value="claude-haiku-4-5" checked style="accent-color:var(--o)"> Haiku <span style="font-size:10px;color:var(--text3);font-weight:400">~$0.002</span>
+          </label>
+          <label style="flex:1;display:flex;align-items:center;gap:6px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text2)">
+            <input type="radio" name="coach-model" value="claude-sonnet-4-5" style="accent-color:var(--o)"> Sonnet <span style="font-size:10px;color:var(--text3);font-weight:400">~$0.01</span>
+          </label>
+        </div>
+        <div id="coach-img-preview" style="display:none;margin-bottom:8px;text-align:center">
+          <img id="coach-img-thumb" style="max-height:80px;border-radius:8px;opacity:0.85">
+          <div id="coach-img-name" style="font-size:11px;color:var(--text3);margin-top:4px"></div>
+        </div>
+        <button id="coach-analyse-btn" onclick="runCoachAnalysis()" style="display:none;width:100%;background:var(--o);color:#fff;border:none;border-radius:10px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Analyse →</button>
+        <div id="coach-scan-status" style="font-size:12px;color:var(--text3);text-align:center;margin-top:6px;display:none"></div>
+      </div>
+    </div>
+
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.5">Total hours your teacher reported per subject — <em>leave blank to keep current</em></div>
     <div id="coach-report-list" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px;padding-right:2px"></div>
     <div class="modal-actions" style="margin-top:16px">
       <button class="btn-save" onclick="saveCoachReport()">Save All</button>
@@ -4671,6 +4706,135 @@ function saveCoachReport(){
   renderDashboard();
   updateSidebar();
   showToast('✓ Updated '+changed+' subject'+(changed!==1?'s':'')+' from coach report');
+}
+
+// ── COACH REPORT AI SCAN ──────────────────────────────────────────────────────
+let _coachImgBase64=null,_coachImgMime='image/jpeg';
+
+function toggleCoachScan(){
+  const el=document.getElementById('coach-scan-expand');
+  el.style.display=el.style.display==='none'?'block':'none';
+}
+
+function focusCoachPaste(){
+  const pt=document.getElementById('coach-paste-target');
+  if(pt){pt.style.pointerEvents='auto';pt.focus();}
+  showToast('Now paste your screenshot (Cmd+V / long-press)');
+  pt.addEventListener('paste',_coachPasteHandler,{once:true});
+}
+
+function _coachPasteHandler(e){
+  const items=e.clipboardData?.items||[];
+  for(const item of items){
+    if(item.type.startsWith('image/')){
+      const blob=item.getAsFile();
+      if(blob)compressWorkoutImage(blob,function(b64,mime){_coachImgBase64=b64;_coachImgMime=mime;_showCoachPreview('Pasted image',b64,mime);});
+      break;
+    }
+  }
+  document.getElementById('coach-paste-target').style.pointerEvents='none';
+}
+
+function handleCoachImage(e){
+  const file=e.target.files[0];
+  if(!file)return;
+  compressWorkoutImage(file,function(b64,mime){_coachImgBase64=b64;_coachImgMime=mime;_showCoachPreview(file.name,b64,mime);});
+  e.target.value='';
+}
+
+function _showCoachPreview(name,b64,mime){
+  const thumb=document.getElementById('coach-img-thumb');
+  const nameEl=document.getElementById('coach-img-name');
+  const prev=document.getElementById('coach-img-preview');
+  const btn=document.getElementById('coach-analyse-btn');
+  if(thumb)thumb.src='data:'+mime+';base64,'+b64;
+  if(nameEl)nameEl.textContent=name;
+  if(prev)prev.style.display='block';
+  if(btn)btn.style.display='block';
+}
+
+async function runCoachAnalysis(){
+  if(!_coachImgBase64){showToast('No image selected','var(--err)');return;}
+  const key=localStorage.getItem('st_anthropic_key');
+  if(!key){showToast('Add Anthropic API key in ⚙ Settings','var(--err)');return;}
+  const modelEl=document.querySelector('input[name="coach-model"]:checked');
+  const model=modelEl?modelEl.value:'claude-haiku-4-5';
+  const btn=document.getElementById('coach-analyse-btn');
+  const status=document.getElementById('coach-scan-status');
+  if(btn)btn.disabled=true;
+  if(status){status.style.display='block';status.textContent='Analysing with '+(model.includes('sonnet')?'Sonnet':'Haiku')+'…';}
+
+  const subjectList=`japanese=Japanese, cwp=CWP/Contemporary World Problems/World History, english=English/English Grade 10, english_11=English Grade 11, english_12=English Grade 12, el1=Electives 1/EL1, el2=Electives 2/EL2, el3=Electives 3/EL3, el4=Electives 4/EL4/Extra Credit, wa_hist=WA State History/Washington State History, us_hist=US History/United States History, civics=Civics, fine_art=Fine Art/Film/Fine Art & Film, pe=PE/Physical Education/PE Cardio/Cardio, health=Health/Health Science, science=Science, lab_sci=Lab Science/Laboratory Science, algebra1=Algebra 1/Algebra I, geometry=Geometry, algebra2=Algebra 2/Algebra II`;
+
+  const prompt=`This is a teacher's progress report or weekly update for a student named Noah Flouty at TIHS school.
+
+Extract the TOTAL CUMULATIVE hours each subject has logged. These are total hours completed to date, not just this week.
+
+Subject IDs to match against (id=possible names):
+${subjectList}
+
+Rules:
+- Match subject names flexibly (ignore case, minor spelling differences)
+- Hours may appear as decimal (31.3), or hours+minutes (31h 18m → 31.3)
+- Only include subjects clearly visible with a numeric hour value
+- Skip subjects with no value shown
+- Return ONLY valid JSON, no markdown:
+{"subjects":{"japanese":31.3,"pe":34.5,"cwp":13.2}}`;
+
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'x-api-key':key,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true',
+        'content-type':'application/json'
+      },
+      body:JSON.stringify({
+        model,
+        max_tokens:400,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:_coachImgMime,data:_coachImgBase64}},
+          {type:'text',text:prompt}
+        ]}]
+      })
+    });
+    if(!resp.ok){
+      let msg='API error '+resp.status;
+      try{const e=await resp.json();msg=e.error?.message||msg;}catch(e2){}
+      showToast(msg,'var(--err)');
+    } else {
+      const data=await resp.json();
+      let text=data.content[0].text.trim().replace(/^```[a-z]*\n?/,'').replace(/\n?```$/,'').trim();
+      const parsed=JSON.parse(text);
+      if(parsed.subjects&&Object.keys(parsed.subjects).length>0){
+        _applyCoachAIResults(parsed.subjects);
+      } else {
+        showToast('No subject hours found — try a clearer screenshot','var(--err)');
+      }
+    }
+  }catch(err){
+    showToast('Error: '+err.message,'var(--err)');
+  }
+  if(btn)btn.disabled=false;
+  if(status)status.style.display='none';
+}
+
+function _applyCoachAIResults(subjects){
+  let filled=0;
+  Object.entries(subjects).forEach(([id,hours])=>{
+    const inp=document.querySelector('#coach-report-list input[data-subj-id="'+id+'"]');
+    if(inp&&typeof hours==='number'&&hours>0){
+      inp.value=hours.toFixed(1);
+      inp.style.background='rgba(249,115,22,0.12)';
+      inp.style.borderColor='var(--o)';
+      filled++;
+    }
+  });
+  // Collapse scan area
+  const expand=document.getElementById('coach-scan-expand');
+  if(expand)expand.style.display='none';
+  showToast('✓ Filled '+filled+' subject'+(filled!==1?'s':'')+' — review and save');
 }
 
 // ── GRADUATION ────────────────────────────────────────────────────────────────
