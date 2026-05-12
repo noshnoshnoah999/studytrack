@@ -4866,10 +4866,10 @@ function renderPlan(){
     const needed=baseTarget;
     recentDeficit+=Math.max(0,needed-logged);
   }
-  // Spread that deficit over the next 7 days
-  const catchUp=recentDeficit/7;
-  // Smart target: base + catch-up, capped at 10h (no point recommending more)
-  const smartTarget=Math.min(10,baseTarget+catchUp);
+  // Spread deficit over 30 days so catch-up is gentle, not punishing
+  const catchUp=recentDeficit/30;
+  // Smart target: base + catch-up, capped at 8h (realistic daily max)
+  const smartTarget=Math.min(8,baseTarget+catchUp);
 
   // ── Yesterday's feedback ──────────────────────────────────────────────────
   const ydStr=dateStr(-1);
@@ -5095,7 +5095,7 @@ function _renderStudyCalendar(targetElId){
   function dateStr(offset){const d=new Date(now);d.setDate(now.getDate()+offset);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
   let recentDeficit=0;
   for(let i=1;i<=7;i++){recentDeficit+=Math.max(0,baseTarget-hoursOn(dateStr(-i)));}
-  const catchUp=recentDeficit/7;
+  const catchUp=recentDeficit/30;
   const todayStr=dateStr(0);
   const MONTH_NAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
   const DOW=['Mo','Tu','We','Th','Fr','Sa','Su'];
