@@ -3825,6 +3825,22 @@ let timerStart=null;
 let timerStartWallClock=null;
 let timerSubjectId=null;
 let _timerSyncInterval=null;
+let _wakeLock=null;
+
+async function _acquireWakeLock(){
+  if(!('wakeLock' in navigator))return;
+  try{
+    _wakeLock=await navigator.wakeLock.request('screen');
+    _wakeLock.addEventListener('release',()=>{_wakeLock=null;});
+  }catch(e){_wakeLock=null;}
+}
+function _releaseWakeLock(){
+  if(_wakeLock){try{_wakeLock.release();}catch(e){}}_wakeLock=null;
+}
+// Re-acquire wake lock if page becomes visible again while timer is running
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&timerInterval)_acquireWakeLock();
+});
 
 // ── TIMER SYNC ────────────────────────────────────────────────────────────────
 async function timerSyncPush(){
@@ -3853,6 +3869,7 @@ async function timerSyncPull(silent){
         timerStartWallClock=new Date(r.startMs);
         clearInterval(timerInterval);
         timerInterval=setInterval(timerTick,1000);
+        _acquireWakeLock();
         renderTimerPage();
         if(!silent)showToast('⏱ Timer synced from another device');
       } else if(r.startMs!==timerStart){
@@ -4088,6 +4105,7 @@ function timerPageToggle(){
     // Stop
     clearInterval(timerInterval);
     timerInterval=null;
+    _releaseWakeLock();
     renderTimerPage();
     timerSyncPush();
   } else if(timerStart!==null){
@@ -4099,6 +4117,7 @@ function timerPageToggle(){
     timerStartWallClock=new Date();
     if(pomodoroMode){pomodoroPhase='work';pomodoroCount=0;pomodoroWorkMs=0;pomodoroPhaseStart=Date.now();pomodoroEndMs=Date.now()+POMO_WORK*1000;}
     timerInterval=setInterval(timerTick,1000);
+    _acquireWakeLock();
     renderTimerPage();
     timerSyncPush();
   }
@@ -4110,6 +4129,7 @@ function timerPageReset(){
   timerStart=null;
   timerStartWallClock=null;
   pomodoroPhase='work';pomodoroCount=0;pomodoroEndMs=null;pomodoroWorkMs=0;pomodoroPhaseStart=null;
+  _releaseWakeLock();
   renderTimerPage();
   timerSyncPush();
 }
@@ -4130,6 +4150,7 @@ function startTimerForSubject(subjectId, blockStartStr){
     timerStart=Date.now();
   }
   timerInterval=setInterval(timerTick,1000);
+  _acquireWakeLock();
   timerSyncPush();
   showPage('timer');
   renderTimerPage();
