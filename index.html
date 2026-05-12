@@ -603,6 +603,28 @@ a{color:inherit;text-decoration:none}
 .pace-label{font-size:13px;color:var(--text2)}
 .pace-val{font-size:14px;font-weight:700;color:var(--text)}
 
+/* TEMPLATE CHIPS */
+.template-section{margin-bottom:12px}
+.template-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;-ms-overflow-style:none}
+.template-row::-webkit-scrollbar{display:none}
+.template-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:100px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;color:var(--text2);white-space:nowrap;flex-shrink:0;transition:background 0.15s,border-color 0.15s}
+.template-chip:hover{background:var(--bg3);color:var(--text);border-color:var(--text3)}
+.template-chip-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.template-chip-add{background:var(--bg2);border:1.5px dashed var(--border);color:var(--text3);font-size:14px;font-weight:700;padding:6px 14px}
+.template-chip-add:hover{border-color:var(--o);color:var(--o);background:var(--ol)}
+.template-empty-hint{font-size:12px;color:var(--text3);font-style:italic;padding:4px 0}
+/* Import button */
+.btn-import-workout{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:12px;color:var(--text2);cursor:pointer;transition:background 0.15s,color 0.15s;font-family:inherit}
+.btn-import-workout:hover{background:var(--bg4);color:var(--text)}
+/* Workout summary card */
+.workout-summary-card{background:var(--bg3);border-radius:12px;padding:14px 16px;margin:12px 0}
+.workout-summary-row{display:flex;align-items:center;gap:10px;padding:5px 0;font-size:14px;font-weight:600;color:var(--text)}
+.workout-summary-icon{font-size:16px;width:22px;text-align:center;flex-shrink:0}
+/* Image drop zone */
+.img-drop-zone{border:2px dashed var(--border);border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:border-color 0.15s,background 0.15s;color:var(--text3);font-size:13px;font-weight:600}
+.img-drop-zone:hover{border-color:var(--o);background:var(--ol);color:var(--o)}
+.img-drop-zone.has-image{border-color:var(--ok);background:var(--okl)}
+.img-preview{max-width:100%;max-height:180px;border-radius:10px;margin-top:10px;display:block}
 /* SYNC INDICATOR */
 .sync-row{display:flex;align-items:center;gap:6px;margin-top:8px}
 .sync-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;transition:background 0.3s}
@@ -896,8 +918,13 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
     <!-- PAGE: LOG -->
     <div class="page" id="page-log">
       <div id="class-log-prompts"></div>
+      <!-- QUICK TEMPLATES -->
+      <div class="template-section" id="template-section"></div>
       <div class="card log-form-card" id="log-form-card" style="margin-bottom:12px">
-        <div class="card-title">Log a Session</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div class="card-title" style="margin-bottom:0">Log a Session</div>
+          <button class="btn-import-workout" onclick="openWorkoutImport()">📸 Import Workout</button>
+        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
           <div class="form-group" style="margin-bottom:0">
             <label class="form-label">Subject</label>
@@ -1090,6 +1117,11 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
       <label class="form-label">Menu Order</label>
       <div id="nav-reorder-list" style="display:flex;flex-direction:column;gap:6px;margin-top:4px"></div>
     </div>
+    <div class="form-group" style="margin-top:6px">
+      <label class="form-label">Anthropic API Key <span style="font-weight:400;color:var(--text3)">(for workout import)</span></label>
+      <input type="password" class="form-input" id="settings-anthropic-key" placeholder="sk-ant-...">
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">Stored locally on your device only. Get yours at console.anthropic.com</div>
+    </div>
     <div class="modal-actions">
       <button class="btn-save" onclick="saveGoalSettings()">Save</button>
       <button class="btn-cancel" onclick="closeModal('goal-modal-overlay')">Cancel</button>
@@ -1256,6 +1288,65 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
     <div class="modal-actions">
       <button class="btn-save" onclick="saveTodoModal()">Save Task</button>
       <button class="btn-cancel" onclick="closeModal('todo-modal-overlay')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- TEMPLATE MODAL -->
+<div class="modal-overlay" id="template-modal-overlay" onclick="handleOverlayClick(event,'template-modal-overlay')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Save Quick Template</div>
+    <div class="form-group">
+      <label class="form-label">Subject</label>
+      <select class="form-input" id="tpl-subject"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Duration (hours)</label>
+      <input type="number" class="form-input" id="tpl-duration" placeholder="1.5" min="0.1" max="12" step="0.25">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Label (optional)</label>
+      <input type="text" class="form-input" id="tpl-name" placeholder="e.g. Japanese · 1.5h">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-save" onclick="saveTemplate()">Save Template</button>
+      <button class="btn-cancel" onclick="closeModal('template-modal-overlay')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- WORKOUT IMPORT MODAL -->
+<div class="modal-overlay" id="workout-import-overlay" onclick="handleOverlayClick(event,'workout-import-overlay')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Import Workout</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Strava · Runna · any fitness app</div>
+
+    <div id="workout-upload-area">
+      <div class="img-drop-zone" id="workout-drop-zone" onclick="document.getElementById('workout-file-input').click()">
+        <div style="font-size:24px;margin-bottom:6px">📸</div>
+        <div>Drop image here or tap to upload</div>
+        <div style="font-size:11px;margin-top:4px;color:var(--text3)">JPEG · PNG · HEIC</div>
+      </div>
+      <input type="file" id="workout-file-input" accept="image/*" style="display:none" onchange="handleWorkoutFile(event)">
+      <img id="workout-img-preview" class="img-preview" style="display:none">
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button onclick="pasteWorkoutFromClipboard()" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit">📋 Paste from clipboard</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button id="workout-analyse-btn" onclick="runWorkoutAnalysis()" style="flex:1;background:var(--o);color:#fff;border:none;border-radius:100px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:none">Analyse with AI →</button>
+        <button onclick="openManualWorkoutEntry()" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:100px;padding:12px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit">Quick manual entry</button>
+      </div>
+      <div id="workout-spinner" style="display:none;text-align:center;padding:16px;font-size:13px;color:var(--text3)">Analysing… ⏳</div>
+    </div>
+
+    <div id="workout-result-area" style="display:none">
+      <div class="workout-summary-card" id="workout-summary-card"></div>
+      <div class="modal-actions">
+        <button class="btn-save" onclick="useWorkoutResult()">Use this →</button>
+        <button class="btn-cancel" onclick="document.getElementById('workout-result-area').style.display='none';document.getElementById('workout-upload-area').style.display='block'">← Back</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1748,6 +1839,288 @@ function loadTodos(){
 }
 function saveTodos(t){localStorage.setItem('st_todos',JSON.stringify(t));sbPush('st_todos',t);}
 
+// ── SESSION TEMPLATES ─────────────────────────────────────────────────────────
+function loadTemplates(){try{return JSON.parse(localStorage.getItem('st_templates')||'[]');}catch(e){return[];}}
+function saveTemplates(t){localStorage.setItem('st_templates',JSON.stringify(t));sbPush('st_templates',t);}
+
+const LOG_SUBJ_COLORS_REF={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',english_11:'#60a5fa',english_12:'#93c5fd',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',geometry:'#a855f7',algebra2:'#7c3aed',el2:'#94a3b8',el3:'#64748b',el4:'#475569',am_hist:'#b45309',jp_exch:'#7c3aed'};
+
+function renderTemplates(){
+  const el=document.getElementById('template-section');
+  if(!el)return;
+  const templates=loadTemplates();
+  const subjs=loadSubjects();
+  let chipsHtml='';
+  if(templates.length===0){
+    chipsHtml='<span class="template-empty-hint">Tap ＋ to save a quick template</span>';
+  } else {
+    chipsHtml=templates.map(t=>{
+      const subj=subjs.find(s=>s.id===t.subjectId);
+      const color=(LOG_SUBJ_COLORS_REF[t.subjectId]||'var(--o)');
+      const label=t.name||(subj?subj.name:'?')+' · '+fmtH(t.durationH);
+      return '<button class="template-chip" onclick="applyTemplate(\''+t.id+'\')" oncontextmenu="event.preventDefault();deleteTemplate(\''+t.id+'\')">'+
+        '<span class="template-chip-dot" style="background:'+color+'"></span>'+
+        '<span>'+escHtml(label)+'</span>'+
+      '</button>';
+    }).join('');
+  }
+  el.innerHTML=
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
+      '<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px">Quick Templates</div>'+
+    '</div>'+
+    '<div class="template-row">'+
+      chipsHtml+
+      '<button class="template-chip template-chip-add" onclick="openAddTemplate()">＋</button>'+
+    '</div>';
+}
+
+function openAddTemplate(){
+  const subjs=loadSubjects().filter(s=>!s.done);
+  const sel=document.getElementById('tpl-subject');
+  if(sel)sel.innerHTML=subjs.map(s=>'<option value="'+s.id+'">'+escHtml(s.name)+'</option>').join('');
+  document.getElementById('tpl-duration').value='';
+  document.getElementById('tpl-name').value='';
+  document.getElementById('template-modal-overlay').classList.add('open');
+}
+
+function saveTemplate(){
+  const subjectId=document.getElementById('tpl-subject').value;
+  const durationH=parseFloat(document.getElementById('tpl-duration').value);
+  if(!subjectId||!durationH||durationH<=0){showToast('Fill in subject and duration','var(--err)');return;}
+  const subjs=loadSubjects();
+  const subj=subjs.find(s=>s.id===subjectId);
+  const rawName=(document.getElementById('tpl-name').value||'').trim();
+  const name=rawName||(subj?subj.name:'?')+' · '+fmtH(durationH);
+  const templates=loadTemplates();
+  templates.push({id:genId(),name,subjectId,durationH});
+  saveTemplates(templates);
+  closeModal('template-modal-overlay');
+  renderTemplates();
+  showToast('Template saved ✓');
+}
+
+function applyTemplate(id){
+  const templates=loadTemplates();
+  const t=templates.find(x=>x.id===id);
+  if(!t)return;
+  // Set subject
+  const sel=document.getElementById('log-subject');
+  if(sel)sel.value=t.subjectId;
+  // Set date to today
+  const ld=document.getElementById('log-date');
+  if(ld)ld.value=todayStr();
+  // Calculate start = now - durationH, end = now
+  const now=new Date();
+  const endH=now.getHours();
+  const endM=now.getMinutes();
+  const startTotalMins=endH*60+endM-Math.round(t.durationH*60);
+  const startH=Math.max(0,Math.floor(startTotalMins/60));
+  const startM=Math.max(0,startTotalMins%60);
+  const startStr=String(startH).padStart(2,'0')+':'+String(startM).padStart(2,'0');
+  const endStr=String(endH).padStart(2,'0')+':'+String(endM).padStart(2,'0');
+  setLogTime('log-start',startStr);
+  setLogTime('log-end',endStr);
+  updateLogDuration();
+  updateLogFormColour();
+  // Scroll form into view
+  const card=document.getElementById('log-form-card');
+  if(card)card.scrollIntoView({behavior:'smooth',block:'start'});
+  showToast('Template applied ✓');
+}
+
+function deleteTemplate(id){
+  const templates=loadTemplates().filter(x=>x.id!==id);
+  saveTemplates(templates);
+  renderTemplates();
+  showToast('Template removed');
+}
+
+// ── WORKOUT IMPORT ────────────────────────────────────────────────────────────
+let _workoutImageBase64=null;
+let _workoutImageMime=null;
+let _workoutResult=null;
+
+async function analyseWorkoutImage(base64,mimeType){
+  const key=localStorage.getItem('st_anthropic_key');
+  if(!key){showToast('Add Anthropic API key in ⚙ Settings','var(--err)');return null;}
+  const resp=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'x-api-key':key,
+      'anthropic-version':'2023-06-01',
+      'content-type':'application/json'
+    },
+    body:JSON.stringify({
+      model:'claude-haiku-4-5',
+      max_tokens:300,
+      messages:[{role:'user',content:[
+        {type:'image',source:{type:'base64',media_type:mimeType,data:base64}},
+        {type:'text',text:'This is a Strava or Runna workout screenshot. Return ONLY a JSON object with these fields (no markdown, no explanation): {"date":"YYYY-MM-DD","startTime":"HH:MM","endTime":"HH:MM","activity":"Cycle|Run|Walk","timeLabel":"Morning|Afternoon|Evening|Night"}. Use 24h times. If a value cannot be determined use null. The date must be the workout date shown in the screenshot.'}
+      ]}]
+    })
+  });
+  if(!resp.ok){showToast('API error: '+resp.status,'var(--err)');return null;}
+  const data=await resp.json();
+  try{
+    const text=data.content[0].text.trim();
+    return JSON.parse(text);
+  }catch(e){showToast('Could not parse workout data','var(--err)');return null;}
+}
+
+function openWorkoutImport(){
+  // Reset state
+  _workoutImageBase64=null;
+  _workoutImageMime=null;
+  _workoutResult=null;
+  const fileInput=document.getElementById('workout-file-input');
+  if(fileInput)fileInput.value='';
+  const preview=document.getElementById('workout-img-preview');
+  if(preview){preview.style.display='none';preview.src='';}
+  const dz=document.getElementById('workout-drop-zone');
+  if(dz)dz.classList.remove('has-image');
+  const analyseBtn=document.getElementById('workout-analyse-btn');
+  if(analyseBtn)analyseBtn.style.display='none';
+  document.getElementById('workout-upload-area').style.display='block';
+  document.getElementById('workout-result-area').style.display='none';
+  document.getElementById('workout-spinner').style.display='none';
+  document.getElementById('workout-import-overlay').classList.add('open');
+}
+
+function handleWorkoutFile(event){
+  const file=event.target.files[0];
+  if(!file)return;
+  _workoutImageMime=file.type||'image/jpeg';
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const dataUrl=e.target.result;
+    // Extract base64 part
+    _workoutImageBase64=dataUrl.split(',')[1];
+    const preview=document.getElementById('workout-img-preview');
+    if(preview){preview.src=dataUrl;preview.style.display='block';}
+    const dz=document.getElementById('workout-drop-zone');
+    if(dz)dz.classList.add('has-image');
+    const analyseBtn=document.getElementById('workout-analyse-btn');
+    if(analyseBtn)analyseBtn.style.display='block';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function pasteWorkoutFromClipboard(){
+  try{
+    const items=await navigator.clipboard.read();
+    for(const item of items){
+      const imgType=item.types.find(t=>t.startsWith('image/'));
+      if(imgType){
+        const blob=await item.getType(imgType);
+        _workoutImageMime=imgType;
+        const reader=new FileReader();
+        reader.onload=function(e){
+          const dataUrl=e.target.result;
+          _workoutImageBase64=dataUrl.split(',')[1];
+          const preview=document.getElementById('workout-img-preview');
+          if(preview){preview.src=dataUrl;preview.style.display='block';}
+          const dz=document.getElementById('workout-drop-zone');
+          if(dz)dz.classList.add('has-image');
+          const analyseBtn=document.getElementById('workout-analyse-btn');
+          if(analyseBtn)analyseBtn.style.display='block';
+          showToast('Image pasted ✓');
+        };
+        reader.readAsDataURL(blob);
+        return;
+      }
+    }
+    showToast('No image found in clipboard','var(--err)');
+  }catch(e){showToast('Clipboard access denied','var(--err)');}
+}
+
+async function runWorkoutAnalysis(){
+  if(!_workoutImageBase64){showToast('No image selected','var(--err)');return;}
+  const spinner=document.getElementById('workout-spinner');
+  const analyseBtn=document.getElementById('workout-analyse-btn');
+  if(spinner)spinner.style.display='block';
+  if(analyseBtn)analyseBtn.style.display='none';
+  const result=await analyseWorkoutImage(_workoutImageBase64,_workoutImageMime||'image/jpeg');
+  if(spinner)spinner.style.display='none';
+  if(!result){
+    if(analyseBtn)analyseBtn.style.display='block';
+    return;
+  }
+  _workoutResult=result;
+  showWorkoutSummary(result);
+}
+
+function showWorkoutSummary(result){
+  if(!result)return;
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let dateLabel='Unknown date';
+  if(result.date){
+    try{
+      const parts=result.date.split('-');
+      const d=new Date(+parts[0],+parts[1]-1,+parts[2]);
+      dateLabel=+parts[2]+' '+months[d.getMonth()]+' '+parts[0];
+    }catch(e){}
+  }
+  const activityLabel=result.timeLabel&&result.activity?(result.timeLabel+' '+result.activity):(result.activity||'Workout');
+  const timeStr=(result.startTime&&result.endTime)?(result.startTime+' – '+result.endTime):'Unknown times';
+  const actIcon={Cycle:'🚴',Run:'🏃',Walk:'🚶'}[result.activity]||'🏋';
+  const summaryEl=document.getElementById('workout-summary-card');
+  if(summaryEl){
+    summaryEl.innerHTML=
+      '<div class="workout-summary-row"><span class="workout-summary-icon">📅</span><span>'+escHtml(dateLabel)+'</span></div>'+
+      '<div class="workout-summary-row"><span class="workout-summary-icon">'+actIcon+'</span><span>'+escHtml(activityLabel)+'</span></div>'+
+      '<div class="workout-summary-row"><span class="workout-summary-icon">⏱</span><span>'+escHtml(timeStr)+'</span></div>';
+  }
+  document.getElementById('workout-upload-area').style.display='none';
+  document.getElementById('workout-result-area').style.display='block';
+}
+
+function openManualWorkoutEntry(){
+  // Pre-fill a blank result so user can confirm
+  _workoutResult={date:todayStr(),startTime:null,endTime:null,activity:'Run',timeLabel:'Morning'};
+  showWorkoutSummary(_workoutResult);
+}
+
+async function useWorkoutResult(){
+  if(!_workoutResult)return;
+  const result=_workoutResult;
+  const subjs=loadSubjects();
+  // Find PE subject
+  const peSubj=subjs.find(s=>s.id==='pe')||subjs.find(s=>s.name&&s.name.toLowerCase().includes('pe'));
+  const peId=peSubj?peSubj.id:(subjs[0]?subjs[0].id:'');
+  // Set form fields
+  const sel=document.getElementById('log-subject');
+  if(sel&&peId)sel.value=peId;
+  const ld=document.getElementById('log-date');
+  if(ld&&result.date)ld.value=result.date;
+  if(result.startTime)setLogTime('log-start',result.startTime);
+  if(result.endTime)setLogTime('log-end',result.endTime);
+  const notesEl=document.getElementById('log-notes');
+  const activityLabel=result.timeLabel&&result.activity?(result.timeLabel+' '+result.activity):(result.activity||'Workout');
+  if(notesEl)notesEl.value=activityLabel;
+  updateLogDuration();
+  updateLogFormColour();
+  // Build title for clipboard: "11 May - Morning Cycle"
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let dayLabel='';
+  if(result.date){
+    try{
+      const parts=result.date.split('-');
+      const d=new Date(+parts[0],+parts[1]-1,+parts[2]);
+      dayLabel=+parts[2]+' '+months[d.getMonth()];
+    }catch(e){}
+  }
+  const title=dayLabel?(dayLabel+' - '+activityLabel):activityLabel;
+  try{
+    await navigator.clipboard.writeText(title);
+    showToast('✓ Copied "'+title+'" — just press Submit');
+  }catch(e){
+    showToast('Ready — '+title);
+  }
+  closeModal('workout-import-overlay');
+  const card=document.getElementById('log-form-card');
+  if(card)card.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
 function renderTodos(){
   const todos=loadTodos();
   const el=document.getElementById('todo-list');
@@ -1972,7 +2345,7 @@ function showPage(id){
   _updateBackToTop();
   if(id==='dashboard')renderDashboard();
   else if(id==='schedule'){renderSchedule();renderTodos();}
-  else if(id==='log')renderLog();
+  else if(id==='log'){renderLog();renderTemplates();}
   else if(id==='history')renderHistory();
   else if(id==='progress')renderProgress();
   else if(id==='graduation')renderGraduationPage();
@@ -4540,6 +4913,9 @@ function saveGoalSettings(){
   const g={daily,daysPerWeek,weekly};
   localStorage.setItem('st_goals',JSON.stringify(g));
   sbPush('st_goals',g);
+  // Save Anthropic API key
+  const keyEl=document.getElementById('settings-anthropic-key');
+  if(keyEl)localStorage.setItem('st_anthropic_key',keyEl.value.trim());
   // Dismiss the recommendation — user has reviewed and saved a goal
   localStorage.setItem('st_rec_dismissed',_latestRecDaily.toFixed(2));
   closeModal('goal-modal-overlay');
@@ -4592,6 +4968,9 @@ function openGoalSettings(){
   document.getElementById('goal-weekly').value=g.weekly;
   const lbl=document.getElementById('goal-daily-current');
   if(lbl)lbl.textContent='Currently '+fmtH(g.daily)+'/day · '+fmtH(g.weekly)+'/week';
+  // Load existing Anthropic key
+  const keyEl=document.getElementById('settings-anthropic-key');
+  if(keyEl)keyEl.value=localStorage.getItem('st_anthropic_key')||'';
   renderNavReorder();
   updateThemeSwatches();
 
@@ -4924,7 +5303,7 @@ async function sbPull(key){
 async function syncFromCloud(){
   setSyncUI('syncing','Syncing…');
   try{
-    const KEYS=['st_subjs','st_sched','st_sessions','st_hours','st_goals','st_todos','st_sched_overrides'];
+    const KEYS=['st_subjs','st_sched','st_sessions','st_hours','st_goals','st_todos','st_sched_overrides','st_templates'];
     const rows=await Promise.all(KEYS.map(k=>sbPull(k)));
     let updated=false;
     let localOnlySessions=[]; // sessions we have locally that cloud didn't know about
