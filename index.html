@@ -2490,7 +2490,7 @@ function getWeekH(){
 
 function getTotalLogged(){
   // Excludes extraCredit subjects — only counts hours that matter for graduation
-  const subjs=loadSubjects().filter(s=>!s.extraCredit);
+  const subjs=_canonicalSubjs().filter(s=>!s.extraCredit);
   const hours=loadHours();
   return subjs.reduce((a,s)=>a+(s.base||0)+(hours[s.id]||0),0);
 }
@@ -2561,7 +2561,7 @@ function renderDashboard(){
     DAYS[now.getDay()]+', '+MONTHS[now.getMonth()]+' '+now.getDate()+', '+now.getFullYear();
 
   const totalLogged=getTotalLogged();
-  const subjs=loadSubjects();
+  const subjs=_canonicalSubjs();
   // Graduation calculations exclude extraCredit subjects
   const gradSubjs=subjs.filter(s=>!s.extraCredit);
   const totalReq=gradSubjs.reduce((a,s)=>a+s.req,0);
@@ -4342,9 +4342,19 @@ function renderProgress(){
   markCardsDone();
 }
 
+function _canonicalSubjs(){
+  // Always use DEFAULT_SUBJECTS as the authoritative subject list so no subject
+  // goes missing if localStorage/Supabase has stale data. Merge stored values
+  // (base hours, done flag, passive) on top.
+  const stored=loadSubjects();
+  return DEFAULT_SUBJECTS.map(def=>{
+    const s=stored.find(x=>x.id===def.id);
+    return s?{...def,...s,req:def.req,extraCredit:!!def.extraCredit}:{...def};
+  });
+}
 function _gradSharedVars(){
   const sessions=loadSessions();
-  const subjs=loadSubjects().filter(s=>!s.extraCredit);
+  const subjs=_canonicalSubjs().filter(s=>!s.extraCredit);
   const goals=loadGoals();
   const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
   const totalLogged=getTotalLogged();
@@ -4801,7 +4811,7 @@ function renderTimeline(){
 
 function renderPlan(){
   const sessions=loadSessions();
-  const subjs=loadSubjects().filter(s=>!s.extraCredit);
+  const subjs=_canonicalSubjs().filter(s=>!s.extraCredit);
   const goals=loadGoals();
   const now=new Date();
   const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
@@ -5067,7 +5077,7 @@ function _renderStudyCalendar(targetElId){
   const el=document.getElementById(targetElId);
   if(!el)return;
   const sessions=loadSessions();
-  const subjs=loadSubjects().filter(s=>!s.extraCredit);
+  const subjs=_canonicalSubjs().filter(s=>!s.extraCredit);
   const goals=loadGoals();
   const now=new Date();
   const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
