@@ -1961,6 +1961,11 @@ function showPage(id){
     }
   }
   buildNav();
+  // Scroll container back to top on page change
+  const mainEl=document.getElementById('main');
+  if(mainEl)mainEl.scrollTop=0;
+  else window.scrollTo(0,0);
+  _updateBackToTop();
   if(id==='dashboard')renderDashboard();
   else if(id==='schedule'){renderSchedule();renderTodos();}
   else if(id==='log')renderLog();
@@ -4964,6 +4969,9 @@ async function syncFromCloud(){
 
   applyTheme();
   applySidebarState();
+  // Attach scroll listener to #main (the actual scroll container in this SPA layout)
+  const _mainEl=document.getElementById('main');
+  if(_mainEl)_mainEl.addEventListener('scroll',_updateBackToTop,{passive:true});
   // Deep link support: open specific page via URL hash e.g. #log
   const hash=window.location.hash.replace('#','');
   const validPages=['dashboard','schedule','log','progress','graduation','timer','history'];
@@ -5029,8 +5037,17 @@ function jumpTo(id){
   const el=document.getElementById(id);
   if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
 }
+function _getScrollY(){
+  const main=document.getElementById('main');
+  return (main&&main.scrollTop)||window.scrollY||document.documentElement.scrollTop||document.body.scrollTop||0;
+}
+function _scrollToTop(){
+  const main=document.getElementById('main');
+  if(main&&main.scrollTop>0){main.scrollTo({top:0,behavior:'smooth'});}
+  else{window.scrollTo({top:0,behavior:'smooth'});}
+}
 function _updateBackToTop(){
-  const y=window.scrollY||document.documentElement.scrollTop||document.body.scrollTop;
+  const y=_getScrollY();
   const btn=document.getElementById('btn-back-top');
   if(btn)btn.classList.toggle('visible',y>200);
 }
@@ -5465,7 +5482,7 @@ function markCardsDone(){
 }
 
 </script>
-<button class="back-to-top" id="btn-back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<button class="back-to-top" id="btn-back-top" onclick="_scrollToTop()">↑</button>
 <button class="quick-log-fab" id="quick-log-fab" onclick="openQuickLog()" title="Quick log session">＋</button>
 <div id="inapp-banner">
   <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
