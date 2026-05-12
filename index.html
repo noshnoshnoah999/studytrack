@@ -1943,28 +1943,47 @@ let _workoutResult=null;
 async function analyseWorkoutImage(base64,mimeType){
   const key=localStorage.getItem('st_anthropic_key');
   if(!key){showToast('Add Anthropic API key in ⚙ Settings','var(--err)');return null;}
-  const resp=await fetch('https://api.anthropic.com/v1/messages',{
-    method:'POST',
-    headers:{
-      'x-api-key':key,
-      'anthropic-version':'2023-06-01',
-      'content-type':'application/json'
-    },
-    body:JSON.stringify({
-      model:'claude-haiku-4-5',
-      max_tokens:300,
-      messages:[{role:'user',content:[
-        {type:'image',source:{type:'base64',media_type:mimeType,data:base64}},
-        {type:'text',text:'This is a Strava or Runna workout screenshot. Return ONLY a JSON object with these fields (no markdown, no explanation): {"date":"YYYY-MM-DD","startTime":"HH:MM","endTime":"HH:MM","activity":"Cycle|Run|Walk","timeLabel":"Morning|Afternoon|Evening|Night"}. Use 24h times. If a value cannot be determined use null. The date must be the workout date shown in the screenshot.'}
-      ]}]
-    })
-  });
-  if(!resp.ok){showToast('API error: '+resp.status,'var(--err)');return null;}
-  const data=await resp.json();
+  // Use corsproxy.io to bypass browser CORS restriction on api.anthropic.com
+  const endpoint='https://corsproxy.io/?url=https://api.anthropic.com/v1/messages';
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),30000); // 30s timeout
   try{
-    const text=data.content[0].text.trim();
-    return JSON.parse(text);
-  }catch(e){showToast('Could not parse workout data','var(--err)');return null;}
+    const resp=await fetch(endpoint,{
+      method:'POST',
+      signal:controller.signal,
+      headers:{
+        'x-api-key':key,
+        'anthropic-version':'2023-06-01',
+        'content-type':'application/json'
+      },
+      body:JSON.stringify({
+        model:'claude-haiku-4-5',
+        max_tokens:300,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:mimeType,data:base64}},
+          {type:'text',text:'This is a Strava or Runna workout screenshot. Return ONLY a JSON object with these fields (no markdown, no explanation): {"date":"YYYY-MM-DD","startTime":"HH:MM","endTime":"HH:MM","activity":"Cycle|Run|Walk","timeLabel":"Morning|Afternoon|Evening|Night"}. Use 24h times. If a value cannot be determined use null. The date must be the workout date shown in the screenshot.'}
+        ]}]
+      })
+    });
+    clearTimeout(timer);
+    if(!resp.ok){
+      let msg='API error '+resp.status;
+      try{const e=await resp.json();msg=e.error?.message||msg;}catch(e2){}
+      showToast(msg,'var(--err)');return null;
+    }
+    const data=await resp.json();
+    try{
+      let text=data.content[0].text.trim();
+      // Strip markdown code fences if model wraps in ```json ... ```
+      text=text.replace(/^```[a-z]*\n?/,'').replace(/\n?```$/,'').trim();
+      return JSON.parse(text);
+    }catch(e){showToast('Could not read workout data — try a clearer screenshot','var(--err)');return null;}
+  }catch(err){
+    clearTimeout(timer);
+    if(err.name==='AbortError'){showToast('Timed out — check your API key and connection','var(--err)');}
+    else{showToast('Network error: '+err.message,'var(--err)');}
+    return null;
+  }
 }
 
 function openWorkoutImport(){
