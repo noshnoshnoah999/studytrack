@@ -1944,7 +1944,7 @@ async function analyseWorkoutImage(base64,mimeType){
   const key=localStorage.getItem('st_anthropic_key');
   if(!key){showToast('Add Anthropic API key in ⚙ Settings','var(--err)');return null;}
   // Use corsproxy.io to bypass browser CORS restriction on api.anthropic.com
-  const endpoint='https://corsproxy.io/?url=https://api.anthropic.com/v1/messages';
+  const endpoint='https://api.anthropic.com/v1/messages';
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),30000); // 30s timeout
   try{
@@ -1954,6 +1954,7 @@ async function analyseWorkoutImage(base64,mimeType){
       headers:{
         'x-api-key':key,
         'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true',
         'content-type':'application/json'
       },
       body:JSON.stringify({
