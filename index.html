@@ -662,10 +662,123 @@ input:checked+.notif-slider:before{transform:translateX(18px);background:#fff}
 .page.active{animation:pageIn 0.2s ease}
 @keyframes cardIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .card{animation:cardIn 0.25s ease both}
+.card.anim-done:hover{box-shadow:0 8px 32px rgba(0,0,0,0.25);transform:translateY(-1px)}
 button:active{transform:scale(0.96);transition:transform 0.08s}
 @keyframes toastIn{from{opacity:0;transform:translateY(20px) scale(0.95)}to{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes toastOut{from{opacity:1;transform:translateY(0) scale(1)}to{opacity:0;transform:translateY(20px) scale(0.95)}}
 @keyframes barGrow{from{width:0%}to{width:var(--w)}}
+
+/* ── Stagger utility ─────────────────────────────────────────────── */
+.stagger-1{animation-delay:0.05s!important}
+.stagger-2{animation-delay:0.10s!important}
+.stagger-3{animation-delay:0.15s!important}
+.stagger-4{animation-delay:0.20s!important}
+.stagger-5{animation-delay:0.25s!important}
+.stagger-6{animation-delay:0.30s!important}
+
+/* ── Spring pop (for stat cards, badges, pills) ─────────────────── */
+@keyframes springPop{0%{transform:scale(0.7);opacity:0}60%{transform:scale(1.08)}80%{transform:scale(0.97)}100%{transform:scale(1);opacity:1}}
+.spring-pop{animation:springPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both}
+
+/* ── Slide up (for list rows) ────────────────────────────────────── */
+@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.slide-up{animation:slideUp 0.28s ease both}
+
+/* ── Slide in from right (forward nav) ──────────────────────────── */
+@keyframes slideInRight{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:translateX(0)}}
+.slide-in-right{animation:slideInRight 0.22s cubic-bezier(0.25,0.46,0.45,0.94) both}
+
+/* ── Fade scale (for modal content rows) ────────────────────────── */
+@keyframes fadeScale{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}
+.fade-scale{animation:fadeScale 0.2s ease both}
+
+/* ── Pulse glow (for NOW indicator, streak) ─────────────────────── */
+@keyframes pulseGlow{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,0.4)}50%{box-shadow:0 0 0 8px rgba(249,115,22,0)}}
+.pulse-glow{animation:pulseGlow 2s ease-in-out infinite}
+
+/* ── Green pulse (for ok/done states) ───────────────────────────── */
+@keyframes pulseGlowGreen{0%,100%{box-shadow:0 0 0 0 rgba(0,200,150,0.4)}50%{box-shadow:0 0 0 8px rgba(0,200,150,0)}}
+.pulse-glow-green{animation:pulseGlowGreen 2s ease-in-out infinite}
+
+/* ── Shimmer (loading skeleton) ─────────────────────────────────── */
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.shimmer{background:linear-gradient(90deg,var(--bg3) 25%,var(--bg4) 50%,var(--bg3) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite}
+
+/* ── Float (hero number, timer clock) ───────────────────────────── */
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.float{animation:float 3s ease-in-out infinite}
+
+/* ── Bounce in (FAB, badges) ────────────────────────────────────── */
+@keyframes bounceIn{0%{transform:scale(0);opacity:0}50%{transform:scale(1.15)}75%{transform:scale(0.95)}100%{transform:scale(1);opacity:1}}
+.bounce-in{animation:bounceIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both}
+
+/* ── Ripple ──────────────────────────────────────────────────────── */
+@keyframes ripple{to{transform:scale(4);opacity:0}}
+.ripple-host{position:relative;overflow:hidden}
+.ripple-wave{position:absolute;border-radius:50%;background:rgba(255,255,255,0.25);animation:ripple 0.5s ease-out forwards;pointer-events:none;transform:scale(0)}
+
+/* ── Confetti pieces ─────────────────────────────────────────────── */
+@keyframes confettiFall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(120vh) rotate(720deg);opacity:0}}
+
+/* ── Number tick ─────────────────────────────────────────────────── */
+@keyframes numTick{0%{transform:translateY(8px);opacity:0}100%{transform:translateY(0);opacity:1}}
+
+/* ── Progress bar fill animation ────────────────────────────────── */
+@keyframes barFill{from{width:0%}to{width:var(--target-w)}}
+.bar-animate{animation:barFill 0.7s cubic-bezier(0.25,0.46,0.45,0.94) both}
+
+/* ── Shake (error) ───────────────────────────────────────────────── */
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.shake{animation:shake 0.4s ease}
+
+/* ── Gradient shift (hero bar) ───────────────────────────────────── */
+@keyframes gradShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+
+/* ── Scale hover for nav items ───────────────────────────────────── */
+.nav-item{transition:background 0.15s,color 0.15s,transform 0.15s!important}
+.nav-item:hover{transform:translateX(3px)}
+.nav-item.active{transform:translateX(4px)}
+
+/* ── Bottom nav item tap ─────────────────────────────────────────── */
+.bn-item{transition:color 0.15s,transform 0.1s}
+.bn-item:active{transform:scale(0.88)}
+.bn-item.active{color:var(--o)}
+
+/* ── Jump pill hover ─────────────────────────────────────────────── */
+.jump-pill{transition:background 0.15s,color 0.15s,transform 0.15s,border-color 0.15s}
+.jump-pill:active{transform:scale(0.94)}
+
+/* ── Card hover lift (only after anim completes via .anim-done) ─── */
+.card{transition:box-shadow 0.2s,transform 0.2s}
+
+/* ── Stat card special hover ─────────────────────────────────────── */
+.stat-card{transition:background 0.15s,transform 0.15s,box-shadow 0.15s;cursor:default}
+.stat-card:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 6px 20px rgba(0,0,0,0.2)}
+
+/* ── Quick log FAB spin on hover ─────────────────────────────────── */
+.quick-log-fab{transition:transform 0.2s,box-shadow 0.2s}
+.quick-log-fab:hover{transform:scale(1.12) rotate(90deg)}
+
+/* ── Subj row hover ──────────────────────────────────────────────── */
+.subj-row{transition:background 0.15s,transform 0.15s}
+.subj-row:hover{background:var(--bg3);transform:translateX(2px)}
+
+/* ── Block card hover ────────────────────────────────────────────── */
+.block-card{transition:background 0.15s,transform 0.15s,box-shadow 0.15s}
+.block-card:hover{transform:translateX(3px);box-shadow:0 4px 16px rgba(0,0,0,0.2)}
+
+/* ── Timeline card hover ─────────────────────────────────────────── */
+.tl-card{transition:transform 0.15s,box-shadow 0.15s}
+.tl-card:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,0.2)}
+
+/* ── Day tab transition ──────────────────────────────────────────── */
+.day-tab{transition:background 0.15s,color 0.15s,transform 0.15s}
+.day-tab:active{transform:scale(0.93)}
+.day-tab.active{transform:scale(1.05)}
+
+/* ── Back to top button ──────────────────────────────────────────── */
+.back-to-top{transition:transform 0.15s,background 0.15s}
+.back-to-top:hover{transform:scale(1.12) translateY(-2px)}
 
 /* ── IN-APP BANNER ───────────────────────────────────────────────────────── */
 @keyframes bannerIn{from{opacity:0;transform:translateX(-50%) translateY(-60px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
@@ -1828,11 +1941,25 @@ function getTotalLogged(){
 // ── NAVIGATION ────────────────────────────────────────────────────────────────
 let currentPage='dashboard';
 
+const NAV_ORDER=['dashboard','schedule','log','progress','graduation','timer','history'];
 function showPage(id){
+  const prevPage=currentPage;
   currentPage=id;
   document.querySelectorAll('.page').forEach(p=>{
     p.classList.toggle('active',p.id==='page-'+id);
   });
+  // Directional page transition
+  const activePage=document.getElementById('page-'+id);
+  if(activePage&&prevPage&&prevPage!==id){
+    const prevIdx=NAV_ORDER.indexOf(prevPage);
+    const nextIdx=NAV_ORDER.indexOf(id);
+    if(nextIdx>prevIdx){
+      activePage.style.animation='none';
+      requestAnimationFrame(()=>{
+        activePage.style.animation='slideInRight 0.22s cubic-bezier(0.25,0.46,0.45,0.94) both';
+      });
+    }
+  }
   buildNav();
   if(id==='dashboard')renderDashboard();
   else if(id==='schedule'){renderSchedule();renderTodos();}
@@ -1916,6 +2043,16 @@ function renderDashboard(){
     '</div>';
   // Count-up for today's % stat
   animateCount(document.getElementById('dash-hero-pct-el'),Math.round(todayPct),0,'%');
+  // Animate hero bar
+  const heroBar=document.querySelector('.dash-hero-bar-fill');
+  if(heroBar){
+    const tw=heroBar.style.width;
+    heroBar.style.width='0%';
+    requestAnimationFrame(()=>{
+      heroBar.style.transition='width 0.8s cubic-bezier(0.25,0.46,0.45,0.94)';
+      heroBar.style.width=tw;
+    });
+  }
 
   // Stats strip — 4 cards (2×2 on mobile, 4-col on desktop)
   const fmtCr=n=>n%1===0?n+'cr':(Math.floor(n)+'½'+'cr'); // e.g. "12½cr" or "3cr"
@@ -1924,6 +2061,13 @@ function renderDashboard(){
     '<div class="stat-card"><div class="stat-label">Total Logged</div><div class="stat-val orange">'+fmtH(totalLogged)+'</div></div>'+
     '<div class="stat-card"><div class="stat-label">Remaining</div><div class="stat-val">'+fmtH(remaining)+'</div></div>'+
     '<div class="stat-card"><div class="stat-label">Credits Left</div><div class="stat-val">'+fmtCr(creditsLeft)+'</div><div style="font-size:10px;color:var(--text3);margin-top:2px">'+fmtCr(earnedCredits)+' of '+fmtCr(totalCredits)+' earned</div></div>';
+
+  // Spring-pop stat cards
+  document.querySelectorAll('#stats-strip .stat-card').forEach((c,i)=>{
+    c.classList.add('spring-pop');
+    c.style.animationDelay=(i*0.07)+'s';
+  });
+  markCardsDone();
 
   // Week bar chart
   const sessions=loadSessions();
@@ -1979,6 +2123,7 @@ function renderDashboard(){
 
   renderFocusCard();
   renderWeeklySummary();
+  markCardsDone();
 }
 
 // ── SCHEDULE ──────────────────────────────────────────────────────────────────
@@ -2193,6 +2338,10 @@ function renderSchedule(){
       html+='</div>';
     });
     content.innerHTML=html;
+    content.querySelectorAll('.block-card').forEach((c,i)=>{
+      c.classList.add('slide-up');
+      c.style.animationDelay=(i*0.05)+'s';
+    });
   } else {
     // View mode: show selected day only
     const dow=scheduleDay;
@@ -2348,6 +2497,15 @@ function renderSchedule(){
     }
     html+='</div>';
     content.innerHTML=html;
+    // Stagger timeline items and block cards
+    content.querySelectorAll('.block-card').forEach((c,i)=>{
+      c.classList.add('slide-up');
+      c.style.animationDelay=(i*0.05)+'s';
+    });
+    content.querySelectorAll('.tl-item').forEach((c,i)=>{
+      c.classList.add('slide-up');
+      c.style.animationDelay=(i*0.04)+'s';
+    });
   }
 }
 
@@ -2889,6 +3047,11 @@ function renderHistory(){
     // ── Single subject: keep day-by-day view ────────────────────────────────
     entriesEl.innerHTML=dates.map(date=>makeDayGroup(date,groups[date])).join('');
   }
+  // Stagger history entries
+  document.querySelectorAll('.hist-card,.hist-month-group').forEach((r,i)=>{
+    r.classList.add('slide-up');
+    r.style.animationDelay=(i*0.03)+'s';
+  });
 }
 
 function toggleHistMonth(bodyId, headerEl){
@@ -3118,6 +3281,10 @@ function renderTimerPage(){
   // Set current subject in dropdown
   const tpSel=document.getElementById('tp-subject');
   if(tpSel&&timerSubjectId)tpSel.value=timerSubjectId;
+  // Float animation on clock
+  const clockEl=document.getElementById('tp-clock');
+  if(clockEl&&!timerInterval)clockEl.classList.add('float');
+  markCardsDone();
 }
 
 function timerChangeSubject(id){
@@ -3451,6 +3618,21 @@ function renderProgress(){
     '<div style="text-align:center;padding:12px;font-size:12px;color:var(--text3);cursor:pointer" onclick="toggleHideDone()">'+done.length+' completed subject'+(done.length>1?'s':'')+' hidden · tap to show</div>':'';
 
   el.innerHTML=rows+hiddenFooter;
+  // Stagger subject rows
+  el.querySelectorAll('.subj-row').forEach((r,i)=>{
+    r.classList.add('slide-up');
+    r.style.animationDelay=(i*0.04)+'s';
+  });
+  // Animate progress bars
+  el.querySelectorAll('.subj-bar-fill').forEach(bar=>{
+    const w=bar.style.width;
+    bar.style.width='0%';
+    requestAnimationFrame(()=>{
+      bar.style.transition='width 0.7s cubic-bezier(0.25,0.46,0.45,0.94)';
+      bar.style.width=w;
+    });
+  });
+  markCardsDone();
 }
 
 function _gradSharedVars(){
@@ -3497,7 +3679,8 @@ function _gradSharedVars(){
 function _renderGradSection(){
   const v=_gradSharedVars();
   const {pct,expectedPct,pctDiffStr,scheduleAhead,totalLogged,remaining,MONTHS}=v;
-  document.getElementById('grad-progress-card').innerHTML=
+  const _gradCard=document.getElementById('grad-progress-card');
+  _gradCard.innerHTML=
     '<div class="grad-hero">'+
       '<div class="grad-pct-big">'+pct.toFixed(1)+'%</div>'+
       '<div class="grad-pct-label">of graduation complete</div>'+
@@ -3525,6 +3708,16 @@ function _renderGradSection(){
         '<div class="grad-stat"><div class="grad-stat-val">'+GRAD_TOTAL_CREDITS+'cr</div><div class="grad-stat-lbl">Total Credits</div></div>'+
       '</div>'+
     '</div>';
+  // Animate grad bar
+  const gradBarFill=_gradCard.querySelector('.grad-bar-fill');
+  if(gradBarFill){
+    const tw=gradBarFill.style.width;
+    gradBarFill.style.width='0%';
+    requestAnimationFrame(()=>{
+      gradBarFill.style.transition='width 1s cubic-bezier(0.25,0.46,0.45,0.94)';
+      gradBarFill.style.width=tw;
+    });
+  }
 }
 
 function _renderGradEstCard(){
@@ -3643,6 +3836,14 @@ function _renderMilestones(){
     '<div class="card-title" style="margin-bottom:4px">Milestones</div>'+
     '<div style="font-size:12px;color:var(--text2);margin-bottom:16px">Estimated dates based on '+(paceIsGoal?'weekly goal':'recent pace')+'</div>'+
     msHtml;
+  // Spring-pop milestone rows
+  const mc=document.getElementById('grad-milestones-card');
+  if(mc){
+    mc.querySelectorAll('.ms-row').forEach((r,i)=>{
+      r.classList.add('spring-pop');
+      r.style.animationDelay=(i*0.08)+'s';
+    });
+  }
 }
 
 // ── SUBJECT MODAL ─────────────────────────────────────────────────────────────
@@ -4232,6 +4433,7 @@ function renderGraduationPage(){
   renderTimeline();
   _renderMilestones();
   _renderStudyCalendar('grad-calendar-inner');
+  markCardsDone();
 }
 
 // ── MODAL UTILS ───────────────────────────────────────────────────────────────
@@ -5208,6 +5410,7 @@ function checkInAppNotifs(){
   const key2='target_hit_'+now.toDateString();
   if(todayH>=goals.daily&&!sessionStorage.getItem(key2)){
     sessionStorage.setItem(key2,'1');
+    launchConfetti();
     addInAppNotif('🎯 Daily target hit!','You\'ve logged '+fmtH(todayH)+' today. Great work!','target_hit');
   }
 
@@ -5220,6 +5423,45 @@ function checkInAppNotifs(){
       addInAppNotif('🔥 Streak at risk','You still need '+fmtH(needed)+' today to keep your streak','streak_warn');
     }
   }
+}
+
+// ── CONFETTI ───────────────────────────────────────────────────────────────────
+function launchConfetti(){
+  const colors=['#f97316','#fb923c','#fbbf24','#34d399','#60a5fa','#a78bfa','#f472b6'];
+  for(let i=0;i<60;i++){
+    const el=document.createElement('div');
+    const size=Math.random()*8+5;
+    el.style.cssText='position:fixed;z-index:9999;pointer-events:none;'+
+      'left:'+Math.random()*100+'vw;'+
+      'top:-20px;'+
+      'width:'+size+'px;height:'+size+'px;'+
+      'border-radius:'+(Math.random()>0.5?'50%':'2px')+';'+
+      'background:'+colors[Math.floor(Math.random()*colors.length)]+';'+
+      'animation:confettiFall '+(Math.random()*2+1.5)+'s ease-in '+(Math.random()*0.8)+'s forwards';
+    document.body.appendChild(el);
+    el.addEventListener('animationend',()=>el.remove());
+  }
+}
+
+// ── RIPPLE ────────────────────────────────────────────────────────────────────
+function addRipple(e){
+  const btn=e.currentTarget;
+  const r=document.createElement('span');
+  r.className='ripple-wave';
+  const rect=btn.getBoundingClientRect();
+  const size=Math.max(rect.width,rect.height);
+  r.style.cssText='width:'+size+'px;height:'+size+'px;left:'+(e.clientX-rect.left-size/2)+'px;top:'+(e.clientY-rect.top-size/2)+'px';
+  btn.appendChild(r);
+  r.addEventListener('animationend',()=>r.remove());
+}
+document.addEventListener('click',e=>{
+  const btn=e.target.closest('button,.btn-primary,.btn-save,.btn-cancel,.btn-danger,.nav-item,.bn-item,.jump-pill,.day-tab');
+  if(btn){btn.classList.add('ripple-host');addRipple({currentTarget:btn,clientX:e.clientX,clientY:e.clientY});}
+});
+
+// ── ANIM-DONE (card hover after entrance) ────────────────────────────────────
+function markCardsDone(){
+  setTimeout(()=>document.querySelectorAll('.card:not(.anim-done)').forEach(c=>c.classList.add('anim-done')),400);
 }
 
 </script>
