@@ -111,7 +111,7 @@ jobs:
             }
 
             // Fetch everything in parallel
-            const [schedule, subjectsRaw, sessionsRaw, hoursRaw, subsRaw, notifDone, todosRaw, overridesRaw] = await Promise.all([
+            const [schedule, subjectsRaw, sessionsRaw, hoursRaw, subsRaw, notifDone, todosRaw, overridesRaw, goalsRaw, templatesRaw] = await Promise.all([
               sbGet('st_sched'),
               sbGet('st_subjs'),
               sbGet('st_sessions'),
@@ -119,7 +119,9 @@ jobs:
               sbGet('push_subscriptions'),
               sbGet('notif_done_subjs'),
               sbGet('st_todos'),
-              sbGet('st_sched_overrides')
+              sbGet('st_sched_overrides'),
+              sbGet('st_goals'),
+              sbGet('st_notif_templates'),
             ]);
 
             if (!subsRaw) { console.log('No push subscriptions found'); return; }
@@ -169,8 +171,35 @@ jobs:
               .reduce((a, s) => a + s.hours, 0);
             const weeklyAvg = monthH / 4;
 
-            const dailyGoal  = 6.3;
-            const weeklyGoal = 31.5;
+            const dailyGoal  = (goalsRaw && goalsRaw.daily)  || 6.3;
+            const weeklyGoal = (goalsRaw && goalsRaw.weekly) || 31.5;
+
+            // ── Notification templates ────────────────────────────────────
+            const DEFAULT_TPLS = {
+              'block-soon':       {title:'Starting in 10min',            body:'{label} · {start}–{end}'},
+              'block-start':      {title:'Time to study — {label}',      body:'{start}–{end} · Tap to start your timer'},
+              'block-end':        {title:'{label} ending soon',          body:'Finishes at {end} · Don\'t forget to log your session!'},
+              'break-end':        {title:'Break ending soon',            body:'Up next: {nextLabel} at {nextStart}'},
+              'morning-empty':    {title:'Good morning!',                body:'No study blocks today — rest up!'},
+              'morning-schedule': {title:'Good morning! {count} blocks today · {scheduledH}', body:'{blocks}'},
+              'morning-focus':    {title:'Today: {subjects}',            body:'{focusBody}'},
+              'wrapup-hit':       {title:'Daily wrap-up 🎯',             body:'Target hit! You studied {todayH} today'},
+              'wrapup-miss':      {title:'Daily wrap-up',                body:'{todayH} logged · {remaining} to go'},
+              'monday':           {title:'New week!',                    body:'Goal: {weeklyGoal} this week · You averaged {weeklyAvg}/week recently'},
+              'weekly-recap':     {title:'Weekly recap',                 body:'{weekH} this week · {daysHit}/7 days hit target'},
+              'subject-done':     {title:'Subject complete! 🎉',         body:'{name} is done · Great work!'},
+              'subjects-behind':  {title:'Subjects falling behind',      body:'{subjects}'},
+            };
+            const TPLS = { ...DEFAULT_TPLS, ...(templatesRaw || {}) };
+
+            // Fill {variable} placeholders in a template string
+            function fill(str, vars) {
+              return str.replace(/\{(\w+)\}/g, (_, k) => vars[k] !== undefined ? vars[k] : '{'+k+'}');
+            }
+            function tpl(id, vars) {
+              const t = TPLS[id] || DEFAULT_TPLS[id] || { title: id, body: '' };
+              return { title: fill(t.title, vars), body: fill(t.body, vars) };
+            }
 
             // ── 1a. Block starting in ~10 min (9–11 min window) ───────────
             const startingSoon = todayBlocks.filter(b =>
@@ -179,11 +208,8 @@ jobs:
               toMins(b.start) - nowMins <= 11
             );
             for (const bl of startingSoon) {
-              await sendAll(
-                `Starting in 10min`,
-                `${bl.label} · ${bl.start}–${bl.end}`,
-                `soon-${bl.id}`
-              );
+              const {title,body} = tpl('block-soon', {label:bl.label, start:bl.start, end:bl.end});
+              await sendAll(title, body, `soon-${bl.id}`);
             }
 
             // ── 1b. Block just started (0–2 min ago) — Start Timer ────────
@@ -193,12 +219,9 @@ jobs:
               nowMins < toMins(b.start) + 2
             );
             for (const bl of justStarted) {
-              await sendAll(
-                `Time to study — ${bl.label}`,
-                `${bl.start}–${bl.end} · Tap to start your timer`,
-                `started-${bl.id}`,
-                { type: 'block-start', subjectId: bl.subjectId || null, blockStart: bl.start }
-              );
+              const {title,body} = tpl('block-start', {label:bl.label, start:bl.start, end:bl.end});
+              await sendAll(title, body, `started-${bl.id}`,
+                { type: 'block-start', subjectId: bl.subjectId || null, blockStart: bl.start });
             }
 
             // ── 2. Study block ending in ~5 min (4–6 min window) ─────────
@@ -208,12 +231,9 @@ jobs:
               toMins(b.end) - nowMins <= 6
             );
             for (const bl of endingSoon) {
-              await sendAll(
-                `${bl.label} ending soon`,
-                `Finishes at ${bl.end} · Don't forget to log your session!`,
-                `end-${bl.id}`,
-                { type: 'block-end', subjectId: bl.subjectId || null, blockStart: bl.start }
-              );
+              const {title,body} = tpl('block-end', {label:bl.label, end:bl.end});
+              await sendAll(title, body, `end-${bl.id}`,
+                { type: 'block-end', subjectId: bl.subjectId || null, blockStart: bl.start });
             }
 
             // ── 3. Break ending in 0–2 min — next block preview ──────────
@@ -224,11 +244,11 @@ jobs:
             );
             for (const bl of breakEndingSoon) {
               const nextBlock = todayBlocks.find(b => toMins(b.start) >= toMins(bl.end) && b.type === 'study');
-              await sendAll(
-                'Break ending soon',
-                nextBlock ? `Up next: ${nextBlock.label} at ${nextBlock.start}` : 'Break wrapping up',
-                `break-end-${bl.id}`
-              );
+              const {title,body} = tpl('break-end', {
+                nextLabel: nextBlock ? nextBlock.label : 'next block',
+                nextStart: nextBlock ? nextBlock.start : ''
+              });
+              await sendAll(title, body, `break-end-${bl.id}`);
             }
 
             // ── 4. Morning summary — 8:30am ───────────────────────────────
@@ -237,13 +257,14 @@ jobs:
               const scheduledH  = studyBlocks.reduce((a, b) => a + (toMins(b.end) - toMins(b.start)) / 60, 0);
 
               if (studyBlocks.length === 0) {
-                await sendAll('Good morning!', 'No study blocks today — rest up!', 'morning-summary');
+                const {title,body} = tpl('morning-empty', {});
+                await sendAll(title, body, 'morning-summary');
               } else {
-                await sendAll(
-                  `Good morning! ${studyBlocks.length} blocks today · ${fmtH(scheduledH)}`,
-                  studyBlocks.map(b => `${b.start}–${b.end} ${b.label}`).join('\n'),
-                  'morning-schedule'
-                );
+                const blocks = studyBlocks.map(b => `${b.start}–${b.end} ${b.label}`).join('\n');
+                const {title,body} = tpl('morning-schedule', {
+                  count: studyBlocks.length, scheduledH: fmtH(scheduledH), blocks
+                });
+                await sendAll(title, body, 'morning-schedule');
 
                 const subjectStats = subjects
                   .filter(s => !s.done && !s.passive && s.req > 0)
@@ -256,39 +277,29 @@ jobs:
                   .sort((a, b) => a.pct - b.pct);
 
                 const top3 = subjectStats.slice(0, 3);
-                const focusBody = top3
-                  .map(s => `${s.name} · ${Math.round(s.pct)}% · ${fmtH(s.left)} left`)
-                  .join('\n');
-
+                const focusBody = top3.map(s => `${s.name} · ${Math.round(s.pct)}% · ${fmtH(s.left)} left`).join('\n');
                 const todaySubjectIds = studyBlocks.map(b => b.subjectId).filter(Boolean);
-                const todayScheduled  = subjectStats
-                  .filter(s => todaySubjectIds.includes(s.id))
-                  .map(s => s.name);
-
-                const focusTitle = todayScheduled.length
-                  ? `Today: ${todayScheduled.join(', ')}`
-                  : 'Most behind subjects';
-
-                await sendAll(focusTitle, focusBody, 'morning-focus');
+                const todayScheduled  = subjectStats.filter(s => todaySubjectIds.includes(s.id)).map(s => s.name);
+                const subjects_str = todayScheduled.length ? todayScheduled.join(', ') : 'Most behind subjects';
+                const {title:ft, body:fb} = tpl('morning-focus', {subjects: subjects_str, focusBody});
+                await sendAll(ft, fb, 'morning-focus');
               }
             }
 
             // ── 5. Daily wrap-up — 6pm ────────────────────────────────────
             if (near(18 * 60)) {
               const remaining = Math.max(0, dailyGoal - todayH);
-              const body = todayH >= dailyGoal
-                ? `Target hit! You studied ${fmtH(todayH)} today`
-                : `${fmtH(todayH)} logged · ${fmtH(remaining)} to go`;
-              await sendAll('Daily wrap-up', body, 'daily-wrapup');
+              const id = todayH >= dailyGoal ? 'wrapup-hit' : 'wrapup-miss';
+              const {title,body} = tpl(id, {todayH: fmtH(todayH), remaining: fmtH(remaining)});
+              await sendAll(title, body, 'daily-wrapup');
             }
 
             // ── 6. Monday morning — weekly preview ────────────────────────
             if (dow === 1 && near(8 * 60)) {
-              await sendAll(
-                'New week!',
-                `Goal: ${fmtH(weeklyGoal)} this week · You averaged ${fmtH(weeklyAvg)}/week recently`,
-                'monday-preview'
-              );
+              const {title,body} = tpl('monday', {
+                weeklyGoal: fmtH(weeklyGoal), weeklyAvg: fmtH(weeklyAvg)
+              });
+              await sendAll(title, body, 'monday-preview');
             }
 
             // ── 7. Sunday evening — weekly recap ─────────────────────────
@@ -297,20 +308,16 @@ jobs:
                 .filter(s => new Date(s.date) >= weekAgo && new Date(s.date) <= nowDate)
                 .reduce((map, s) => { map[s.date] = (map[s.date] || 0) + s.hours; return map; }, {});
               const daysHit = Object.values(hitTarget).filter(h => h >= dailyGoal).length;
-              await sendAll(
-                'Weekly recap',
-                `${fmtH(weekH)} this week · ${daysHit}/7 days hit target`,
-                'weekly-recap'
-              );
+              const {title,body} = tpl('weekly-recap', {weekH: fmtH(weekH), daysHit});
+              await sendAll(title, body, 'weekly-recap');
             }
 
             // ── 8. Subject complete — first time only ─────────────────────
             const alreadyNotified = notifDone || [];
-            const newlyDone = subjects.filter(s =>
-              s.done && !alreadyNotified.includes(s.id)
-            );
+            const newlyDone = subjects.filter(s => s.done && !alreadyNotified.includes(s.id));
             for (const s of newlyDone) {
-              await sendAll('Subject complete!', `${s.name} is done · Great work!`, `done-${s.id}`);
+              const {title,body} = tpl('subject-done', {name: s.name});
+              await sendAll(title, body, `done-${s.id}`);
             }
             if (newlyDone.length) {
               await sbSet('notif_done_subjs', [...alreadyNotified, ...newlyDone.map(s => s.id)]);
@@ -331,11 +338,10 @@ jobs:
                 .slice(0, 3);
 
               if (wayBehind.length) {
-                await sendAll(
-                  'Subjects falling behind',
-                  wayBehind.map(s => `${s.name} (${Math.round(s.pct)}%)`).join(' · '),
-                  'behind-subjects'
-                );
+                const {title,body} = tpl('subjects-behind', {
+                  subjects: wayBehind.map(s => `${s.name} (${Math.round(s.pct)}%)`).join(' · ')
+                });
+                await sendAll(title, body, 'behind-subjects');
               }
             }
 

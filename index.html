@@ -6400,6 +6400,93 @@ const NOTIF_TYPES=[
   {id:'streak_warn',   label:'Streak at risk 🔥',      desc:'Evening reminder if daily target not yet met', inAppOnly:true},
 ];
 
+// ── NOTIFICATION TEMPLATES ────────────────────────────────────────────────────
+// {label},{start},{end},{todayH},{remaining},{weekH},{daysHit},{name},{subjects}
+// {scheduledH},{count},{weeklyGoal},{weeklyAvg},{nextLabel},{nextStart} are also available
+const DEFAULT_NOTIF_TEMPLATES={
+  'block-soon':       {title:'Starting in 10min',            body:'{label} · {start}–{end}'},
+  'block-start':      {title:'Time to study — {label}',      body:'{start}–{end} · Tap to start your timer'},
+  'block-end':        {title:'{label} ending soon',          body:'Finishes at {end} · Don\'t forget to log your session!'},
+  'break-end':        {title:'Break ending soon',            body:'Up next: {nextLabel} at {nextStart}'},
+  'morning-empty':    {title:'Good morning!',                body:'No study blocks today — rest up!'},
+  'morning-schedule': {title:'Good morning! {count} blocks today · {scheduledH}', body:'{blocks}'},
+  'morning-focus':    {title:'Today: {subjects}',            body:'{focusBody}'},
+  'wrapup-hit':       {title:'Daily wrap-up 🎯',             body:'Target hit! You studied {todayH} today'},
+  'wrapup-miss':      {title:'Daily wrap-up',                body:'{todayH} logged · {remaining} to go'},
+  'monday':           {title:'New week!',                    body:'Goal: {weeklyGoal} this week · You averaged {weeklyAvg}/week recently'},
+  'weekly-recap':     {title:'Weekly recap',                 body:'{weekH} this week · {daysHit}/7 days hit target'},
+  'subject-done':     {title:'Subject complete! 🎉',         body:'{name} is done · Great work!'},
+  'subjects-behind':  {title:'Subjects falling behind',      body:'{subjects}'},
+};
+
+const NOTIF_TEMPLATE_META=[
+  {id:'block-soon',       label:'Block starting soon',      vars:'{label} {start} {end}'},
+  {id:'block-start',      label:'Block just started',       vars:'{label} {start} {end}'},
+  {id:'block-end',        label:'Block ending soon',        vars:'{label} {end}'},
+  {id:'break-end',        label:'Break ending',             vars:'{nextLabel} {nextStart}'},
+  {id:'morning-empty',    label:'Morning (no blocks)',       vars:'—'},
+  {id:'morning-schedule', label:'Morning schedule',         vars:'{count} {scheduledH} {blocks}'},
+  {id:'morning-focus',    label:'Morning focus subjects',   vars:'{subjects} {focusBody}'},
+  {id:'wrapup-hit',       label:'Daily wrap-up (goal hit)', vars:'{todayH}'},
+  {id:'wrapup-miss',      label:'Daily wrap-up (not hit)',  vars:'{todayH} {remaining}'},
+  {id:'monday',           label:'Monday preview',           vars:'{weeklyGoal} {weeklyAvg}'},
+  {id:'weekly-recap',     label:'Weekly recap',             vars:'{weekH} {daysHit}'},
+  {id:'subject-done',     label:'Subject complete',         vars:'{name}'},
+  {id:'subjects-behind',  label:'Falling behind alert',     vars:'{subjects}'},
+];
+
+function loadNotifTemplates(){
+  try{const s=localStorage.getItem('st_notif_templates');if(s)return{...DEFAULT_NOTIF_TEMPLATES,...JSON.parse(s)};}catch(e){}
+  return{...DEFAULT_NOTIF_TEMPLATES};
+}
+function saveNotifTemplates(t){
+  localStorage.setItem('st_notif_templates',JSON.stringify(t));
+  sbPush('st_notif_templates',t);
+}
+
+function openNotifMessages(){
+  const tpls=loadNotifTemplates();
+  const rows=NOTIF_TEMPLATE_META.map(m=>{
+    const t=tpls[m.id]||DEFAULT_NOTIF_TEMPLATES[m.id]||{title:'',body:''};
+    return`<div style="border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.4px">${escHtml(m.label)}</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Variables: <code style="background:var(--bg3);padding:1px 5px;border-radius:4px;font-size:10px">${escHtml(m.vars)}</code></div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <input class="form-input" style="font-size:13px;padding:8px 10px" placeholder="Title" id="ntpl-title-${m.id}" value="${escHtml(t.title)}">
+        <input class="form-input" style="font-size:13px;padding:8px 10px" placeholder="Body" id="ntpl-body-${m.id}" value="${escHtml(t.body)}">
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('notif-messages-list').innerHTML=rows;
+  closeModal('notif-settings-modal-overlay');
+  document.getElementById('notif-messages-modal-overlay').classList.add('open');
+}
+
+function saveNotifMessages(){
+  const tpls={};
+  NOTIF_TEMPLATE_META.forEach(m=>{
+    const titleEl=document.getElementById('ntpl-title-'+m.id);
+    const bodyEl=document.getElementById('ntpl-body-'+m.id);
+    tpls[m.id]={
+      title:titleEl?titleEl.value.trim():(DEFAULT_NOTIF_TEMPLATES[m.id]||{}).title||'',
+      body:bodyEl?bodyEl.value.trim():(DEFAULT_NOTIF_TEMPLATES[m.id]||{}).body||'',
+    };
+  });
+  saveNotifTemplates(tpls);
+  closeModal('notif-messages-modal-overlay');
+  showToast('Notification messages saved');
+}
+
+function resetNotifMessages(){
+  NOTIF_TEMPLATE_META.forEach(m=>{
+    const d=DEFAULT_NOTIF_TEMPLATES[m.id]||{title:'',body:''};
+    const titleEl=document.getElementById('ntpl-title-'+m.id);
+    const bodyEl=document.getElementById('ntpl-body-'+m.id);
+    if(titleEl)titleEl.value=d.title;
+    if(bodyEl)bodyEl.value=d.body;
+  });
+}
+
 function loadNotifPrefs(){
   try{return JSON.parse(localStorage.getItem('st_notif_prefs')||'{}');}catch(e){return{};}
 }
@@ -6678,9 +6765,27 @@ function markCardsDone(){
     <div class="modal-handle"></div>
     <div class="modal-title">🔔 Notification Settings</div>
     <div id="notif-prefs-list"></div>
-    <div style="margin-top:16px">
+    <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
       <button class="btn-save" onclick="saveNotifPrefs()">Save &amp; Sync</button>
-      <button class="btn-cancel" onclick="closeModal('notif-settings-modal-overlay')" style="margin-top:8px">Cancel</button>
+      <button onclick="openNotifMessages()" style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:11px;font-size:14px;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit">✏️ Edit notification messages</button>
+      <button class="btn-cancel" onclick="closeModal('notif-settings-modal-overlay')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- NOTIFICATION MESSAGES MODAL -->
+<div class="modal-overlay" id="notif-messages-modal-overlay" onclick="handleOverlayClick(event,'notif-messages-modal-overlay')">
+  <div class="modal-sheet" style="max-height:85vh;display:flex;flex-direction:column" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="modal-title" style="margin-bottom:0">✏️ Notification Messages</div>
+      <button onclick="resetNotifMessages()" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;font-family:inherit;text-decoration:underline">Reset all</button>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Customise the text sent by each notification. Use the listed variables in curly braces — they get filled in automatically.</div>
+    <div id="notif-messages-list" style="overflow-y:auto;flex:1"></div>
+    <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+      <button class="btn-save" onclick="saveNotifMessages()">Save</button>
+      <button class="btn-cancel" onclick="closeModal('notif-messages-modal-overlay')">Cancel</button>
     </div>
   </div>
 </div>
