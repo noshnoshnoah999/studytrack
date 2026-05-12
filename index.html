@@ -249,12 +249,17 @@ a{color:inherit;text-decoration:none}
 .hist-month-group{margin-bottom:6px;border-radius:14px;overflow:hidden;background:var(--bg2)}
 .hist-month-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;user-select:none;transition:background 0.15s}
 .hist-month-header:hover{background:var(--bg3)}
+.hist-month-header:active{transform:scale(0.985)}
 .hist-month-left{display:flex;align-items:center;gap:10px}
-.hist-month-chevron{font-size:11px;color:var(--text3);width:12px;flex-shrink:0}
+.hist-month-chevron{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform 0.28s cubic-bezier(0.34,1.56,0.64,1),color 0.15s;color:var(--text3)}
+.hist-month-chevron svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.hist-month-chevron.open{transform:rotate(180deg);color:var(--o)}
 .hist-month-name{font-size:15px;font-weight:700;color:var(--text)}
 .hist-month-count{font-size:12px;color:var(--text3);font-weight:500}
 .hist-month-total{font-size:14px;font-weight:800;color:var(--o)}
-.hist-month-body{padding:0 12px 12px}
+.hist-month-body{padding:0 12px 12px;overflow:hidden;max-height:0;transition:max-height 0.38s cubic-bezier(0.4,0,0.2,1),opacity 0.28s ease}
+.hist-month-body.open{max-height:4000px;opacity:1}
+.hist-month-body:not(.open){opacity:0}
 .hist-group{margin-bottom:20px}
 .hist-date-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 2px}
 .hist-date-label{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px}
@@ -778,8 +783,11 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
 .day-tab.active{transform:scale(1.05)}
 
 /* ── Back to top button ──────────────────────────────────────────── */
-.back-to-top{transition:transform 0.15s,background 0.15s}
-.back-to-top:hover{transform:scale(1.12) translateY(-2px)}
+.back-to-top{transition:transform 0.15s,background 0.15s,box-shadow 0.15s}
+.back-to-top:hover{transform:scale(1.12) translateY(-2px);box-shadow:0 6px 20px rgba(249,115,22,0.65)}
+.back-to-top:active{transform:scale(0.88) translateY(2px)}
+@keyframes bttLaunch{0%{transform:scale(1)}30%{transform:scale(0.82) translateY(4px)}65%{transform:scale(1.18) translateY(-8px)}85%{transform:scale(0.96) translateY(-2px)}100%{transform:scale(1) translateY(0)}}
+.back-to-top.launching{animation:bttLaunch 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards}
 
 /* ── IN-APP BANNER ───────────────────────────────────────────────────────── */
 @keyframes bannerIn{from{opacity:0;transform:translateX(-50%) translateY(-60px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
@@ -3035,16 +3043,17 @@ function renderHistory(){
       const sessionCount=monthDates.reduce((t,date)=>t+groups[date].length,0);
       const bodyId='hist-month-'+mk.replace('-','_');
       const dayHtml=monthDates.map(date=>makeDayGroup(date,groups[date])).join('');
+      const chevronSvg='<svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>';
       return '<div class="hist-month-group">'+
         '<div class="hist-month-header" onclick="toggleHistMonth(\''+bodyId+'\',this)">'+
           '<div class="hist-month-left">'+
-            '<span class="hist-month-chevron">'+(isCurrentMonth?'▾':'▸')+'</span>'+
+            '<span class="hist-month-chevron'+(isCurrentMonth?' open':'')+'">'+chevronSvg+'</span>'+
             '<span class="hist-month-name">'+monthLabel+'</span>'+
             '<span class="hist-month-count">'+sessionCount+' session'+(sessionCount!==1?'s':'')+'</span>'+
           '</div>'+
           '<span class="hist-month-total">'+fmtH(monthTotal)+'</span>'+
         '</div>'+
-        '<div class="hist-month-body" id="'+bodyId+'" style="display:'+(isCurrentMonth?'block':'none')+'">'+
+        '<div class="hist-month-body'+(isCurrentMonth?' open':'')+'" id="'+bodyId+'">'+
           dayHtml+
         '</div>'+
       '</div>';
@@ -3063,10 +3072,10 @@ function renderHistory(){
 function toggleHistMonth(bodyId, headerEl){
   const body=document.getElementById(bodyId);
   if(!body)return;
-  const open=body.style.display!=='none';
-  body.style.display=open?'none':'block';
+  const opening=!body.classList.contains('open');
+  body.classList.toggle('open',opening);
   const chevron=headerEl.querySelector('.hist-month-chevron');
-  if(chevron)chevron.textContent=open?'▸':'▾';
+  if(chevron)chevron.classList.toggle('open',opening);
 }
 
 function archiveOldSessions(){
@@ -5043,6 +5052,8 @@ function _getScrollY(){
   return (main&&main.scrollTop)||window.scrollY||document.documentElement.scrollTop||document.body.scrollTop||0;
 }
 function _scrollToTop(){
+  const btn=document.getElementById('btn-back-top');
+  if(btn){btn.classList.remove('launching');void btn.offsetWidth;btn.classList.add('launching');btn.addEventListener('animationend',()=>btn.classList.remove('launching'),{once:true});}
   const main=document.getElementById('main');
   if(main&&main.scrollTop>0){main.scrollTo({top:0,behavior:'smooth'});}
   else{window.scrollTo({top:0,behavior:'smooth'});}
