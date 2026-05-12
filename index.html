@@ -1962,7 +1962,7 @@ async function analyseWorkoutImage(base64,mimeType){
         max_tokens:300,
         messages:[{role:'user',content:[
           {type:'image',source:{type:'base64',media_type:mimeType,data:base64}},
-          {type:'text',text:'This is a Strava or Runna workout screenshot. Return ONLY a JSON object with these fields (no markdown, no explanation): {"date":"YYYY-MM-DD","startTime":"HH:MM","endTime":"HH:MM","activity":"Cycle|Run|Walk","timeLabel":"Morning|Afternoon|Evening|Night"}. Use 24h times. If a value cannot be determined use null. The date must be the workout date shown in the screenshot.'}
+          {type:'text',text:'This is a Strava or Runna workout screenshot. Extract the workout details carefully.\n\nStrava often shows the start time as "Today at HH:MM" or "DD Month at HH:MM". The duration is shown as a "Time" field (e.g. "9m 0s" or "1h 23m"). Calculate endTime = startTime + duration.\n\nReturn ONLY a valid JSON object, no markdown, no explanation:\n{"date":"YYYY-MM-DD","startTime":"HH:MM","endTime":"HH:MM","durationMinutes":number,"activity":"Cycle|Run|Walk","timeLabel":"Morning|Afternoon|Evening|Night"}\n\nRules:\n- date: the actual workout date (if it says "Today" use today\'s date)\n- startTime/endTime: 24h format HH:MM\n- durationMinutes: total workout duration in minutes (integer)\n- timeLabel: Morning=before 12:00, Afternoon=12:00-17:00, Evening=17:00-21:00, Night=after 21:00\n- If truly unknown use null, but try hard to find it.'}
         ]}]
       })
     });
@@ -2071,17 +2071,21 @@ async function runWorkoutAnalysis(){
 
 function showWorkoutSummary(result){
   if(!result)return;
-  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const fullMonths2=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  function ordinal2(n){const s=['th','st','nd','rd'];const v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
   let dateLabel='Unknown date';
   if(result.date){
     try{
       const parts=result.date.split('-');
       const d=new Date(+parts[0],+parts[1]-1,+parts[2]);
-      dateLabel=+parts[2]+' '+months[d.getMonth()]+' '+parts[0];
+      dateLabel=ordinal2(+parts[2])+' '+fullMonths2[d.getMonth()]+' '+parts[0];
     }catch(e){}
   }
   const activityLabel=result.timeLabel&&result.activity?(result.timeLabel+' '+result.activity):(result.activity||'Workout');
-  const timeStr=(result.startTime&&result.endTime)?(result.startTime+' – '+result.endTime):'Unknown times';
+  let timeStr='Unknown times';
+  if(result.startTime&&result.endTime)timeStr=result.startTime+' – '+result.endTime;
+  else if(result.startTime&&result.durationMinutes)timeStr=result.startTime+' ('+result.durationMinutes+'min)';
+  else if(result.durationMinutes)timeStr=result.durationMinutes+' min';
   const actIcon={Cycle:'🚴',Run:'🏃',Walk:'🚶'}[result.activity]||'🏋';
   const summaryEl=document.getElementById('workout-summary-card');
   if(summaryEl){
@@ -2119,14 +2123,15 @@ async function useWorkoutResult(){
   if(notesEl)notesEl.value=activityLabel;
   updateLogDuration();
   updateLogFormColour();
-  // Build title for clipboard: "11 May - Morning Cycle"
-  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  // Build title for clipboard: "11th May - Evening Cycle"
+  const fullMonths=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  function ordinal(n){const s=['th','st','nd','rd'];const v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
   let dayLabel='';
   if(result.date){
     try{
       const parts=result.date.split('-');
       const d=new Date(+parts[0],+parts[1]-1,+parts[2]);
-      dayLabel=+parts[2]+' '+months[d.getMonth()];
+      dayLabel=ordinal(+parts[2])+' '+fullMonths[d.getMonth()];
     }catch(e){}
   }
   const title=dayLabel?(dayLabel+' - '+activityLabel):activityLabel;
