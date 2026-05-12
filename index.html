@@ -49,7 +49,7 @@ a{color:inherit;text-decoration:none}
 #app{display:flex;min-height:100vh}
 #sidebar{width:210px;min-width:210px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100%;position:fixed;left:0;top:0;z-index:100;transition:transform 0.25s cubic-bezier(.4,0,.2,1)}
 #sidebar.hidden{transform:translateX(-210px)}
-#main{margin-left:210px;flex:1;min-height:100%;display:flex;flex-direction:column;overflow:visible;transition:margin-left 0.25s cubic-bezier(.4,0,.2,1)}
+#main{margin-left:210px;flex:1;min-height:100%;display:flex;flex-direction:column;overflow-x:clip;transition:margin-left 0.25s cubic-bezier(.4,0,.2,1)}
 #main.sidebar-hidden{margin-left:0}
 #main.sidebar-hidden .page{max-width:1100px}
 #sidebar-toggle{position:fixed;top:16px;left:16px;z-index:200;background:var(--bg2);border:1px solid var(--border);border-radius:9px;width:34px;height:34px;display:none;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);transition:all 0.15s}
@@ -445,7 +445,7 @@ a{color:inherit;text-decoration:none}
 /* MOBILE */
 @media(max-width:768px){
   #sidebar{display:none}
-  #main{margin-left:0;width:100vw;overflow:visible}
+  #main{margin-left:0;width:100vw;overflow-x:clip}
   .page{padding:16px 16px 100px 16px;width:100vw;overflow-x:hidden}
   #bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);padding:10px 0 calc(10px + env(safe-area-inset-bottom));z-index:100;transition:transform 0.32s cubic-bezier(0.4,0,0.2,1)}
   .back-to-top{bottom:calc(72px + env(safe-area-inset-bottom))!important;right:16px!important;left:auto!important}
@@ -6119,13 +6119,13 @@ function _getScrollY(){
   );
 }
 function _scrollToTop(){
-  const opts={top:0,behavior:'smooth'};
-  try{window.scrollTo(opts);}catch(e){}
-  try{document.documentElement.scrollTo(opts);}catch(e){}
-  try{document.body.scrollTo(opts);}catch(e){}
+  // Instant jump — smooth scrolling causes position:fixed to drift in Safari
+  try{window.scrollTo(0,0);}catch(e){}
+  document.documentElement.scrollTop=0;
+  document.body.scrollTop=0;
   const main=document.getElementById('main');
-  if(main)try{main.scrollTo(opts);}catch(e){}
-  setTimeout(_updateBackToTop,600);
+  if(main)main.scrollTop=0;
+  _updateBackToTop();
 }
 function _updateBackToTop(){
   const btn=document.getElementById('btn-back-top');
