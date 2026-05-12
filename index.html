@@ -923,7 +923,10 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
       <div class="card log-form-card" id="log-form-card" style="margin-bottom:12px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
           <div class="card-title" style="margin-bottom:0">Log a Session</div>
-          <button class="btn-import-workout" onclick="openWorkoutImport()">📸 Import Workout</button>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button onclick="clearLogForm()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:12px;color:var(--text3);cursor:pointer;font-family:inherit" title="Clear form">Clear</button>
+            <button class="btn-import-workout" onclick="openWorkoutImport()">📸 Import Workout</button>
+          </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
           <div class="form-group" style="margin-bottom:0">
@@ -3184,6 +3187,19 @@ function animateCount(el,target,decimals,suffix){
 }
 
 // ── LOG ───────────────────────────────────────────────────────────────────────
+function clearLogForm(){
+  document.getElementById('log-date').value=todayStr();
+  document.getElementById('log-start-hh').value='';
+  document.getElementById('log-start-mm').value='';
+  document.getElementById('log-end-hh').value='';
+  document.getElementById('log-end-mm').value='';
+  document.getElementById('log-start').value='';
+  document.getElementById('log-end').value='';
+  document.getElementById('log-notes').value='';
+  const dur=document.getElementById('log-duration');
+  if(dur)dur.textContent='';
+  updateLogFormColour();
+}
 function renderLog(){
   const subjs=loadSubjects();
   const available=subjs.filter(s=>!s.done);
