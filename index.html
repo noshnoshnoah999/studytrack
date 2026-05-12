@@ -3824,6 +3824,8 @@ function deleteHistEntry(id){
 // ── SESSION TIMER ─────────────────────────────────────────────────────────────
 let timerInterval=null;
 let timerStart=null;
+let timerStop=null;       // ms timestamp when timer was stopped (null = running/idle)
+let timerSessionId=null;  // unique ID per session — used to detect duplicate logs
 let timerStartWallClock=null;
 let timerSubjectId=null;
 let _timerSyncInterval=null;
@@ -3863,7 +3865,9 @@ async function timerSyncPush(){
     await sbPush('st_timer',{
       running:!!timerInterval,
       startMs:timerStart,
+      stopMs:timerStop,
       subjectId:timerSubjectId,
+      sessionId:timerSessionId,
       updatedAt:Date.now()
     });
   }catch(e){}
@@ -3881,7 +3885,9 @@ async function timerSyncPull(silent){
       if(!timerInterval){
         // Local is idle — start it from remote start time
         timerSubjectId=r.subjectId||timerSubjectId;
+        timerSessionId=r.sessionId||null;
         timerStart=r.startMs;
+        timerStop=null;
         timerStartWallClock=new Date(r.startMs);
         timerInterval=setInterval(timerTick,1000);
         _acquireWakeLock();
@@ -3890,18 +3896,22 @@ async function timerSyncPull(silent){
       } else if(r.startMs!==timerStart){
         // Different session started on another device — adopt it
         timerSubjectId=r.subjectId||timerSubjectId;
+        timerSessionId=r.sessionId||null;
         timerStart=r.startMs;
+        timerStop=null;
         timerStartWallClock=new Date(r.startMs);
         if(!silent)showToast('⏱ Timer updated from another device');
       }
     } else if(!r.running&&r.startMs){
-      // Remote stopped the timer (startMs preserved so you can still log)
+      // Remote stopped the timer — use remote stopMs so elapsed time is exact
       if(timerInterval){
         // Local is still running — stop it to match remote
         clearInterval(timerInterval);
         timerInterval=null;
         timerSubjectId=r.subjectId||timerSubjectId;
+        timerSessionId=r.sessionId||null;
         timerStart=r.startMs;
+        timerStop=r.stopMs||Date.now();  // ← use remote stop time, not local now
         timerStartWallClock=new Date(r.startMs);
         _releaseWakeLock();
         renderTimerPage();
@@ -3909,7 +3919,9 @@ async function timerSyncPull(silent){
       } else if(r.startMs!==timerStart){
         // Local also stopped but from a different session — adopt remote state
         timerSubjectId=r.subjectId||timerSubjectId;
+        timerSessionId=r.sessionId||null;
         timerStart=r.startMs;
+        timerStop=r.stopMs||null;
         timerStartWallClock=new Date(r.startMs);
         renderTimerPage();
       }
@@ -3964,7 +3976,7 @@ function pomodoroPhaseComplete(){
   renderTimerPage();
 }
 
-function timerElapsedSecs(){return timerStart?Math.floor((Date.now()-timerStart)/1000):0;}
+function timerElapsedSecs(){if(!timerStart)return 0;return Math.floor(((timerStop||Date.now())-timerStart)/1000);}
 
 function timerFmtClock(secs){
   const h=Math.floor(secs/3600),m=Math.floor((secs%3600)/60),s=secs%60;
@@ -4131,6 +4143,7 @@ function timerPageToggle(){
     // Stop
     clearInterval(timerInterval);
     timerInterval=null;
+    timerStop=Date.now();
     _releaseWakeLock();
     renderTimerPage();
     timerSyncPush();
@@ -4140,6 +4153,8 @@ function timerPageToggle(){
   } else {
     // Start
     timerStart=Date.now();
+    timerStop=null;
+    timerSessionId=genId();
     timerStartWallClock=new Date();
     if(pomodoroMode){pomodoroPhase='work';pomodoroCount=0;pomodoroWorkMs=0;pomodoroPhaseStart=Date.now();pomodoroEndMs=Date.now()+POMO_WORK*1000;}
     timerInterval=setInterval(timerTick,1000);
@@ -4153,6 +4168,8 @@ function timerPageReset(){
   clearInterval(timerInterval);
   timerInterval=null;
   timerStart=null;
+  timerStop=null;
+  timerSessionId=null;
   timerStartWallClock=null;
   pomodoroPhase='work';pomodoroCount=0;pomodoroEndMs=null;pomodoroWorkMs=0;pomodoroPhaseStart=null;
   _releaseWakeLock();
@@ -4163,6 +4180,8 @@ function timerPageReset(){
 // Called from notification action: start timer for a subject (optionally with a backdated start time)
 function startTimerForSubject(subjectId, blockStartStr){
   timerSubjectId=subjectId;
+  timerStop=null;
+  timerSessionId=genId();
   clearInterval(timerInterval);
   // If block already started (e.g. notification fires a few mins late), backdate the start
   if(blockStartStr){
@@ -4205,9 +4224,25 @@ function stopTimerAndLog(){
   timerStartWallClock=null;
 }
 
-function timerPageLog(){
+async function timerPageLog(){
   if(!timerStartWallClock)return;
-  const endTime=new Date();
+  // Anti-duplicate: check Supabase to ensure another device hasn't already logged this session
+  const mySessionId=timerSessionId;
+  const myStartMs=timerStart;
+  try{
+    const check=await sbPull('st_timer');
+    if(check&&check.value!==undefined){
+      const rv=check.value;
+      // Session was cleared (logged/reset elsewhere) — abort
+      if(!rv.startMs||rv.startMs!==myStartMs||(rv.sessionId&&rv.sessionId!==mySessionId)){
+        showToast('Session already logged on another device');
+        timerPageReset();
+        return;
+      }
+    }
+  }catch(e){}
+  // Use the recorded stop time (not current time) so logged hours are exact
+  const endTime=timerStop?new Date(timerStop):new Date();
   const fmt=d=>String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
   const ds=endTime.getFullYear()+'-'+String(endTime.getMonth()+1).padStart(2,'0')+'-'+String(endTime.getDate()).padStart(2,'0');
   const notes=document.getElementById('tp-notes')?document.getElementById('tp-notes').value:'';
