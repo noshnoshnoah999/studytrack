@@ -721,8 +721,8 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
       </div>
       <div id="export-panel" style="display:none">
         <div class="export-panel">
-          <button class="export-btn" onclick="exportJSON()">📦 Export JSON (Full Backup)</button>
-          <button class="export-btn" onclick="exportCSV()">📄 Export Sessions CSV</button>
+          <button class="export-btn" onclick="exportReport()">📄 Print / Save Report</button>
+          <button class="export-btn" onclick="exportJSON()">📦 Backup Data (JSON)</button>
         </div>
       </div>
     </div>
@@ -881,8 +881,8 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
       <div class="hist-header">
         <h2>History</h2>
         <div style="display:flex;gap:8px">
-          <button class="btn-add" style="background:var(--bg3);color:var(--text2);font-size:12px;padding:8px 14px" onclick="exportJSON()">📦 JSON</button>
-          <button class="btn-add" style="background:var(--bg3);color:var(--text2);font-size:12px;padding:8px 14px" onclick="exportCSV()">📄 CSV</button>
+          <button class="btn-add" style="background:var(--bg3);color:var(--text2);font-size:12px;padding:8px 14px" onclick="exportReport()">📄 Report</button>
+          <button class="btn-add" style="background:var(--bg3);color:var(--text2);font-size:12px;padding:8px 14px" onclick="exportJSON()">📦 Backup</button>
         </div>
       </div>
       <div class="hist-controls">
@@ -4866,23 +4866,126 @@ function exportJSON(){
   if(p)p.style.display='none';
 }
 
-function exportCSV(){
-  const today=todayStr();
-  const subjects=JSON.parse(localStorage.getItem('st_subjs')||'[]');
-  const sessions=JSON.parse(localStorage.getItem('st_sessions')||'[]');
-  const subjMap={};
-  subjects.forEach(s=>{subjMap[s.id]=s.name;});
-  const rows=[['Date','Subject','Hours','Notes']];
-  sessions.forEach(s=>{
-    const name=subjMap[s.subjectId]||s.subjectId||'';
-    const notes=(s.notes||'').replace(/"/g,'""');
-    rows.push([s.date,'"'+name+'"',s.hours!=null?s.hours:'','"'+notes+'"']);
-  });
-  const csv=rows.map(r=>r.join(',')).join('\n');
-  downloadFile(csv,'studytrack-sessions-'+today+'.csv','text/csv');
-  showToast('CSV downloaded');
+function exportReport(){
   const p=document.getElementById('export-panel');
   if(p)p.style.display='none';
+  const subjs=loadSubjects().filter(s=>!s.extraCredit);
+  const sessions=loadSessions().sort((a,b)=>a.date.localeCompare(b.date));
+  const goals=loadGoals();
+  const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
+  const totalLogged=getTotalLogged();
+  const remaining=Math.max(0,TOTAL_REQ-totalLogged);
+  const pct=Math.min(100,totalLogged/TOTAL_REQ*100);
+  const now=new Date();
+  const dateStr2=now.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  // Pace
+  const cutoff=new Date(now);cutoff.setDate(now.getDate()-28);
+  const cutStr=cutoff.getFullYear()+'-'+String(cutoff.getMonth()+1).padStart(2,'0')+'-'+String(cutoff.getDate()).padStart(2,'0');
+  const recent=sessions.filter(s=>s.date>=cutStr).reduce((a,s)=>a+s.hours,0);
+  const pace=recent>0?recent/4:goals.daily*5;
+  const estWeeks=pace>0?remaining/pace:null;
+  const estDate=estWeeks!=null?new Date(now.getTime()+estWeeks*7*24*3600*1000):null;
+  const estDateStr=estDate?MONTHS[estDate.getMonth()]+' '+estDate.getFullYear():'—';
+
+  // Subject rows
+  const subjMap={};subjs.forEach(s=>{subjMap[s.id]=s;});
+  const logged={};
+  sessions.forEach(s=>{if(s.subjectId)logged[s.subjectId]=(logged[s.subjectId]||0)+s.hours;});
+
+  const subjRows=subjs.map(s=>{
+    const log=parseFloat(((s.base||0)+(logged[s.id]||0)).toFixed(1));
+    const pp=Math.min(100,log/s.req*100);
+    const done=pp>=100;
+    const bar='<div style="height:8px;background:#e5e7eb;border-radius:100px;overflow:hidden;margin-top:4px"><div style="height:100%;width:'+pp.toFixed(1)+'%;background:'+(done?'#22c55e':'#f97316')+';border-radius:100px"></div></div>';
+    return'<tr>'+
+      '<td style="padding:10px 12px;font-weight:600;color:#111;border-bottom:1px solid #f3f4f6">'+escHtml(s.name)+'</td>'+
+      '<td style="padding:10px 12px;text-align:right;border-bottom:1px solid #f3f4f6;color:#374151">'+log.toFixed(1)+'h</td>'+
+      '<td style="padding:10px 12px;text-align:right;border-bottom:1px solid #f3f4f6;color:#6b7280">'+s.req+'h</td>'+
+      '<td style="padding:10px 16px;border-bottom:1px solid #f3f4f6"><div style="display:flex;align-items:center;gap:8px">'+
+        '<div style="flex:1;min-width:80px">'+bar+'</div>'+
+        '<span style="font-size:12px;font-weight:700;color:'+(done?'#22c55e':'#374151');+';min-width:36px;text-align:right">'+Math.round(pp)+'%</span>'+
+        (done?'<span style="font-size:11px;background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:100px;font-weight:700">Done</span>':'')+'</div></td>'+
+    '</tr>';
+  }).join('');
+
+  // Recent sessions table (last 50)
+  const recent50=sessions.slice(-50).reverse();
+  const sessRows=recent50.map(s=>{
+    const subj=subjMap[s.subjectId];
+    const name=subj?subj.name:(s.subjectId||'—');
+    return'<tr>'+
+      '<td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;color:#374151;font-size:13px">'+s.date+'</td>'+
+      '<td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-weight:600;color:#111;font-size:13px">'+escHtml(name)+'</td>'+
+      '<td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;color:#374151;font-size:13px">'+Number(s.hours).toFixed(2)+'h</td>'+
+      '<td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:13px">'+escHtml(s.notes||'')+'</td>'+
+    '</tr>';
+  }).join('');
+
+  const html=`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>StudyTrack Report — ${dateStr2}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fff;color:#111;padding:48px 56px;max-width:860px;margin:0 auto;font-size:15px;line-height:1.5}
+  @media print{body{padding:24px 32px}@page{margin:1.5cm}}
+  h1{font-size:28px;font-weight:800;letter-spacing:-0.5px;color:#111;margin-bottom:4px}
+  h2{font-size:16px;font-weight:700;color:#111;margin:32px 0 12px;padding-bottom:8px;border-bottom:2px solid #f3f4f6}
+  .meta{font-size:13px;color:#6b7280;margin-bottom:36px}
+  .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:8px}
+  .stat{background:#f9fafb;border-radius:12px;padding:16px 18px;border:1px solid #f3f4f6}
+  .stat-val{font-size:26px;font-weight:800;color:#111;letter-spacing:-0.5px}
+  .stat-lbl{font-size:11px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px}
+  .big-bar-wrap{background:#f3f4f6;border-radius:100px;height:14px;overflow:hidden;margin:16px 0 6px}
+  .big-bar-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,#f97316,#fb923c)}
+  .bar-labels{display:flex;justify-content:space-between;font-size:12px;color:#6b7280;margin-bottom:24px}
+  table{width:100%;border-collapse:collapse;margin-bottom:8px}
+  th{padding:10px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#9ca3af;border-bottom:2px solid #e5e7eb;background:#f9fafb}
+  th:last-child,td:last-child{text-align:right}
+  .footer{margin-top:40px;padding-top:20px;border-top:1px solid #e5e7eb;font-size:12px;color:#9ca3af;display:flex;justify-content:space-between}
+  .orange{color:#f97316}
+  .green{color:#22c55e}
+</style>
+</head>
+<body>
+<h1>StudyTrack Progress Report</h1>
+<div class="meta">Noah Flouty &nbsp;·&nbsp; TIHS &nbsp;·&nbsp; Generated ${dateStr2}</div>
+
+<h2>Overall Progress</h2>
+<div class="stat-grid">
+  <div class="stat"><div class="stat-val orange">${totalLogged.toFixed(1)}h</div><div class="stat-lbl">Hours Logged</div></div>
+  <div class="stat"><div class="stat-val">${remaining.toFixed(1)}h</div><div class="stat-lbl">Hours Remaining</div></div>
+  <div class="stat"><div class="stat-val orange">${Math.round(pct)}%</div><div class="stat-lbl">Complete</div></div>
+  <div class="stat"><div class="stat-val ${estDate&&estDate<=new Date('2027-10-31')?'green':'orange'}">${estDateStr}</div><div class="stat-lbl">Est. Finish</div></div>
+</div>
+<div class="big-bar-wrap"><div class="big-bar-fill" style="width:${pct.toFixed(1)}%"></div></div>
+<div class="bar-labels"><span>${totalLogged.toFixed(1)}h logged</span><span>${TOTAL_REQ}h required</span></div>
+
+<h2>Subject Breakdown</h2>
+<table>
+  <thead><tr><th>Subject</th><th style="text-align:right">Logged</th><th style="text-align:right">Required</th><th>Progress</th></tr></thead>
+  <tbody>${subjRows}</tbody>
+</table>
+
+<h2>Recent Sessions <span style="font-size:13px;font-weight:400;color:#9ca3af">(last 50)</span></h2>
+<table>
+  <thead><tr><th>Date</th><th>Subject</th><th style="text-align:right">Hours</th><th>Notes</th></tr></thead>
+  <tbody>${sessRows}</tbody>
+</table>
+
+<div class="footer">
+  <span>StudyTrack · noshnoshnoah999.github.io/studytrack</span>
+  <span>Target: Oct 31, 2027 · ${pace.toFixed(1)}h/wk current pace</span>
+</div>
+<script>window.onload=()=>window.print()</script>
+</body></html>`;
+
+  const win=window.open('','_blank');
+  if(win){win.document.write(html);win.document.close();}
+  else{showToast('Allow pop-ups to open the report');}
 }
 
 // ── NOTIFICATION PREFERENCES ──────────────────────────────────────────────────
