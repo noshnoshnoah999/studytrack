@@ -892,14 +892,17 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
           </button>
           <button onclick="openQuickLog()" title="Quick log" style="background:var(--o);border:none;border-radius:9px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;font-size:20px;font-weight:300;line-height:1;transition:transform 0.15s,background 0.15s" onmousedown="this.style.transform='scale(0.88)'" onmouseup="this.style.transform=''" onmouseleave="this.style.transform=''">＋</button>
           <button class="btn-dark" onclick="openGoalSettings()" title="Settings">⚙️</button>
+          <button onclick="openLayoutEditor('dashboard')" title="Customise layout" style="background:none;border:1px solid var(--border);border-radius:9px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);font-size:15px">⊞</button>
         </div>
       </div>
-      <div id="now-next-banner"></div>
-      <div id="today-card"></div>
-      <div class="stats-strip" id="stats-strip" style="margin-top:10px"></div>
-      <div class="card" style="margin-top:10px" id="focus-card"></div>
-      <div class="card" style="margin-top:10px" id="week-combined-card"></div>
-      <div class="card" style="margin-top:10px" id="attention-card"></div>
+      <div id="dash-blocks-container">
+        <div id="now-next-banner" data-block="now-next-banner"></div>
+        <div id="today-card" data-block="today-card"></div>
+        <div class="stats-strip" id="stats-strip" style="margin-top:10px" data-block="stats-strip"></div>
+        <div class="card" style="margin-top:10px" id="focus-card" data-block="focus-card"></div>
+        <div class="card" style="margin-top:10px" id="week-combined-card" data-block="week-combined-card"></div>
+        <div class="card" style="margin-top:10px" id="attention-card" data-block="attention-card"></div>
+      </div>
     </div>
 
     <!-- PAGE: SCHEDULE -->
@@ -1272,6 +1275,21 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
       <button class="btn-save" onclick="saveSubject()">Save Subject</button>
       <button class="btn-danger" id="sm-delete-btn" onclick="deleteSubjectFromModal()" style="display:none">Delete Subject</button>
       <button class="btn-cancel" onclick="closeModal('subj-modal-overlay')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- LAYOUT EDITOR MODAL -->
+<div class="modal-overlay" id="layout-modal-overlay" onclick="handleOverlayClick(event,'layout-modal-overlay')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="layout-modal-title">Customise Layout</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Tap ↑ ↓ to reorder blocks</div>
+    <div id="layout-block-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn-save" onclick="saveLayout()">Save</button>
+      <button class="btn-cancel" onclick="closeModal('layout-modal-overlay')">Cancel</button>
+      <button onclick="resetLayout()" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;font-family:inherit;text-decoration:underline;padding:0 4px">Reset</button>
     </div>
   </div>
 </div>
@@ -2717,6 +2735,89 @@ function renderDashboard(){
   renderFocusCard();
   renderWeeklySummary();
   markCardsDone();
+  applyDashLayout();
+}
+
+// ── LAYOUT EDITOR ─────────────────────────────────────────────────────────────
+const DASH_BLOCK_DEFS=[
+  {id:'now-next-banner', label:'Now / Next banner'},
+  {id:'today-card',      label:"Today's hours"},
+  {id:'stats-strip',     label:'Stats strip'},
+  {id:'focus-card',      label:'Focus Today'},
+  {id:'week-combined-card', label:'This Week & Last 7 Days'},
+  {id:'attention-card',  label:'Needs Attention'},
+];
+
+function loadDashLayout(){
+  try{const s=localStorage.getItem('st_dash_layout');if(s)return JSON.parse(s);}catch(e){}
+  return DASH_BLOCK_DEFS.map(b=>b.id);
+}
+
+function saveDashLayout(order){
+  localStorage.setItem('st_dash_layout',JSON.stringify(order));
+}
+
+function applyDashLayout(){
+  const container=document.getElementById('dash-blocks-container');
+  if(!container)return;
+  const order=loadDashLayout();
+  order.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)container.appendChild(el);
+  });
+  // Append any blocks not in the saved order (safety net)
+  DASH_BLOCK_DEFS.forEach(def=>{
+    const el=document.getElementById(def.id);
+    if(el&&el.parentElement!==container)container.appendChild(el);
+  });
+}
+
+let _layoutEditorOrder=[];
+
+function openLayoutEditor(page){
+  if(page!=='dashboard')return;
+  _layoutEditorOrder=loadDashLayout();
+  _renderLayoutList();
+  document.getElementById('layout-modal-title').textContent='Customise Dashboard';
+  document.getElementById('layout-modal-overlay').classList.add('open');
+}
+
+function _renderLayoutList(){
+  const list=document.getElementById('layout-block-list');
+  list.innerHTML='';
+  _layoutEditorOrder.forEach((id,i)=>{
+    const def=DASH_BLOCK_DEFS.find(b=>b.id===id)||{id,label:id};
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px';
+    row.innerHTML=
+      '<span style="flex:1;font-size:14px;font-weight:500;color:var(--text)">'+def.label+'</span>'+
+      '<button onclick="_layoutMove('+i+',-1)" '+(i===0?'disabled':'')+
+        ' style="background:none;border:1px solid var(--border);border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:14px;color:var(--text2);display:flex;align-items:center;justify-content:center">▲</button>'+
+      '<button onclick="_layoutMove('+i+',1)" '+(i===_layoutEditorOrder.length-1?'disabled':'')+
+        ' style="background:none;border:1px solid var(--border);border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:14px;color:var(--text2);display:flex;align-items:center;justify-content:center">▼</button>';
+    list.appendChild(row);
+  });
+}
+
+function _layoutMove(index,dir){
+  const newIndex=index+dir;
+  if(newIndex<0||newIndex>=_layoutEditorOrder.length)return;
+  const tmp=_layoutEditorOrder[index];
+  _layoutEditorOrder[index]=_layoutEditorOrder[newIndex];
+  _layoutEditorOrder[newIndex]=tmp;
+  _renderLayoutList();
+}
+
+function saveLayout(){
+  saveDashLayout(_layoutEditorOrder);
+  applyDashLayout();
+  closeModal('layout-modal-overlay');
+  showToast('Layout saved');
+}
+
+function resetLayout(){
+  _layoutEditorOrder=DASH_BLOCK_DEFS.map(b=>b.id);
+  _renderLayoutList();
 }
 
 // ── SCHEDULE ──────────────────────────────────────────────────────────────────
