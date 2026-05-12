@@ -973,9 +973,14 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
           <div class="dup-warn-title">⚠ Possible duplicate</div>
           <div class="dup-warn-body" id="dup-warn-body"></div>
           <div class="dup-warn-session" id="dup-warn-session"></div>
-          <div class="dup-warn-actions">
-            <button class="dup-warn-dismiss" onclick="dismissDupWarn()">Dismiss</button>
+          <div class="dup-warn-actions" id="dup-warn-actions">
+            <button class="dup-warn-dismiss" onclick="dupWarnAskClear()">Dismiss</button>
             <button class="dup-warn-anyway" onclick="logSessionConfirmed()">Log Anyway →</button>
+          </div>
+          <div class="dup-warn-actions" id="dup-warn-clear-row" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid rgba(245,158,11,0.25);align-items:center;gap:8px">
+            <span style="font-size:13px;color:var(--text2);flex:1">Clear the form?</span>
+            <button class="dup-warn-dismiss" onclick="dismissDupWarn();clearLogForm()">Yes, clear</button>
+            <button class="dup-warn-dismiss" onclick="dismissDupWarn()">No, keep</button>
           </div>
         </div>
         <button class="btn-primary" onclick="logSession()">Log Session</button>
@@ -4007,6 +4012,16 @@ function checkAndShowDupWarn(subjectId,date,start,end){
 function dismissDupWarn(){
   const warn=document.getElementById('dup-warn');
   if(warn)warn.classList.remove('visible');
+  const cr=document.getElementById('dup-warn-clear-row');
+  const ar=document.getElementById('dup-warn-actions');
+  if(cr)cr.style.display='none';
+  if(ar)ar.style.display='flex';
+}
+function dupWarnAskClear(){
+  const cr=document.getElementById('dup-warn-clear-row');
+  const ar=document.getElementById('dup-warn-actions');
+  if(cr)cr.style.display='flex';
+  if(ar)ar.style.display='none';
 }
 function logSessionConfirmed(){
   dismissDupWarn();
