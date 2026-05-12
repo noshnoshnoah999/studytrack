@@ -2231,6 +2231,12 @@ function selectScheduleDay(dow){
   if(btn){btn.textContent='Edit';btn.classList.remove('active');}
   renderSchedule();
 }
+function _scrollActiveTabIntoView(){
+  requestAnimationFrame(()=>{
+    const active=document.querySelector('.day-tabs .day-tab.active');
+    if(active)active.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+  });
+}
 
 function renderSchedule(){
   const schedule=loadSchedule();
@@ -2308,6 +2314,7 @@ function renderSchedule(){
       html+='</div>';
     }
     content.innerHTML=html;
+    _scrollActiveTabIntoView();
     return;
   }
 
@@ -2345,6 +2352,7 @@ function renderSchedule(){
       html+='</div>';
     });
     content.innerHTML=html;
+    _scrollActiveTabIntoView();
     content.querySelectorAll('.block-card').forEach((c,i)=>{
       c.classList.add('slide-up');
       c.style.animationDelay=(i*0.05)+'s';
@@ -2504,6 +2512,7 @@ function renderSchedule(){
     }
     html+='</div>';
     content.innerHTML=html;
+    _scrollActiveTabIntoView();
     // Stagger timeline items and block cards
     content.querySelectorAll('.block-card').forEach((c,i)=>{
       c.classList.add('slide-up');
