@@ -1995,6 +1995,28 @@ async function analyseWorkoutImage(base64,mimeType){
   }
 }
 
+function compressWorkoutImage(fileOrBlob,cb){
+  const url=URL.createObjectURL(fileOrBlob);
+  const img=new Image();
+  img.onload=function(){
+    const MAX=900;
+    let w=img.width,h=img.height;
+    if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+    const canvas=document.createElement('canvas');
+    canvas.width=w;canvas.height=h;
+    canvas.getContext('2d').drawImage(img,0,0,w,h);
+    URL.revokeObjectURL(url);
+    cb(canvas.toDataURL('image/jpeg',0.82));
+  };
+  img.onerror=function(){
+    // Fallback: read raw if canvas fails
+    URL.revokeObjectURL(url);
+    const reader=new FileReader();
+    reader.onload=e=>cb(e.target.result);
+    reader.readAsDataURL(fileOrBlob);
+  };
+  img.src=url;
+}
 function openWorkoutImport(){
   // Reset state
   _workoutImageBase64=null;
@@ -2017,20 +2039,14 @@ function openWorkoutImport(){
 function handleWorkoutFile(event){
   const file=event.target.files[0];
   if(!file)return;
-  _workoutImageMime=file.type||'image/jpeg';
-  const reader=new FileReader();
-  reader.onload=function(e){
-    const dataUrl=e.target.result;
-    // Extract base64 part
+  _workoutImageMime='image/jpeg';
+  compressWorkoutImage(file,function(dataUrl){
     _workoutImageBase64=dataUrl.split(',')[1];
     const preview=document.getElementById('workout-img-preview');
     if(preview){preview.src=dataUrl;preview.style.display='block';}
-    const dz=document.getElementById('workout-drop-zone');
-    if(dz)dz.classList.add('has-image');
-    const analyseBtn=document.getElementById('workout-analyse-btn');
-    if(analyseBtn)analyseBtn.style.display='block';
-  };
-  reader.readAsDataURL(file);
+    document.getElementById('workout-drop-zone')?.classList.add('has-image');
+    document.getElementById('workout-analyse-btn').style.display='block';
+  });
 }
 
 async function pasteWorkoutFromClipboard(){
@@ -2041,19 +2057,15 @@ async function pasteWorkoutFromClipboard(){
       if(imgType){
         const blob=await item.getType(imgType);
         _workoutImageMime=imgType;
-        const reader=new FileReader();
-        reader.onload=function(e){
-          const dataUrl=e.target.result;
+        _workoutImageMime='image/jpeg';
+        compressWorkoutImage(blob,function(dataUrl){
           _workoutImageBase64=dataUrl.split(',')[1];
           const preview=document.getElementById('workout-img-preview');
           if(preview){preview.src=dataUrl;preview.style.display='block';}
-          const dz=document.getElementById('workout-drop-zone');
-          if(dz)dz.classList.add('has-image');
-          const analyseBtn=document.getElementById('workout-analyse-btn');
-          if(analyseBtn)analyseBtn.style.display='block';
+          document.getElementById('workout-drop-zone')?.classList.add('has-image');
+          document.getElementById('workout-analyse-btn').style.display='block';
           showToast('Image pasted ✓');
-        };
-        reader.readAsDataURL(blob);
+        });
         return;
       }
     }
