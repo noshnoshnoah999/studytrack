@@ -1959,7 +1959,7 @@ async function analyseWorkoutImage(base64,mimeType){
       },
       body:JSON.stringify({
         model:'claude-haiku-4-5',
-        max_tokens:300,
+        max_tokens:120,
         messages:[{role:'user',content:[
           {type:'image',source:{type:'base64',media_type:mimeType,data:base64}},
           {type:'text',text:'This is a workout screenshot from Strava, Runna, or a similar fitness app. Extract the details carefully.\n\nFormat clues:\n- Runna shows: "10 May 2026 at 19:11 - 19:55" — this gives you the date, startTime AND endTime directly.\n- Strava shows: "Today at 17:28" with a separate Time field like "9m 0s" — use startTime + duration to calculate endTime.\n- Activity names: "Walk Run", "Walk-Run", "Run", "Easy Run", "Interval Run" → all count as Run. "Ride", "Cycle", "Virtual Ride" → Cycle.\n\nReturn ONLY a valid JSON object, no markdown, no explanation:\n{"date":"YYYY-MM-DD","startTime":"HH:MM","endTime":"HH:MM","durationMinutes":number,"activity":"Cycle|Run|Walk","timeLabel":"Morning|Afternoon|Evening|Night"}\n\nRules:\n- date: actual workout date in YYYY-MM-DD (convert "10 May 2026" → "2026-05-10")\n- startTime/endTime: 24h HH:MM\n- durationMinutes: integer minutes\n- timeLabel: Morning=before 12:00, Afternoon=12:00-17:00, Evening=17:00-21:00, Night=after 21:00\n- Try hard — only use null if truly not visible anywhere.'}
