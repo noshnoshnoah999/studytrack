@@ -3862,12 +3862,12 @@ async function timerSyncPull(silent){
     // Identical state — nothing to do
     if(r.running===!!timerInterval&&r.startMs===timerStart&&r.subjectId===timerSubjectId)return;
     if(r.running&&r.startMs){
-      // Another device has a running timer
+      // Remote has a running timer
       if(!timerInterval){
+        // Local is idle — start it from remote start time
         timerSubjectId=r.subjectId||timerSubjectId;
         timerStart=r.startMs;
         timerStartWallClock=new Date(r.startMs);
-        clearInterval(timerInterval);
         timerInterval=setInterval(timerTick,1000);
         _acquireWakeLock();
         renderTimerPage();
@@ -3879,21 +3879,32 @@ async function timerSyncPull(silent){
         timerStartWallClock=new Date(r.startMs);
         if(!silent)showToast('⏱ Timer updated from another device');
       }
-    } else if(!r.running&&r.startMs&&r.startMs!==timerStart){
-      // Another device stopped the timer (stopped-but-not-logged state)
-      clearInterval(timerInterval);
-      timerInterval=null;
-      timerSubjectId=r.subjectId||timerSubjectId;
-      timerStart=r.startMs;
-      timerStartWallClock=new Date(r.startMs);
-      renderTimerPage();
-      if(!silent)showToast('⏹ Timer stopped on another device');
-    } else if(!r.running&&!r.startMs&&timerStart){
-      // Another device reset/logged it
+    } else if(!r.running&&r.startMs){
+      // Remote stopped the timer (startMs preserved so you can still log)
+      if(timerInterval){
+        // Local is still running — stop it to match remote
+        clearInterval(timerInterval);
+        timerInterval=null;
+        timerSubjectId=r.subjectId||timerSubjectId;
+        timerStart=r.startMs;
+        timerStartWallClock=new Date(r.startMs);
+        _releaseWakeLock();
+        renderTimerPage();
+        if(!silent)showToast('⏹ Timer stopped on another device');
+      } else if(r.startMs!==timerStart){
+        // Local also stopped but from a different session — adopt remote state
+        timerSubjectId=r.subjectId||timerSubjectId;
+        timerStart=r.startMs;
+        timerStartWallClock=new Date(r.startMs);
+        renderTimerPage();
+      }
+    } else if(!r.running&&!r.startMs&&(timerStart||timerInterval)){
+      // Remote was reset/logged — clear locally too
       clearInterval(timerInterval);
       timerInterval=null;
       timerStart=null;
       timerStartWallClock=null;
+      _releaseWakeLock();
       renderTimerPage();
       if(!silent)showToast('Timer cleared on another device');
     }
@@ -3902,7 +3913,7 @@ async function timerSyncPull(silent){
 
 function _startTimerSyncPoll(){
   if(_timerSyncInterval)return;
-  _timerSyncInterval=setInterval(()=>timerSyncPull(true),15000);
+  _timerSyncInterval=setInterval(()=>timerSyncPull(true),8000);
 }
 function _stopTimerSyncPoll(){
   if(_timerSyncInterval){clearInterval(_timerSyncInterval);_timerSyncInterval=null;}
