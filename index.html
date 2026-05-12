@@ -2582,7 +2582,8 @@ function showPage(id){
   else if(id==='graduation')renderGraduationPage();
   else if(id==='plan'){currentPage='progress';showPage('progress');return;}
   else if(id==='timeline'){currentPage='graduation';showPage('graduation');return;}
-  else if(id==='timer')renderTimerPage();
+  else if(id==='timer'){timerSyncPull(false);renderTimerPage();_startTimerSyncPoll();}
+  if(id!=='timer')_stopTimerSyncPoll();
   updateSidebar();
 }
 
@@ -3823,6 +3824,72 @@ let timerInterval=null;
 let timerStart=null;
 let timerStartWallClock=null;
 let timerSubjectId=null;
+let _timerSyncInterval=null;
+
+// ── TIMER SYNC ────────────────────────────────────────────────────────────────
+async function timerSyncPush(){
+  try{
+    await sbPush('st_timer',{
+      running:!!timerInterval,
+      startMs:timerStart,
+      subjectId:timerSubjectId,
+      updatedAt:Date.now()
+    });
+  }catch(e){}
+}
+
+async function timerSyncPull(silent){
+  try{
+    const row=await sbPull('st_timer');
+    if(!row||row.value===undefined)return;
+    const r=row.value;
+    // Identical state — nothing to do
+    if(r.running===!!timerInterval&&r.startMs===timerStart&&r.subjectId===timerSubjectId)return;
+    if(r.running&&r.startMs){
+      // Another device has a running timer
+      if(!timerInterval){
+        timerSubjectId=r.subjectId||timerSubjectId;
+        timerStart=r.startMs;
+        timerStartWallClock=new Date(r.startMs);
+        clearInterval(timerInterval);
+        timerInterval=setInterval(timerTick,1000);
+        renderTimerPage();
+        if(!silent)showToast('⏱ Timer synced from another device');
+      } else if(r.startMs!==timerStart){
+        // Different session started on another device — adopt it
+        timerSubjectId=r.subjectId||timerSubjectId;
+        timerStart=r.startMs;
+        timerStartWallClock=new Date(r.startMs);
+        if(!silent)showToast('⏱ Timer updated from another device');
+      }
+    } else if(!r.running&&r.startMs&&r.startMs!==timerStart){
+      // Another device stopped the timer (stopped-but-not-logged state)
+      clearInterval(timerInterval);
+      timerInterval=null;
+      timerSubjectId=r.subjectId||timerSubjectId;
+      timerStart=r.startMs;
+      timerStartWallClock=new Date(r.startMs);
+      renderTimerPage();
+      if(!silent)showToast('⏹ Timer stopped on another device');
+    } else if(!r.running&&!r.startMs&&timerStart){
+      // Another device reset/logged it
+      clearInterval(timerInterval);
+      timerInterval=null;
+      timerStart=null;
+      timerStartWallClock=null;
+      renderTimerPage();
+      if(!silent)showToast('Timer cleared on another device');
+    }
+  }catch(e){}
+}
+
+function _startTimerSyncPoll(){
+  if(_timerSyncInterval)return;
+  _timerSyncInterval=setInterval(()=>timerSyncPull(true),15000);
+}
+function _stopTimerSyncPoll(){
+  if(_timerSyncInterval){clearInterval(_timerSyncInterval);_timerSyncInterval=null;}
+}
 const SUBJ_COLORS_T={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',english_11:'#60a5fa',english_12:'#93c5fd',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',geometry:'#a855f7',algebra2:'#7c3aed',el2:'#94a3b8',el3:'#64748b',el4:'#475569',am_hist:'#b45309',jp_exch:'#7c3aed'};
 let pomodoroMode=false;
 let pomodoroPhase='work';
@@ -3975,6 +4042,10 @@ function renderTimerPage(){
           ${stopped?'<button class="timer-btn-reset" onclick="timerPageReset()">Reset</button>':''}
         </div>
         ${!stopped?`<button class="pomo-toggle-btn ${pomodoroMode?'on':''}" onclick="togglePomodoroMode()">🍅 ${pomodoroMode?'Pomodoro ON · 25/5 min':'Pomodoro mode'}</button>`:''}
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px;display:flex;align-items:center;gap:4px;justify-content:center">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          Synced across devices
+        </div>
         <div class="timer-stat-row">
           <div class="timer-stat"><div class="timer-stat-val">${fmtH(todaySubjH)}</div><div class="timer-stat-lbl">Today</div></div>
           <div class="timer-stat"><div class="timer-stat-val">${Math.round(pct)}%</div><div class="timer-stat-lbl">done</div></div>
@@ -4018,6 +4089,7 @@ function timerPageToggle(){
     clearInterval(timerInterval);
     timerInterval=null;
     renderTimerPage();
+    timerSyncPush();
   } else if(timerStart!==null){
     // Stopped state — start new session
     timerPageReset();
@@ -4028,6 +4100,7 @@ function timerPageToggle(){
     if(pomodoroMode){pomodoroPhase='work';pomodoroCount=0;pomodoroWorkMs=0;pomodoroPhaseStart=Date.now();pomodoroEndMs=Date.now()+POMO_WORK*1000;}
     timerInterval=setInterval(timerTick,1000);
     renderTimerPage();
+    timerSyncPush();
   }
 }
 
@@ -4038,6 +4111,7 @@ function timerPageReset(){
   timerStartWallClock=null;
   pomodoroPhase='work';pomodoroCount=0;pomodoroEndMs=null;pomodoroWorkMs=0;pomodoroPhaseStart=null;
   renderTimerPage();
+  timerSyncPush();
 }
 
 // Called from notification action: start timer for a subject (optionally with a backdated start time)
@@ -4056,6 +4130,7 @@ function startTimerForSubject(subjectId, blockStartStr){
     timerStart=Date.now();
   }
   timerInterval=setInterval(timerTick,1000);
+  timerSyncPush();
   showPage('timer');
   renderTimerPage();
 }
@@ -6051,6 +6126,11 @@ window.addEventListener('scroll',_updateBackToTop,{passive:true});
 document.addEventListener('scroll',_updateBackToTop,{passive:true});
 document.addEventListener('touchmove',_updateBackToTop,{passive:true});
 setInterval(_updateBackToTop,500);
+
+// Pull timer state when user switches back to the tab
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&currentPage==='timer')timerSyncPull(false);
+});
 
 
 // ── DATA EXPORT ───────────────────────────────────────────────────────────────
