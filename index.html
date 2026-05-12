@@ -5811,7 +5811,13 @@ function exportJSON(){
 function exportReport(){
   const p=document.getElementById('export-panel');
   if(p)p.style.display='none';
-  const subjs=loadSubjects().filter(s=>!s.extraCredit);
+  // Use DEFAULT_SUBJECTS as authoritative list so no subject goes missing from stored data
+  const allStoredSubjs=loadSubjects();
+  const subjs=DEFAULT_SUBJECTS.filter(s=>!s.extraCredit).map(def=>{
+    const stored=allStoredSubjs.find(x=>x.id===def.id);
+    return stored?{...def,...stored,req:def.req,extraCredit:def.extraCredit}:def;
+  });
+  const allSubjsForLookup=DEFAULT_SUBJECTS.concat(allStoredSubjs.filter(s=>!DEFAULT_SUBJECTS.find(d=>d.id===s.id)));
   const sessions=loadSessions().sort((a,b)=>a.date.localeCompare(b.date));
   const goals=loadGoals();
   const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
@@ -5832,7 +5838,7 @@ function exportReport(){
   const estDateStr=estDate?MONTHS[estDate.getMonth()]+' '+estDate.getFullYear():'—';
 
   // Subject rows
-  const subjMap={};subjs.forEach(s=>{subjMap[s.id]=s;});
+  const subjMap={};allSubjsForLookup.forEach(s=>{subjMap[s.id]=s;});
   const logged={};
   sessions.forEach(s=>{if(s.subjectId)logged[s.subjectId]=(logged[s.subjectId]||0)+s.hours;});
 
