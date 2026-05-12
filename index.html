@@ -2397,16 +2397,22 @@ function getLogged(subjectId){
   return(s.base||0)+(hours[subjectId]||0);
 }
 
+function _extraCreditIds(){
+  return new Set(loadSubjects().filter(s=>s.extraCredit).map(s=>s.id));
+}
+
 function getTodayH(){
   const sessions=loadSessions();
   const today=todayStr();
-  return sessions.filter(s=>s.date===today).reduce((a,s)=>a+s.hours,0);
+  const ecIds=_extraCreditIds();
+  return sessions.filter(s=>s.date===today&&!ecIds.has(s.subjectId)).reduce((a,s)=>a+s.hours,0);
 }
 
 function getWeekH(){
   const sessions=loadSessions();
   const{mon,sun}=weekRange();
-  return sessions.filter(s=>s.date>=mon&&s.date<=sun).reduce((a,s)=>a+s.hours,0);
+  const ecIds=_extraCreditIds();
+  return sessions.filter(s=>s.date>=mon&&s.date<=sun&&!ecIds.has(s.subjectId)).reduce((a,s)=>a+s.hours,0);
 }
 
 function getTotalLogged(){
@@ -4273,7 +4279,8 @@ function _gradSharedVars(){
   const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const cutoff=new Date(now);cutoff.setDate(now.getDate()-28);
   const cutoffStr=cutoff.getFullYear()+'-'+String(cutoff.getMonth()+1).padStart(2,'0')+'-'+String(cutoff.getDate()).padStart(2,'0');
-  const recentH=sessions.filter(s=>s.date>=cutoffStr).reduce((a,s)=>a+s.hours,0);
+  const ecIds=_extraCreditIds();
+  const recentH=sessions.filter(s=>s.date>=cutoffStr&&!ecIds.has(s.subjectId)).reduce((a,s)=>a+s.hours,0);
   const hasGoodData=recentH>=3;
   const pace=hasGoodData?recentH/4:goals.weekly;
   const paceIsGoal=!hasGoodData;
