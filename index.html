@@ -1686,7 +1686,7 @@ function runMigrations(){
   // Japanese & Fine Art → 300h (2 credits each); PE → 225h (1.5 credits);
   // Science & Lab Science → 150h (1 credit each); EL4 → extraCredit flag.
   // Runs AFTER v5 so these authoritative values always win.
-  if(!localStorage.getItem('st_migration_v6')){
+  if(!localStorage.getItem('st_migration_v6b')){
     try{
       const raw=localStorage.getItem('st_subjs');
       if(raw){
@@ -1704,6 +1704,9 @@ function runMigrations(){
           const s=subjs.find(x=>x.id===d.id);
           if(s&&!s.extraCredit){s.extraCredit=true;changed=true;}
         });
+        // Mark EL3 as done — 152h logged ≥ 150h required
+        const el3=subjs.find(s=>s.id==='el3');
+        if(el3&&!el3.done){el3.done=true;if(!el3.base||el3.base<150)el3.base=152;changed=true;}
         if(changed){
           localStorage.setItem('st_subjs',JSON.stringify(subjs));
           sbPush('st_subjs',subjs);
@@ -1711,7 +1714,7 @@ function runMigrations(){
         }
       }
     }catch(e){console.warn('[Migration v6] Error:',e);}
-    localStorage.setItem('st_migration_v6','1');
+    localStorage.setItem('st_migration_v6b','1');
   }
   // ── Migration v4: English/Maths chains, EL3 complete ─────────────────────
   if(localStorage.getItem('st_migration_v4')) return;
