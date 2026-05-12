@@ -823,6 +823,8 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
 #inapp-banner-title{font-size:13px;font-weight:700;color:var(--text)}
 #inapp-banner-body{font-size:12px;color:var(--text2)}
 </style>
+<!-- NoSleep.js: prevents screen dim/sleep during timer on Safari/older browsers -->
+<script src="https://cdn.jsdelivr.net/npm/nosleep.js@0.12.0/dist/NoSleep.min.js" onerror="window.NoSleep=undefined"></script>
 </head>
 <body>
 <!-- Floating toggle shown when sidebar is hidden -->
@@ -3826,16 +3828,29 @@ let timerStartWallClock=null;
 let timerSubjectId=null;
 let _timerSyncInterval=null;
 let _wakeLock=null;
+let _noSleep=null;
 
 async function _acquireWakeLock(){
-  if(!('wakeLock' in navigator))return;
-  try{
-    _wakeLock=await navigator.wakeLock.request('screen');
-    _wakeLock.addEventListener('release',()=>{_wakeLock=null;});
-  }catch(e){_wakeLock=null;}
+  // Try native Screen Wake Lock API first (Chrome, Edge, Safari 17+)
+  if('wakeLock' in navigator){
+    try{
+      _wakeLock=await navigator.wakeLock.request('screen');
+      _wakeLock.addEventListener('release',()=>{_wakeLock=null;});
+      return; // success — no need for NoSleep fallback
+    }catch(e){_wakeLock=null;}
+  }
+  // Fallback: NoSleep.js uses a tiny looping video to prevent screen sleep
+  // Works on macOS Safari < 17, Firefox, and other browsers without Wake Lock
+  if(typeof NoSleep!=='undefined'&&NoSleep){
+    try{
+      if(!_noSleep)_noSleep=new NoSleep();
+      await _noSleep.enable();
+    }catch(e){}
+  }
 }
 function _releaseWakeLock(){
   if(_wakeLock){try{_wakeLock.release();}catch(e){}}_wakeLock=null;
+  if(_noSleep){try{_noSleep.disable();}catch(e){};}
 }
 // Re-acquire wake lock if page becomes visible again while timer is running
 document.addEventListener('visibilitychange',()=>{
