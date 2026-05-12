@@ -1977,7 +1977,15 @@ async function analyseWorkoutImage(base64,mimeType){
       let text=data.content[0].text.trim();
       // Strip markdown code fences if model wraps in ```json ... ```
       text=text.replace(/^```[a-z]*\n?/,'').replace(/\n?```$/,'').trim();
-      return JSON.parse(text);
+      const parsed=JSON.parse(text);
+      // Normalise activity: Walk-Run, Walk Run, Easy Run → Run
+      if(parsed.activity){
+        const a=parsed.activity.toLowerCase();
+        if(a.includes('run')||a.includes('jog'))parsed.activity='Run';
+        else if(a.includes('walk')&&!a.includes('run'))parsed.activity='Walk';
+        else if(a.includes('ride')||a.includes('cycle')||a.includes('bike')||a.includes('cycling'))parsed.activity='Cycle';
+      }
+      return parsed;
     }catch(e){showToast('Could not read workout data — try a clearer screenshot','var(--err)');return null;}
   }catch(err){
     clearTimeout(timer);
