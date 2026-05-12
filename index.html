@@ -800,11 +800,8 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
 .day-tab.active{transform:scale(1.05)}
 
 /* ── Back to top button ──────────────────────────────────────────── */
-.back-to-top{transition:opacity 0.25s,visibility 0.25s,transform 0.15s,background 0.15s,box-shadow 0.15s}
-.back-to-top:hover{transform:scale(1.12) translateY(-2px);box-shadow:0 6px 20px rgba(249,115,22,0.65)}
-.back-to-top:active{transform:scale(0.88) translateY(2px)}
-@keyframes bttLaunch{0%{transform:scale(1)}30%{transform:scale(0.82) translateY(4px)}65%{transform:scale(1.18) translateY(-8px)}85%{transform:scale(0.96) translateY(-2px)}100%{transform:scale(1) translateY(0)}}
-.back-to-top.launching{animation:bttLaunch 0.5s cubic-bezier(0.34,1.56,0.64,1) both}
+.back-to-top{transition:opacity 0.25s,visibility 0.25s,background 0.15s,box-shadow 0.15s}
+.back-to-top:hover{box-shadow:0 6px 20px rgba(249,115,22,0.65)}
 
 /* ── IN-APP BANNER ───────────────────────────────────────────────────────── */
 @keyframes bannerIn{from{opacity:0;transform:translateX(-50%) translateY(-60px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
@@ -5510,15 +5507,7 @@ function _getScrollY(){
   return window.scrollY||window.pageYOffset||document.documentElement.scrollTop||0;
 }
 function _scrollToTop(){
-  const btn=document.getElementById('btn-back-top');
-  if(btn){
-    btn.classList.remove('launching');
-    void btn.offsetWidth;
-    btn.classList.add('launching');
-    setTimeout(()=>btn.classList.remove('launching'),600);
-  }
   window.scrollTo({top:0,behavior:'smooth'});
-  document.documentElement.scrollTo({top:0,behavior:'smooth'});
 }
 function _updateBackToTop(){
   const btn=document.getElementById('btn-back-top');
