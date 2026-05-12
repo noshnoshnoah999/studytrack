@@ -4040,7 +4040,23 @@ function checkAndShowDupWarn(subjectId,date,start,end){
   } else {
     bodyEl.textContent='The time you\'re logging overlaps with an existing session.';
   }
-  sessEl.innerHTML='<span style="font-weight:700;color:var(--text)">'+subjName+'</span><span>'+_fmtTime(s.start)+'–'+_fmtTime(s.end)+'</span><span style="color:var(--text3)">'+_fmtHm(durMins)+'</span>'+(s.notes?'<span style="color:var(--text3)">· '+s.notes+'</span>':'');
+  // Format the original session's date as "Mon 11 May" or "Today" / "Yesterday"
+  function _fmtDupDate(d){
+    if(!d)return'';
+    const today=todayStr();
+    const parts=today.split('-');
+    const yest=new Date(+parts[0],+parts[1]-1,+parts[2]-1);
+    const yestStr=yest.getFullYear()+'-'+String(yest.getMonth()+1).padStart(2,'0')+'-'+String(yest.getDate()).padStart(2,'0');
+    if(d===today)return'Today';
+    if(d===yestStr)return'Yesterday';
+    const dp=d.split('-');
+    const dt=new Date(+dp[0],+dp[1]-1,+dp[2]);
+    const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return days[dt.getDay()]+' '+dt.getDate()+' '+months[dt.getMonth()];
+  }
+  const dateLabel=_fmtDupDate(s.date);
+  sessEl.innerHTML='<span style="font-weight:700;color:var(--o)">'+dateLabel+'</span><span style="font-weight:700;color:var(--text)">'+subjName+'</span><span>'+_fmtTime(s.start)+'–'+_fmtTime(s.end)+'</span><span style="color:var(--text3)">'+_fmtHm(durMins)+'</span>'+(s.notes?'<span style="color:var(--text3)">· '+s.notes+'</span>':'');
   warn.classList.add('visible');
   return true;
 }
