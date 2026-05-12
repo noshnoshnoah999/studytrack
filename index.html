@@ -3968,20 +3968,44 @@ function _fmtHm(mins){
   const h=Math.floor(mins/60),m=mins%60;
   return h>0?(m>0?h+'h '+m+'m':h+'h'):m+'m';
 }
+function _normTime(t){
+  // Normalise to "HH:MM" — pad hours, strip spaces, ensure 2-digit minutes
+  if(!t)return'';
+  const clean=(t+'').trim();
+  const[h,m]=clean.split(':');
+  const hh=String(parseInt(h,10)||0).padStart(2,'0');
+  const mm=String(parseInt(m,10)||0).padStart(2,'0');
+  return hh+':'+mm;
+}
 function findDuplicateSession(subjectId,date,start,end){
   if(!subjectId||!date||!start||!end)return null;
   const sessions=loadSessions();
-  const sMin=toMins(start),eMin=toMins(end);
-  let exact=null,overlap=null;
+  const ns=_normTime(start),ne=_normTime(end);
+  const sMin=toMins(ns),eMin=toMins(ne);
+  const newDur=eMin-sMin;
+  let exact=null,overlap=null,near=null;
   for(const s of sessions){
     if(s.date!==date)continue;
-    const sS=toMins(s.start),sE=toMins(s.end);
-    if(s.subjectId===subjectId&&s.start===start&&s.end===end){exact=s;break;}
-    if(sMin<sE&&eMin>sS){// time ranges overlap
-      if(!overlap)overlap=s;
+    const ss=_normTime(s.start),se=_normTime(s.end);
+    const sS=toMins(ss),sE=toMins(se);
+    const sDur=sE-sS;
+    // Exact: same subject, normalised times match
+    if(s.subjectId===subjectId&&ss===ns&&se===ne){
+      exact=s;break;
+    }
+    // Near-duplicate: same subject, start within 10 min, duration within 5 min
+    if(!near&&s.subjectId===subjectId&&Math.abs(sS-sMin)<=10&&Math.abs(sDur-newDur)<=5){
+      near=s;
+    }
+    // Overlap: any session on same day whose time window intersects
+    if(!overlap&&sMin<sE&&eMin>sS){
+      overlap=s;
     }
   }
-  return exact?{type:'exact',session:exact}:overlap?{type:'overlap',session:overlap}:null;
+  if(exact)return{type:'exact',session:exact};
+  if(near)return{type:'near',session:near};
+  if(overlap)return{type:'overlap',session:overlap};
+  return null;
 }
 function _dupSubjName(id){
   const subjs=loadSubjects();
@@ -3994,16 +4018,16 @@ function checkAndShowDupWarn(subjectId,date,start,end){
   const dup=findDuplicateSession(subjectId,date,start,end);
   if(!dup){warn.classList.remove('visible');return false;}
   const s=dup.session;
-  const durMins=Math.round((toMins(s.end)-toMins(s.start)));
+  const durMins=Math.round((toMins(_normTime(s.end))-toMins(_normTime(s.start))));
   const subjName=_dupSubjName(s.subjectId);
   const bodyEl=document.getElementById('dup-warn-body');
   const sessEl=document.getElementById('dup-warn-session');
   if(dup.type==='exact'){
-    bodyEl.textContent='You\'ve already logged an identical session for this subject, date, and time.';
+    bodyEl.textContent='You\'ve already logged this exact session.';
+  } else if(dup.type==='near'){
+    bodyEl.textContent='This looks like a session you\'ve already logged — same subject and very similar time.';
   } else {
-    const newSubjName=_dupSubjName(subjectId);
     bodyEl.textContent='The time you\'re logging overlaps with an existing session.';
-    if(subjectId===s.subjectId&&newSubjName!==subjName)bodyEl.textContent='You\'ve already logged '+subjName+' during this time window.';
   }
   sessEl.innerHTML='<span style="font-weight:700;color:var(--text)">'+subjName+'</span><span>'+_fmtTime(s.start)+'–'+_fmtTime(s.end)+'</span><span style="color:var(--text3)">'+_fmtHm(durMins)+'</span>'+(s.notes?'<span style="color:var(--text3)">· '+s.notes+'</span>':'');
   warn.classList.add('visible');
