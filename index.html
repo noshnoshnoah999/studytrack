@@ -1988,7 +1988,7 @@ async function analyseWorkoutImage(base64,mimeType){
         max_tokens:120,
         messages:[{role:'user',content:[
           {type:'image',source:{type:'base64',media_type:mimeType,data:base64}},
-{type:'text',text:'This is a workout screenshot from Strava, Runna, or a similar fitness app. Extract the details carefully.\n\nToday\'s date is '+new Date().toISOString().slice(0,10)+' (use this year if the screenshot says "Today" without a year).\n\nFormat clues:\n- Runna shows: "10 May 2026 at 19:11 - 19:55" — date, startTime AND endTime directly.\n- Strava shows: "Today at 17:28" with a Time field like "9m 0s" — use startTime + duration to calculate endTime.\n- Activity names: "Walk Run", "Walk-Run", "Run", "Easy Run", "Interval Run" → Run. "Ride", "Cycle", "Virtual Ride" → Cycle.\n\nReturn ONLY valid JSON, no markdown:\n{"date":"YYYY-MM-DD","startTime":"HH:MM","endTime":"HH:MM","durationMinutes":number,"activity":"Cycle|Run|Walk","timeLabel":"Morning|Afternoon|Evening|Night"}\n\nRules:\n- date: YYYY-MM-DD. If screenshot says "Today", use today\'s date above.\n- startTime/endTime: 24h HH:MM\n- durationMinutes: integer\n- timeLabel: Morning<12:00, Afternoon 12-17, Evening 17-21, Night>21\n- Only use null if truly not visible.'}
+{type:'text',text:'This is a workout screenshot from Strava, Runna, or a similar fitness app. Extract the details carefully.\n\nToday\'s date is '+new Date().toISOString().slice(0,10)+' (use this year if the screenshot says "Today" without a year).\n\nFormat clues:\n- Runna shows: "10 May 2026 at 19:11 - 19:55" — date, startTime AND endTime directly.\n- Strava shows: "Today at 17:28" with a Time field like "9m 45s" — use startTime + FLOORED minutes to get endTime. IMPORTANT: 9m 45s → 9 minutes (drop the seconds, do NOT round up). So 17:19 + 9m = 17:28, not 17:29.\n- Activity names: "Walk Run", "Walk-Run", "Run", "Easy Run", "Interval Run" → Run. "Ride", "Cycle", "Virtual Ride" → Cycle.\n\nReturn ONLY valid JSON, no markdown:\n{"date":"YYYY-MM-DD","startTime":"HH:MM","endTime":"HH:MM","durationMinutes":number,"activity":"Cycle|Run|Walk","timeLabel":"Morning|Afternoon|Evening|Night"}\n\nRules:\n- date: YYYY-MM-DD. If screenshot says "Today", use today\'s date above.\n- startTime/endTime: 24h HH:MM\n- durationMinutes: integer — FLOOR the seconds off (9m 45s → 9, never round up)\n- endTime = startTime + durationMinutes exactly, no rounding\n- timeLabel: Morning<12:00, Afternoon 12-17, Evening 17-21, Night>21\n- Only use null if truly not visible.'}
         ]}]
       })
     });
@@ -2010,6 +2010,17 @@ async function analyseWorkoutImage(base64,mimeType){
         if(a.includes('run')||a.includes('jog'))parsed.activity='Run';
         else if(a.includes('walk')&&!a.includes('run'))parsed.activity='Walk';
         else if(a.includes('ride')||a.includes('cycle')||a.includes('bike')||a.includes('cycling'))parsed.activity='Cycle';
+      }
+      // Enforce floored end time: recalculate endTime from startTime + floor(durationMinutes)
+      // This prevents rounding-up seconds from inflating the end time
+      if(parsed.startTime&&parsed.durationMinutes){
+        const flooredMins=Math.floor(parsed.durationMinutes);
+        const base=toMins(parsed.startTime);
+        const endTotal=base+flooredMins;
+        const eh=String(Math.floor(endTotal/60)%24).padStart(2,'0');
+        const em=String(endTotal%60).padStart(2,'0');
+        parsed.endTime=eh+':'+em;
+        parsed.durationMinutes=flooredMins;
       }
       return parsed;
     }catch(e){showToast('Could not read workout data — try a clearer screenshot','var(--err)');return null;}
