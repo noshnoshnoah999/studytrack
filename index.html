@@ -1699,6 +1699,11 @@ function runMigrations(){
         // Mark EL4 as extraCredit (doesn't count toward graduation)
         const el4=subjs.find(s=>s.id==='el4');
         if(el4&&!el4.extraCredit){el4.extraCredit=true;changed=true;}
+        // Also ensure DEFAULT_SUBJECTS extraCredit flags are always applied
+        DEFAULT_SUBJECTS.filter(d=>d.extraCredit).forEach(d=>{
+          const s=subjs.find(x=>x.id===d.id);
+          if(s&&!s.extraCredit){s.extraCredit=true;changed=true;}
+        });
         if(changed){
           localStorage.setItem('st_subjs',JSON.stringify(subjs));
           sbPush('st_subjs',subjs);
@@ -2398,7 +2403,11 @@ function getLogged(subjectId){
 }
 
 function _extraCreditIds(){
-  return new Set(loadSubjects().filter(s=>s.extraCredit).map(s=>s.id));
+  // Use DEFAULT_SUBJECTS as authoritative source for extraCredit flag —
+  // stored subjects may be out of date if Supabase sync overwrote the migration
+  const defIds=new Set(DEFAULT_SUBJECTS.filter(s=>s.extraCredit).map(s=>s.id));
+  const storedIds=new Set(loadSubjects().filter(s=>s.extraCredit).map(s=>s.id));
+  return new Set([...defIds,...storedIds]);
 }
 // Hours logged on a specific date string, excluding extraCredit subjects
 function _hoursOnDate(sessions,dStr,ecIds){
