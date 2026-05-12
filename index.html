@@ -1324,21 +1324,22 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
     <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Strava · Runna · any fitness app</div>
 
     <div id="workout-upload-area">
-      <div class="img-drop-zone" id="workout-drop-zone" onclick="document.getElementById('workout-file-input').click()">
-        <div style="font-size:24px;margin-bottom:6px">📸</div>
-        <div>Drop image here or tap to upload</div>
-        <div style="font-size:11px;margin-top:4px;color:var(--text3)">JPEG · PNG · HEIC</div>
+      <!-- Paste target — hidden contenteditable so native paste (Cmd+V / long-press) works -->
+      <div id="workout-paste-target" contenteditable="true" style="position:absolute;opacity:0;width:1px;height:1px;overflow:hidden;pointer-events:none" aria-hidden="true"></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <button onclick="document.getElementById('workout-file-input').click()" style="background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:16px 10px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:6px">
+          <span style="font-size:26px">📂</span>Choose Photo
+        </button>
+        <button onclick="pasteWorkoutImage()" style="background:var(--ol);border:1.5px solid var(--o);border-radius:12px;padding:16px 10px;font-size:13px;font-weight:700;color:var(--o);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:6px">
+          <span style="font-size:26px">📋</span>Paste
+        </button>
       </div>
+      <div style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:10px">Mac: Cmd+V anywhere · iPhone: long-press → Paste</div>
       <input type="file" id="workout-file-input" accept="image/*" style="display:none" onchange="handleWorkoutFile(event)">
-      <img id="workout-img-preview" class="img-preview" style="display:none">
-      <div style="display:flex;gap:8px;margin-top:10px">
-        <button onclick="pasteWorkoutFromClipboard()" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit">📋 Paste from clipboard</button>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:10px">
-        <button id="workout-analyse-btn" onclick="runWorkoutAnalysis()" style="flex:1;background:var(--o);color:#fff;border:none;border-radius:100px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:none">Analyse with AI →</button>
-        <button onclick="openManualWorkoutEntry()" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:100px;padding:12px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit">Quick manual entry</button>
-      </div>
+      <img id="workout-img-preview" class="img-preview" style="display:none;margin-bottom:8px">
       <div id="workout-spinner" style="display:none;text-align:center;padding:16px;font-size:13px;color:var(--text3)">Analysing… ⏳</div>
+      <button id="workout-analyse-btn" onclick="runWorkoutAnalysis()" style="display:none">Analyse →</button>
     </div>
 
     <div id="workout-result-area" style="display:none">
@@ -2049,28 +2050,50 @@ function handleWorkoutFile(event){
   });
 }
 
-async function pasteWorkoutFromClipboard(){
-  try{
-    const items=await navigator.clipboard.read();
-    for(const item of items){
-      const imgType=item.types.find(t=>t.startsWith('image/'));
-      if(imgType){
-        const blob=await item.getType(imgType);
-        _workoutImageMime=imgType;
-        _workoutImageMime='image/jpeg';
-        compressWorkoutImage(blob,function(dataUrl){
-          _workoutImageBase64=dataUrl.split(',')[1];
-          const preview=document.getElementById('workout-img-preview');
-          if(preview){preview.src=dataUrl;preview.style.display='block';}
-          document.getElementById('workout-drop-zone')?.classList.add('has-image');
-          runWorkoutAnalysis();
-        });
-        return;
-      }
-    }
-    showToast('No image found in clipboard','var(--err)');
-  }catch(e){showToast('Clipboard access denied','var(--err)');}
+function _handleWorkoutBlob(blob){
+  _workoutImageMime='image/jpeg';
+  compressWorkoutImage(blob,function(dataUrl){
+    _workoutImageBase64=dataUrl.split(',')[1];
+    const preview=document.getElementById('workout-img-preview');
+    if(preview){preview.src=dataUrl;preview.style.display='block';}
+    runWorkoutAnalysis();
+  });
 }
+async function pasteWorkoutImage(){
+  // Try Clipboard API first (works on Mac Chrome/Safari, iOS 16+)
+  if(navigator.clipboard&&navigator.clipboard.read){
+    try{
+      const items=await navigator.clipboard.read();
+      for(const item of items){
+        const imgType=item.types.find(t=>t.startsWith('image/'));
+        if(imgType){_handleWorkoutBlob(await item.getType(imgType));return;}
+      }
+    }catch(e){}
+  }
+  // Fallback: focus hidden paste target and wait for paste event
+  const pt=document.getElementById('workout-paste-target');
+  if(pt){
+    pt.innerHTML='';
+    pt.style.pointerEvents='auto';
+    pt.focus();
+    showToast('Now paste your screenshot (Cmd+V or long-press → Paste)');
+    setTimeout(()=>{pt.style.pointerEvents='none';},8000);
+  }
+}
+// Listen for native paste anywhere in the modal
+document.addEventListener('paste',function(e){
+  if(!document.getElementById('workout-import-overlay').classList.contains('open'))return;
+  const items=e.clipboardData&&e.clipboardData.items;
+  if(!items)return;
+  for(const item of items){
+    if(item.type.startsWith('image/')){
+      e.preventDefault();
+      _handleWorkoutBlob(item.getAsFile());
+      document.getElementById('workout-paste-target').style.pointerEvents='none';
+      return;
+    }
+  }
+});
 
 async function runWorkoutAnalysis(){
   if(!_workoutImageBase64){showToast('No image selected','var(--err)');return;}
