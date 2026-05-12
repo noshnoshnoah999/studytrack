@@ -2138,12 +2138,10 @@ async function useWorkoutResult(){
   if(ld&&result.date)ld.value=result.date;
   if(result.startTime)setLogTime('log-start',result.startTime);
   if(result.endTime)setLogTime('log-end',result.endTime);
-  const notesEl=document.getElementById('log-notes');
   const activityLabel=result.timeLabel&&result.activity?(result.timeLabel+' '+result.activity):(result.activity||'Workout');
-  if(notesEl)notesEl.value=activityLabel;
   updateLogDuration();
   updateLogFormColour();
-  // Build title for clipboard: "11th May - Evening Cycle"
+  // Build title: "11th May - Evening Cycle"
   const fullMonths=['January','February','March','April','May','June','July','August','September','October','November','December'];
   function ordinal(n){const s=['th','st','nd','rd'];const v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
   let dayLabel='';
@@ -2155,6 +2153,9 @@ async function useWorkoutResult(){
     }catch(e){}
   }
   const title=dayLabel?(dayLabel+' - '+activityLabel):activityLabel;
+  // Set notes to full title
+  const notesEl=document.getElementById('log-notes');
+  if(notesEl)notesEl.value=title;
   try{
     await navigator.clipboard.writeText(title);
     showToast('✓ Copied "'+title+'" — just press Submit');
