@@ -531,6 +531,17 @@ a{color:inherit;text-decoration:none}
 .nnb-quicklog{margin-left:auto;flex-shrink:0;padding:6px 14px;border-radius:100px;font-size:12px;font-weight:700;border:none;cursor:pointer;background:var(--o);color:#fff;transition:opacity 0.15s}
 .nnb-quicklog:hover{opacity:0.85}
 .log-form-card{transition:border-color 0.2s,box-shadow 0.2s}
+.dup-warn{display:none;background:rgba(255,183,0,0.1);border:1.5px solid #f59e0b;border-radius:10px;padding:11px 13px;margin-bottom:12px;animation:dupFadeIn 0.22s ease}
+.dup-warn.visible{display:block}
+@keyframes dupFadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.dup-warn-title{font-size:12px;font-weight:800;color:#f59e0b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;display:flex;align-items:center;gap:5px}
+.dup-warn-body{font-size:13px;color:var(--text);margin-bottom:10px;line-height:1.4}
+.dup-warn-session{background:var(--bg3);border-radius:7px;padding:7px 10px;font-size:12px;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dup-warn-actions{display:flex;gap:8px}
+.dup-warn-dismiss{background:none;border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:13px;font-weight:600;color:var(--text3);cursor:pointer;font-family:inherit;transition:background 0.15s}
+.dup-warn-dismiss:hover{background:var(--bg3)}
+.dup-warn-anyway{background:#f59e0b;border:none;border-radius:8px;padding:6px 16px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;transition:background 0.15s}
+.dup-warn-anyway:hover{background:#d97706}
 .log-subject-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px;flex-shrink:0}
 .now-next-banner.is-now{background:var(--okl)}
 .now-next-banner.is-next{background:var(--ol)}
@@ -929,7 +940,7 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
           <div class="form-group" style="margin-bottom:0">
             <label class="form-label">Subject</label>
-            <select class="form-input" id="log-subject" onchange="updateLogFormColour()"></select>
+            <select class="form-input" id="log-subject" onchange="updateLogFormColour();dismissDupWarn()"></select>
           </div>
           <div class="form-group" style="margin-bottom:0">
             <label class="form-label">Date</label>
@@ -958,6 +969,15 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
         <div class="form-group" style="margin-bottom:16px">
           <label class="form-label">Notes (optional)</label>
           <input type="text" class="form-input" id="log-notes" placeholder="e.g. chapter 3 review">
+        </div>
+        <div class="dup-warn" id="dup-warn">
+          <div class="dup-warn-title">⚠ Possible duplicate</div>
+          <div class="dup-warn-body" id="dup-warn-body"></div>
+          <div class="dup-warn-session" id="dup-warn-session"></div>
+          <div class="dup-warn-actions">
+            <button class="dup-warn-dismiss" onclick="dismissDupWarn()">Dismiss</button>
+            <button class="dup-warn-anyway" onclick="logSessionConfirmed()">Log Anyway →</button>
+          </div>
         </div>
         <button class="btn-primary" onclick="logSession()">Log Session</button>
       </div>
@@ -3196,6 +3216,7 @@ function clearLogForm(){
   document.getElementById('log-notes').value='';
   const dur=document.getElementById('log-duration');
   if(dur)dur.textContent='';
+  dismissDupWarn();
   updateLogFormColour();
 }
 function renderLog(){
@@ -3932,17 +3953,88 @@ function updateLogDuration(){
   el.textContent='';
 }
 
+// ── DUPLICATE DETECTION ──────────────────────────────────────────────────────
+function _fmtTime(t){
+  if(!t)return'';
+  const[h,m]=t.split(':');
+  const hh=parseInt(h,10);
+  return(hh===0?12:hh>12?hh-12:hh)+':'+(m||'00')+(hh<12?'am':'pm');
+}
+function _fmtHm(mins){
+  const h=Math.floor(mins/60),m=mins%60;
+  return h>0?(m>0?h+'h '+m+'m':h+'h'):m+'m';
+}
+function findDuplicateSession(subjectId,date,start,end){
+  if(!subjectId||!date||!start||!end)return null;
+  const sessions=loadSessions();
+  const sMin=toMins(start),eMin=toMins(end);
+  let exact=null,overlap=null;
+  for(const s of sessions){
+    if(s.date!==date)continue;
+    const sS=toMins(s.start),sE=toMins(s.end);
+    if(s.subjectId===subjectId&&s.start===start&&s.end===end){exact=s;break;}
+    if(sMin<sE&&eMin>sS){// time ranges overlap
+      if(!overlap)overlap=s;
+    }
+  }
+  return exact?{type:'exact',session:exact}:overlap?{type:'overlap',session:overlap}:null;
+}
+function _dupSubjName(id){
+  const subjs=loadSubjects();
+  const s=subjs.find(x=>x.id===id);
+  return s?s.name:id;
+}
+function checkAndShowDupWarn(subjectId,date,start,end){
+  const warn=document.getElementById('dup-warn');
+  if(!warn)return false;
+  const dup=findDuplicateSession(subjectId,date,start,end);
+  if(!dup){warn.classList.remove('visible');return false;}
+  const s=dup.session;
+  const durMins=Math.round((toMins(s.end)-toMins(s.start)));
+  const subjName=_dupSubjName(s.subjectId);
+  const bodyEl=document.getElementById('dup-warn-body');
+  const sessEl=document.getElementById('dup-warn-session');
+  if(dup.type==='exact'){
+    bodyEl.textContent='You\'ve already logged an identical session for this subject, date, and time.';
+  } else {
+    const newSubjName=_dupSubjName(subjectId);
+    bodyEl.textContent='The time you\'re logging overlaps with an existing session.';
+    if(subjectId===s.subjectId&&newSubjName!==subjName)bodyEl.textContent='You\'ve already logged '+subjName+' during this time window.';
+  }
+  sessEl.innerHTML='<span style="font-weight:700;color:var(--text)">'+subjName+'</span><span>'+_fmtTime(s.start)+'–'+_fmtTime(s.end)+'</span><span style="color:var(--text3)">'+_fmtHm(durMins)+'</span>'+(s.notes?'<span style="color:var(--text3)">· '+s.notes+'</span>':'');
+  warn.classList.add('visible');
+  return true;
+}
+function dismissDupWarn(){
+  const warn=document.getElementById('dup-warn');
+  if(warn)warn.classList.remove('visible');
+}
+function logSessionConfirmed(){
+  dismissDupWarn();
+  _doLogSession();
+}
 function logSession(){
   const subjectId=document.getElementById('log-subject').value;
   const date=document.getElementById('log-date').value;
   const start=document.getElementById('log-start').value;
   const end=document.getElementById('log-end').value;
-  const notes=document.getElementById('log-notes').value.trim();
-  if(!subjectId){alert('Please select a subject.');return;}
-  if(!date){alert('Please select a date.');return;}
-  if(!start||!end){alert('Please enter start and end times.');return;}
+  if(!subjectId){showToast('Please select a subject.','var(--err)');return;}
+  if(!date){showToast('Please select a date.','var(--err)');return;}
+  if(!start||!end){showToast('Please enter start and end times.','var(--err)');return;}
   const mins=toMins(end)-toMins(start);
-  if(mins<=0){alert('End time must be after start time.');return;}
+  if(mins<=0){showToast('End time must be after start time.','var(--err)');return;}
+  // Check for duplicates — if found, show warning and stop here
+  if(checkAndShowDupWarn(subjectId,date,start,end))return;
+  _doLogSession();
+}
+function _doLogSession(){
+  const subjectId=document.getElementById('log-subject').value;
+  const date=document.getElementById('log-date').value;
+  const start=document.getElementById('log-start').value;
+  const end=document.getElementById('log-end').value;
+  const notes=document.getElementById('log-notes').value.trim();
+  const mins=toMins(end)-toMins(start);
+  if(mins<=0)return;
   const hours=mins/60;
   const sessions=loadSessions();
   const hoursStore=loadHours();
@@ -3954,8 +4046,10 @@ function logSession(){
   setLogTime('log-end','');
   document.getElementById('log-notes').value='';
   document.getElementById('log-duration').textContent='';
+  dismissDupWarn();
   renderLogEntries();
   updateSidebar();
+  showToast('Session logged ✓','var(--ok)');
   if(currentPage==='dashboard')renderDashboard();
   if(currentPage==='progress')renderProgress();
   if(currentPage==='graduation')renderGraduationPage();
