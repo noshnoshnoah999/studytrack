@@ -21,14 +21,14 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;min-width:0}
 html,body{overflow-x:hidden}
 :root{
-  --bg:#0f1923;
-  --bg2:#162030;
-  --bg3:#1c2a3c;
-  --bg4:#253347;
-  --border:rgba(255,255,255,0.08);
-  --text:#f0f4f8;
-  --text2:#8ca8c0;
-  --text3:#607d96;
+  --bg:#160e06;
+  --bg2:#211508;
+  --bg3:#2c1e0e;
+  --bg4:#382815;
+  --border:rgba(249,115,22,0.12);
+  --text:#f5ede4;
+  --text2:#c0916a;
+  --text3:#8a5c38;
   --o:#f97316;
   --od:#e86a10;
   --ol:rgba(249,115,22,0.18);
@@ -595,9 +595,9 @@ a{color:inherit;text-decoration:none}
 [data-theme="sage"] .modal-sheet,[data-theme="sage"] #bottom-nav{background:var(--bg2)}
 /* ── MIDNIGHT THEME (pure black, orange accent) ────────────────────────────── */
 [data-theme="midnight"]{
-  --bg:#080c10;--bg2:#0f1419;--bg3:#181f28;--bg4:#202a36;
-  --border:rgba(255,255,255,0.06);
-  --text:#eef2f7;--text2:#8ca8c0;--text3:#607d96;
+  --bg:#04060f;--bg2:#080e1e;--bg3:#0e162e;--bg4:#151f3e;
+  --border:rgba(100,140,255,0.1);
+  --text:#dde6ff;--text2:#6b8fd4;--text3:#3a5898;
   --o:#f97316;--od:#e86a10;--ol:rgba(249,115,22,0.16);--od2:rgba(249,115,22,0.28);
   --ok:#00c896;--okl:rgba(0,200,150,0.13);--err:#ff4d6a;--errl:rgba(255,77,106,0.14);
   --shadow:none;
@@ -605,12 +605,12 @@ a{color:inherit;text-decoration:none}
 [data-theme="midnight"] .modal-sheet,[data-theme="midnight"] #bottom-nav{background:var(--bg2)}
 /* ── SLATE THEME (pure dark gray, minimal) ─────────────────────────────────── */
 [data-theme="slate"]{
-  --bg:#111111;--bg2:#1a1a1a;--bg3:#242424;--bg4:#2e2e2e;
-  --border:rgba(255,255,255,0.07);
-  --text:#f5f5f5;--text2:#a0a0a0;--text3:#686868;
+  --bg:#0e0e0e;--bg2:#1c1c1c;--bg3:#272727;--bg4:#333333;
+  --border:rgba(255,255,255,0.08);
+  --text:#f0f0f0;--text2:#909090;--text3:#585858;
   --o:#f97316;--od:#e86a10;--ol:rgba(249,115,22,0.15);--od2:rgba(249,115,22,0.28);
   --ok:#00c896;--okl:rgba(0,200,150,0.14);--err:#ff4d6a;--errl:rgba(255,77,106,0.14);
-  --shadow:none;
+  --shadow:0 1px 0 rgba(255,255,255,0.04);
 }
 [data-theme="slate"] .modal-sheet,[data-theme="slate"] #bottom-nav{background:var(--bg2)}
 /* ── ROSE THEME (soft pink light) ──────────────────────────────────────────── */
@@ -1492,7 +1492,7 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
           <span>Pumpkin</span>
         </button>
         <button class="theme-swatch" data-theme-name="midnight" onclick="setTheme('midnight')" style="min-width:calc(33% - 6px)">
-          <span class="swatch-dot" style="background:#f97316;box-shadow:0 0 0 3px #0f1419,0 0 0 5px #f97316"></span>
+          <span class="swatch-dot" style="background:#f97316;box-shadow:0 0 0 3px #080e1e,0 0 0 5px #f97316"></span>
           <span>Midnight</span>
         </button>
         <button class="theme-swatch" data-theme-name="slate" onclick="setTheme('slate')" style="min-width:calc(33% - 6px)">
