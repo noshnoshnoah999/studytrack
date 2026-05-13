@@ -7620,7 +7620,7 @@ function _aiActionSummary(action){
     // Try to find the block name from the current schedule
     const schedule=loadSchedule();
     const b=schedule.find(x=>x.id===action.id);
-    return{icon:'🗑',text:'Remove '+(b?escHtml(b.label||b.type)+'  ('+DAYS[b.day]+' '+b.start+'-'+b.end+')'):'block '+action.id};
+    return{icon:'🗑',text:'Remove '+(b?escHtml(b.label||b.type)+'  ('+DAYS[b.day]+' '+b.start+'-'+b.end+')':'block '+action.id)};
   }else if(action.type==='edit'){
     const schedule=loadSchedule();
     const b=schedule.find(x=>x.id===action.id);
