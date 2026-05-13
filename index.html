@@ -925,7 +925,7 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
 #timer-bubble .tb-label{flex:1;font-size:13px;opacity:0.92;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #timer-bubble .tb-arrow{margin-left:auto;opacity:0.7;font-size:16px;font-weight:300}
 /* Desktop: live in the sidebar — hide the floating bar */
-@media(min-width:700px){#timer-bubble{display:none!important}}
+/* desktop: JS controls #timer-bubble visibility via _updateTimerBubble() */
 /* Sidebar timer chip (desktop only) */
 #timer-sidebar-chip{display:none;align-items:center;gap:8px;background:var(--o);color:#fff;border-radius:10px;padding:9px 13px;cursor:pointer;margin-bottom:10px;font-family:inherit;font-weight:700;font-size:13px;line-height:1;animation:bubble-pop 0.25s ease both;transition:opacity 0.15s}
 #timer-sidebar-chip:hover{opacity:0.88}
@@ -5875,9 +5875,11 @@ function renderTimeline(){
       '<div style="width:10px;height:10px;border-radius:50%;background:'+col+';flex-shrink:0"></div>'+
       // Name + progress
       '<div style="flex:1;min-width:0">'+
-        '<div style="display:flex;align-items:baseline;gap:6px;margin-bottom:5px">'+
-          '<span style="font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(s.name)+'</span>'+
-          (isLocked?'<span style="font-size:10px;font-weight:700;color:var(--text3)">locked</span>':'<span style="font-size:11px;color:var(--text3)">'+fmtH(left)+' left</span>')+
+        '<div style="margin-bottom:5px">'+
+          '<div style="font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(s.name)+'</div>'+
+          '<div style="font-size:11px;color:var(--text3);margin-top:1px">'+
+            (isLocked?'🔒 locked':fmtH(left)+' left')+
+          '</div>'+
         '</div>'+
         '<div style="height:5px;background:var(--bg3);border-radius:100px;overflow:hidden">'+
           '<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:100px;transition:width 0.4s"></div>'+
