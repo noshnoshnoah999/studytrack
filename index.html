@@ -1290,7 +1290,10 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
             <span style="font-size:12px;color:var(--text3)" id="ai-key-status"></span>
           </div>
         </div>
-        <button onclick="openAISettings()" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer">⚙ API Key</button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button onclick="_aiClearHistory()" style="background:none;border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:600;color:var(--text3);cursor:pointer" title="Clear chat history">Clear</button>
+          <button onclick="openAISettings()" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer">⚙ API Key</button>
+        </div>
       </div>
       <div id="ai-context-bar" class="ai-context-bar" style="margin-top:12px"></div>
       <div id="ai-chat-messages"></div>
@@ -7591,7 +7594,10 @@ function markCardsDone(){
 }
 
 // ── AI SCHEDULE COACH ─────────────────────────────────────────────────────────
-let _aiHistory=[];   // [{role,content}]
+function _aiSaveHistory(){try{localStorage.setItem('st_ai_history',JSON.stringify(_aiHistory));}catch(e){}}
+function _aiLoadHistory(){try{const h=localStorage.getItem('st_ai_history');if(h)return JSON.parse(h);}catch(e){}return[];}
+function _aiClearHistory(){if(_aiHistory.length&&!confirm('Clear all chat history?'))return;_aiHistory=[];_aiSaveHistory();_aiRenderMessages();}
+let _aiHistory=_aiLoadHistory();   // [{role,content}] — persisted to localStorage
 let _aiThinking=false;
 let _aiPendingActions=null; // actions waiting for user confirmation
 
@@ -7812,6 +7818,7 @@ async function _aiSendMsg(text){
   const inp=document.getElementById('ai-input-field');
   if(inp)inp.value='';
   _aiHistory.push({role:'user',content:text.trim()});
+  _aiSaveHistory();
   _aiThinking=true;
   _aiRenderMessages();
   try{
@@ -7841,11 +7848,13 @@ async function _aiSendMsg(text){
     const data=await resp.json();
     const rawText=data.content[0].text;
     _aiHistory.push({role:'assistant',content:rawText});
+    _aiSaveHistory();
     _aiThinking=false;
     _aiRenderMessages();
   }catch(e){
     _aiThinking=false;
     _aiHistory.push({role:'assistant',content:'⚠ Error: '+e.message+'\n\nCheck your API key in settings.'});
+    _aiSaveHistory();
     _aiRenderMessages();
   }
 }
