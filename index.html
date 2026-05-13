@@ -5870,7 +5870,7 @@ function renderTimeline(){
     const moAway=estDate&&estDate>now?Math.round((estDate-now)/86400000/30.4):null;
     const isLast=idx===future.length-1;
 
-    html+='<div data-tl-row style="padding:13px 0;'+(isLast?'':'border-bottom:1px solid var(--border)')+';display:flex;align-items:center;gap:12px;'+(isLocked?'opacity:0.5':'')+'">'+
+    html+='<div data-tl-row style="padding:13px 18px;'+(isLast?'':'border-bottom:1px solid var(--border)')+';display:flex;align-items:center;gap:12px;'+(isLocked?'opacity:0.5':'')+'">'+
       // Color dot
       '<div style="width:10px;height:10px;border-radius:50%;background:'+col+';flex-shrink:0"></div>'+
       // Name + progress
