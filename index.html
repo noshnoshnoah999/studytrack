@@ -1068,6 +1068,7 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
         <div>
           <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.5px;color:var(--text)" id="greeting"></h1>
           <p style="font-size:11px;color:var(--text3);margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px" id="greeting-date"></p>
+          <div id="dash-yesterday-pill" style="margin-top:7px;font-size:12px;color:var(--text2);font-weight:500;line-height:1.4;display:none"></div>
         </div>
         <div style="display:flex;gap:4px;align-items:center" id="mobile-top-bar">
           <button id="notif-bell-mb" onclick="openNotifCenter()" style="position:relative;background:none;border:1px solid var(--border);border-radius:9px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2)" title="Notifications">
@@ -3101,6 +3102,26 @@ function renderDashboard(){
   const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
   document.getElementById('greeting-date').textContent=
     DAYS[now.getDay()]+', '+MONTHS[now.getMonth()]+' '+now.getDate()+', '+now.getFullYear();
+
+  // Yesterday feedback pill
+  (function(){
+    const sessions=loadSessions();
+    const goals=loadGoals();
+    const target=goals.daily||6;
+    const yd=new Date(now);yd.setDate(now.getDate()-1);
+    const ydStr=yd.getFullYear()+'-'+String(yd.getMonth()+1).padStart(2,'0')+'-'+String(yd.getDate()).padStart(2,'0');
+    const ydH=sessions.filter(s=>s.date===ydStr).reduce((a,s)=>a+s.hours,0);
+    const pct=target>0?ydH/target:1;
+    let emoji,text;
+    if(ydH===0){emoji='😬';text='No hours logged yesterday — fresh start today.';}
+    else if(pct<0.5){emoji='📉';text='Yesterday: '+fmtH(ydH)+' — about '+Math.round(pct*100)+'% of your goal.';}
+    else if(pct<0.9){emoji='📊';text='Yesterday: '+fmtH(ydH)+' logged — '+fmtH(Math.max(0,target-ydH))+' short of goal.';}
+    else if(pct<1){emoji='🎯';text='So close yesterday — '+fmtH(ydH)+' out of '+fmtH(target)+'.';}
+    else if(pct>=1.5){emoji='🔥';text='Big day yesterday — '+fmtH(ydH)+'. '+fmtH(Math.max(0,ydH-target))+' over goal!';}
+    else{emoji='✅';text='You hit your goal yesterday with '+fmtH(ydH)+'. Keep it up!';}
+    const pill=document.getElementById('dash-yesterday-pill');
+    if(pill){pill.innerHTML=emoji+' <span style="color:var(--text3)">'+text+'</span>';pill.style.display='block';}
+  })();
 
   const totalLogged=getTotalLogged();
   const subjs=_canonicalSubjs();
@@ -5974,31 +5995,7 @@ function renderPlan(){
   // ── Render ────────────────────────────────────────────────────────────────
   const el=document.getElementById('plan-inner');
   el.innerHTML=
-    // Card 1: Today's smart target
-    '<div class="card" style="margin-bottom:16px">'+
-      '<div class="card-title">Today\'s Target</div>'+
-      '<div style="display:flex;align-items:flex-end;gap:12px;margin-bottom:4px">'+
-        '<div class="plan-smart-num">'+fmtH(personalTarget)+'</div>'+
-        '<div style="padding-bottom:8px;font-size:13px;color:var(--text2);font-weight:600">your daily goal</div>'+
-      '</div>'+
-      '<div class="plan-teacher-ref">'+daysPerWeek+' days/week = <strong style="color:var(--text2)">'+fmtH(weeklyPersonal)+'/week</strong> · <span style="color:var(--text3)">Teacher\'s standard: '+fmtH(TEACHER_DAILY)+'/day</span></div>'+
-      // Today progress bar
-      '<div style="margin:14px 0">'+
-        '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:5px">'+
-          '<span>'+fmtH(todayLogged)+' logged today</span>'+
-          '<span>'+fmtH(stillNeeded)+' to go</span>'+
-        '</div>'+
-        '<div style="height:8px;background:var(--bg3);border-radius:100px;overflow:hidden">'+
-          '<div style="height:100%;border-radius:100px;background:'+(todayLogged>=personalTarget?'var(--ok)':'linear-gradient(90deg,var(--o),#fb923c)')+';width:'+todayPct.toFixed(1)+'%;transition:width 0.4s"></div>'+
-        '</div>'+
-      '</div>'+
-      // Yesterday feedback
-      '<div class="plan-feedback">'+
-        '<span style="font-size:16px;margin-right:6px">'+feedbackEmoji+'</span>'+
-        '<span>'+feedbackText+'</span>'+
-      '</div>'+
-    '</div>'+
-    // Card 2: Pace comparison
+    // Card 1: Pace comparison
     '<div class="card" style="margin-bottom:16px">'+
       '<div class="card-title">Pace Comparison</div>'+
       // Actual pace row — full width, most important
