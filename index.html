@@ -696,10 +696,10 @@ input:checked+.notif-slider:before{transform:translateX(18px);background:#fff}
 /* QUICK LOG FAB */
 
 /* ── ANIMATIONS ──────────────────────────────────────────────────────────── */
-@keyframes pageIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-.page.active{animation:pageIn 0.2s ease}
-@keyframes cardIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.card{animation:cardIn 0.25s ease both}
+@keyframes pageIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.page.active{animation:pageIn 0.25s cubic-bezier(0.25,0.46,0.45,0.94)}
+@keyframes cardIn{0%{opacity:0;transform:translateY(10px) scale(0.98)}100%{opacity:1;transform:translateY(0) scale(1)}}
+.card{animation:cardIn 0.3s cubic-bezier(0.25,0.46,0.45,0.94) both}
 .card.anim-done:hover{box-shadow:0 8px 32px rgba(0,0,0,0.25);transform:translateY(-1px)}
 button:active{transform:scale(0.96);transition:transform 0.08s}
 @keyframes toastIn{from{opacity:0;transform:translateY(20px) scale(0.95)}to{opacity:1;transform:translateY(0) scale(1)}}
@@ -814,6 +814,106 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
 
 /* ── Back to top button ──────────────────────────────────────────── */
 .back-to-top:hover{box-shadow:0 6px 20px rgba(249,115,22,0.65)}
+.back-to-top:active{transform:scale(0.9)}
+
+/* ── Heartbeat (running timer clock) ────────────────────────────── */
+@keyframes heartbeat{0%,100%{transform:scale(1)}14%{transform:scale(1.05)}28%{transform:scale(1)}42%{transform:scale(1.03)}70%{transform:scale(1)}}
+.heartbeat{animation:heartbeat 1.4s ease-in-out infinite}
+
+/* ── Slide in from left ──────────────────────────────────────────── */
+@keyframes slideInLeft{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:translateX(0)}}
+.slide-in-left{animation:slideInLeft 0.28s cubic-bezier(0.25,0.46,0.45,0.94) both}
+
+/* ── Fade in ─────────────────────────────────────────────────────── */
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.fade-in{animation:fadeIn 0.35s ease both}
+
+/* ── Drop in (from above) ────────────────────────────────────────── */
+@keyframes dropIn{from{opacity:0;transform:translateY(-14px) scale(0.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+.drop-in{animation:dropIn 0.3s cubic-bezier(0.34,1.56,0.64,1) both}
+
+/* ── Zoom in (for badges/chips) ──────────────────────────────────── */
+@keyframes zoomIn{from{opacity:0;transform:scale(0.5)}to{opacity:1;transform:scale(1)}}
+.zoom-in{animation:zoomIn 0.3s cubic-bezier(0.34,1.56,0.64,1) both}
+
+/* ── Number roll ─────────────────────────────────────────────────── */
+@keyframes numRoll{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.num-roll{animation:numRoll 0.3s cubic-bezier(0.25,0.46,0.45,0.94) both}
+
+/* ── Swoop in from below (hero entrance) ─────────────────────────── */
+@keyframes swoopIn{from{opacity:0;transform:translateY(32px) scale(0.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+.swoop-in{animation:swoopIn 0.45s cubic-bezier(0.34,1.56,0.64,1) both}
+
+/* ── Glow border pulse (active block, running timer) ────────────── */
+@keyframes borderGlow{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,0.45)}50%{box-shadow:0 0 0 6px rgba(249,115,22,0)}}
+.border-glow{animation:borderGlow 2s ease-in-out infinite}
+@keyframes borderGlowGreen{0%,100%{box-shadow:0 0 0 0 rgba(52,211,153,0.5)}50%{box-shadow:0 0 0 7px rgba(52,211,153,0)}}
+.border-glow-green{animation:borderGlowGreen 2s ease-in-out infinite}
+
+/* ── Streak flame flicker ────────────────────────────────────────── */
+@keyframes flicker{0%,100%{opacity:1;transform:scale(1) rotate(-2deg)}25%{opacity:0.85;transform:scale(1.06) rotate(2deg)}50%{opacity:1;transform:scale(0.97) rotate(-1deg)}75%{opacity:0.9;transform:scale(1.04) rotate(1deg)}}
+.flicker{animation:flicker 1.8s ease-in-out infinite;display:inline-block}
+
+/* ── Progress bar stripe shine ───────────────────────────────────── */
+@keyframes barShine{0%{background-position:-200% 0}100%{background-position:200% 0}}
+
+/* ── Card entrance with slight overshoot ────────────────────────── */
+@keyframes cardPop{0%{opacity:0;transform:translateY(12px) scale(0.97)}60%{transform:translateY(-3px) scale(1.01)}100%{opacity:1;transform:translateY(0) scale(1)}}
+.card-pop{animation:cardPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both}
+
+/* ── Form input focus glow ───────────────────────────────────────── */
+.form-input:focus{outline:none;border-color:var(--o)!important;box-shadow:0 0 0 3px rgba(249,115,22,0.18);transform:scale(1.01);transition:all 0.2s cubic-bezier(0.34,1.56,0.64,1)}
+
+/* ── Button hover lift ───────────────────────────────────────────── */
+.btn-primary:hover{box-shadow:0 6px 20px rgba(249,115,22,0.45);transform:translateY(-1px);transition:all 0.2s}
+.btn-save:hover{box-shadow:0 6px 20px rgba(249,115,22,0.45);transform:translateY(-1px);transition:all 0.2s}
+.btn-add:hover{box-shadow:0 4px 14px rgba(249,115,22,0.35);transform:translateY(-1px)}
+.jump-pill:hover{background:var(--bg4);color:var(--text);border-color:var(--o);transform:translateY(-1px)}
+.log-suggest-chip:hover{background:var(--bg3);transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.2)}
+
+/* ── Stat card interaction ───────────────────────────────────────── */
+.stat-card:active{transform:scale(0.96)!important}
+
+/* ── Subj row animated progress ──────────────────────────────────── */
+.subj-bar-fill{transition:width 0.8s cubic-bezier(0.25,0.46,0.45,0.94)}
+
+/* ── Timeline dot entrance ───────────────────────────────────────── */
+.tl-dot.anim{animation:bounceIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both}
+
+/* ── Active timeline card highlight ─────────────────────────────── */
+.tl-item.is-active>.tl-card{animation:borderGlow 2s ease-in-out infinite}
+
+/* ── Day tab active bounce ───────────────────────────────────────── */
+.day-tab.active{animation:springPop 0.35s cubic-bezier(0.34,1.56,0.64,1) both;transform:scale(1.05)}
+
+/* ── Week bar grow from 0 ────────────────────────────────────────── */
+.week-bar-fill{transition:width 0s}
+.week-bar-fill.bar-grown{transition:width 0.7s cubic-bezier(0.25,0.46,0.45,0.94)!important}
+
+/* ── Hist stats spring pop ───────────────────────────────────────── */
+.hist-stat-val{display:inline-block}
+
+/* ── Log suggest chip entrance ───────────────────────────────────── */
+.log-suggest-chip{transition:background 0.15s,transform 0.2s,box-shadow 0.2s}
+
+/* ── Now/Next banner entrance ────────────────────────────────────── */
+.nnb-inner{transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1)}
+
+/* ── Bottom nav active icon bounce ──────────────────────────────── */
+.bn-item.active .bn-icon{animation:springPop 0.35s cubic-bezier(0.34,1.56,0.64,1) both}
+
+/* ── Card stagger max to avoid huge delays ───────────────────────── */
+.stagger-7{animation-delay:0.35s!important}
+.stagger-8{animation-delay:0.40s!important}
+.stagger-9{animation-delay:0.45s!important}
+.stagger-10{animation-delay:0.50s!important}
+
+/* ── Attention row ───────────────────────────────────────────────── */
+.attention-row{transition:transform 0.2s}
+.attention-row:hover{transform:translateX(3px)}
+
+/* ── Modal sheet entrance ────────────────────────────────────────── */
+.modal-overlay.open .modal-sheet{animation:none}
 
 /* ── IN-APP BANNER ───────────────────────────────────────────────────────── */
 @keyframes bannerIn{from{opacity:0;transform:translateX(-50%) translateY(-60px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
@@ -1604,6 +1704,7 @@ function renderNowNext(){
           qlBtn+
         '</div>'+
       '</div>';
+    el.querySelector('.now-next-banner').classList.add('drop-in');
     return;
   }
 
@@ -1624,6 +1725,7 @@ function renderNowNext(){
           '<span class="nnb-name">'+escHtml(next.label)+'</span>'+
         '</div>'+
       '</div>';
+    el.querySelector('.now-next-banner').classList.add('drop-in');
     return;
   }
 
@@ -2679,10 +2781,12 @@ function renderDashboard(){
     '<div class="stat-card"><div class="stat-label">Remaining</div><div class="stat-val">'+fmtH(remaining)+'</div></div>'+
     '<div class="stat-card"><div class="stat-label">Credits Left</div><div class="stat-val">'+fmtCr(creditsLeft)+'</div><div style="font-size:10px;color:var(--text3);margin-top:2px">'+fmtCr(earnedCredits)+' of '+fmtCr(totalCredits)+' earned</div></div>';
 
-  // Spring-pop stat cards
+  // Spring-pop stat cards with staggered roll-in numbers
   document.querySelectorAll('#stats-strip .stat-card').forEach((c,i)=>{
     c.classList.add('spring-pop');
     c.style.animationDelay=(i*0.07)+'s';
+    const valEl=c.querySelector('.stat-val');
+    if(valEl){valEl.classList.add('num-roll');valEl.style.animationDelay=(i*0.07+0.05)+'s';}
   });
   markCardsDone();
 
@@ -2737,11 +2841,36 @@ function renderDashboard(){
   document.getElementById('attention-card').innerHTML=
     '<div class="card-title">Needs Attention</div>'+
     (arows||'<div class="empty-state">All subjects on track!</div>');
+  // Stagger needs-attention rows
+  document.querySelectorAll('#attention-card .attention-row').forEach((r,i)=>{
+    r.classList.add('slide-in-left');
+    r.style.animationDelay=(i*0.07)+'s';
+  });
+  // Animate attention progress bars from 0
+  document.querySelectorAll('#attention-card .progress-fill').forEach((bar,i)=>{
+    const w=bar.style.width;
+    bar.style.width='0%';
+    setTimeout(()=>{bar.style.transition='width 0.8s cubic-bezier(0.25,0.46,0.45,0.94)';bar.style.width=w;},i*70+100);
+  });
 
   renderFocusCard();
   renderWeeklySummary();
   markCardsDone();
   applyDashLayout();
+
+  // Animate week bars from 0 after a short delay
+  setTimeout(()=>{
+    document.querySelectorAll('.week-bar-fill').forEach((b,i)=>{
+      const w=b.style.width;
+      b.style.width='0%';
+      setTimeout(()=>{b.classList.add('bar-grown');b.style.width=w;},i*60);
+    });
+  },120);
+
+  // Greeting swoop
+  const greetEl=document.querySelector('.greeting-text');
+  if(greetEl){greetEl.classList.remove('swoop-in');void greetEl.offsetWidth;greetEl.classList.add('swoop-in');}
+
 }
 
 // ── LAYOUT EDITOR ─────────────────────────────────────────────────────────────
@@ -3503,6 +3632,11 @@ function renderLog(){
           '<div class="log-suggest-label">Unlogged today — tap to autofill</div>'+
           '<div class="log-suggest-row">'+chips+'</div>'+
         '</div>';
+      // Spring pop each chip with stagger
+      promptsEl.querySelectorAll('.log-suggest-chip').forEach((c,i)=>{
+        c.classList.add('spring-pop');
+        c.style.animationDelay=(i*0.08)+'s';
+      });
     }
   }
 
@@ -3615,6 +3749,11 @@ function renderLogEntries(){
       '<button class="btn-del" onclick="deleteEntry(\''+s.id+'\')">×</button>'+
     '</div>';
   }).join('');
+  // Stagger entry rows
+  el.querySelectorAll('.entry-row').forEach((r,i)=>{
+    r.classList.add('slide-up');
+    r.style.animationDelay=(i*0.06)+'s';
+  });
 }
 
 // ── HISTORY PAGE ─────────────────────────────────────────────────────────────
@@ -3674,6 +3813,10 @@ function renderHistory(){
       '<div class="hist-stat"><span class="hist-stat-val">'+totalSessions+'</span><span class="hist-stat-lbl">Sessions</span></div>'+
       '<div class="hist-stat"><span class="hist-stat-val">'+fmtH(totalH)+'</span><span class="hist-stat-lbl">Total</span></div>'+
       '<div class="hist-stat"><span class="hist-stat-val">'+fmtH(avgPerDay)+'</span><span class="hist-stat-lbl">Avg/Day</span></div>';
+    summaryEl.querySelectorAll('.hist-stat').forEach((s,i)=>{
+      s.classList.add('spring-pop');
+      s.style.animationDelay=(i*0.08)+'s';
+    });
   }
 
   // Group by date
@@ -4135,9 +4278,28 @@ function renderTimerPage(){
   // Set current subject in dropdown
   const tpSel=document.getElementById('tp-subject');
   if(tpSel&&timerSubjectId)tpSel.value=timerSubjectId;
-  // Float animation on clock
+  // Float animation on idle clock, heartbeat when running
   const clockEl=document.getElementById('tp-clock');
-  if(clockEl&&!timerInterval)clockEl.classList.add('float');
+  if(clockEl){
+    if(timerInterval){
+      clockEl.classList.add('heartbeat');
+    } else {
+      clockEl.classList.add('float');
+    }
+  }
+  // Spring-pop the stat cards with stagger
+  document.querySelectorAll('.timer-stat').forEach((c,i)=>{
+    c.classList.remove('spring-pop');
+    void c.offsetWidth;
+    c.classList.add('spring-pop');
+    c.style.animationDelay=(i*0.08)+'s';
+  });
+  // Log button bounce-in when stopped
+  const logBtn=document.querySelector('.btn-primary[onclick="timerPageLog()"]');
+  if(logBtn){logBtn.classList.add('bounce-in');}
+  // Subject badge drop-in
+  const badge=document.querySelector('.timer-subject-badge,.timer-df-subject');
+  if(badge){badge.classList.add('drop-in');}
   markCardsDone();
 }
 
@@ -4727,13 +4889,18 @@ function _renderGradSection(){
         '<div class="grad-stat"><div class="grad-stat-val">'+GRAD_TOTAL_CREDITS+'cr</div><div class="grad-stat-lbl">Total Credits</div></div>'+
       '</div>'+
     '</div>';
+  // Spring-pop grad stats
+  _gradCard.querySelectorAll('.grad-stat').forEach((s,i)=>{
+    s.classList.add('spring-pop');
+    s.style.animationDelay=(i*0.08)+'s';
+  });
   // Animate grad bar
   const gradBarFill=_gradCard.querySelector('.grad-bar-fill');
   if(gradBarFill){
     const tw=gradBarFill.style.width;
     gradBarFill.style.width='0%';
     requestAnimationFrame(()=>{
-      gradBarFill.style.transition='width 1s cubic-bezier(0.25,0.46,0.45,0.94)';
+      gradBarFill.style.transition='width 1.1s cubic-bezier(0.25,0.46,0.45,0.94)';
       gradBarFill.style.width=tw;
     });
   }
@@ -4804,6 +4971,15 @@ function _renderGradEstCard(){
       '<div style="margin-top:3px;color:var(--text3)">'+futureNames+'</div>'+
     '</div>':''
     );
+
+  // Spring pop the two estimate boxes
+  const estCard=document.getElementById('grad-est-card');
+  if(estCard){
+    estCard.querySelectorAll('[style*="border-radius:12px"]').forEach((b,i)=>{
+      b.classList.add('card-pop');
+      b.style.animationDelay=(i*0.1)+'s';
+    });
+  }
 }
 
 function _renderMilestones(){
@@ -5214,7 +5390,7 @@ function renderTimeline(){
     const moAway=estDate&&estDate>now?Math.round((estDate-now)/86400000/30.4):null;
     const isLast=idx===future.length-1;
 
-    html+='<div style="padding:13px 16px;'+(isLast?'':'border-bottom:1px solid var(--border)')+';display:flex;align-items:center;gap:12px;'+(isLocked?'opacity:0.5':'')+'">'+
+    html+='<div data-tl-row style="padding:13px 16px;'+(isLast?'':'border-bottom:1px solid var(--border)')+';display:flex;align-items:center;gap:12px;'+(isLocked?'opacity:0.5':'')+'">'+
       // Color dot
       '<div style="width:10px;height:10px;border-radius:50%;background:'+col+';flex-shrink:0"></div>'+
       // Name + progress
@@ -5237,6 +5413,19 @@ function renderTimeline(){
 
   html+='</div>'; // close card
   el.innerHTML=html;
+
+  // Stagger the subject rows in the timeline with slide-up
+  const rows=el.querySelectorAll('[data-tl-row]');
+  rows.forEach((r,i)=>{
+    r.classList.add('slide-up');
+    r.style.animationDelay=(i*0.05)+'s';
+  });
+  // Animate graduation progress bars
+  el.querySelectorAll('.grad-bar-fill').forEach((b,i)=>{
+    const w=b.style.width;
+    b.style.width='0%';
+    setTimeout(()=>{b.style.transition='width 0.8s cubic-bezier(0.25,0.46,0.45,0.94)';b.style.width=w;},i*60+100);
+  });
 }
 
 function renderPlan(){
@@ -5479,6 +5668,23 @@ function renderPlan(){
       '</div>'+
       '<div style="margin-top:10px;font-size:11px;color:var(--text3);text-align:center">Change your goal in <span style="color:var(--o);cursor:pointer;font-weight:600" onclick="openGoalSettings()">Settings ⚙</span></div>'+
     '</div>';
+
+  // Animate plan page today target number
+  const smartNumEl=document.querySelector('.plan-smart-num');
+  if(smartNumEl){smartNumEl.classList.add('swoop-in');}
+  // Animate plan today progress bar
+  const planBar=document.querySelector('#plan-inner [style*="height:8px"] div');
+  if(planBar){
+    const tw=planBar.style.width;
+    planBar.style.width='0%';
+    setTimeout(()=>{planBar.style.width=tw;},150);
+  }
+  // Stagger pace comparison boxes
+  const paceBoxes=document.querySelectorAll('#plan-inner [style*="border-radius:10px"]');
+  paceBoxes.forEach((b,i)=>{
+    b.classList.add('fade-scale');
+    b.style.animationDelay=(i*0.07)+'s';
+  });
 }
 
 function _renderStudyCalendar(targetElId){
@@ -5564,6 +5770,17 @@ function _renderStudyCalendar(targetElId){
     '<div style="font-size:12px;color:var(--text3);margin-bottom:12px">Past days show actual hours logged · Future shows projected recommended hours</div>'+
     legendHtml+calHtml+
   '</div>';
+  // Stagger calendar cells with fade-in
+  el.querySelectorAll('.plan-cal-cell:not(.empty)').forEach((c,i)=>{
+    c.style.opacity='0';
+    c.style.transform='scale(0.85)';
+    c.style.transition='none';
+    setTimeout(()=>{
+      c.style.transition='opacity 0.25s ease, transform 0.25s cubic-bezier(0.34,1.56,0.64,1)';
+      c.style.opacity='1';
+      c.style.transform='scale(1)';
+    },i*8);
+  });
 }
 
 function _fmtDecimalToHm(h){
@@ -5711,6 +5928,22 @@ function _renderPaceDropCard(){
     '</div>'+
     rowsHtml+
     milestonesHtml;
+
+  // Stagger pace-drop rows
+  el.querySelectorAll('div[style*="grid-template-columns:72px"]').forEach((r,i)=>{
+    r.style.opacity='0';
+    r.style.transform='translateX(-12px)';
+    setTimeout(()=>{
+      r.style.transition='opacity 0.28s ease, transform 0.28s cubic-bezier(0.25,0.46,0.45,0.94)';
+      r.style.opacity='1';
+      r.style.transform='translateX(0)';
+    },i*40+100);
+  });
+  // Bounce-in milestone chips
+  el.querySelectorAll('div[style*="flex-direction:column;align-items:center"]').forEach((chip,i)=>{
+    chip.classList.add('spring-pop');
+    chip.style.animationDelay=(i*0.07)+'s';
+  });
 }
 
 function renderGraduationPage(){
@@ -6000,6 +6233,11 @@ function renderFocusCard(){
     '</div>';
   });
   el.innerHTML='<div class="card-title">🎯 Today\'s Schedule</div>'+rows;
+  // Stagger focus rows
+  el.querySelectorAll('.focus-row').forEach((r,i)=>{
+    r.classList.add('slide-in-left');
+    r.style.animationDelay=(i*0.07)+'s';
+  });
 }
 
 // ── WEEKLY SUMMARY ────────────────────────────────────────────────────────────
@@ -6040,6 +6278,14 @@ function renderWeeklySummary(){
     '<div class="week-sum-grid">'+bars+'</div>'+
     '';
   renderWeekCombined();
+  // Animate vertical bars from 0 with stagger
+  setTimeout(()=>{
+    document.querySelectorAll('.wsd-bar-fill').forEach((b,i)=>{
+      const h=b.style.height;
+      b.style.height='0%';
+      setTimeout(()=>{b.style.transition='height 0.65s cubic-bezier(0.25,0.46,0.45,0.94)';b.style.height=h;},i*50);
+    });
+  },80);
 }
 
 function renderWeekCombined(){
