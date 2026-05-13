@@ -6885,7 +6885,7 @@ async function syncFromCloud(){
   // Deep link support: open specific page via URL hash e.g. #log
   const hash=window.location.hash.replace('#','');
   const validPages=['dashboard','schedule','log','progress','graduation','timer','history','tasks','ai'];
-  showPage(validPages.includes(hash)?hash:'dashboard');
+  try{showPage(validPages.includes(hash)?hash:'dashboard');}catch(e){console.error('showPage crashed:',e);document.getElementById('main').innerHTML='<div style="padding:32px;color:var(--text)"><h2>Something went wrong loading the app.</h2><p style="color:var(--text3);margin-top:8px">Error: '+e.message+'</p><button onclick="location.reload()" style="margin-top:16px;padding:10px 20px;background:var(--o);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:14px">Reload</button></div>';}
   _updateTasksBadge();
   syncFromCloud();
   updateNotifBtn();
