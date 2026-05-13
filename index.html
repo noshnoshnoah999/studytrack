@@ -5373,13 +5373,16 @@ function renderPlan(){
         // Remaining hours if smartTarget is hit every day up to this point
         const projRemaining=Math.max(0,remaining-daysFromToday*smartTarget);
         const projDaysLeft=Math.max(1,daysLeft-daysFromToday);
-        const projBareMin=projRemaining/projDaysLeft;
-        const projBase=Math.max(projBareMin,personalTarget);
+        // Use study-days basis (not calendar days) so bare min isn't artificially low
+        const projStudyDaysLeft=Math.max(1,projDaysLeft/7*daysPerWeek);
+        const projBareMin=projRemaining/projStudyDaysLeft;
+        // Floor at teacher standard — never show less than required pace
+        const projBase=Math.max(projBareMin,TEACHER_DAILY);
         // Deficit: each day that smartTarget is hit, catchUp amount is paid off
         // After 7 days the whole recentDeficit is fully absorbed
         const deficitLeft=Math.max(0,recentDeficit-daysFromToday*catchUp);
         const projCatchUp=deficitLeft/7;
-        const dayTarget=Math.min(10,projBase+projCatchUp);
+        const dayTarget=Math.min(7.5,projBase+projCatchUp);
         cls='future';
         val=fmtH(dayTarget);
       }
@@ -5559,7 +5562,7 @@ function _renderStudyCalendar(targetElId){
       }else{
         const daysFromToday=Math.round((new Date(dStr)-now)/(1000*60*60*24));
         const deficitLeft=Math.max(0,recentDeficit-daysFromToday*catchUp);
-        const dayTarget=Math.min(10,baseTarget+deficitLeft/7);
+        const dayTarget=Math.min(7.5,Math.max(bareMinimum,TEACHER_DAILY)+deficitLeft/7);
         cls='future';val=fmtH(dayTarget);
       }
       cells+='<div class="plan-cal-cell '+cls+'"><div class="plan-cal-day">'+d+'</div><div class="plan-cal-val">'+val+'</div></div>';
