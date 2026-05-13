@@ -1100,16 +1100,6 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
         </div>
       </div>
       <div id="sched-content"></div>
-      <div style="margin-top:24px">
-        <div class="todo-header">
-          <h2 style="font-size:18px">To-Do</h2>
-          <button class="todo-add-btn" onclick="openTodoModal()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Add Task
-          </button>
-        </div>
-        <div id="todo-list"></div>
-      </div>
       <div id="schedule-calendar-inner" style="margin-top:8px;margin-bottom:80px"></div>
     </div>
 
@@ -3069,7 +3059,7 @@ function showPage(id){
   window.scrollTo(0,0);
   _updateBackToTop();
   if(id==='dashboard')renderDashboard();
-  else if(id==='schedule'){renderSchedule();renderTodos();_renderStudyCalendar('schedule-calendar-inner');}
+  else if(id==='schedule'){renderSchedule();_renderStudyCalendar('schedule-calendar-inner');}
   else if(id==='log'){renderLog();renderTemplates();}
   else if(id==='history')renderHistory();
   else if(id==='progress')renderProgress();
