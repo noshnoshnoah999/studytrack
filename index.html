@@ -650,6 +650,45 @@ a{color:inherit;text-decoration:none}
 .sync-label{font-size:11px;color:var(--text3)}
 
 /* ── TO-DO ──────────────────────────────────────────────────────── */
+/* ── Tasks page ─────────────────────────────────────────────────────── */
+.tasks-stat-chip{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:100px;font-size:12px;font-weight:700;cursor:default}
+.tasks-group-header{display:flex;align-items:center;gap:8px;padding:14px 0 8px;cursor:pointer;user-select:none}
+.tasks-group-label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.7px}
+.tasks-group-count{font-size:11px;font-weight:700;color:var(--text3);background:var(--bg3);border-radius:100px;padding:1px 8px}
+.tasks-group-chevron{margin-left:auto;color:var(--text3);transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1)}
+.tasks-group-chevron.open{transform:rotate(180deg)}
+.tasks-group-body{overflow:hidden;max-height:0;transition:max-height 0.35s cubic-bezier(0.4,0,0.2,1)}
+.tasks-group-body.open{max-height:4000px}
+.task-card{display:flex;align-items:flex-start;gap:12px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px 14px;margin-bottom:8px;transition:transform 0.2s,box-shadow 0.2s,opacity 0.3s;position:relative;overflow:hidden}
+.task-card:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,0.15)}
+.task-card.done-card{opacity:0.42}
+.task-card.overdue-card{border-left:3px solid var(--err)}
+.task-card.today-card{border-left:3px solid var(--ok)}
+.task-check{width:22px;height:22px;min-width:22px;border-radius:7px;border:2px solid var(--text3);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s cubic-bezier(0.34,1.56,0.64,1);flex-shrink:0;margin-top:1px}
+.task-check:hover{border-color:var(--o);background:var(--ol)}
+.task-check.checked{background:var(--ok);border-color:var(--ok);animation:springPop 0.35s cubic-bezier(0.34,1.56,0.64,1)}
+.task-check.checked::after{content:'✓';color:#fff;font-size:13px;font-weight:800}
+.task-body{flex:1;min-width:0}
+.task-text{font-size:14px;font-weight:600;color:var(--text);line-height:1.4;margin-bottom:6px}
+.task-card.done-card .task-text{text-decoration:line-through;color:var(--text3)}
+.task-meta{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.task-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:100px;display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
+.task-badge.date-badge{background:var(--bg3);color:var(--text2)}
+.task-badge.time-badge{background:var(--ol);color:var(--o)}
+.task-badge.overdue-badge{background:var(--errl);color:var(--err)}
+.task-badge.today-badge{background:var(--okl);color:var(--ok)}
+.task-badge.subj-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:100px}
+.task-actions{display:flex;gap:4px;flex-shrink:0;align-items:flex-start}
+.task-btn{background:none;border:none;cursor:pointer;color:var(--text3);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;font-size:15px}
+.task-btn:hover{background:var(--bg3);color:var(--text)}
+.task-btn.del:hover{background:var(--errl);color:var(--err)}
+.tasks-empty{text-align:center;padding:48px 24px;color:var(--text3)}
+.tasks-empty-icon{font-size:40px;margin-bottom:12px}
+.tasks-empty-text{font-size:15px;font-weight:600;margin-bottom:6px;color:var(--text2)}
+.tasks-empty-sub{font-size:13px}
+/* Nav badge */
+.nav-badge{min-width:18px;height:18px;border-radius:100px;background:var(--err);color:#fff;font-size:10px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;padding:0 5px;margin-left:auto;animation:bounceIn 0.4s cubic-bezier(0.34,1.56,0.64,1)}
+.bn-badge{min-width:16px;height:16px;border-radius:100px;background:var(--err);color:#fff;font-size:9px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;position:absolute;top:2px;right:50%;transform:translateX(10px);animation:bounceIn 0.4s cubic-bezier(0.34,1.56,0.64,1)}
 .todo-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
 .todo-header h2{font-size:22px;font-weight:800;letter-spacing:-0.5px}
 .todo-add-btn{display:flex;align-items:center;gap:6px;background:var(--o);color:#fff;font-size:13px;font-weight:700;padding:8px 16px;border-radius:10px;border:none;cursor:pointer}
@@ -1178,7 +1217,20 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
       <div id="hist-entries"></div>
     </div>
 
-    <!-- PAGE: TO-DO -->
+    <!-- PAGE: TASKS -->
+    <div class="page" id="page-tasks">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <h2 style="font-size:22px;font-weight:800;letter-spacing:-0.5px">Tasks</h2>
+        <button class="btn-add" onclick="openTodoModal()" style="display:flex;align-items:center;gap:6px">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Task
+        </button>
+      </div>
+      <!-- Stats bar -->
+      <div id="tasks-stats-bar" style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap"></div>
+      <!-- Task list -->
+      <div id="tasks-page-list"></div>
+    </div>
 
   </main>
 
@@ -1468,6 +1520,12 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
         <input type="time" class="form-input" id="todo-time" disabled style="opacity:0.4">
       </div>
     </div>
+    <div class="form-group">
+      <label class="form-label">Subject (optional)</label>
+      <select class="form-input" id="todo-subject">
+        <option value="">No subject</option>
+      </select>
+    </div>
     <div class="modal-actions">
       <button class="btn-save" onclick="saveTodoModal()">Save Task</button>
       <button class="btn-cancel" onclick="closeModal('todo-modal-overlay')">Cancel</button>
@@ -1556,6 +1614,7 @@ const NAV_ITEMS=[
   {id:'graduation', label:'Graduation', short:'Grad', icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>'},
   {id:'timer',     label:'Timer',     short:'Timer',      icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'},
   {id:'history',   label:'History',   short:'History',    icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>'},
+  {id:'tasks',     label:'Tasks',     short:'Tasks',      icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>'},
 ];
 const DEFAULT_NAV_ORDER=NAV_ITEMS.map(n=>n.id);
 
@@ -2527,7 +2586,8 @@ function toggleTodo(id){
   if(t){t.done=!t.done;t.doneAt=t.done?new Date().toISOString():null;}
   saveTodos(todos);
   renderTodos();
-  // Also refresh schedule if it's visible
+  renderTasksPage();
+  _updateTasksBadge();
   if(document.getElementById('page-schedule').classList.contains('active'))renderSchedule();
 }
 
@@ -2535,6 +2595,234 @@ function deleteTodo(id){
   const todos=loadTodos().filter(x=>x.id!==id);
   saveTodos(todos);
   renderTodos();
+  renderTasksPage();
+  _updateTasksBadge();
+}
+
+// ── TASKS PAGE ────────────────────────────────────────────────────────────────
+const TASK_SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',english_11:'#60a5fa',english_12:'#93c5fd',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',geometry:'#a855f7',algebra2:'#7c3aed',el2:'#94a3b8',el3:'#64748b',el4:'#475569',am_hist:'#b45309',jp_exch:'#7c3aed'};
+
+function _updateTasksBadge(){
+  const todos=loadTodos();
+  const now=new Date();
+  const todayDate=todayStr();
+  const urgent=todos.filter(t=>!t.done&&(t.date<todayDate||(t.date===todayDate))).length;
+  // Sidebar badge
+  document.querySelectorAll('[data-page="tasks"]').forEach(el=>{
+    let badge=el.querySelector('.nav-badge,.bn-badge');
+    if(urgent>0){
+      if(!badge){
+        badge=document.createElement('span');
+        badge.className=el.classList.contains('bn-item')?'bn-badge':'nav-badge';
+        el.appendChild(badge);
+      }
+      badge.textContent=urgent>9?'9+':urgent;
+    } else {
+      if(badge)badge.remove();
+    }
+  });
+}
+
+let _tasksDoneOpen=false;
+function toggleTasksDoneSection(){
+  _tasksDoneOpen=!_tasksDoneOpen;
+  const body=document.getElementById('tasks-done-body');
+  const chev=document.getElementById('tasks-done-chev');
+  if(body)body.classList.toggle('open',_tasksDoneOpen);
+  if(chev)chev.classList.toggle('open',_tasksDoneOpen);
+}
+
+function renderTasksPage(){
+  const el=document.getElementById('tasks-page-list');
+  const statsEl=document.getElementById('tasks-stats-bar');
+  if(!el)return;
+
+  const todos=loadTodos();
+  const subjs=loadSubjects();
+  const now=new Date();
+  const todayDate=todayStr();
+
+  // Partition
+  const overdue=[],today=[],tomorrow=[],thisWeek=[],later=[],someday=[],done=[];
+  const tomorrowDate=(()=>{const d=new Date(now);d.setDate(d.getDate()+1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
+  const weekEnd=(()=>{const d=new Date(now);d.setDate(d.getDate()+7);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
+
+  todos.forEach(t=>{
+    if(t.done){done.push(t);return;}
+    if(!t.date){someday.push(t);return;}
+    if(t.date<todayDate){overdue.push(t);return;}
+    if(t.date===todayDate){today.push(t);return;}
+    if(t.date===tomorrowDate){tomorrow.push(t);return;}
+    if(t.date<=weekEnd){thisWeek.push(t);return;}
+    later.push(t);
+  });
+
+  // Sort each group
+  [today,tomorrow,thisWeek,later].forEach(g=>g.sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99')));
+  overdue.sort((a,b)=>a.date.localeCompare(b.date));
+  done.sort((a,b)=>(b.doneAt||'').localeCompare(a.doneAt||''));
+
+  // Stats bar
+  if(statsEl){
+    const chips=[
+      overdue.length?{label:overdue.length+' overdue',bg:'var(--errl)',color:'var(--err)'}:null,
+      today.length?{label:today.length+' today',bg:'var(--okl)',color:'var(--ok)'}:null,
+      (tomorrow.length+thisWeek.length+later.length)?{label:(tomorrow.length+thisWeek.length+later.length)+' upcoming',bg:'var(--bg3)',color:'var(--text2)'}:null,
+      someday.length?{label:someday.length+' no date',bg:'var(--bg3)',color:'var(--text3)'}:null,
+      done.length?{label:done.length+' done',bg:'var(--bg3)',color:'var(--text3)'}:null,
+    ].filter(Boolean);
+    statsEl.innerHTML=chips.map(c=>'<div class="tasks-stat-chip" style="background:'+c.bg+';color:'+c.color+'">'+c.label+'</div>').join('');
+    statsEl.querySelectorAll('.tasks-stat-chip').forEach((c,i)=>{c.classList.add('spring-pop');c.style.animationDelay=(i*0.06)+'s';});
+  }
+
+  function fmtDate(d){
+    if(d===todayDate)return'Today';
+    if(d===tomorrowDate)return'Tomorrow';
+    const [y,m,day]=d.split('-');
+    const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return months[+m-1]+' '+parseInt(day);
+  }
+  function fmtTime(t){
+    if(!t)return'';
+    const [h,m]=t.split(':');const hr=+h;
+    return(hr%12||12)+':'+m+(hr<12?'am':'pm');
+  }
+  function isOverdueTime(t){
+    if(!t.date||!t.time)return false;
+    return new Date(t.date+'T'+t.time)<now;
+  }
+
+  function makeCard(t,sectionType){
+    const isOD=!t.done&&(t.date&&t.date<todayDate||isOverdueTime(t));
+    const isToday=!t.done&&t.date===todayDate;
+    const subj=t.subjectId?subjs.find(s=>s.id===t.subjectId):null;
+    const subjColor=t.subjectId?(TASK_SUBJ_COLORS[t.subjectId]||'var(--o)'):null;
+    const subjBg=subjColor&&subjColor.startsWith('#')?(subjColor+'22'):'rgba(249,115,22,0.12)';
+    let cardCls='task-card';
+    if(t.done)cardCls+=' done-card';
+    else if(isOD)cardCls+=' overdue-card';
+    else if(isToday)cardCls+=' today-card';
+    return'<div class="'+cardCls+'" id="task-'+t.id+'">'+
+      '<div class="task-check'+(t.done?' checked':'')+'" onclick="toggleTodoFull(\''+t.id+'\')"></div>'+
+      '<div class="task-body">'+
+        '<div class="task-text">'+escHtml(t.text)+'</div>'+
+        '<div class="task-meta">'+
+          (t.date?'<span class="task-badge '+(isOD?'overdue-badge':isToday?'today-badge':'date-badge')+'">'+(isOD&&!isToday?'⚠ ':isToday?'● ':'')+fmtDate(t.date)+'</span>':'')+
+          (t.time?'<span class="task-badge time-badge">'+fmtTime(t.time)+'</span>':'')+
+          (subj?'<span class="task-badge subj-badge" style="background:'+subjBg+';color:'+subjColor+'">'+escHtml(subj.name)+'</span>':'')+
+        '</div>'+
+      '</div>'+
+      '<div class="task-actions">'+
+        '<button class="task-btn" onclick="openTodoModal(\''+t.id+'\')" title="Edit">'+
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'+
+        '</button>'+
+        '<button class="task-btn del" onclick="deleteTodoFull(\''+t.id+'\')" title="Delete">'+
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>'+
+        '</button>'+
+      '</div>'+
+    '</div>';
+  }
+
+  function makeSection(label,items,color,id,defaultOpen){
+    if(!items.length)return'';
+    const bodyId=id||('tasks-sec-'+label.replace(/\s/g,'_'));
+    const chevSvg='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>';
+    return'<div class="tasks-group-header" onclick="toggleTasksSection(\''+bodyId+'\',this)">'+
+      '<div class="tasks-group-label" style="color:'+color+'">'+label+'</div>'+
+      '<div class="tasks-group-count">'+items.length+'</div>'+
+      '<div class="tasks-group-chevron'+(defaultOpen?' open':'')+'" id="'+bodyId+'-chev">'+chevSvg+'</div>'+
+    '</div>'+
+    '<div class="tasks-group-body'+(defaultOpen?' open':'')+'" id="'+bodyId+'">'+
+      items.map(t=>makeCard(t)).join('')+
+    '</div>';
+  }
+
+  if(!todos.length){
+    el.innerHTML='<div class="tasks-empty">'+
+      '<div class="tasks-empty-icon">✅</div>'+
+      '<div class="tasks-empty-text">No tasks yet</div>'+
+      '<div class="tasks-empty-sub">Tap <strong>New Task</strong> to add something</div>'+
+    '</div>';
+    if(statsEl)statsEl.innerHTML='';
+    return;
+  }
+
+  let html='';
+  if(overdue.length) html+=makeSection('⚠ Overdue',overdue,'var(--err)','tasks-overdue',true);
+  if(today.length)   html+=makeSection('● Today',today,'var(--ok)','tasks-today',true);
+  if(tomorrow.length)html+=makeSection('Tomorrow',tomorrow,'var(--text2)','tasks-tomorrow',true);
+  if(thisWeek.length)html+=makeSection('This Week',thisWeek,'var(--text2)','tasks-thisweek',true);
+  if(later.length)   html+=makeSection('Later',later,'var(--text3)','tasks-later',false);
+  if(someday.length) html+=makeSection('No Date',someday,'var(--text3)','tasks-someday',false);
+  if(done.length){
+    const chevSvg='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>';
+    html+='<div class="tasks-group-header" onclick="toggleTasksDoneSection()">'+
+      '<div class="tasks-group-label" style="color:var(--text3)">Completed</div>'+
+      '<div class="tasks-group-count">'+done.length+'</div>'+
+      '<div class="tasks-group-chevron'+(_tasksDoneOpen?' open':'')+'" id="tasks-done-chev">'+chevSvg+'</div>'+
+    '</div>'+
+    '<div class="tasks-group-body'+(_tasksDoneOpen?' open':'')+'" id="tasks-done-body">'+
+      done.slice(0,20).map(t=>makeCard(t)).join('')+
+      (done.length>20?'<div style="text-align:center;padding:8px;font-size:12px;color:var(--text3)">+'+(done.length-20)+' more</div>':'')+
+    '</div>';
+  }
+
+  el.innerHTML=html;
+
+  // Stagger all cards in
+  el.querySelectorAll('.task-card').forEach((c,i)=>{
+    c.classList.add('slide-up');
+    c.style.animationDelay=(i*0.04)+'s';
+  });
+}
+
+function toggleTasksSection(bodyId,headerEl){
+  const body=document.getElementById(bodyId);
+  const chev=document.getElementById(bodyId+'-chev');
+  if(!body)return;
+  const opening=!body.classList.contains('open');
+  body.classList.toggle('open',opening);
+  if(chev)chev.classList.toggle('open',opening);
+}
+
+function toggleTodoFull(id){
+  const todos=loadTodos();
+  const t=todos.find(x=>x.id===id);
+  if(!t)return;
+  t.done=!t.done;t.doneAt=t.done?new Date().toISOString():null;
+  saveTodos(todos);
+  // Animate the card out then re-render
+  const card=document.getElementById('task-'+id);
+  if(card){
+    card.style.transition='all 0.3s cubic-bezier(0.4,0,0.2,1)';
+    card.style.transform='translateX(12px)';
+    card.style.opacity='0';
+    setTimeout(()=>{renderTasksPage();_updateTasksBadge();},300);
+  } else {
+    renderTasksPage();_updateTasksBadge();
+  }
+  renderTodos();
+  if(document.getElementById('page-schedule').classList.contains('active'))renderSchedule();
+}
+
+function deleteTodoFull(id){
+  const card=document.getElementById('task-'+id);
+  if(card){
+    card.style.transition='all 0.25s ease';
+    card.style.transform='translateX(20px)';
+    card.style.opacity='0';
+    card.style.maxHeight=card.offsetHeight+'px';
+    setTimeout(()=>{card.style.maxHeight='0';card.style.marginBottom='0';card.style.padding='0';},250);
+    setTimeout(()=>{
+      const todos=loadTodos().filter(x=>x.id!==id);
+      saveTodos(todos);
+      renderTasksPage();renderTodos();_updateTasksBadge();
+    },450);
+  } else {
+    const todos=loadTodos().filter(x=>x.id!==id);
+    saveTodos(todos);
+    renderTasksPage();renderTodos();_updateTasksBadge();
+  }
 }
 
 function openTodoModal(editId){
@@ -2547,6 +2835,14 @@ function openTodoModal(editId){
   timeEl.value='';
   timeEl.disabled=true;
   timeEl.style.opacity='0.4';
+  // Populate subject dropdown
+  const subjEl=document.getElementById('todo-subject');
+  if(subjEl){
+    const subjs=loadSubjects();
+    subjEl.innerHTML='<option value="">No subject</option>'+
+      subjs.map(s=>'<option value="'+s.id+'">'+escHtml(s.name)+'</option>').join('');
+    subjEl.value='';
+  }
   if(editId){
     const t=loadTodos().find(x=>x.id===editId);
     if(t){
@@ -2554,6 +2850,7 @@ function openTodoModal(editId){
       document.getElementById('todo-date').value=t.date||'';
       if(t.date){timeEl.disabled=false;timeEl.style.opacity='1';}
       timeEl.value=t.time||'';
+      if(subjEl&&t.subjectId)subjEl.value=t.subjectId;
     }
   }
   overlay.classList.add('open');
@@ -2574,16 +2871,20 @@ function saveTodoModal(){
   const editId=document.getElementById('todo-edit-id').value;
   const date=document.getElementById('todo-date').value||null;
   const time=document.getElementById('todo-time').value||null;
+  const subjEl=document.getElementById('todo-subject');
+  const subjectId=subjEl?subjEl.value||null:null;
   const todos=loadTodos();
   if(editId){
     const t=todos.find(x=>x.id===editId);
-    if(t){t.text=text;t.date=date;t.time=time;}
+    if(t){t.text=text;t.date=date;t.time=time;t.subjectId=subjectId;}
   }else{
-    todos.push({id:genId(),text,date,time,done:false,createdAt:new Date().toISOString()});
+    todos.push({id:genId(),text,date,time,subjectId,done:false,createdAt:new Date().toISOString()});
   }
   saveTodos(todos);
   closeModal('todo-modal-overlay');
   renderTodos();
+  renderTasksPage();
+  _updateTasksBadge();
 }
 
 // In-app todo notification check (when app is open)
@@ -2690,6 +2991,7 @@ function showPage(id){
   else if(id==='plan'){currentPage='progress';showPage('progress');return;}
   else if(id==='timeline'){currentPage='graduation';showPage('graduation');return;}
   else if(id==='timer'){timerSyncPull(false);renderTimerPage();_startTimerSyncPoll();}
+  else if(id==='tasks')renderTasksPage();
   if(id!=='timer')_stopTimerSyncPoll();
   updateSidebar();
 }
@@ -6506,8 +6808,9 @@ async function syncFromCloud(){
   // Attach scroll listener to #main (the actual scroll container in this SPA layout)
   // Deep link support: open specific page via URL hash e.g. #log
   const hash=window.location.hash.replace('#','');
-  const validPages=['dashboard','schedule','log','progress','graduation','timer','history'];
+  const validPages=['dashboard','schedule','log','progress','graduation','timer','history','tasks'];
   showPage(validPages.includes(hash)?hash:'dashboard');
+  _updateTasksBadge();
   syncFromCloud();
   updateNotifBtn();
   scheduleNotifications();
