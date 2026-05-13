@@ -4566,35 +4566,43 @@ function _updateTimerBubble(){
   const subjs=loadSubjects();
   const subj=subjs.find(s=>s.id===timerSubjectId);
   const label=subj?subj.name:'';
-  // Mobile bar
-  const bubble=document.getElementById('timer-bubble');
-  if(bubble){
-    if(show){
-      const clockEl=document.getElementById('tb-clock');
-      const labelEl=document.getElementById('tb-label');
-      if(clockEl)clockEl.textContent=clock;
-      if(labelEl)labelEl.textContent=label;
-      if(bubble.style.display==='none'||!bubble.style.display){
-        bubble.style.display='flex';
-        bubble.style.animation='none';bubble.offsetWidth;
-        bubble.style.animation='bubble-pop 0.25s ease both';
-      }
-    }else{bubble.style.display='none';}
+  const sidebarHidden=document.getElementById('sidebar')&&document.getElementById('sidebar').classList.contains('hidden');
+  const isDesktop=window.innerWidth>=700;
+  // Use sidebar chip on desktop when sidebar is visible; otherwise use the bar
+  const useSidebarChip=isDesktop&&!sidebarHidden;
+  function _show(el){
+    if(!el)return;
+    if(el.style.display==='none'||!el.style.display){
+      el.style.display='flex';
+      el.style.animation='none';el.offsetWidth;
+      el.style.animation='bubble-pop 0.25s ease both';
+    }
   }
-  // Sidebar chip (desktop)
+  // Sidebar chip
   const chip=document.getElementById('timer-sidebar-chip');
   if(chip){
-    if(show){
-      const clockEl=document.getElementById('tb-clock-sb');
-      const labelEl=document.getElementById('tb-label-sb');
-      if(clockEl)clockEl.textContent=clock;
-      if(labelEl)labelEl.textContent=label;
-      if(chip.style.display==='none'||!chip.style.display){
-        chip.style.display='flex';
-        chip.style.animation='none';chip.offsetWidth;
-        chip.style.animation='bubble-pop 0.25s ease both';
-      }
+    if(show&&useSidebarChip){
+      const c=document.getElementById('tb-clock-sb');const l=document.getElementById('tb-label-sb');
+      if(c)c.textContent=clock;if(l)l.textContent=label;
+      _show(chip);
     }else{chip.style.display='none';}
+  }
+  // Floating bar (mobile, or desktop with sidebar hidden)
+  const bubble=document.getElementById('timer-bubble');
+  if(bubble){
+    if(show&&!useSidebarChip){
+      const c=document.getElementById('tb-clock');const l=document.getElementById('tb-label');
+      if(c)c.textContent=clock;if(l)l.textContent=label;
+      // On desktop without sidebar: position as small corner bubble instead of full-width bar
+      if(isDesktop){
+        bubble.style.left='auto';bubble.style.right='24px';bubble.style.bottom='24px';
+        bubble.style.borderRadius='100px';bubble.style.boxShadow='0 4px 18px rgba(249,115,22,0.38)';
+      }else{
+        bubble.style.left='0';bubble.style.right='0';bubble.style.bottom='62px';
+        bubble.style.borderRadius='0';bubble.style.boxShadow='0 -2px 12px rgba(249,115,22,0.25)';
+      }
+      _show(bubble);
+    }else{bubble.style.display='none';}
   }
 }
 
@@ -6458,6 +6466,7 @@ function toggleSidebar(){
   main.classList.toggle('sidebar-hidden',hidden);
   toggle.classList.toggle('visible',hidden);
   localStorage.setItem('st_sidebar_hidden',hidden?'1':'0');
+  _updateTimerBubble();
 }
 function applySidebarState(){
   const hidden=localStorage.getItem('st_sidebar_hidden')==='1';
