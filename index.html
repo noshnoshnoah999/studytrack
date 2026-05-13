@@ -905,6 +905,17 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
 @keyframes heartbeat{0%,100%{transform:scale(1)}14%{transform:scale(1.05)}28%{transform:scale(1)}42%{transform:scale(1.03)}70%{transform:scale(1)}}
 .heartbeat{animation:heartbeat 1.4s ease-in-out infinite}
 
+/* ── Floating timer bubble ───────────────────────────────────────── */
+@keyframes bubble-pop{from{transform:scale(0.6) translateY(16px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+#timer-bubble{position:fixed;bottom:82px;right:16px;z-index:9998;display:none;align-items:center;gap:8px;background:var(--o);color:#fff;border-radius:100px;padding:10px 18px 10px 14px;cursor:pointer;box-shadow:0 4px 18px rgba(249,115,22,0.38);font-family:inherit;font-weight:700;font-size:14px;line-height:1;user-select:none;-webkit-user-select:none;animation:bubble-pop 0.35s cubic-bezier(0.34,1.56,0.64,1) both;transition:transform 0.15s,box-shadow 0.15s}
+#timer-bubble:hover{transform:scale(1.05);box-shadow:0 6px 22px rgba(249,115,22,0.5)}
+#timer-bubble:active{transform:scale(0.95)}
+#timer-bubble .tb-dot{width:8px;height:8px;border-radius:50%;background:#fff;opacity:0.9;animation:heartbeat 1.4s ease-in-out infinite;flex-shrink:0}
+#timer-bubble .tb-clock{font-size:15px;font-variant-numeric:tabular-nums;letter-spacing:0.5px}
+#timer-bubble .tb-sep{opacity:0.6;font-weight:400;font-size:12px}
+#timer-bubble .tb-label{font-size:12px;opacity:0.9;max-width:90px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(min-width:700px){#timer-bubble{bottom:24px;right:24px}}
+
 /* ── Slide in from left ──────────────────────────────────────────── */
 @keyframes slideInLeft{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:translateX(0)}}
 .slide-in-left{animation:slideInLeft 0.28s cubic-bezier(0.25,0.46,0.45,0.94) both}
@@ -3077,6 +3088,8 @@ function showPage(id){
   // Mount / unmount AI input bar
   _aiInputBarMount(id==='ai');
   updateSidebar();
+  // Show/hide floating timer bubble
+  _updateTimerBubble();
 }
 
 // ── SIDEBAR ───────────────────────────────────────────────────────────────────
@@ -4529,6 +4542,32 @@ function timerTick(){
     const el=document.getElementById('tp-clock');if(el)el.textContent=timerFmtClock(timerElapsedSecs());
     const el2=document.getElementById('timer-display');if(el2)el2.textContent=timerFmtClock(timerElapsedSecs());
   }
+  _updateTimerBubble();
+}
+
+function _updateTimerBubble(){
+  const bubble=document.getElementById('timer-bubble');
+  if(!bubble)return;
+  const onTimerPage=document.getElementById('page-timer')&&document.getElementById('page-timer').classList.contains('active');
+  if(timerInterval&&!onTimerPage){
+    const clockEl=document.getElementById('tb-clock');
+    const labelEl=document.getElementById('tb-label');
+    if(clockEl)clockEl.textContent=timerFmtClock(timerElapsedSecs());
+    if(labelEl){
+      const subjs=loadSubjects();
+      const subj=subjs.find(s=>s.id===timerSubjectId);
+      labelEl.textContent=subj?subj.name:'';
+    }
+    if(bubble.style.display==='none'||!bubble.style.display){
+      bubble.style.display='flex';
+      // Re-trigger pop animation
+      bubble.style.animation='none';
+      bubble.offsetWidth; // reflow
+      bubble.style.animation='bubble-pop 0.35s cubic-bezier(0.34,1.56,0.64,1) both';
+    }
+  }else{
+    bubble.style.display='none';
+  }
 }
 
 function renderTimerPage(){
@@ -4702,6 +4741,7 @@ function timerPageToggle(){
     _releaseWakeLock();
     renderTimerPage();
     timerSyncPush();
+    _updateTimerBubble();
   } else if(timerStart!==null){
     // Stopped state — start new session
     timerPageReset();
@@ -4716,6 +4756,7 @@ function timerPageToggle(){
     _acquireWakeLock();
     renderTimerPage();
     timerSyncPush();
+    _updateTimerBubble();
   }
 }
 
@@ -7960,5 +8001,13 @@ window.addEventListener('load',function(){
   }
 });
 </script>
+
+<!-- Floating timer bubble -->
+<div id="timer-bubble" onclick="showPage('timer')" title="Go to timer">
+  <span class="tb-dot"></span>
+  <span class="tb-clock" id="tb-clock">00:00</span>
+  <span class="tb-sep">·</span>
+  <span class="tb-label" id="tb-label"></span>
+</div>
 </body>
 </html>
