@@ -633,6 +633,46 @@ a{color:inherit;text-decoration:none}
   --shadow:none;
 }
 [data-theme="ocean"] .modal-sheet,[data-theme="ocean"] #bottom-nav{background:var(--bg2)}
+/* ── PAPER THEME (warm white, very clean) ───────────────────────────────────── */
+[data-theme="paper"]{
+  --bg:#f7f4ef;--bg2:#fdfcf9;--bg3:#ede9e2;--bg4:#dedad1;
+  --border:rgba(0,0,0,0.06);
+  --text:#1a1612;--text2:#6b6158;--text3:#a39a8e;
+  --o:#d97706;--od:#b86005;--ol:rgba(217,119,6,0.12);--od2:rgba(217,119,6,0.24);
+  --ok:#4a8a5a;--okl:rgba(74,138,90,0.15);--err:#c0392b;--errl:rgba(192,57,43,0.12);
+  --shadow:0 1px 3px rgba(60,40,10,0.05),0 4px 16px rgba(60,40,10,0.07);
+}
+[data-theme="paper"] .modal-sheet,[data-theme="paper"] #bottom-nav{background:var(--bg2)}
+/* ── SKY THEME (light blue, airy) ───────────────────────────────────────────── */
+[data-theme="sky"]{
+  --bg:#eef5fc;--bg2:#f6faff;--bg3:#dceaf8;--bg4:#c8dcf0;
+  --border:rgba(0,0,0,0.07);
+  --text:#0d1e30;--text2:#4a6f90;--text3:#8aaec8;
+  --o:#1d7ed8;--od:#1568b8;--ol:rgba(29,126,216,0.12);--od2:rgba(29,126,216,0.24);
+  --ok:#2a9060;--okl:rgba(42,144,96,0.15);--err:#c0392b;--errl:rgba(192,57,43,0.12);
+  --shadow:0 1px 3px rgba(10,30,60,0.05),0 4px 16px rgba(10,30,60,0.07);
+}
+[data-theme="sky"] .modal-sheet,[data-theme="sky"] #bottom-nav{background:var(--bg2)}
+/* ── LAVENDER THEME (soft purple, light) ────────────────────────────────────── */
+[data-theme="lavender"]{
+  --bg:#f2eff8;--bg2:#f9f7fd;--bg3:#e4deef;--bg4:#d4cce4;
+  --border:rgba(0,0,0,0.07);
+  --text:#1a1428;--text2:#6a5888;--text3:#a898c0;
+  --o:#7c4dbe;--od:#6a3ca8;--ol:rgba(124,77,190,0.12);--od2:rgba(124,77,190,0.24);
+  --ok:#4a8a5a;--okl:rgba(74,138,90,0.15);--err:#c0392b;--errl:rgba(192,57,43,0.12);
+  --shadow:0 1px 3px rgba(40,10,80,0.05),0 4px 16px rgba(40,10,80,0.07);
+}
+[data-theme="lavender"] .modal-sheet,[data-theme="lavender"] #bottom-nav{background:var(--bg2)}
+/* ── SAND THEME (warm desert tan) ───────────────────────────────────────────── */
+[data-theme="sand"]{
+  --bg:#f5efe4;--bg2:#fdf8f0;--bg3:#ebe0cc;--bg4:#d8cab0;
+  --border:rgba(0,0,0,0.07);
+  --text:#22180a;--text2:#7a6248;--text3:#b09878;
+  --o:#c47c2a;--od:#a86820;--ol:rgba(196,124,42,0.12);--od2:rgba(196,124,42,0.24);
+  --ok:#4a7a50;--okl:rgba(74,122,80,0.15);--err:#b03030;--errl:rgba(176,48,48,0.12);
+  --shadow:0 1px 3px rgba(60,30,5,0.05),0 4px 16px rgba(60,30,5,0.08);
+}
+[data-theme="sand"] .modal-sheet,[data-theme="sand"] #bottom-nav{background:var(--bg2)}
 
 /* THEME BUTTON */
 .btn-dark{background:none;border:none;cursor:pointer;font-size:17px;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0}
@@ -1468,6 +1508,22 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
         <button class="theme-swatch" data-theme-name="sage" onclick="setTheme('sage')" style="min-width:calc(33% - 6px)">
           <span class="swatch-dot" style="background:#4a7c5a;box-shadow:0 0 0 3px #f6f8f4,0 0 0 5px #4a7c5a"></span>
           <span>Sage</span>
+        </button>
+        <button class="theme-swatch" data-theme-name="paper" onclick="setTheme('paper')" style="min-width:calc(33% - 6px)">
+          <span class="swatch-dot" style="background:#d97706;box-shadow:0 0 0 3px #fdfcf9,0 0 0 5px #d97706"></span>
+          <span>Paper</span>
+        </button>
+        <button class="theme-swatch" data-theme-name="sky" onclick="setTheme('sky')" style="min-width:calc(33% - 6px)">
+          <span class="swatch-dot" style="background:#1d7ed8;box-shadow:0 0 0 3px #f6faff,0 0 0 5px #1d7ed8"></span>
+          <span>Sky</span>
+        </button>
+        <button class="theme-swatch" data-theme-name="lavender" onclick="setTheme('lavender')" style="min-width:calc(33% - 6px)">
+          <span class="swatch-dot" style="background:#7c4dbe;box-shadow:0 0 0 3px #f9f7fd,0 0 0 5px #7c4dbe"></span>
+          <span>Lavender</span>
+        </button>
+        <button class="theme-swatch" data-theme-name="sand" onclick="setTheme('sand')" style="min-width:calc(33% - 6px)">
+          <span class="swatch-dot" style="background:#c47c2a;box-shadow:0 0 0 3px #fdf8f0,0 0 0 5px #c47c2a"></span>
+          <span>Sand</span>
         </button>
       </div>
     </div>
