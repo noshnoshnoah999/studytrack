@@ -837,7 +837,7 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
     <div class="sidebar-logo" style="display:flex;align-items:center;justify-content:space-between">
       <div>
         <div class="logo-title">Study<span>Track</span></div>
-        <div class="logo-sub">Noah Fouty · t2509002</div>
+        <div class="logo-sub">Noah Flouty · t2509002</div>
       </div>
       <button onclick="toggleSidebar()" title="Hide menu" style="background:none;border:none;cursor:pointer;color:var(--text3);padding:4px;border-radius:7px;display:flex;align-items:center;justify-content:center;transition:color 0.15s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text3)'">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -847,7 +847,7 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
     <!-- Recommendation prompt — only shown when rec changed since last accepted -->
     <div id="sb-rec-prompt" onclick="openGoalSettings()" style="display:none;margin:0 8px 8px;background:var(--ol);border:1.5px solid var(--o);border-radius:10px;padding:10px 12px;cursor:pointer">
       <div style="font-size:10px;font-weight:700;color:var(--o);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px">✦ Recommendation updated</div>
-      <div id="sb-rec-text" style="font-size:13px;font-weight:700;color:var(--text1)"></div>
+      <div id="sb-rec-text" style="font-size:13px;font-weight:700;color:var(--text)"></div>
       <div style="font-size:11px;color:var(--text3);margin-top:2px">Tap ⚙ to review →</div>
     </div>
     <div class="sidebar-footer">
@@ -2791,7 +2791,7 @@ function _renderLayoutList(){
   _layoutEditorOrder.forEach((id,i)=>{
     const def=DASH_BLOCK_DEFS.find(b=>b.id===id)||{id,label:id};
     const row=document.createElement('div');
-    row.style.cssText='display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px';
+    row.style.cssText='display:flex;align-items:center;gap:10px;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px 14px';
     row.innerHTML=
       '<span style="flex:1;font-size:14px;font-weight:500;color:var(--text)">'+def.label+'</span>'+
       '<button onclick="_layoutMove('+i+',-1)" '+(i===0?'disabled':'')+
@@ -4211,7 +4211,7 @@ function stopTimerAndLog(){
   if(!timerStart)return;
   clearInterval(timerInterval);
   timerInterval=null;
-  const endTime=new Date();
+  const endTime=timerStop?new Date(timerStop):new Date();
   const fmt=d=>String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
   const startStr=fmt(timerStartWallClock);
   const endStr=fmt(endTime);
@@ -5294,7 +5294,7 @@ function renderPlan(){
     recentDeficit+=Math.max(0,needed-logged);
   }
   // Spread deficit over 60 days — gentle long-term catch-up (~40min extra/day)
-  const catchUp=recentDeficit/60;
+  const catchUp=recentDeficit/7;
   // Cap at 7.5h so it never feels overwhelming
   const smartTarget=Math.min(7.5,baseTarget+catchUp);
 
@@ -5522,7 +5522,7 @@ function _renderStudyCalendar(targetElId){
   function dateStr(offset){const d=new Date(now);d.setDate(now.getDate()+offset);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
   let recentDeficit=0;
   for(let i=1;i<=7;i++){recentDeficit+=Math.max(0,baseTarget-hoursOn(dateStr(-i)));}
-  const catchUp=recentDeficit/60;
+  const catchUp=recentDeficit/7;
   const todayStr=dateStr(0);
   const MONTH_NAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
   const DOW=['Mo','Tu','We','Th','Fr','Sa','Su'];
@@ -5790,7 +5790,7 @@ function openGoalSettings(){
     if(recCard&&recText){
       if(recChanged){
         recText.innerHTML=
-          '<strong style="font-size:18px;color:var(--text1)">'+fmtH(recDaily)+'/day</strong>'+
+          '<strong style="font-size:18px;color:var(--text)">'+fmtH(recDaily)+'/day</strong>'+
           ' · '+daysPerWeek+' days/week = '+fmtH(recDaily*daysPerWeek)+'/week<br>'+
           '<span style="font-size:12px;color:var(--text3)">'+why+'</span>';
         recCard.style.display='block';
@@ -6570,9 +6570,12 @@ function submitQuickLog(){
   const hrs=((eh*60+em)-(sh*60+sm))/60;
   if(hrs<=0){showToast('End time must be after start time');return;}
   const sessions=loadSessions();
-  sessions.push({id:genId(),subjectId,date,start,end,hours:parseFloat(hrs.toFixed(2)),notes});
-  localStorage.setItem('st_sessions',JSON.stringify(sessions));
-  sbPush('st_sessions',sessions);
+  const roundedHrs=parseFloat(hrs.toFixed(2));
+  sessions.push({id:genId(),subjectId,date,start,end,hours:roundedHrs,notes});
+  const hoursStore=loadHours();
+  hoursStore[subjectId]=(hoursStore[subjectId]||0)+roundedHrs;
+  saveSessions(sessions);
+  saveHours(hoursStore);
   closeModal('quick-log-modal-overlay');
   showToast('✓ Logged '+fmtH(hrs)+' · '+date);
   updateSidebar();
@@ -6671,8 +6674,7 @@ function _timeAgo(ms){
 // Schedule-based in-app notification checks
 function checkInAppNotifs(){
   const now=new Date();
-  const sched=loadSchedule();
-  const dayBlocks=sched.filter(b=>b.day===now.getDay());
+  const dayBlocks=getTodayActualBlocks();
   const nowMin=now.getHours()*60+now.getMinutes();
 
   // Block starting soon (8-12 min away)
