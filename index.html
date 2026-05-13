@@ -3414,7 +3414,7 @@ const LOG_SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',englis
 // ── SHARED UTILITIES ─────────────────────────────────────────────────────────
 function showToast(msg,color){
   const t=document.createElement('div');
-  t.style.cssText='position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:'+(color||'var(--ok)')+';color:#fff;padding:10px 22px;border-radius:20px;font-weight:700;font-size:14px;z-index:9999;white-space:nowrap;pointer-events:none';
+  t.style.cssText='position:fixed;bottom:calc(80px + env(safe-area-inset-bottom, 0px));left:50%;transform:translateX(-50%);background:'+(color||'var(--ok)')+';color:#fff;padding:10px 22px;border-radius:20px;font-weight:700;font-size:14px;z-index:9999;white-space:nowrap;pointer-events:none;max-width:calc(100vw - 40px);text-align:center';
   t.style.animation='toastIn 0.2s ease both';
   t.textContent=msg;
   document.body.appendChild(t);
