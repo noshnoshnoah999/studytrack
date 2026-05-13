@@ -3104,24 +3104,24 @@ function renderDashboard(){
     DAYS[now.getDay()]+', '+MONTHS[now.getMonth()]+' '+now.getDate()+', '+now.getFullYear();
 
   // Yesterday feedback pill
-  (function(){
-    const sessions=loadSessions();
-    const goals=loadGoals();
-    const target=goals.daily||6;
-    const yd=new Date(now);yd.setDate(now.getDate()-1);
-    const ydStr=yd.getFullYear()+'-'+String(yd.getMonth()+1).padStart(2,'0')+'-'+String(yd.getDate()).padStart(2,'0');
-    const ydH=sessions.filter(s=>s.date===ydStr).reduce((a,s)=>a+s.hours,0);
-    const pct=target>0?ydH/target:1;
-    let emoji,text;
-    if(ydH===0){emoji='😬';text='No hours logged yesterday — fresh start today.';}
-    else if(pct<0.5){emoji='📉';text='Yesterday: '+fmtH(ydH)+' — about '+Math.round(pct*100)+'% of your goal.';}
-    else if(pct<0.9){emoji='📊';text='Yesterday: '+fmtH(ydH)+' logged — '+fmtH(Math.max(0,target-ydH))+' short of goal.';}
-    else if(pct<1){emoji='🎯';text='So close yesterday — '+fmtH(ydH)+' out of '+fmtH(target)+'.';}
-    else if(pct>=1.5){emoji='🔥';text='Big day yesterday — '+fmtH(ydH)+'. '+fmtH(Math.max(0,ydH-target))+' over goal!';}
-    else{emoji='✅';text='You hit your goal yesterday with '+fmtH(ydH)+'. Keep it up!';}
-    const pill=document.getElementById('dash-yesterday-pill');
-    if(pill){pill.innerHTML=emoji+' <span style="color:var(--text3)">'+text+'</span>';pill.style.display='block';}
-  })();
+  try{
+    const ydSessions=loadSessions();
+    const ydGoals=loadGoals();
+    const ydTarget=ydGoals.daily||6;
+    const ydDate=new Date(now);ydDate.setDate(now.getDate()-1);
+    const ydStr=ydDate.getFullYear()+'-'+String(ydDate.getMonth()+1).padStart(2,'0')+'-'+String(ydDate.getDate()).padStart(2,'0');
+    const ydH=ydSessions.filter(s=>s.date===ydStr).reduce((a,s)=>a+s.hours,0);
+    const ydPct=ydTarget>0?ydH/ydTarget:1;
+    let ydEmoji,ydText;
+    if(ydH===0){ydEmoji='😬';ydText='No hours logged yesterday — fresh start today.';}
+    else if(ydPct<0.5){ydEmoji='📉';ydText='Yesterday: '+fmtH(ydH)+' — about '+Math.round(ydPct*100)+'% of your goal.';}
+    else if(ydPct<0.9){ydEmoji='📊';ydText='Yesterday: '+fmtH(ydH)+' — '+fmtH(Math.max(0,ydTarget-ydH))+' short of goal.';}
+    else if(ydPct<1){ydEmoji='🎯';ydText='So close yesterday — '+fmtH(ydH)+' out of '+fmtH(ydTarget)+'.';}
+    else if(ydPct>=1.5){ydEmoji='🔥';ydText='Big day yesterday — '+fmtH(ydH)+'. '+fmtH(Math.max(0,ydH-ydTarget))+' over goal!';}
+    else{ydEmoji='✅';ydText='Hit your goal yesterday with '+fmtH(ydH)+'. Keep it up!';}
+    const ydPill=document.getElementById('dash-yesterday-pill');
+    if(ydPill){ydPill.innerHTML=ydEmoji+' <span style="color:var(--text3)">'+ydText+'</span>';ydPill.style.display='block';}
+  }catch(e){console.warn('Yesterday pill error:',e);}
 
   const totalLogged=getTotalLogged();
   const subjs=_canonicalSubjs();
