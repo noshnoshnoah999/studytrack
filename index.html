@@ -7924,6 +7924,11 @@ function renderAIPage(){
   </div>
 </div>
 <script>
+// Catch any uncaught JS error and show it on screen so we can debug
+window.addEventListener('error',function(e){
+  var d=document.getElementById('main');
+  if(d)d.innerHTML='<div style="padding:24px;color:#ff6b6b;font-family:monospace;font-size:13px;white-space:pre-wrap"><strong>JS ERROR — send this to Noah\'s developer:</strong>\n\n'+e.message+'\n\nFile: '+e.filename+'\nLine: '+e.lineno+':'+e.colno+(e.error?'\n\nStack:\n'+e.error.stack:'')+'</div>';
+});
 window.addEventListener('load',function(){
   function fillYesterdayPill(){
     try{
