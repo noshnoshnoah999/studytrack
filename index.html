@@ -5368,21 +5368,7 @@ function renderPlan(){
       } else {
         // Future: project forward day by day
         // Assume smartTarget is hit every day going forward; deficit pays down
-        const todayMidnight=new Date(now.getFullYear(),now.getMonth(),now.getDate());
-        const daysFromToday=Math.round((cellDate-todayMidnight)/(1000*60*60*24));
-        // Remaining hours if smartTarget is hit every day up to this point
-        const projRemaining=Math.max(0,remaining-daysFromToday*smartTarget);
-        const projDaysLeft=Math.max(1,daysLeft-daysFromToday);
-        // Use study-days basis (not calendar days) so bare min isn't artificially low
-        const projStudyDaysLeft=Math.max(1,projDaysLeft/7*daysPerWeek);
-        const projBareMin=projRemaining/projStudyDaysLeft;
-        // Floor at personal goal — respect that user wants to study above teacher standard
-        const projBase=Math.max(projBareMin,personalTarget);
-        // Deficit: each day that smartTarget is hit, catchUp amount is paid off
-        // After 7 days the whole recentDeficit is fully absorbed
-        const deficitLeft=Math.max(0,recentDeficit-daysFromToday*catchUp);
-        const projCatchUp=deficitLeft/7;
-        const dayTarget=Math.min(7.5,projBase+projCatchUp);
+        const dayTarget=personalTarget;
         cls='future';
         val=fmtH(dayTarget);
       }
@@ -5560,9 +5546,7 @@ function _renderStudyCalendar(targetElId){
         cells+='<div class="plan-cal-cell '+todayCls+'"><div class="plan-cal-day">'+d+'</div><div class="plan-cal-val">'+val2+'</div></div>';
         continue;
       }else{
-        const daysFromToday=Math.round((new Date(dStr)-now)/(1000*60*60*24));
-        const deficitLeft=Math.max(0,recentDeficit-daysFromToday*catchUp);
-        const dayTarget=Math.min(7.5,Math.max(bareMinimum,personalTarget)+deficitLeft/7);
+        const dayTarget=personalTarget;
         cls='future';val=fmtH(dayTarget);
       }
       cells+='<div class="plan-cal-cell '+cls+'"><div class="plan-cal-day">'+d+'</div><div class="plan-cal-val">'+val+'</div></div>';
