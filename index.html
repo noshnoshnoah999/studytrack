@@ -1330,9 +1330,9 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
     <div class="form-group">
       <label class="form-label">Model</label>
       <select class="form-input" id="ai-model-select">
-        <option value="claude-3-5-haiku-20241022">claude-3-5-haiku (fast, cheap)</option>
-        <option value="claude-opus-4-5">claude-opus-4 (smartest)</option>
+        <option value="claude-haiku-4-5">claude-haiku-4 (fast, cheap)</option>
         <option value="claude-sonnet-4-5">claude-sonnet-4 (balanced)</option>
+        <option value="claude-opus-4-5">claude-opus-4 (smartest)</option>
       </select>
     </div>
     <div class="modal-actions">
@@ -7591,12 +7591,12 @@ function openAISettings(){
   const keyEl=document.getElementById('ai-api-key-input');
   const modelEl=document.getElementById('ai-model-select');
   if(keyEl)keyEl.value=localStorage.getItem('st_ai_key')||'';
-  if(modelEl)modelEl.value=localStorage.getItem('st_ai_model')||'claude-3-5-haiku-20241022';
+  if(modelEl)modelEl.value=localStorage.getItem('st_ai_model')||'claude-haiku-4-5';
   document.getElementById('ai-settings-overlay').classList.add('open');
 }
 function saveAISettings(){
   const key=(document.getElementById('ai-api-key-input').value||'').trim();
-  const model=document.getElementById('ai-model-select').value||'claude-3-5-haiku-20241022';
+  const model=document.getElementById('ai-model-select').value||'claude-haiku-4-5';
   if(key)localStorage.setItem('st_ai_key',key);else localStorage.removeItem('st_ai_key');
   localStorage.setItem('st_ai_model',model);
   closeModal('ai-settings-overlay');
@@ -7808,7 +7808,7 @@ async function _aiSendMsg(text){
   _aiRenderMessages();
   try{
     const ctx=_aiMakeContext();
-    const model=localStorage.getItem('st_ai_model')||'claude-3-5-haiku-20241022';
+    const model=localStorage.getItem('st_ai_model')||'claude-haiku-4-5';
     // Build messages array — only keep displayable content for history
     const apiMessages=_aiHistory.map(m=>({role:m.role,content:m.content}));
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
@@ -7894,7 +7894,7 @@ function renderAIPage(){
   const statusEl=document.getElementById('ai-key-status');
   if(statusEl){
     const hasKey=!!localStorage.getItem('st_ai_key');
-    const model=localStorage.getItem('st_ai_model')||'claude-3-5-haiku-20241022';
+    const model=localStorage.getItem('st_ai_model')||'claude-haiku-4-5';
     statusEl.textContent=hasKey?model.replace('claude-','').replace('-2024',''):'No API key';
     statusEl.style.color=hasKey?'var(--ok)':'var(--err)';
   }
