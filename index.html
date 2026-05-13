@@ -25,10 +25,10 @@ html,body{overflow-x:hidden}
   --bg2:#162030;
   --bg3:#1c2a3c;
   --bg4:#253347;
-  --border:rgba(255,255,255,0.07);
+  --border:rgba(255,255,255,0.08);
   --text:#f0f4f8;
-  --text2:#7a8fa6;
-  --text3:#3e5268;
+  --text2:#8ca8c0;
+  --text3:#607d96;
   --o:#f97316;
   --od:#e86a10;
   --ol:rgba(249,115,22,0.18);
@@ -593,6 +593,46 @@ a{color:inherit;text-decoration:none}
   --shadow:0 1px 4px rgba(10,40,10,0.05),0 6px 20px rgba(10,40,10,0.07);
 }
 [data-theme="sage"] .modal-sheet,[data-theme="sage"] #bottom-nav{background:var(--bg2)}
+/* ── MIDNIGHT THEME (pure black, orange accent) ────────────────────────────── */
+[data-theme="midnight"]{
+  --bg:#080c10;--bg2:#0f1419;--bg3:#181f28;--bg4:#202a36;
+  --border:rgba(255,255,255,0.06);
+  --text:#eef2f7;--text2:#8ca8c0;--text3:#607d96;
+  --o:#f97316;--od:#e86a10;--ol:rgba(249,115,22,0.16);--od2:rgba(249,115,22,0.28);
+  --ok:#00c896;--okl:rgba(0,200,150,0.13);--err:#ff4d6a;--errl:rgba(255,77,106,0.14);
+  --shadow:none;
+}
+[data-theme="midnight"] .modal-sheet,[data-theme="midnight"] #bottom-nav{background:var(--bg2)}
+/* ── SLATE THEME (pure dark gray, minimal) ─────────────────────────────────── */
+[data-theme="slate"]{
+  --bg:#111111;--bg2:#1a1a1a;--bg3:#242424;--bg4:#2e2e2e;
+  --border:rgba(255,255,255,0.07);
+  --text:#f5f5f5;--text2:#a0a0a0;--text3:#686868;
+  --o:#f97316;--od:#e86a10;--ol:rgba(249,115,22,0.15);--od2:rgba(249,115,22,0.28);
+  --ok:#00c896;--okl:rgba(0,200,150,0.14);--err:#ff4d6a;--errl:rgba(255,77,106,0.14);
+  --shadow:none;
+}
+[data-theme="slate"] .modal-sheet,[data-theme="slate"] #bottom-nav{background:var(--bg2)}
+/* ── ROSE THEME (soft pink light) ──────────────────────────────────────────── */
+[data-theme="rose"]{
+  --bg:#fdf0f3;--bg2:#fff6f7;--bg3:#f2dee2;--bg4:#e4cdd2;
+  --border:rgba(0,0,0,0.07);
+  --text:#2a1015;--text2:#8a5060;--text3:#b8848e;
+  --o:#c94060;--od:#a83050;--ol:rgba(201,64,96,0.12);--od2:rgba(201,64,96,0.24);
+  --ok:#5a8a60;--okl:rgba(90,138,96,0.15);--err:#c94060;--errl:rgba(201,64,96,0.12);
+  --shadow:0 1px 4px rgba(80,10,20,0.06),0 6px 20px rgba(80,10,20,0.08);
+}
+[data-theme="rose"] .modal-sheet,[data-theme="rose"] #bottom-nav{background:var(--bg2)}
+/* ── OCEAN THEME (dark teal, cyan accent) ───────────────────────────────────── */
+[data-theme="ocean"]{
+  --bg:#09141e;--bg2:#0f2030;--bg3:#162840;--bg4:#1e3450;
+  --border:rgba(255,255,255,0.07);
+  --text:#d8eeff;--text2:#6898bc;--text3:#3f6480;
+  --o:#00b8d9;--od:#0098b8;--ol:rgba(0,184,217,0.15);--od2:rgba(0,184,217,0.28);
+  --ok:#00c896;--okl:rgba(0,200,150,0.13);--err:#ff4d6a;--errl:rgba(255,77,106,0.14);
+  --shadow:none;
+}
+[data-theme="ocean"] .modal-sheet,[data-theme="ocean"] #bottom-nav{background:var(--bg2)}
 
 /* THEME BUTTON */
 .btn-dark{background:none;border:none;cursor:pointer;font-size:17px;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0}
@@ -1400,18 +1440,34 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
     </div>
     <div class="form-group" style="margin-top:6px">
       <label class="form-label">Theme</label>
-      <div class="theme-swatch-row">
-        <button class="theme-swatch" data-theme-name="pumpkin" onclick="setTheme('pumpkin')" style="--swatch-bg:#1c2a3c;--swatch-fg:#f97316">
+      <div class="theme-swatch-row" style="flex-wrap:wrap;gap:8px">
+        <button class="theme-swatch" data-theme-name="pumpkin" onclick="setTheme('pumpkin')" style="min-width:calc(33% - 6px)">
           <span class="swatch-dot" style="background:#f97316;box-shadow:0 0 0 3px #1c2a3c,0 0 0 5px #f97316"></span>
-          <span style="color:inherit">Pumpkin</span>
+          <span>Pumpkin</span>
         </button>
-        <button class="theme-swatch" data-theme-name="ember" onclick="setTheme('ember')" style="--swatch-bg:#faf7f1;--swatch-fg:#b5654e">
+        <button class="theme-swatch" data-theme-name="midnight" onclick="setTheme('midnight')" style="min-width:calc(33% - 6px)">
+          <span class="swatch-dot" style="background:#f97316;box-shadow:0 0 0 3px #0f1419,0 0 0 5px #f97316"></span>
+          <span>Midnight</span>
+        </button>
+        <button class="theme-swatch" data-theme-name="slate" onclick="setTheme('slate')" style="min-width:calc(33% - 6px)">
+          <span class="swatch-dot" style="background:#f97316;box-shadow:0 0 0 3px #242424,0 0 0 5px #f97316"></span>
+          <span>Slate</span>
+        </button>
+        <button class="theme-swatch" data-theme-name="ocean" onclick="setTheme('ocean')" style="min-width:calc(33% - 6px)">
+          <span class="swatch-dot" style="background:#00b8d9;box-shadow:0 0 0 3px #0f2030,0 0 0 5px #00b8d9"></span>
+          <span>Ocean</span>
+        </button>
+        <button class="theme-swatch" data-theme-name="ember" onclick="setTheme('ember')" style="min-width:calc(33% - 6px)">
           <span class="swatch-dot" style="background:#b5654e;box-shadow:0 0 0 3px #faf7f1,0 0 0 5px #b5654e"></span>
-          <span style="color:inherit">Ember</span>
+          <span>Ember</span>
         </button>
-        <button class="theme-swatch" data-theme-name="sage" onclick="setTheme('sage')" style="--swatch-bg:#f6f8f4;--swatch-fg:#4a7c5a">
+        <button class="theme-swatch" data-theme-name="rose" onclick="setTheme('rose')" style="min-width:calc(33% - 6px)">
+          <span class="swatch-dot" style="background:#c94060;box-shadow:0 0 0 3px #fff6f7,0 0 0 5px #c94060"></span>
+          <span>Rose</span>
+        </button>
+        <button class="theme-swatch" data-theme-name="sage" onclick="setTheme('sage')" style="min-width:calc(33% - 6px)">
           <span class="swatch-dot" style="background:#4a7c5a;box-shadow:0 0 0 3px #f6f8f4,0 0 0 5px #4a7c5a"></span>
-          <span style="color:inherit">Sage</span>
+          <span>Sage</span>
         </button>
       </div>
     </div>
