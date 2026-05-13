@@ -5308,29 +5308,29 @@ function renderPlan(){
   let feedbackEmoji,feedbackText;
   if(ydLogged===0){
     feedbackEmoji='😬';
-    feedbackText='You didn\'t study at all yesterday. That\'s '+fmtH(baseTarget)+' of ground lost — the gap has grown slightly. No guilt, just today is a good day to make a dent. Your target\'s been nudged up to compensate.';
+    feedbackText='You didn\'t study at all yesterday. No guilt — today\'s a fresh start.';
   } else if(ydPct<0.5){
     feedbackEmoji='📉';
-    feedbackText='You studied '+fmtH(ydLogged)+' yesterday — about '+Math.round(ydPct*100)+'% of the '+fmtH(baseTarget)+' needed. You\'re slowly falling further behind. Today\'s target is a bit higher to help claw back some of that deficit.';
+    feedbackText='You studied '+fmtH(ydLogged)+' yesterday — about '+Math.round(ydPct*100)+'% of your '+fmtH(personalTarget)+' goal. Keep chipping away.';
   } else if(ydPct<0.9){
     feedbackEmoji='📊';
-    feedbackText='You studied '+fmtH(ydLogged)+' yesterday — a decent effort, but '+fmtH(ydShortfall)+' short of target. A small catch-up has been added and spread across this week so it doesn\'t all land on today.';
+    feedbackText='You studied '+fmtH(ydLogged)+' yesterday — '+fmtH(ydShortfall)+' short of your goal. Decent effort.';
   } else if(ydPct<1){
     feedbackEmoji='🎯';
-    feedbackText='So close yesterday — '+fmtH(ydLogged)+' out of '+fmtH(baseTarget)+'. Practically on track. Today looks almost the same as planned.';
+    feedbackText='So close yesterday — '+fmtH(ydLogged)+' out of '+fmtH(personalTarget)+'. Nearly there.';
   } else if(ydPct>=1.5){
     feedbackEmoji='🔥';
-    feedbackText='Big day yesterday — you did '+fmtH(ydLogged)+', which is '+fmtH(ydOverage)+' over target. The graduation gap shrank noticeably. Today\'s adjusted slightly lower as a result.';
+    feedbackText='Big day yesterday — '+fmtH(ydLogged)+', which is '+fmtH(ydOverage)+' over your goal. Great work.';
   } else {
     feedbackEmoji='✅';
-    feedbackText='You hit your target yesterday with '+fmtH(ydLogged)+'. That\'s exactly what was needed. Keep the same energy today.';
+    feedbackText='You hit your goal yesterday with '+fmtH(ydLogged)+'. Keep the same energy today.';
   }
 
   // ── Today's progress ──────────────────────────────────────────────────────
   const todayStr2=todayStr();
   const todayLogged=hoursOn(todayStr2);
-  const stillNeeded=Math.max(0,smartTarget-todayLogged);
-  const todayPct=Math.min(100,todayLogged/smartTarget*100);
+  const stillNeeded=Math.max(0,personalTarget-todayLogged);
+  const todayPct=Math.min(100,todayLogged/personalTarget*100);
 
   // ── Build calendar (current month + next month) ───────────────────────────
   function buildCal(year,month){
@@ -5405,10 +5405,10 @@ function renderPlan(){
     '<div class="card" style="margin-bottom:16px">'+
       '<div class="card-title">Today\'s Target</div>'+
       '<div style="display:flex;align-items:flex-end;gap:12px;margin-bottom:4px">'+
-        '<div class="plan-smart-num">'+fmtH(smartTarget)+'</div>'+
-        '<div style="padding-bottom:8px;font-size:13px;color:var(--text2);font-weight:600">recommended today</div>'+
+        '<div class="plan-smart-num">'+fmtH(personalTarget)+'</div>'+
+        '<div style="padding-bottom:8px;font-size:13px;color:var(--text2);font-weight:600">your daily goal</div>'+
       '</div>'+
-      '<div class="plan-teacher-ref">Your goal: <strong style="color:var(--text2)">'+fmtH(personalTarget)+'/day · '+daysPerWeek+' days/week = '+fmtH(weeklyPersonal)+'/week</strong> · <span style="color:var(--text3)">Teacher\'s standard: '+fmtH(TEACHER_DAILY)+'/day</span></div>'+
+      '<div class="plan-teacher-ref">'+daysPerWeek+' days/week = <strong style="color:var(--text2)">'+fmtH(weeklyPersonal)+'/week</strong> · <span style="color:var(--text3)">Teacher\'s standard: '+fmtH(TEACHER_DAILY)+'/day</span></div>'+
       // Today progress bar
       '<div style="margin:14px 0">'+
         '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:5px">'+
@@ -5416,18 +5416,7 @@ function renderPlan(){
           '<span>'+fmtH(stillNeeded)+' to go</span>'+
         '</div>'+
         '<div style="height:8px;background:var(--bg3);border-radius:100px;overflow:hidden">'+
-          '<div style="height:100%;border-radius:100px;background:'+(todayLogged>=smartTarget?'var(--ok)':'linear-gradient(90deg,var(--o),#fb923c)')+';width:'+todayPct.toFixed(1)+'%;transition:width 0.4s"></div>'+
-        '</div>'+
-      '</div>'+
-      // Breakdown chips
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">'+
-        '<div style="background:var(--bg3);border-radius:10px;padding:10px;text-align:center">'+
-          '<div style="font-size:13px;font-weight:800;color:var(--text)">'+fmtH(baseTarget)+'</div>'+
-          '<div style="font-size:10px;color:var(--text3);margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px">Base target</div>'+
-        '</div>'+
-        '<div style="background:var(--bg3);border-radius:10px;padding:10px;text-align:center">'+
-          '<div style="font-size:13px;font-weight:800;color:'+(catchUp>0.08?'var(--err)':'var(--ok)')+'">'+fmtH(catchUp)+'</div>'+
-          '<div style="font-size:10px;color:var(--text3);margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px">'+(catchUp>0.08?'7-day catch-up':'On pace')+'</div>'+
+          '<div style="height:100%;border-radius:100px;background:'+(todayLogged>=personalTarget?'var(--ok)':'linear-gradient(90deg,var(--o),#fb923c)')+';width:'+todayPct.toFixed(1)+'%;transition:width 0.4s"></div>'+
         '</div>'+
       '</div>'+
       // Yesterday feedback
