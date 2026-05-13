@@ -1068,7 +1068,6 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
         <div>
           <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.5px;color:var(--text)" id="greeting"></h1>
           <p style="font-size:11px;color:var(--text3);margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px" id="greeting-date"></p>
-          <div id="dash-yesterday-pill" style="display:none;margin-top:6px;font-size:12px;color:var(--text2);font-weight:500;line-height:1.4"></div>
         </div>
         <div style="display:flex;gap:4px;align-items:center" id="mobile-top-bar">
           <button id="notif-bell-mb" onclick="openNotifCenter()" style="position:relative;background:none;border:1px solid var(--border);border-radius:9px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2)" title="Notifications">
@@ -3077,29 +3076,6 @@ function showPage(id){
 }
 
 // ── SIDEBAR ───────────────────────────────────────────────────────────────────
-function renderYesterdayPill(){
-  try{
-    var pill2=document.getElementById('dash-yesterday-pill');
-    if(!pill2)return;
-    var s2=loadSessions();
-    var g2=loadGoals();
-    var t2=g2.daily||6;
-    var yd2=new Date();yd2.setDate(yd2.getDate()-1);
-    var ydS2=yd2.getFullYear()+'-'+String(yd2.getMonth()+1).padStart(2,'0')+'-'+String(yd2.getDate()).padStart(2,'0');
-    var ydH2=s2.filter(function(x){return x.date===ydS2;}).reduce(function(a,x){return a+x.hours;},0);
-    var pct2=t2>0?ydH2/t2:1;
-    var em2,tx2;
-    if(ydH2===0){em2='😬';tx2='No hours logged yesterday — fresh start today.';}
-    else if(pct2<0.5){em2='📉';tx2='Yesterday: '+fmtH(ydH2)+' — about '+Math.round(pct2*100)+'% of your goal.';}
-    else if(pct2<0.9){em2='📊';tx2='Yesterday: '+fmtH(ydH2)+' — '+fmtH(Math.max(0,t2-ydH2))+' short of goal.';}
-    else if(pct2<1){em2='🎯';tx2='So close yesterday — '+fmtH(ydH2)+' out of '+fmtH(t2)+'.';}
-    else if(pct2>=1.5){em2='🔥';tx2='Big day yesterday — '+fmtH(ydH2)+', '+fmtH(Math.max(0,ydH2-t2))+' over goal!';}
-    else{em2='✅';tx2='Hit your goal yesterday with '+fmtH(ydH2)+'. Keep it up!';}
-    pill2.innerHTML=em2+' <span style="color:var(--text3)">'+tx2+'</span>';
-    pill2.style.display='block';
-  }catch(e2){console.warn('yesterday pill:',e2);}
-}
-
 function updateSidebar(){
   const todayH=getTodayH();
   const goals=loadGoals();
@@ -3276,7 +3252,6 @@ function renderDashboard(){
   const greetEl=document.querySelector('.greeting-text');
   if(greetEl){greetEl.classList.remove('swoop-in');void greetEl.offsetWidth;greetEl.classList.add('swoop-in');}
 
-  renderYesterdayPill();
 }
 
 // ── LAYOUT EDITOR ─────────────────────────────────────────────────────────────
@@ -5999,7 +5974,31 @@ function renderPlan(){
   // ── Render ────────────────────────────────────────────────────────────────
   const el=document.getElementById('plan-inner');
   el.innerHTML=
-    // Card 1: Pace comparison
+    // Card 1: Today's smart target
+    '<div class="card" style="margin-bottom:16px">'+
+      '<div class="card-title">Today\'s Target</div>'+
+      '<div style="display:flex;align-items:flex-end;gap:12px;margin-bottom:4px">'+
+        '<div class="plan-smart-num">'+fmtH(personalTarget)+'</div>'+
+        '<div style="padding-bottom:8px;font-size:13px;color:var(--text2);font-weight:600">your daily goal</div>'+
+      '</div>'+
+      '<div class="plan-teacher-ref">'+daysPerWeek+' days/week = <strong style="color:var(--text2)">'+fmtH(weeklyPersonal)+'/week</strong> · <span style="color:var(--text3)">Teacher\'s standard: '+fmtH(TEACHER_DAILY)+'/day</span></div>'+
+      // Today progress bar
+      '<div style="margin:14px 0">'+
+        '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:5px">'+
+          '<span>'+fmtH(todayLogged)+' logged today</span>'+
+          '<span>'+fmtH(stillNeeded)+' to go</span>'+
+        '</div>'+
+        '<div style="height:8px;background:var(--bg3);border-radius:100px;overflow:hidden">'+
+          '<div style="height:100%;border-radius:100px;background:'+(todayLogged>=personalTarget?'var(--ok)':'linear-gradient(90deg,var(--o),#fb923c)')+';width:'+todayPct.toFixed(1)+'%;transition:width 0.4s"></div>'+
+        '</div>'+
+      '</div>'+
+      // Yesterday feedback
+      '<div class="plan-feedback">'+
+        '<span style="font-size:16px;margin-right:6px">'+feedbackEmoji+'</span>'+
+        '<span>'+feedbackText+'</span>'+
+      '</div>'+
+    '</div>'+
+    // Card 2: Pace comparison
     '<div class="card" style="margin-bottom:16px">'+
       '<div class="card-title">Pace Comparison</div>'+
       // Actual pace row — full width, most important
