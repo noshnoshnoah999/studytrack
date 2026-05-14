@@ -4650,7 +4650,7 @@ async function timerSyncPull(silent){
       // Remote stopped the timer — use remote stopMs so elapsed time is exact
       if(timerInterval){
         // Local is still running — stop it to match remote
-        clearInterval(timerInterval);
+        clearInterval(timerInterval);_resetTabTitle();
         timerInterval=null;
         timerSubjectId=r.subjectId||timerSubjectId;
         timerSessionId=r.sessionId||null;
@@ -4671,7 +4671,7 @@ async function timerSyncPull(silent){
       }
     } else if(!r.running&&!r.startMs&&(timerStart||timerInterval)){
       // Remote was reset/logged — clear locally too
-      clearInterval(timerInterval);
+      clearInterval(timerInterval);_resetTabTitle();
       timerInterval=null;
       timerStart=null;
       timerStartWallClock=null;
@@ -4732,16 +4732,25 @@ function timerFmtClock(secs){
   return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
 }
 
+function _resetTabTitle(){document.title='StudyTrack';}
 function timerTick(){
+  let clockStr;
   if(pomodoroMode&&pomodoroEndMs){
     const remaining=Math.ceil((pomodoroEndMs-Date.now())/1000);
-    const el=document.getElementById('tp-clock');if(el)el.textContent=fmtCountdown(remaining);
-    const el2=document.getElementById('timer-display');if(el2)el2.textContent=fmtCountdown(remaining);
+    clockStr=fmtCountdown(remaining);
+    const el=document.getElementById('tp-clock');if(el)el.textContent=clockStr;
+    const el2=document.getElementById('timer-display');if(el2)el2.textContent=clockStr;
     if(remaining<=0){pomodoroPhaseComplete();return;}
   }else{
-    const el=document.getElementById('tp-clock');if(el)el.textContent=timerFmtClock(timerElapsedSecs());
-    const el2=document.getElementById('timer-display');if(el2)el2.textContent=timerFmtClock(timerElapsedSecs());
+    clockStr=timerFmtClock(timerElapsedSecs());
+    const el=document.getElementById('tp-clock');if(el)el.textContent=clockStr;
+    const el2=document.getElementById('timer-display');if(el2)el2.textContent=clockStr;
   }
+  // Update tab title like Google timer
+  const subjs=loadSubjects();
+  const subj=subjs.find(s=>s.id===timerSubjectId);
+  const label=subj?subj.name:'StudyTrack';
+  document.title=clockStr+' – '+label;
   _updateTimerBubble();
 }
 
@@ -4957,7 +4966,7 @@ function timerChangeSubject(id){
 function timerPageToggle(){
   if(timerInterval){
     // Stop
-    clearInterval(timerInterval);
+    clearInterval(timerInterval);_resetTabTitle();
     timerInterval=null;
     timerStop=Date.now();
     _releaseWakeLock();
@@ -4983,7 +4992,7 @@ function timerPageToggle(){
 }
 
 function timerPageReset(){
-  clearInterval(timerInterval);
+  clearInterval(timerInterval);_resetTabTitle();
   timerInterval=null;
   timerStart=null;
   timerStop=null;
@@ -5000,7 +5009,7 @@ function startTimerForSubject(subjectId, blockStartStr){
   timerSubjectId=subjectId;
   timerStop=null;
   timerSessionId=genId();
-  clearInterval(timerInterval);
+  clearInterval(timerInterval);_resetTabTitle();
   // If block already started (e.g. notification fires a few mins late), backdate the start
   if(blockStartStr){
     const now=new Date();
@@ -5022,7 +5031,7 @@ function startTimerForSubject(subjectId, blockStartStr){
 // Called from notification action: stop timer and pre-fill log page
 function stopTimerAndLog(){
   if(!timerStart)return;
-  clearInterval(timerInterval);
+  clearInterval(timerInterval);_resetTabTitle();
   timerInterval=null;
   const endTime=timerStop?new Date(timerStop):new Date();
   const fmt=d=>String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
