@@ -3252,7 +3252,6 @@ function showPage(id){
   buildNav();
   // Scroll to top on page change
   window.scrollTo(0,0);
-  _updateBackToTop();
   if(id==='dashboard')renderDashboard();
   else if(id==='schedule'){renderSchedule();_renderStudyCalendar('schedule-calendar-inner');}
   else if(id==='log'){renderLog();renderTemplates();}
@@ -7232,10 +7231,6 @@ function jumpTo(id){
   const el=document.getElementById(id);
   if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
 }
-document.addEventListener('touchmove',_updateBackToTop,{passive:true});
-setInterval(_updateBackToTop,500);
-// Also listen on #main in case it is the scroll container
-(function(){const m=document.getElementById('main');if(m)m.addEventListener('scroll',_updateBackToTop,{passive:true});})();
 
 // Pull timer state when user switches back to the tab
 document.addEventListener('visibilitychange',()=>{
