@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1747234800000">
+<meta name="app-built" content="1747235400000">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -4139,7 +4139,7 @@ const LOG_SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',englis
 // ── SHARED UTILITIES ─────────────────────────────────────────────────────────
 function showToast(msg,color){
   const t=document.createElement('div');
-  t.style.cssText='position:fixed;bottom:calc(80px + env(safe-area-inset-bottom, 0px));left:50%;transform:translateX(-50%);background:'+(color||'var(--ok)')+';color:#fff;padding:10px 20px;border-radius:20px;font-weight:700;font-size:14px;z-index:9999;white-space:normal;word-break:break-word;pointer-events:none;max-width:min(320px, calc(100vw - 40px));width:max-content;text-align:center;box-sizing:border-box';
+  t.style.cssText='position:fixed;bottom:calc(80px + env(safe-area-inset-bottom, 0px));left:20px;right:20px;margin-left:auto;margin-right:auto;width:fit-content;max-width:calc(100vw - 40px);background:'+(color||'var(--ok)')+';color:#fff;padding:10px 20px;border-radius:20px;font-weight:700;font-size:14px;z-index:9999;white-space:normal;word-break:break-word;pointer-events:none;text-align:center;box-sizing:border-box';
   t.style.animation='toastIn 0.2s ease both';
   t.textContent=msg;
   document.body.appendChild(t);
