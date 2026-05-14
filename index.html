@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1778728190389">
+<meta name="app-built" content="1778728242832">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -451,8 +451,8 @@ a{color:inherit;text-decoration:none}
 /* MOBILE */
 @media(max-width:768px){
   #sidebar{display:none}
-  #main{margin-left:0;width:100vw;overflow-x:clip}
-  .page{padding:16px 16px 100px 16px;width:100vw;overflow-x:hidden}
+  #main{margin-left:0;width:100vw;overflow-x:clip;padding-top:env(safe-area-inset-top)}
+  .page{padding:16px 16px calc(72px + env(safe-area-inset-bottom)) 16px;width:100vw;overflow-x:hidden}
   /* ── WHEEL NAV ── */
   #bottom-nav{display:block;position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--border);z-index:100;height:calc(52px + env(safe-area-inset-bottom));overflow:hidden}
   #bottom-nav::before,#bottom-nav::after{content:'';position:absolute;top:0;bottom:0;width:72px;z-index:2;pointer-events:none}
