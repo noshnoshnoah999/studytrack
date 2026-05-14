@@ -6585,6 +6585,22 @@ function updateThemeSwatches(){
   document.querySelectorAll('.theme-swatch').forEach(b=>{
     b.classList.toggle('active',b.dataset.themeName===name);
   });
+  // Fill incomplete last row with invisible placeholders
+  const row=document.querySelector('.theme-swatch-row');
+  if(!row)return;
+  row.querySelectorAll('.theme-swatch-ghost').forEach(el=>el.remove());
+  const cols=3;
+  const real=row.querySelectorAll('.theme-swatch:not(.theme-swatch-ghost)').length;
+  const rem=real%cols;
+  if(rem!==0){
+    for(let i=0;i<cols-rem;i++){
+      const ghost=document.createElement('div');
+      ghost.className='theme-swatch theme-swatch-ghost';
+      ghost.setAttribute('aria-hidden','true');
+      ghost.style.cssText='visibility:hidden;pointer-events:none';
+      row.appendChild(ghost);
+    }
+  }
 }
 
 function toggleSidebar(){
