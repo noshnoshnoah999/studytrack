@@ -593,16 +593,6 @@ a{color:inherit;text-decoration:none}
   --shadow:0 1px 4px rgba(10,40,10,0.05),0 6px 20px rgba(10,40,10,0.07);
 }
 [data-theme="sage"] .modal-sheet,[data-theme="sage"] #bottom-nav{background:var(--bg2)}
-/* ── MIDNIGHT THEME (pure black, orange accent) ────────────────────────────── */
-[data-theme="midnight"]{
-  --bg:#04060f;--bg2:#080e1e;--bg3:#0e162e;--bg4:#151f3e;
-  --border:rgba(100,140,255,0.1);
-  --text:#dde6ff;--text2:#6b8fd4;--text3:#3a5898;
-  --o:#f97316;--od:#e86a10;--ol:rgba(249,115,22,0.16);--od2:rgba(249,115,22,0.28);
-  --ok:#00c896;--okl:rgba(0,200,150,0.13);--err:#ff4d6a;--errl:rgba(255,77,106,0.14);
-  --shadow:none;
-}
-[data-theme="midnight"] .modal-sheet,[data-theme="midnight"] #bottom-nav{background:var(--bg2)}
 /* ── SLATE THEME (pure dark gray, minimal) ─────────────────────────────────── */
 [data-theme="slate"]{
   --bg:#0e0e0e;--bg2:#1c1c1c;--bg3:#272727;--bg4:#333333;
@@ -1491,10 +1481,7 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
           <span class="swatch-dot" style="background:#f97316;box-shadow:0 0 0 3px #1c2a3c,0 0 0 5px #f97316"></span>
           <span>Pumpkin</span>
         </button>
-        <button class="theme-swatch" data-theme-name="midnight" onclick="setTheme('midnight')" style="min-width:calc(33% - 6px)">
-          <span class="swatch-dot" style="background:#f97316;box-shadow:0 0 0 3px #080e1e,0 0 0 5px #f97316"></span>
-          <span>Midnight</span>
-        </button>
+
         <button class="theme-swatch" data-theme-name="slate" onclick="setTheme('slate')" style="min-width:calc(33% - 6px)">
           <span class="swatch-dot" style="background:#f97316;box-shadow:0 0 0 3px #242424,0 0 0 5px #f97316"></span>
           <span>Slate</span>
