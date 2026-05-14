@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-version" content="dfdcf9e">
+<meta name="app-built" content="1747234800000">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -7339,32 +7339,27 @@ async function syncFromCloud(){
 })();
 
 // ── Version / deploy check ────────────────────────────────────────────────────
-const _APP_SHA=(document.querySelector('meta[name="app-version"]')||{}).content||'';
+const _APP_BUILT=parseInt((document.querySelector('meta[name="app-built"]')||{}).content||'0',10);
 async function _checkVersion(){
   const el=document.getElementById('version-row');
   if(!el)return;
   try{
-    const res=await fetch('https://api.github.com/repos/noshnoshnoah999/studytrack/commits/main',{cache:'no-store'});
+    const res=await fetch('/studytrack/version.txt?_='+Date.now(),{cache:'no-store'});
     if(!res.ok)throw new Error();
-    const data=await res.json();
-    const latestSha=(data.sha||'').slice(0,7);
-    const msg=data.commit&&data.commit.message?data.commit.message.split('\n')[0]:'';
-    const dateStr=data.commit&&data.commit.author&&data.commit.author.date?data.commit.author.date:'';
+    const deployed=parseInt((await res.text()).trim(),10);
+    const diff=Math.floor((Date.now()-deployed)/1000);
     let ago='';
-    if(dateStr){
-      const diff=Math.floor((Date.now()-new Date(dateStr))/1000);
-      if(diff<60)ago='just now';
-      else if(diff<3600)ago=Math.floor(diff/60)+'m ago';
-      else if(diff<86400)ago=Math.floor(diff/3600)+'h ago';
-      else ago=Math.floor(diff/86400)+'d ago';
-    }
-    if(latestSha&&latestSha===_APP_SHA){
-      el.title=msg+' · '+ago;
+    if(diff<60)ago='just now';
+    else if(diff<3600)ago=Math.floor(diff/60)+'m ago';
+    else if(diff<86400)ago=Math.floor(diff/3600)+'h ago';
+    else ago=Math.floor(diff/86400)+'d ago';
+    if(deployed===_APP_BUILT){
+      el.title='Deployed '+ago;
       el.innerHTML='<span style="width:6px;height:6px;border-radius:50%;background:var(--ok);flex-shrink:0"></span>Up to date · <span style="opacity:0.7">'+ago+'</span>';
       el.style.cursor='default';
       el.onclick=null;
-    } else if(latestSha){
-      el.title='New: '+msg+' ('+latestSha+') · '+ago+'\nClick to reload';
+    }else{
+      el.title='New update deployed '+ago+'\nClick to reload';
       el.innerHTML='<span style="width:6px;height:6px;border-radius:50%;background:var(--o);flex-shrink:0;animation:syncpulse 1s infinite"></span><span style="color:var(--o);font-weight:700">Update ready · '+ago+'</span>';
       el.style.cursor='pointer';
       el.onclick=()=>location.reload(true);
@@ -7373,7 +7368,6 @@ async function _checkVersion(){
     if(el)el.innerHTML='';
   }
 }
-// Check on load, then every 2 minutes
 _checkVersion();
 setInterval(_checkVersion,120000);
 
