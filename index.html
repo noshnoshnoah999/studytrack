@@ -136,11 +136,6 @@ a{color:inherit;text-decoration:none}
 .week-val{font-size:12px;font-weight:600;color:var(--text2);width:34px;text-align:right;flex-shrink:0}
 
 /* NEEDS ATTENTION */
-.attention-row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--border)}
-.attention-row:last-child{border-bottom:none}
-.attention-name{font-size:14px;font-weight:600;color:var(--text);flex:1}
-.attention-pct{font-size:13px;font-weight:700;color:var(--text2);width:36px;text-align:right;flex-shrink:0}
-.attention-left{font-size:12px;color:var(--text3);width:52px;text-align:right;flex-shrink:0}
 
 /* GREETING */
 .greeting-row{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:12px}
@@ -1087,8 +1082,6 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
 .stagger-10{animation-delay:0.50s!important}
 
 /* ── Attention row ───────────────────────────────────────────────── */
-.attention-row{transition:transform 0.2s}
-.attention-row:hover{transform:translateX(3px)}
 
 /* ── Modal sheet entrance ────────────────────────────────────────── */
 .modal-overlay.open .modal-sheet{animation:none}
@@ -1182,7 +1175,6 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
         <div class="stats-strip" id="stats-strip" style="margin-top:10px" data-block="stats-strip"></div>
         <div class="card" style="margin-top:10px" id="focus-card" data-block="focus-card"></div>
         <div class="card" style="margin-top:10px" id="week-combined-card" data-block="week-combined-card"></div>
-        <div class="card" style="margin-top:10px" id="attention-card" data-block="attention-card"></div>
       </div>
     </div>
 
@@ -3325,41 +3317,6 @@ function renderDashboard(){
   window._weekRows=weekRows; // store for combined render
   renderWeekCombined();
 
-  // Needs attention
-  const attention=subjs
-    .map(s=>{
-      const logged=getLogged(s.id);
-      const pct=s.req>0?Math.min(100,logged/s.req*100):100;
-      return{...s,logged,pct};
-    })
-    .filter(s=>!s.done&&!s.passive&&s.pct<100&&!isSubjPrereqLocked(s.id,subjs))
-    .sort((a,b)=>a.pct-b.pct)
-    .slice(0,5);
-
-  let arows='';
-  attention.forEach(s=>{
-    const left=Math.max(0,s.req-s.logged);
-    arows+='<div class="attention-row">'+
-      '<div class="attention-name">'+s.name+'</div>'+
-      '<div style="flex:2;min-width:60px"><div class="progress-bar"><div class="progress-fill" style="width:'+s.pct+'%;background:'+(s.pct>=100?'linear-gradient(90deg,var(--ok),#34d399)':'linear-gradient(90deg,var(--o),#fb923c)')+'"></div></div></div>'+
-      '<div class="attention-pct">'+Math.round(s.pct)+'%</div>'+
-      '<div class="attention-left">'+fmtH(left)+'</div>'+
-      '</div>';
-  });
-  document.getElementById('attention-card').innerHTML=
-    '<div class="card-title">Needs Attention</div>'+
-    (arows||'<div class="empty-state">All subjects on track!</div>');
-  // Stagger needs-attention rows
-  document.querySelectorAll('#attention-card .attention-row').forEach((r,i)=>{
-    r.classList.add('slide-in-left');
-    r.style.animationDelay=(i*0.07)+'s';
-  });
-  // Animate attention progress bars from 0
-  document.querySelectorAll('#attention-card .progress-fill').forEach((bar,i)=>{
-    const w=bar.style.width;
-    bar.style.width='0%';
-    setTimeout(()=>{bar.style.transition='width 0.8s cubic-bezier(0.25,0.46,0.45,0.94)';bar.style.width=w;},i*70+100);
-  });
 
   renderFocusCard();
   renderWeeklySummary();
@@ -3388,7 +3345,6 @@ const DASH_BLOCK_DEFS=[
   {id:'stats-strip',     label:'Stats strip'},
   {id:'focus-card',      label:'Focus Today'},
   {id:'week-combined-card', label:'This Week & Last 7 Days'},
-  {id:'attention-card',  label:'Needs Attention'},
 ];
 
 function loadDashLayout(){
