@@ -575,12 +575,12 @@ a{color:inherit;text-decoration:none}
 /* DARK MODE TOGGLE (kept for light mode) */
 /* ── EMBER THEME (warm cream + terracotta) ─────────────────────────────────── */
 [data-theme="ember"]{
-  --bg:#f2ece2;--bg2:#faf7f1;--bg3:#e7dfd2;--bg4:#d8ccbb;
+  --bg:#f5efe4;--bg2:#fdf8f0;--bg3:#ebe0cc;--bg4:#d8cab0;
   --border:rgba(0,0,0,0.07);
-  --text:#261a0e;--text2:#7a5c3e;--text3:#b09070;
+  --text:#22180a;--text2:#7a6248;--text3:#b09878;
   --o:#b5654e;--od:#9c5240;--ol:rgba(181,101,78,0.13);--od2:rgba(181,101,78,0.26);
   --ok:#5a8a60;--okl:rgba(90,138,96,0.15);--errl:rgba(181,101,78,0.12);
-  --shadow:0 1px 4px rgba(60,30,10,0.06),0 6px 20px rgba(60,30,10,0.08);
+  --shadow:0 1px 4px rgba(60,30,10,0.05),0 6px 20px rgba(60,30,10,0.07);
 }
 [data-theme="ember"] .modal-sheet,[data-theme="ember"] #bottom-nav{background:var(--bg2)}
 /* ── SAGE THEME (soft sage green + forest accent) ──────────────────────────── */
@@ -624,15 +624,6 @@ a{color:inherit;text-decoration:none}
 }
 [data-theme="ocean"] .modal-sheet,[data-theme="ocean"] #bottom-nav{background:var(--bg2)}
 /* ── PAPER THEME (warm white, very clean) ───────────────────────────────────── */
-[data-theme="paper"]{
-  --bg:#f7f4ef;--bg2:#fdfcf9;--bg3:#ede9e2;--bg4:#dedad1;
-  --border:rgba(0,0,0,0.06);
-  --text:#1a1612;--text2:#6b6158;--text3:#a39a8e;
-  --o:#d97706;--od:#b86005;--ol:rgba(217,119,6,0.12);--od2:rgba(217,119,6,0.24);
-  --ok:#4a8a5a;--okl:rgba(74,138,90,0.15);--err:#c0392b;--errl:rgba(192,57,43,0.12);
-  --shadow:0 1px 3px rgba(60,40,10,0.05),0 4px 16px rgba(60,40,10,0.07);
-}
-[data-theme="paper"] .modal-sheet,[data-theme="paper"] #bottom-nav{background:var(--bg2)}
 /* ── SKY THEME (light blue, airy) ───────────────────────────────────────────── */
 [data-theme="sky"]{
   --bg:#eef5fc;--bg2:#f6faff;--bg3:#dceaf8;--bg4:#c8dcf0;
@@ -654,15 +645,6 @@ a{color:inherit;text-decoration:none}
 }
 [data-theme="lavender"] .modal-sheet,[data-theme="lavender"] #bottom-nav{background:var(--bg2)}
 /* ── SAND THEME (warm desert tan) ───────────────────────────────────────────── */
-[data-theme="sand"]{
-  --bg:#f5efe4;--bg2:#fdf8f0;--bg3:#ebe0cc;--bg4:#d8cab0;
-  --border:rgba(0,0,0,0.07);
-  --text:#22180a;--text2:#7a6248;--text3:#b09878;
-  --o:#c47c2a;--od:#a86820;--ol:rgba(196,124,42,0.12);--od2:rgba(196,124,42,0.24);
-  --ok:#4a7a50;--okl:rgba(74,122,80,0.15);--err:#b03030;--errl:rgba(176,48,48,0.12);
-  --shadow:0 1px 3px rgba(60,30,5,0.05),0 4px 16px rgba(60,30,5,0.08);
-}
-[data-theme="sand"] .modal-sheet,[data-theme="sand"] #bottom-nav{background:var(--bg2)}
 /* ── COSMIC ORANGE THEME (deep space purple-black, electric orange) ──────────── */
 [data-theme="cosmic"]{
   --bg:#1c1528;--bg2:#251d34;--bg3:#302540;--bg4:#3c2f50;
@@ -1491,7 +1473,7 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
           <span>Ocean</span>
         </button>
         <button class="theme-swatch" data-theme-name="ember" onclick="setTheme('ember')">
-          <span class="swatch-dot" style="background:#b5654e;box-shadow:0 0 0 3px #faf7f1,0 0 0 5px #b5654e"></span>
+          <span class="swatch-dot" style="background:#b5654e;box-shadow:0 0 0 3px #fdf8f0,0 0 0 5px #b5654e"></span>
           <span>Ember</span>
         </button>
         <button class="theme-swatch" data-theme-name="rose" onclick="setTheme('rose')">
@@ -1502,10 +1484,6 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
           <span class="swatch-dot" style="background:#4a7c5a;box-shadow:0 0 0 3px #f6f8f4,0 0 0 5px #4a7c5a"></span>
           <span>Sage</span>
         </button>
-        <button class="theme-swatch" data-theme-name="paper" onclick="setTheme('paper')">
-          <span class="swatch-dot" style="background:#d97706;box-shadow:0 0 0 3px #fdfcf9,0 0 0 5px #d97706"></span>
-          <span>Paper</span>
-        </button>
         <button class="theme-swatch" data-theme-name="sky" onclick="setTheme('sky')">
           <span class="swatch-dot" style="background:#1d7ed8;box-shadow:0 0 0 3px #f6faff,0 0 0 5px #1d7ed8"></span>
           <span>Sky</span>
@@ -1513,10 +1491,6 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
         <button class="theme-swatch" data-theme-name="lavender" onclick="setTheme('lavender')">
           <span class="swatch-dot" style="background:#7c4dbe;box-shadow:0 0 0 3px #f9f7fd,0 0 0 5px #7c4dbe"></span>
           <span>Lavender</span>
-        </button>
-        <button class="theme-swatch" data-theme-name="sand" onclick="setTheme('sand')">
-          <span class="swatch-dot" style="background:#c47c2a;box-shadow:0 0 0 3px #fdf8f0,0 0 0 5px #c47c2a"></span>
-          <span>Sand</span>
         </button>
         <button class="theme-swatch" data-theme-name="cosmic" onclick="setTheme('cosmic')">
           <span class="swatch-dot" style="background:#ff6400;box-shadow:0 0 0 3px #14101c,0 0 0 5px #ff6400"></span>
