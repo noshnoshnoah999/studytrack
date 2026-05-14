@@ -452,24 +452,19 @@ a{color:inherit;text-decoration:none}
   #sidebar{display:none}
   #main{margin-left:0;width:100vw;overflow-x:clip}
   .page{padding:16px 16px 100px 16px;width:100vw;overflow-x:hidden}
-  #bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);padding:10px 0 calc(10px + env(safe-area-inset-bottom));z-index:100;transition:transform 0.32s cubic-bezier(0.4,0,0.2,1)}
-  #bottom-nav.bn-hidden{transform:translateY(110%)}
-  .bn-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:4px 2px;transition:color 0.15s;color:var(--text3);font-size:10px;font-weight:600;letter-spacing:0.2px;min-width:0}
-  .bn-item.active{color:var(--o)}
-  .bn-item svg{width:24px;height:24px;flex-shrink:0}
-  /* Floating pill to restore nav when hidden */
-  #bn-restore{display:none;position:fixed;bottom:16px;right:16px;z-index:101;background:var(--bg2);border:1.5px solid var(--border);border-radius:100px;padding:9px 16px;font-size:13px;font-weight:700;color:var(--text2);box-shadow:0 4px 20px rgba(0,0,0,0.18);cursor:pointer;align-items:center;gap:6px;transition:opacity 0.2s}
-  #bn-restore.visible{display:flex}
-  /* More sheet overlay */
-  #mobile-more-overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.4);backdrop-filter:blur(2px)}
-  #mobile-more-overlay.open{display:block}
-  #mobile-more-sheet{position:absolute;bottom:0;left:0;right:0;background:var(--bg2);border-radius:20px 20px 0 0;padding:8px 20px calc(20px + env(safe-area-inset-bottom));box-shadow:0 -8px 40px rgba(0,0,0,0.15)}
-  .bn-more-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:8px auto 18px}
-  .bn-more-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
-  .bn-more-item{display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--bg3);border-radius:14px;padding:14px 8px;cursor:pointer;color:var(--text2);font-size:11px;font-weight:700;letter-spacing:0.2px;transition:background 0.15s;border:1.5px solid transparent}
-  .bn-more-item.active{color:var(--o);border-color:var(--o);background:var(--ol)}
-  .bn-more-item svg{width:26px;height:26px}
-  .bn-more-hide{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:var(--bg3);border:none;border-radius:14px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer}
+  /* ── WHEEL NAV ── */
+  #bottom-nav{display:block;position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--border);z-index:100;height:calc(52px + env(safe-area-inset-bottom));overflow:hidden}
+  #bottom-nav::before,#bottom-nav::after{content:'';position:absolute;top:0;bottom:0;width:72px;z-index:2;pointer-events:none}
+  #bottom-nav::before{left:0;background:linear-gradient(to right,var(--bg) 40%,transparent)}
+  #bottom-nav::after{right:0;background:linear-gradient(to left,var(--bg) 40%,transparent)}
+  .wheel-center-mark{position:absolute;top:0;left:50%;transform:translateX(-50%);width:3px;height:5px;background:var(--o);border-radius:0 0 2px 2px;z-index:3;pointer-events:none}
+  .wheel-track{display:flex;align-items:center;height:calc(52px + env(safe-area-inset-bottom));overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:env(safe-area-inset-bottom)}
+  .wheel-track::-webkit-scrollbar{display:none}
+  .wheel-spacer{flex-shrink:0;width:50vw}
+  .wheel-item{scroll-snap-align:center;flex-shrink:0;padding:10px 14px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;letter-spacing:0.4px;white-space:nowrap;user-select:none;-webkit-user-select:none;transition:color 0.2s,font-size 0.2s}
+  .wheel-item.active{color:var(--o);font-size:15px}
+  .wheel-tick{flex-shrink:0;width:1px;height:12px;background:var(--border);opacity:0.6}
+  #bn-restore{display:none}
   .stats-strip{grid-template-columns:repeat(2,1fr)}
   .stat-chips{grid-template-columns:1fr 1fr}
   .two-col{grid-template-columns:1fr}
@@ -1055,9 +1050,7 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
 .nav-item.active{transform:translateX(4px)}
 
 /* ── Bottom nav item tap ─────────────────────────────────────────── */
-.bn-item{transition:color 0.15s,transform 0.1s}
-.bn-item:active{transform:scale(0.88)}
-.bn-item.active{color:var(--o)}
+.wheel-item:active{opacity:0.7}
 
 /* ── Jump pill hover ─────────────────────────────────────────────── */
 .jump-pill{transition:background 0.15s,color 0.15s,transform 0.15s,border-color 0.15s}
@@ -1194,7 +1187,6 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
 .nnb-inner{transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1)}
 
 /* ── Bottom nav active icon bounce ──────────────────────────────── */
-.bn-item.active .bn-icon{animation:springPop 0.35s cubic-bezier(0.34,1.56,0.64,1) both}
 
 /* ── Card stagger max to avoid huge delays ───────────────────────── */
 .stagger-7{animation-delay:0.35s!important}
@@ -1896,6 +1888,79 @@ const newItems=NAV_ITEMS.filter(n=>!filtered.includes(n.id)).map(n=>n.id);const 
 }
 function saveNavOrder(o){localStorage.setItem('st_nav_order',JSON.stringify(o));}
 
+// ── Wheel nav ─────────────────────────────────────────────────────────────────
+let _wheelProgrammatic=false;
+let _wheelSnapTimer=null;
+let _wheelListenerAttached=false;
+
+function _wheelBuild(items,page){
+  const bn=document.getElementById('bottom-nav');
+  if(!bn)return;
+  // Inject center mark if not present
+  if(!bn.querySelector('.wheel-center-mark')){
+    const mark=document.createElement('div');
+    mark.className='wheel-center-mark';
+    bn.insertBefore(mark,bn.firstChild);
+  }
+  // Build or update the track
+  let track=document.getElementById('wheel-track');
+  if(!track){
+    track=document.createElement('div');
+    track.className='wheel-track';
+    track.id='wheel-track';
+    bn.appendChild(track);
+  }
+  // Build items
+  let html='<div class="wheel-spacer"></div>';
+  items.forEach((n,i)=>{
+    if(i>0) html+='<div class="wheel-tick"></div>';
+    html+=`<div class="wheel-item${n.id===page?' active':''}" data-page="${n.id}" onclick="_wheelTap('${n.id}')">${n.short}</div>`;
+  });
+  html+='<div class="wheel-spacer"></div>';
+  track.innerHTML=html;
+  // Scroll to active immediately
+  _wheelScrollTo(page,false);
+  // Attach scroll listener once
+  if(!_wheelListenerAttached){
+    track.addEventListener('scroll',_wheelOnScroll,{passive:true});
+    _wheelListenerAttached=true;
+  }
+}
+
+function _wheelTap(pageId){
+  showPage(pageId);
+}
+
+function _wheelOnScroll(){
+  if(_wheelProgrammatic)return;
+  clearTimeout(_wheelSnapTimer);
+  _wheelSnapTimer=setTimeout(()=>{
+    const track=document.getElementById('wheel-track');
+    if(!track)return;
+    const mid=track.getBoundingClientRect().left+track.offsetWidth/2;
+    let closest=null,minDist=Infinity;
+    track.querySelectorAll('.wheel-item').forEach(el=>{
+      const r=el.getBoundingClientRect();
+      const d=Math.abs(r.left+r.width/2-mid);
+      if(d<minDist){minDist=d;closest=el;}
+    });
+    if(closest&&closest.dataset.page&&closest.dataset.page!==currentPage){
+      showPage(closest.dataset.page);
+    }
+  },120);
+}
+
+function _wheelScrollTo(pageId,animate){
+  const track=document.getElementById('wheel-track');
+  if(!track)return;
+  const item=track.querySelector(`.wheel-item[data-page="${pageId}"]`);
+  if(!item)return;
+  _wheelProgrammatic=true;
+  const offset=item.offsetLeft+item.offsetWidth/2-track.offsetWidth/2;
+  track.scrollTo({left:offset,behavior:animate?'smooth':'instant'});
+  setTimeout(()=>{_wheelProgrammatic=false;},400);
+}
+
 function buildNav(){
   const order=loadNavOrder();
   const items=order.map(id=>NAV_ITEMS.find(n=>n.id===id)).filter(Boolean);
@@ -1905,23 +1970,8 @@ function buildNav(){
   const sb=document.getElementById('sidebar-nav');
   if(sb)sb.innerHTML=items.map(n=>`<div class="nav-item${n.id===page?' active':''}" data-page="${n.id}" onclick="showPage('${n.id}')">${n.icon}${n.label}</div>`).join('');
 
-  // Bottom nav — show first 5 items + "···" More button
-  const bn=document.getElementById('bottom-nav');
-  if(bn){
-    const primary=items.slice(0,5);
-    const hasMore=items.length>5;
-    const moreActive=items.slice(5).some(n=>n.id===page);
-    bn.innerHTML=primary.map(n=>`<div class="bn-item${n.id===page?' active':''}" data-page="${n.id}" onclick="showPage('${n.id}')">${n.icon}${n.short}</div>`).join('')+
-      (hasMore?`<div class="bn-item${moreActive?' active':''}" onclick="openMobileMore()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>More</div>`:'');
-    // Maintain hidden state across nav rebuilds
-    if(localStorage.getItem('st_bn_hidden')==='1'){bn.classList.add('bn-hidden');document.getElementById('bn-restore').classList.add('visible');}
-    else{bn.classList.remove('bn-hidden');document.getElementById('bn-restore').classList.remove('visible');}
-  }
-  // Populate the More sheet grid
-  const grid=document.getElementById('mobile-more-grid');
-  if(grid){
-    grid.innerHTML=items.map(n=>`<div class="bn-more-item${n.id===page?' active':''}" onclick="showPage('${n.id}');closeMobileMore()">${n.icon}${n.short}</div>`).join('');
-  }
+  // Wheel nav
+  _wheelBuild(items, page);
 }
 
 function openMobileMore(){
