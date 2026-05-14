@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1778727669494">
+<meta name="app-built" content="1778728190389">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -1384,6 +1384,9 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
         <h2>Progress</h2>
         <button onclick="showPage('subjects')" style="background:none;border:1px solid var(--border);border-radius:10px;padding:7px 13px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer">All Subjects →</button>
       </div>
+      <div id="prog-grad-card" class="card" style="margin-bottom:12px"></div>
+      <div id="prog-stats-row" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px"></div>
+      <div id="prog-spotlight-card" class="card" style="margin-bottom:12px"></div>
       <div id="sec-today"></div>
       <div id="plan-inner" style="margin-bottom:80px"></div>
     </div>
@@ -5468,7 +5471,125 @@ function toggleHideDone(){
 }
 
 function renderProgress(){
+  _renderProgGradCard();
+  _renderProgStatsRow();
+  _renderProgSpotlight();
   renderPlan();
+}
+
+function _renderProgGradCard(){
+  const el=document.getElementById('prog-grad-card');
+  if(!el)return;
+  const v=_gradSharedVars();
+  const {pct,expectedPct,pctDiffStr,scheduleAhead,totalLogged,remaining}=v;
+  el.innerHTML=
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
+      '<div>'+
+        '<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Graduation</div>'+
+        '<div style="font-size:32px;font-weight:900;color:var(--text);letter-spacing:-1px;line-height:1.1">'+pct.toFixed(1)+'%</div>'+
+        '<div style="font-size:12px;color:var(--text3);margin-top:1px">'+fmtH(totalLogged)+' logged · '+fmtH(remaining)+' remaining</div>'+
+      '</div>'+
+      '<div style="text-align:right">'+
+        '<div style="font-size:22px;font-weight:900;color:'+(scheduleAhead?'var(--ok)':'var(--err)')+'">'+pctDiffStr+'</div>'+
+        '<div style="font-size:11px;color:var(--text3);font-weight:600">'+(scheduleAhead?'ahead of':'behind')+'<br>schedule</div>'+
+        '<button onclick="showPage(\'graduation\')" style="margin-top:8px;background:none;border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--text3);cursor:pointer">Details →</button>'+
+      '</div>'+
+    '</div>'+
+    '<div style="height:8px;background:var(--bg3);border-radius:100px;overflow:hidden;position:relative">'+
+      '<div id="prog-grad-bar" style="height:100%;width:'+pct.toFixed(2)+'%;background:linear-gradient(90deg,var(--o),#fb923c);border-radius:100px;transition:width 1s cubic-bezier(0.25,0.46,0.45,0.94)"></div>'+
+      '<div style="position:absolute;top:0;bottom:0;left:'+expectedPct.toFixed(2)+'%;width:2px;background:var(--text3);border-radius:2px" title="Expected: '+expectedPct.toFixed(1)+'%"></div>'+
+    '</div>'+
+    '<div style="display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:var(--text3)">'+
+      '<span>0%</span><span style="color:var(--text3)">Expected: '+expectedPct.toFixed(1)+'%</span><span>100%</span>'+
+    '</div>';
+  // Animate bar
+  const bar=el.querySelector('#prog-grad-bar');
+  if(bar){const w=bar.style.width;bar.style.width='0%';requestAnimationFrame(()=>{bar.style.transition='width 1s cubic-bezier(0.25,0.46,0.45,0.94)';bar.style.width=w;});}
+}
+
+function _progStreak(){
+  const sessions=loadSessions();
+  const goals=loadGoals();
+  const target=goals.daily;
+  const now=new Date();
+  let streak=0;
+  // Check today first — if hit, count it then go back
+  const todayStr2=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  const todayH=_hoursOnDate(sessions,todayStr2);
+  let startOffset=todayH>=target?0:1; // start from yesterday if today not yet hit
+  for(let i=startOffset;i<=365;i++){
+    const d=new Date(now);d.setDate(now.getDate()-i);
+    const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const h=_hoursOnDate(sessions,ds);
+    if(h>=target)streak++;
+    else break;
+  }
+  return streak;
+}
+
+function _renderProgStatsRow(){
+  const el=document.getElementById('prog-stats-row');
+  if(!el)return;
+  const sessions=loadSessions();
+  const goals=loadGoals();
+  const weekH=getWeekH();
+  const streak=_progStreak();
+  const subjs=_canonicalSubjs().filter(s=>!s.extraCredit);
+  const doneCount=subjs.filter(s=>s.done||(getLogged(s.id)>=s.req&&s.req>0)).length;
+  el.innerHTML=
+    '<div class="stat-card"><div class="stat-label">🔥 Streak</div><div class="stat-val">'+(streak>0?streak+'d':'—')+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">This Week</div><div class="stat-val orange">'+fmtH(weekH)+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Completed</div><div class="stat-val">'+doneCount+'/'+subjs.length+'</div></div>';
+}
+
+function _renderProgSpotlight(){
+  const el=document.getElementById('prog-spotlight-card');
+  if(!el)return;
+  const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',english_11:'#60a5fa',english_12:'#93c5fd',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',geometry:'#a855f7',algebra2:'#7c3aed',el2:'#94a3b8',el3:'#64748b',el4:'#475569',am_hist:'#b45309',jp_exch:'#7c3aed'};
+  const allSubjs=_canonicalSubjs().filter(s=>!s.extraCredit);
+  const active=allSubjs.filter(s=>!s.done&&!(getLogged(s.id)>=s.req&&s.req>0));
+  // Sort by % complete ascending (most behind first)
+  const sorted=active.sort((a,b)=>{
+    const pa=a.req>0?getLogged(a.id)/a.req:1;
+    const pb=b.req>0?getLogged(b.id)/b.req:1;
+    return pa-pb;
+  }).slice(0,4);
+  if(!sorted.length){
+    el.innerHTML='<div class="card-title" style="margin-bottom:6px">Subjects Spotlight</div><div style="color:var(--ok);font-weight:600;font-size:14px">🎉 All subjects complete!</div>';
+    return;
+  }
+  let rows='';
+  sorted.forEach((s,i)=>{
+    const logged=getLogged(s.id);
+    const pct=s.req>0?Math.min(100,logged/s.req*100):0;
+    const left=Math.max(0,s.req-logged);
+    const color=SUBJ_COLORS[s.id]||'var(--o)';
+    const isLast=i===sorted.length-1;
+    rows+=
+      '<div style="'+(isLast?'':'padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--border)')+'">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">'+
+          '<div style="display:flex;align-items:center;gap:7px">'+
+            '<div style="width:8px;height:8px;border-radius:50%;background:'+color+';flex-shrink:0"></div>'+
+            '<span style="font-size:14px;font-weight:600;color:var(--text)">'+escHtml(s.name)+'</span>'+
+          '</div>'+
+          '<span style="font-size:12px;font-weight:700;color:var(--text2)">'+fmtH(left)+' left</span>'+
+        '</div>'+
+        '<div style="height:5px;background:var(--bg3);border-radius:100px;overflow:hidden">'+
+          '<div style="height:100%;width:'+pct.toFixed(1)+'%;background:'+color+';border-radius:100px;transition:width 0.7s cubic-bezier(0.25,0.46,0.45,0.94)"></div>'+
+        '</div>'+
+        '<div style="font-size:11px;color:var(--text3);margin-top:3px">'+Math.round(pct)+'% · '+fmtH(logged)+' of '+fmtH(s.req)+'</div>'+
+      '</div>';
+  });
+  el.innerHTML=
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+      '<div class="card-title" style="margin-bottom:0">Subjects Spotlight</div>'+
+      '<button onclick="showPage(\'subjects\')" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--text3);cursor:pointer">All →</button>'+
+    '</div>'+rows;
+  // Animate bars
+  el.querySelectorAll('div[style*="transition:width"]').forEach(bar=>{
+    const w=bar.style.width;bar.style.width='0%';
+    requestAnimationFrame(()=>{bar.style.width=w;});
+  });
 }
 
 function renderSubjectsPage(){
