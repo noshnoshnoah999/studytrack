@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1778728242832">
+<meta name="app-built" content="1778728542244">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -7328,7 +7328,13 @@ async function toggleNotifications(){
     if('serviceWorker' in navigator)await subscribePush();
     new Notification('StudyTrack 📚',{body:'Notifications enabled! You\'ll be reminded before each study block.',tag:'st-welcome'});
   } else {
-    alert('Notification permission denied.\n\niPhone users: add this app to your home screen from Safari, then try again.');
+    const isIOS2=/iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isSafari=/^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    if(isIOS2){
+      alert('Notifications blocked on iPhone.\n\nTo fix:\n1. Open this site in Safari\n2. Tap Share → Add to Home Screen\n3. Open StudyTrack from your Home Screen\n4. Tap 🔔 to enable notifications');
+    } else {
+      alert('Notifications are blocked in this browser.\n\nTo fix in Chrome:\n1. Click the 🔒 lock icon in the address bar\n2. Find "Notifications" → change to "Allow"\n3. Refresh the page\n4. Then tap 🔔 again\n\nTo fix in Safari:\nPreferences → Websites → Notifications → find this site → Allow');
+    }
   }
 }
 
