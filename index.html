@@ -4572,6 +4572,9 @@ let timerStop=null;       // ms timestamp when timer was stopped (null = running
 let timerSessionId=null;  // unique ID per session — used to detect duplicate logs
 let timerStartWallClock=null;
 let timerSubjectId=null;
+let timerPaused=false;      // is the timer currently paused?
+let timerPauseStart=null;   // ms timestamp when current pause began
+let timerPausedMs=0;        // total accumulated paused milliseconds
 let _timerSyncInterval=null;
 let _wakeLock=null;
 let _noSleep=null;
@@ -4612,6 +4615,9 @@ async function timerSyncPush(){
       stopMs:timerStop,
       subjectId:timerSubjectId,
       sessionId:timerSessionId,
+      paused:timerPaused,
+      pauseStartMs:timerPauseStart,
+      pausedMs:timerPausedMs,
       updatedAt:Date.now()
     });
   }catch(e){}
@@ -4623,7 +4629,7 @@ async function timerSyncPull(silent){
     if(!row||row.value===undefined)return;
     const r=row.value;
     // Identical state — nothing to do
-    if(r.running===!!timerInterval&&r.startMs===timerStart&&r.subjectId===timerSubjectId)return;
+    if(r.running===!!timerInterval&&r.startMs===timerStart&&r.subjectId===timerSubjectId&&r.paused===timerPaused)return;
     if(r.running&&r.startMs){
       // Remote has a running timer
       if(!timerInterval){
@@ -4632,19 +4638,32 @@ async function timerSyncPull(silent){
         timerSessionId=r.sessionId||null;
         timerStart=r.startMs;
         timerStop=null;
+        timerPaused=r.paused||false;
+        timerPauseStart=r.pauseStartMs||null;
+        timerPausedMs=r.pausedMs||0;
         timerStartWallClock=new Date(r.startMs);
         timerInterval=setInterval(timerTick,1000);
         _acquireWakeLock();
         renderTimerPage();
-        if(!silent)showToast('⏱ Timer synced from another device');
+        if(!silent)showToast(timerPaused?'⏸ Timer paused on another device':'⏱ Timer synced from another device');
       } else if(r.startMs!==timerStart){
         // Different session started on another device — adopt it
         timerSubjectId=r.subjectId||timerSubjectId;
         timerSessionId=r.sessionId||null;
         timerStart=r.startMs;
         timerStop=null;
+        timerPaused=r.paused||false;
+        timerPauseStart=r.pauseStartMs||null;
+        timerPausedMs=r.pausedMs||0;
         timerStartWallClock=new Date(r.startMs);
         if(!silent)showToast('⏱ Timer updated from another device');
+      } else if(r.paused!==timerPaused){
+        // Same session, but pause state changed on another device
+        timerPaused=r.paused||false;
+        timerPauseStart=r.pauseStartMs||null;
+        timerPausedMs=r.pausedMs||0;
+        renderTimerPage();
+        if(!silent)showToast(timerPaused?'⏸ Timer paused on another device':'▶ Timer resumed on another device');
       }
     } else if(!r.running&&r.startMs){
       // Remote stopped the timer — use remote stopMs so elapsed time is exact
@@ -4720,7 +4739,12 @@ function pomodoroPhaseComplete(){
   renderTimerPage();
 }
 
-function timerElapsedSecs(){if(!timerStart)return 0;return Math.floor(((timerStop||Date.now())-timerStart)/1000);}
+function timerElapsedSecs(){
+  if(!timerStart)return 0;
+  const end=timerStop||Date.now();
+  const pausedSoFar=timerPausedMs+(timerPaused&&timerPauseStart?end-timerPauseStart:0);
+  return Math.max(0,Math.floor((end-timerStart-pausedSoFar)/1000));
+}
 
 function timerFmtClock(secs){
   if(secs<60){
@@ -4734,6 +4758,7 @@ function timerFmtClock(secs){
 
 function _resetTabTitle(){document.title='StudyTrack';}
 function timerTick(){
+  if(timerPaused)return; // frozen while paused
   let clockStr;
   if(pomodoroMode&&pomodoroEndMs){
     const remaining=Math.ceil((pomodoroEndMs-Date.now())/1000);
@@ -4879,8 +4904,12 @@ function renderTimerPage(){
           ${escHtml(currentSubj?currentSubj.name:'Studying')}
         </div>
         ${pomodoroMode?`<div class="pomo-phase-badge" style="background:${pomodoroPhase==='work'?'var(--errl)':'var(--okl)'};color:${pomodoroPhase==='work'?'var(--err)':'var(--ok)'}">${pomodoroPhase==='work'?'🍅 Focus':'☕ Break'}</div><div class="pomo-sessions">${'🍅'.repeat(Math.min(pomodoroCount,8))} ${pomodoroCount} session${pomodoroCount!==1?'s':''} done · ${fmtH((pomodoroWorkMs+(pomodoroPhase==='work'&&pomodoroPhaseStart?Date.now()-pomodoroPhaseStart:0))/3600000)} studied</div>`:''}
-        <div class="timer-df-clock" id="tp-clock" style="color:${pomodoroMode?(pomodoroPhase==='work'?'var(--err)':'var(--ok)'):subjColor}">${pomodoroMode&&pomodoroEndMs?fmtCountdown(Math.ceil((pomodoroEndMs-Date.now())/1000)):timerFmtClock(elapsed)}</div>
-        <button class="timer-df-stop" onclick="timerPageToggle()">⏹ Stop</button>
+        <div class="timer-df-clock" id="tp-clock" style="color:${timerPaused?'var(--text3)':pomodoroMode?(pomodoroPhase==='work'?'var(--err)':'var(--ok)'):subjColor};opacity:${timerPaused?0.6:1}">${pomodoroMode&&pomodoroEndMs?fmtCountdown(Math.ceil((pomodoroEndMs-Date.now())/1000)):timerFmtClock(elapsed)}</div>
+        ${timerPaused?`<div style="font-size:13px;font-weight:700;color:var(--text3);letter-spacing:0.5px;margin-bottom:8px">PAUSED</div>`:''}
+        <div style="display:flex;gap:12px;justify-content:center">
+          <button class="timer-df-stop" style="background:${timerPaused?'var(--ol)':'var(--bg3)'};color:${timerPaused?'var(--o)':'var(--text2)'};border:1.5px solid ${timerPaused?'var(--o)':'var(--border)'}" onclick="timerPagePause()">${timerPaused?'▶ Resume':'⏸ Pause'}</button>
+          <button class="timer-df-stop" onclick="timerPageToggle()">⏹ Stop</button>
+        </div>
         ${progHtml}
       </div>`;
   } else {
@@ -4982,6 +5011,7 @@ function timerPageToggle(){
     timerStop=null;
     timerSessionId=genId();
     timerStartWallClock=new Date();
+    timerPaused=false;timerPauseStart=null;timerPausedMs=0;
     if(pomodoroMode){pomodoroPhase='work';pomodoroCount=0;pomodoroWorkMs=0;pomodoroPhaseStart=Date.now();pomodoroEndMs=Date.now()+POMO_WORK*1000;}
     timerInterval=setInterval(timerTick,1000);
     _acquireWakeLock();
@@ -4991,6 +5021,23 @@ function timerPageToggle(){
   }
 }
 
+function timerPagePause(){
+  if(!timerInterval)return;
+  if(timerPaused){
+    // Resume
+    if(timerPauseStart)timerPausedMs+=Date.now()-timerPauseStart;
+    timerPauseStart=null;
+    timerPaused=false;
+  }else{
+    // Pause
+    timerPaused=true;
+    timerPauseStart=Date.now();
+  }
+  renderTimerPage();
+  timerSyncPush();
+  _updateTimerBubble();
+}
+
 function timerPageReset(){
   clearInterval(timerInterval);_resetTabTitle();
   timerInterval=null;
@@ -4998,6 +5045,9 @@ function timerPageReset(){
   timerStop=null;
   timerSessionId=null;
   timerStartWallClock=null;
+  timerPaused=false;
+  timerPauseStart=null;
+  timerPausedMs=0;
   pomodoroPhase='work';pomodoroCount=0;pomodoroEndMs=null;pomodoroWorkMs=0;pomodoroPhaseStart=null;
   _releaseWakeLock();
   renderTimerPage();
