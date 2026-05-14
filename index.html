@@ -337,9 +337,6 @@ a{color:inherit;text-decoration:none}
 .jump-pill{flex-shrink:0;padding:6px 13px;border-radius:100px;font-size:12px;font-weight:700;background:var(--bg3);color:var(--text2);border:1px solid var(--border);cursor:pointer;white-space:nowrap;transition:background 0.15s,color 0.15s}
 .jump-pill:hover{background:var(--ol);color:var(--o);border-color:var(--od2)}
 /* Back to top */
-.back-to-top{position:fixed;bottom:28px;right:24px;left:auto;top:auto;width:40px;height:40px;border-radius:50%;background:var(--o);border:none;color:#fff;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:9999;box-shadow:0 3px 12px rgba(249,115,22,0.5);opacity:0;pointer-events:none;transition:opacity 0.2s}
-.back-to-top.visible{opacity:1;pointer-events:auto}
-.back-to-top:hover{background:var(--od)}
 .btn-add{background:var(--o);color:#fff;font-size:13px;font-weight:700;padding:8px 18px;border-radius:100px;transition:all 0.15s}
 .btn-add:hover{background:var(--od)}
 .subj-row{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:12px;margin-bottom:6px;border-left:3px solid var(--border);background:var(--bg2);transition:border-color 0.2s}
@@ -456,7 +453,6 @@ a{color:inherit;text-decoration:none}
   #main{margin-left:0;width:100vw;overflow-x:clip}
   .page{padding:16px 16px 100px 16px;width:100vw;overflow-x:hidden}
   #bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);padding:10px 0 calc(10px + env(safe-area-inset-bottom));z-index:100;transition:transform 0.32s cubic-bezier(0.4,0,0.2,1)}
-  .back-to-top{bottom:calc(72px + env(safe-area-inset-bottom))!important;right:16px!important;left:auto!important}
   #bottom-nav.bn-hidden{transform:translateY(110%)}
   .bn-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:4px 2px;transition:color 0.15s;color:var(--text3);font-size:10px;font-weight:600;letter-spacing:0.2px;min-width:0}
   .bn-item.active{color:var(--o)}
@@ -967,8 +963,6 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
 .day-tab.active{transform:scale(1.05)}
 
 /* ── Back to top button ──────────────────────────────────────────── */
-.back-to-top:hover{box-shadow:0 6px 20px rgba(249,115,22,0.65)}
-.back-to-top:active{transform:scale(0.9)}
 
 /* ── Heartbeat (running timer clock) ────────────────────────────── */
 @keyframes heartbeat{0%,100%{transform:scale(1)}14%{transform:scale(1.05)}28%{transform:scale(1)}42%{transform:scale(1.03)}70%{transform:scale(1)}}
@@ -7092,36 +7086,10 @@ async function syncFromCloud(){
   updateNotifBell(); // initialise badge count on load
 })();
 
-// ── Jump nav & back-to-top ────────────────────────────────────────────────
 function jumpTo(id){
   const el=document.getElementById(id);
   if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
 }
-function _getScrollY(){
-  const main=document.getElementById('main');
-  return Math.max(
-    window.scrollY||window.pageYOffset||0,
-    document.documentElement.scrollTop||0,
-    document.body.scrollTop||0,
-    main?main.scrollTop:0
-  );
-}
-function _scrollToTop(){
-  // Instant jump — smooth scrolling causes position:fixed to drift in Safari
-  try{window.scrollTo(0,0);}catch(e){}
-  document.documentElement.scrollTop=0;
-  document.body.scrollTop=0;
-  const main=document.getElementById('main');
-  if(main)main.scrollTop=0;
-  _updateBackToTop();
-}
-function _updateBackToTop(){
-  const btn=document.getElementById('btn-back-top');
-  if(!btn)return;
-  btn.classList.toggle('visible',_getScrollY()>300);
-}
-window.addEventListener('scroll',_updateBackToTop,{passive:true});
-document.addEventListener('scroll',_updateBackToTop,{passive:true});
 document.addEventListener('touchmove',_updateBackToTop,{passive:true});
 setInterval(_updateBackToTop,500);
 // Also listen on #main in case it is the scroll container
@@ -7982,7 +7950,6 @@ function renderAIPage(){
 }
 
 </script>
-<button class="back-to-top" id="btn-back-top" onclick="_scrollToTop()">↑</button>
 <div id="inapp-banner">
   <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
     <div>
