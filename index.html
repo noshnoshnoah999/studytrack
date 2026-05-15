@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1778812862250">
+<meta name="app-built" content="1778813055484">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -2299,6 +2299,25 @@ function runMigrations(){
       }
     }catch(e){console.warn('[Migration v6] Error:',e);}
     localStorage.setItem('st_migration_v6b','1');
+  }
+  // ── Migration v7: remove block ka4i74ykol (Science Friday — deleted via Coach) ──
+  if(!localStorage.getItem('st_migration_v7')){
+    try{
+      const raw=localStorage.getItem('st_sched');
+      if(raw){
+        const sched=JSON.parse(raw);
+        const before=sched.length;
+        const cleaned=sched.filter(b=>b.id!=='ka4i74ykol');
+        if(cleaned.length<before){
+          localStorage.setItem('st_sched',JSON.stringify(cleaned));
+          // Force push to cloud so all devices get the fix
+          const newV=_getSchedV()+1;
+          _setSchedLV(newV);
+          sbPush('st_sched',cleaned).then(()=>{_setSchedCV(newV);});
+        }
+      }
+    }catch(e){}
+    localStorage.setItem('st_migration_v7','1');
   }
   // ── Migration v4: English/Maths chains, EL3 complete ─────────────────────
   if(localStorage.getItem('st_migration_v4')) return;
@@ -7794,7 +7813,7 @@ async function sbPull(key){
 async function syncFromCloud(){
   setSyncUI('syncing','Syncing…');
   try{
-    const KEYS=['st_subjs','st_sched','st_sessions','st_hours','st_goals','st_todos','st_sched_overrides','st_templates'];
+    const KEYS=['st_subjs','st_sched','st_sessions','st_hours','st_goals','st_todos','st_sched_overrides','st_templates','st_ai_history'];
     const rows=await Promise.all(KEYS.map(k=>sbPull(k)));
     let updated=false;
     let localOnlySessions=[]; // sessions we have locally that cloud didn't know about
@@ -7822,6 +7841,14 @@ async function syncFromCloud(){
           } else {
             // Unconfirmed local edits — push ours back up to cloud
             sbPush('st_sched',JSON.parse(localStorage.getItem('st_sched')||'[]')).then(()=>{_setSchedCV(lv);});
+          }
+        } else if(k==='st_ai_history'){
+          // Take whichever is longer (most messages) — don't overwrite a longer local history
+          const local=JSON.parse(localStorage.getItem('st_ai_history')||'[]');
+          const cloud=Array.isArray(rows[i].value)?rows[i].value:[];
+          if(cloud.length>local.length){
+            localStorage.setItem(k,JSON.stringify(cloud));
+            _aiHistory=cloud;
           }
         } else {
           localStorage.setItem(k,JSON.stringify(rows[i].value));
@@ -8496,7 +8523,10 @@ function _aiSaveHistory(){
   if(_aiHistory.length>AI_HISTORY_LIMIT){
     _aiHistory=_aiHistory.slice(_aiHistory.length-AI_HISTORY_LIMIT);
   }
-  try{localStorage.setItem('st_ai_history',JSON.stringify(_aiHistory));}catch(e){}
+  try{
+    localStorage.setItem('st_ai_history',JSON.stringify(_aiHistory));
+    sbPush('st_ai_history',_aiHistory);
+  }catch(e){}
 }
 function _aiLoadHistory(){try{const h=localStorage.getItem('st_ai_history');if(h)return JSON.parse(h);}catch(e){}return[];}
 function _aiClearHistory(){if(_aiHistory.length&&!confirm('Clear all chat history?'))return;_aiHistory=[];_aiSaveHistory();_aiRenderMessages();}
