@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1778809985063">
+<meta name="app-built" content="1778810533627">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -1289,6 +1289,7 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
           <button onclick="openLayoutEditor('dashboard')" title="Customise layout" style="background:none;border:1px solid var(--border);border-radius:9px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);font-size:15px">⊞</button>
         </div>
       </div>
+      <div id="dash-pace-strip" style="margin-bottom:10px"></div>
       <div id="dash-blocks-container">
         <div id="now-next-banner" data-block="now-next-banner"></div>
         <div id="today-card" data-block="today-card"></div>
@@ -3464,6 +3465,31 @@ function renderDashboard(){
       heroBar.style.transition='width 0.8s cubic-bezier(0.25,0.46,0.45,0.94)';
       heroBar.style.width=tw;
     });
+  }
+
+  // Pace strip — minimum / teacher target / my goal
+  const deadline=new Date('2027-10-31');
+  const daysLeft=Math.max(1,(deadline-now)/(1000*60*60*24));
+  const studyDaysLeft=Math.max(1,daysLeft/7*(goals.daysPerWeek||5));
+  const minRequired=Math.max(0,remaining/studyDaysLeft);
+  const teacherRate=goals.daily;
+  const paceStripEl=document.getElementById('dash-pace-strip');
+  if(paceStripEl){
+    const chip=(label,val,col)=>
+      '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;min-width:0">'+
+        '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.4px;white-space:nowrap">'+label+'</div>'+
+        '<div style="font-size:14px;font-weight:800;color:'+(col||'var(--text)')+';letter-spacing:-0.3px">'+val+'</div>'+
+      '</div>';
+    const sep='<div style="width:1px;background:var(--border);align-self:stretch;margin:2px 0"></div>';
+    const minCol=minRequired>teacherRate?'var(--err)':minRequired>goals.daily*0.9?'#f59e0b':'var(--ok)';
+    paceStripEl.innerHTML=
+      '<div style="display:flex;align-items:center;gap:0;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:8px 12px">'+
+        chip('Minimum',_fmtDecimalToHm(minRequired),minCol)+
+        sep+
+        chip('Teacher\'s target',_fmtDecimalToHm(teacherRate),'var(--o)')+
+        sep+
+        chip('My goal',_fmtDecimalToHm(goals.daily),'var(--text2)')+
+      '</div>';
   }
 
   // Stats strip — 4 cards (2×2 on mobile, 4-col on desktop)
