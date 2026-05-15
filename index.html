@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1778811014048">
+<meta name="app-built" content="1778811288457">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -1553,7 +1553,10 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
   <div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
     <div class="modal-title">Goals & Settings</div>
-    <div style="font-size:11px;color:var(--text3);background:var(--bg3);border-radius:8px;padding:8px 12px;margin-bottom:14px">📌 Teacher's standard: <strong style="color:var(--text2)">6h 18m/day · 5 days/week = 31.5h/week</strong></div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">Teacher's target <span style="font-weight:400;color:var(--text3)">(h/day recommended by your teacher)</span></label>
+      <input type="number" class="form-input" id="goal-teacher-target" placeholder="6.3" min="0.5" max="16" step="0.1">
+    </div>
     <!-- Recommended goal card -->
     <div id="goal-rec-card" style="background:var(--bg3);border-radius:10px;padding:12px 14px;margin-bottom:14px;border:1.5px solid var(--o);display:none">
       <div style="font-size:11px;font-weight:700;color:var(--o);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">✦ Recommended for you</div>
@@ -3472,7 +3475,7 @@ function renderDashboard(){
   const daysLeft=Math.max(1,(deadline-now)/(1000*60*60*24));
   const studyDaysLeft=Math.max(1,daysLeft/7*(goals.daysPerWeek||5));
   const minRequired=Math.max(0,remaining/studyDaysLeft);
-  const teacherRate=goals.daily;
+  const teacherRate=goals.teacherTarget||6.3;
   const paceStripEl=document.getElementById('dash-pace-strip');
   if(paceStripEl){
     const chip=(label,val,col)=>
@@ -7071,7 +7074,7 @@ function _renderPaceDropCard(){
 
   // Guide rate — preserve typed value across re-renders
   const guideEl=document.getElementById('pace-drop-guide-input');
-  const guideRate=guideEl&&parseFloat(guideEl.value)>0?parseFloat(guideEl.value):goals.daily;
+  const guideRate=guideEl&&parseFloat(guideEl.value)>0?parseFloat(guideEl.value):(goals.teacherTarget||goals.daily);
 
   const now=new Date();
   const deadline=new Date('2027-10-31');
@@ -7352,8 +7355,8 @@ const GRAD_TOTAL_CREDITS=24.0;
 const GRAD_TRANSFER_CREDITS=4.5; // English9(1) + Lab Sci(1) + Soc.Studies.Elect.(0.5) + CTE(1) + Electives(1)
 
 function loadGoals(){
-  try{const g=localStorage.getItem('st_goals');if(g){const p=JSON.parse(g);if(!p.daysPerWeek)p.daysPerWeek=5;return p;}}catch(e){}
-  return{daily:6.3,daysPerWeek:5,weekly:31.5};
+  try{const g=localStorage.getItem('st_goals');if(g){const p=JSON.parse(g);if(!p.daysPerWeek)p.daysPerWeek=5;if(!p.teacherTarget)p.teacherTarget=6.3;return p;}}catch(e){}
+  return{daily:6.3,daysPerWeek:5,weekly:31.5,teacherTarget:6.3};
 }
 function updateGoalWeekly(){
   const daily=parseFloat(document.getElementById('goal-daily').value)||6.3;
@@ -7364,7 +7367,9 @@ function saveGoalSettings(){
   const daily=parseFloat(document.getElementById('goal-daily').value)||6.3;
   const daysPerWeek=parseInt(document.getElementById('goal-days-per-week').value)||5;
   const weekly=daily*daysPerWeek;
-  const g={daily,daysPerWeek,weekly};
+  const ttEl=document.getElementById('goal-teacher-target');
+  const teacherTarget=ttEl&&parseFloat(ttEl.value)>0?parseFloat(ttEl.value):6.3;
+  const g={daily,daysPerWeek,weekly,teacherTarget};
   localStorage.setItem('st_goals',JSON.stringify(g));
   sbPush('st_goals',g);
   // Save Anthropic API key
@@ -7422,6 +7427,8 @@ function openGoalSettings(){
   document.getElementById('goal-daily').value=g.daily;
   document.getElementById('goal-days-per-week').value=g.daysPerWeek||5;
   document.getElementById('goal-weekly').value=g.weekly;
+  const ttEl=document.getElementById('goal-teacher-target');
+  if(ttEl)ttEl.value=g.teacherTarget||6.3;
   const lbl=document.getElementById('goal-daily-current');
   if(lbl)lbl.textContent='Currently '+fmtH(g.daily)+'/day · '+fmtH(g.weekly)+'/week';
   // Load existing Anthropic key
