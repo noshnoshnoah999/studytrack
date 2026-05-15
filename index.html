@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1778808202667">
+<meta name="app-built" content="1778809008040">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -1442,6 +1442,7 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
         <input type="text" id="hist-search" placeholder="Search subject, notes, date…" oninput="renderHistory()" style="width:100%;box-sizing:border-box;padding:10px 36px 10px 36px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--text);font-family:inherit;outline:none">
         <button id="hist-search-clear" onclick="document.getElementById('hist-search').value='';renderHistory()" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;line-height:1;padding:2px 4px">×</button>
       </div>
+      <div class="card" style="margin-bottom:12px" id="hist-chart-card"></div>
       <div class="card" style="margin-bottom:12px" id="hist-week-card"></div>
       <div class="hist-controls">
         <select class="form-input hist-filter" id="hist-subject-filter" onchange="renderHistory()">
@@ -4368,6 +4369,109 @@ function renderLogEntries(){
 }
 
 // ── HISTORY PAGE ─────────────────────────────────────────────────────────────
+function _renderStudyLineChart(){
+  const el=document.getElementById('hist-chart-card');
+  if(!el)return;
+  const sessions=loadSessions();
+  const goals=loadGoals();
+  const target=goals.daily||6.3;
+  const now=new Date();
+  const DAYS=30;
+  const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  // Build last 30 days of data
+  const data=[];
+  for(let i=DAYS-1;i>=0;i--){
+    const d=new Date(now);d.setDate(now.getDate()-i);
+    const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    data.push({ds,h:_hoursOnDate(sessions,ds),d,isToday:i===0,dayIdx:DAYS-1-i});
+  }
+
+  const maxH=Math.max(target*1.2,...data.map(d=>d.h),0.5);
+
+  // SVG layout
+  const VW=500,VH=140;
+  const PL=32,PR=8,PT=10,PB=28;
+  const CW=VW-PL-PR,CH=VH-PT-PB;
+
+  function px(i){return PL+(i/(DAYS-1))*CW;}
+  function py(h){return PT+CH-(h/maxH)*CH;}
+
+  // Smooth bezier path
+  const pts=data.map((d,i)=>({x:px(i),y:py(d.h),h:d.h,isToday:d.isToday,ds:d.ds,d:d.d}));
+  function smoothD(arr){
+    if(arr.length<2)return '';
+    let d='M'+arr[0].x.toFixed(1)+','+arr[0].y.toFixed(1);
+    for(let i=1;i<arr.length;i++){
+      const p=arr[i-1],c=arr[i];
+      const cpx=(c.x-p.x)/2.5;
+      d+=' C'+(p.x+cpx).toFixed(1)+','+p.y.toFixed(1)+' '+(c.x-cpx).toFixed(1)+','+c.y.toFixed(1)+' '+c.x.toFixed(1)+','+c.y.toFixed(1);
+    }
+    return d;
+  }
+  const linePath=smoothD(pts);
+  const fillPath=linePath+' L'+pts[pts.length-1].x.toFixed(1)+','+(PT+CH)+' L'+PL+','+(PT+CH)+' Z';
+  const targetY=py(target);
+
+  // X-axis labels: today, -7, -14, -21, -28
+  const xLabels=data.filter((_,i)=>i===0||i===DAYS-1||i%(DAYS/4)===0)
+    .map(d=>({x:px(d.dayIdx),label:MONTHS[d.d.getMonth()]+' '+d.d.getDate()}));
+
+  // Y-axis ticks: 0, target, max (clean)
+  const yTicks=[0];
+  if(target<maxH*0.85)yTicks.push(target);
+  yTicks.push(Math.round(maxH));
+
+  // Dots — only show for days with sessions + today + local peaks
+  const dots=pts.map((p,i)=>{
+    const hit=p.h>=target;
+    const col=hit?'var(--ok)':'var(--o)';
+    const r=p.isToday?4.5:p.h>0?3:0;
+    if(r===0)return '';
+    return '<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="'+r+'" fill="'+col+'" stroke="var(--bg)" stroke-width="1.5"/>'+
+      (p.isToday?'<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="7" fill="'+col+'" opacity="0.15"/>':'');
+  }).join('');
+
+  // Build SVG
+  const gridLines=yTicks.map(h=>{
+    const y=py(h).toFixed(1);
+    return '<line x1="'+PL+'" y1="'+y+'" x2="'+(VW-PR)+'" y2="'+y+'" stroke="var(--border)" stroke-width="0.5" opacity="0.8"/>';
+  }).join('');
+
+  const yLabels=yTicks.map(h=>{
+    const y=(py(h)+3).toFixed(1);
+    return '<text x="'+(PL-4)+'" y="'+y+'" text-anchor="end" font-size="8" fill="var(--text3)">'+h+'h</text>';
+  }).join('');
+
+  const xLabelsSvg=xLabels.map(l=>'<text x="'+l.x.toFixed(1)+'" y="'+(VH-6)+'" text-anchor="middle" font-size="8" fill="var(--text3)">'+l.label+'</text>').join('');
+
+  el.innerHTML=
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
+      '<div class="card-title" style="margin-bottom:0">📈 Daily Study Hours</div>'+
+      '<div style="font-size:11px;color:var(--text3);font-weight:600">Last 30 days</div>'+
+    '</div>'+
+    '<svg viewBox="0 0 '+VW+' '+VH+'" style="width:100%;height:auto;display:block;overflow:visible" preserveAspectRatio="xMidYMid meet">'+
+      '<defs>'+
+        '<linearGradient id="slc-grad" x1="0" y1="0" x2="0" y2="1">'+
+          '<stop offset="0%" stop-color="var(--o)" stop-opacity="0.3"/>'+
+          '<stop offset="100%" stop-color="var(--o)" stop-opacity="0.01"/>'+
+        '</linearGradient>'+
+      '</defs>'+
+      gridLines+
+      '<line x1="'+PL+'" y1="'+targetY.toFixed(1)+'" x2="'+(VW-PR)+'" y2="'+targetY.toFixed(1)+'" stroke="var(--ok)" stroke-width="1" stroke-dasharray="5,4" opacity="0.7"/>'+
+      '<path d="'+fillPath+'" fill="url(#slc-grad)"/>'+
+      '<path d="'+linePath+'" fill="none" stroke="var(--o)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'+
+      dots+
+      yLabels+
+      xLabelsSvg+
+    '</svg>'+
+    '<div style="display:flex;align-items:center;gap:14px;margin-top:8px;font-size:11px;color:var(--text3)">'+
+      '<span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:14px;height:2.5px;background:var(--o);border-radius:2px"></span>Hours studied</span>'+
+      '<span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:14px;height:0;border-top:1.5px dashed var(--ok)"></span>Daily goal</span>'+
+      '<span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok)"></span>Goal hit</span>'+
+    '</div>';
+}
+
 function _renderHistWeekChart(){
   const el=document.getElementById('hist-week-card');
   if(!el)return;
@@ -4411,6 +4515,7 @@ function _renderHistWeekChart(){
 }
 
 function renderHistory(){
+  _renderStudyLineChart();
   _renderHistWeekChart();
   const sessions=loadSessions();
   const subjs=loadSubjects();
