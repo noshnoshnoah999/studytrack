@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1778812304897">
+<meta name="app-built" content="1778812347455">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -8994,13 +8994,15 @@ window.addEventListener('load',function(){
       var ds=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
       var yh=ss.filter(function(s){return s.date===ds;}).reduce(function(a,s){return a+(s.hours||0);},0);
       var pc=tg>0?yh/tg:1;
+      function hm(h){var tot=Math.round(h*60);var hr=Math.floor(tot/60),mn=tot%60;return hr&&mn?hr+'h '+mn+'m':hr?hr+'h':mn+'m';}
+      function yhStr(){return Math.round(yh*10)/10+'h ('+hm(yh)+')';}
       var em,tx;
       if(yh===0){em='😬';tx='No hours logged yesterday.';}
-      else if(pc<0.5){em='📉';tx='Yesterday: '+Math.round(yh*10)/10+'h - about '+Math.round(pc*100)+'% of your goal.';}
-      else if(pc<0.9){em='📊';tx='Yesterday: '+Math.round(yh*10)/10+'h - '+(Math.round((tg-yh)*10)/10)+'h short of goal.';}
-      else if(pc<1){em='🎯';tx='So close yesterday - '+Math.round(yh*10)/10+'h out of '+Math.round(tg*10)/10+'h.';}
-      else if(pc>=1.5){em='🔥';tx='Big day yesterday - '+Math.round(yh*10)/10+'h. Well over goal!';}
-      else{em='✅';tx='Hit your goal yesterday with '+Math.round(yh*10)/10+'h. Keep it up!';}
+      else if(pc<0.5){em='📉';tx='Yesterday: '+yhStr()+' — about '+Math.round(pc*100)+'% of your goal.';}
+      else if(pc<0.9){em='📊';tx='Yesterday: '+yhStr()+' — '+hm(tg-yh)+' short of goal.';}
+      else if(pc<1){em='🎯';tx='So close yesterday — '+yhStr()+' out of '+hm(tg)+'.';}
+      else if(pc>=1.5){em='🔥';tx='Big day yesterday — '+yhStr()+'. Well over goal!';}
+      else{em='✅';tx='Hit your goal yesterday with '+yhStr()+'. Keep it up!';}
       el.innerHTML=em+' '+tx;
       el.style.display='block';
     }catch(e){}
