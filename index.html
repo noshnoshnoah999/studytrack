@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1778812237400">
+<meta name="app-built" content="1778812304897">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -1424,8 +1424,7 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
       <div class="card" id="pace-drop-card" style="margin-bottom:16px"></div>
       <div id="gsec-timeline" style="scroll-margin-top:16px"></div>
       <div id="timeline-inner" style="margin-bottom:16px"></div>
-      <div id="gsec-milestones" style="scroll-margin-top:16px"></div>
-      <div class="card" id="grad-milestones-card" style="margin-bottom:80px"></div>
+      <div style="margin-bottom:80px"></div>
     </div>
 
     <!-- PAGE: TIMER -->
@@ -7220,7 +7219,6 @@ function renderGraduationPage(){
   _renderGradEstCard();
   _renderPaceDropCard();
   renderTimeline();
-  _renderMilestones();
   markCardsDone();
 }
 
@@ -8564,7 +8562,8 @@ function _aiSystemPrompt(ctx){
 TODAY: ${DAYS[now.getDay()]}, ${now.toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'})}
 OVERALL PROGRESS: ${totalLogged.toFixed(1)}h / ${TOTAL_REQ}h logged (${pct}%)
 RECENT PACE: ${recentH}h in last 7 days
-DAILY GOAL: ${goals.daily}h/day | WEEKLY GOAL: ${goals.weekly||((goals.daily||0)*(goals.daysPerWeek||5)).toFixed(1)}h over ${goals.daysPerWeek||5} days/week
+TEACHER'S TARGET: ${goals.teacherTarget||6.3}h/day (${_fmtDecimalToHm(goals.teacherTarget||6.3)})
+MY DAILY GOAL: ${goals.daily}h/day | WEEKLY GOAL: ${goals.weekly||((goals.daily||0)*(goals.daysPerWeek||5)).toFixed(1)}h over ${goals.daysPerWeek||5} days/week
 
 SUBJECTS (name | id | logged | required | %done):
 ${subjLines}
