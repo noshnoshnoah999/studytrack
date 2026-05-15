@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1778807846557">
+<meta name="app-built" content="1778808202667">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -276,8 +276,10 @@ a{color:inherit;text-decoration:none}
 .hist-card-time{font-weight:500}
 .hist-card-notes{font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px}
 .hist-card-dur{font-size:12px;font-weight:700;flex-shrink:0;padding:3px 9px;border-radius:100px;background:var(--bg3);color:var(--text2);margin-left:10px}
-.hist-card-del{background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;margin-left:4px}
+.hist-card-del{background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;margin-left:2px}
 .hist-card-del:hover{background:var(--errl);color:var(--err)}
+.hist-card-edit{background:none;border:none;color:var(--text3);cursor:pointer;width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;margin-left:2px}
+.hist-card-edit:hover{background:var(--ol);color:var(--o)}
 /* Archive banner */
 .hist-archive-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;margin-bottom:16px}
 .hist-archive-text{font-size:13px;color:var(--text2);font-weight:500;flex:1}
@@ -4537,6 +4539,9 @@ function renderHistory(){
           '</div>'+
         '</div>'+
         '<div class="hist-card-dur">'+fmtH(s.hours)+'</div>'+
+        '<button class="hist-card-edit" onclick="openEditSession(\''+s.id+'\')" title="Edit">'+
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'+
+        '</button>'+
         '<button class="hist-card-del" onclick="deleteHistEntry(\''+s.id+'\')" title="Delete">×</button>'+
       '</div>';
     }).join('');
@@ -4622,6 +4627,123 @@ function archiveOldSessions(){
   renderHistory();
   renderLogEntries();
   showToast('Archived '+count+' old sessions — hours preserved ✓');
+}
+
+let _editSessionId=null;
+
+function openEditSession(id){
+  const sessions=loadSessions();
+  const s=sessions.find(x=>x.id===id);
+  if(!s)return;
+  _editSessionId=id;
+
+  // Populate subject dropdown
+  const subjs=loadSubjects();
+  const sel=document.getElementById('es-subject');
+  sel.innerHTML=subjs.map(x=>'<option value="'+x.id+'"'+(x.id===s.subjectId?' selected':'')+'>'+escHtml(x.name)+'</option>').join('');
+
+  // Date
+  document.getElementById('es-date').value=s.date||'';
+
+  // Start time
+  const [sH='',sM='']=(s.start||'').split(':');
+  document.getElementById('es-start-hh').value=sH;
+  document.getElementById('es-start-mm').value=sM;
+  document.getElementById('es-start').value=s.start||'';
+
+  // End time
+  const [eH='',eM='']=(s.end||'').split(':');
+  document.getElementById('es-end-hh').value=eH;
+  document.getElementById('es-end-mm').value=eM;
+  document.getElementById('es-end').value=s.end||'';
+
+  // Notes
+  document.getElementById('es-notes').value=s.notes||'';
+
+  _esCalcDur();
+  document.getElementById('edit-session-overlay').classList.add('open');
+}
+
+function _esCalcDur(){
+  const start=document.getElementById('es-start').value;
+  const end=document.getElementById('es-end').value;
+  const el=document.getElementById('es-duration');
+  if(!start||!end){el.textContent='';return;}
+  const [sh,sm]=start.split(':').map(Number);
+  const [eh,em]=end.split(':').map(Number);
+  const mins=(eh*60+em)-(sh*60+sm);
+  if(mins<=0){el.textContent='⚠ End must be after start';el.style.color='var(--err)';return;}
+  el.style.color='var(--o)';
+  el.textContent=fmtH(mins/60);
+}
+
+function saveEditSession(){
+  const id=_editSessionId;
+  if(!id)return;
+  const sessions=loadSessions();
+  const old=sessions.find(x=>x.id===id);
+  if(!old)return;
+
+  const newSubjectId=document.getElementById('es-subject').value;
+  const newDate=document.getElementById('es-date').value;
+  const newStart=document.getElementById('es-start').value;
+  const newEnd=document.getElementById('es-end').value;
+  const newNotes=document.getElementById('es-notes').value.trim();
+
+  if(!newDate){showToast('Date required','var(--err)');return;}
+  if(!newSubjectId){showToast('Subject required','var(--err)');return;}
+
+  let newHours=old.hours;
+  if(newStart&&newEnd){
+    const [sh,sm]=newStart.split(':').map(Number);
+    const [eh,em]=newEnd.split(':').map(Number);
+    const mins=(eh*60+em)-(sh*60+sm);
+    if(mins<=0){showToast('End must be after start','var(--err)');return;}
+    newHours=Math.round(mins/60*100)/100;
+  }
+
+  // Fix up hours store: reverse old, apply new
+  const hoursStore=loadHours();
+  if(old.subjectId)hoursStore[old.subjectId]=Math.max(0,(hoursStore[old.subjectId]||0)-old.hours);
+  hoursStore[newSubjectId]=(hoursStore[newSubjectId]||0)+newHours;
+
+  const updated=sessions.map(x=>x.id===id
+    ?{...x,subjectId:newSubjectId,date:newDate,start:newStart,end:newEnd,notes:newNotes,hours:newHours}
+    :x);
+
+  saveSessions(updated);
+  saveHours(hoursStore);
+  closeModal('edit-session-overlay');
+  showToast('Session updated ✓');
+  renderHistory();
+  renderLogEntries();
+  updateSidebar();
+  if(currentPage==='dashboard')renderDashboard();
+  if(currentPage==='progress')renderProgress();
+  if(currentPage==='subjects')renderSubjectsPage();
+  if(currentPage==='graduation')renderGraduationPage();
+}
+
+function deleteFromEditModal(){
+  const id=_editSessionId;
+  if(!id)return;
+  closeModal('edit-session-overlay');
+  const sessions=loadSessions();
+  const s=sessions.find(x=>x.id===id);
+  if(!s)return;
+  if(!confirm('Delete this session?'))return;
+  const updated=sessions.filter(x=>x.id!==id);
+  const hoursStore=loadHours();
+  if(s.subjectId)hoursStore[s.subjectId]=Math.max(0,(hoursStore[s.subjectId]||0)-s.hours);
+  saveSessions(updated);
+  saveHours(hoursStore);
+  renderHistory();
+  renderLogEntries();
+  updateSidebar();
+  if(currentPage==='dashboard')renderDashboard();
+  if(currentPage==='progress')renderProgress();
+  if(currentPage==='subjects')renderSubjectsPage();
+  if(currentPage==='graduation')renderGraduationPage();
 }
 
 function deleteHistEntry(id){
@@ -8526,6 +8648,52 @@ function renderAIPage(){
     </div>
   </div>
 </div>
+<!-- EDIT SESSION MODAL -->
+<div class="modal-overlay" id="edit-session-overlay" onclick="handleOverlayClick(event,'edit-session-overlay')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Edit Session</div>
+    <div class="form-group">
+      <label class="form-label">Subject</label>
+      <select class="form-input" id="es-subject"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Date</label>
+      <input type="date" class="form-input" id="es-date">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Start</label>
+        <input type="hidden" id="es-start">
+        <div class="time-split-input" id="es-start-wrap">
+          <input class="tsplit-hh" id="es-start-hh" type="text" inputmode="numeric" maxlength="2" placeholder="09" autocomplete="off" oninput="timeSplitInput('es-start','es-start-hh','es-start-mm');_esCalcDur()">
+          <span class="tsplit-sep">:</span>
+          <input class="tsplit-mm" id="es-start-mm" type="text" inputmode="numeric" maxlength="2" placeholder="00" autocomplete="off" oninput="timeSplitInput('es-start','es-start-mm','es-end-hh');_esCalcDur()" onkeydown="timeSplitBack(event,'es-start-hh')">
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">End</label>
+        <input type="hidden" id="es-end">
+        <div class="time-split-input" id="es-end-wrap">
+          <input class="tsplit-hh" id="es-end-hh" type="text" inputmode="numeric" maxlength="2" placeholder="10" autocomplete="off" oninput="timeSplitInput('es-end','es-end-hh','es-end-mm');_esCalcDur()" onkeydown="timeSplitBack(event,'es-start-mm')">
+          <span class="tsplit-sep">:</span>
+          <input class="tsplit-mm" id="es-end-mm" type="text" inputmode="numeric" maxlength="2" placeholder="30" autocomplete="off" oninput="timeSplitInput('es-end','es-end-mm',null);_esCalcDur()" onkeydown="timeSplitBack(event,'es-end-hh')">
+        </div>
+      </div>
+    </div>
+    <div id="es-duration" style="font-size:13px;font-weight:700;color:var(--o);min-height:20px;margin:10px 0 4px"></div>
+    <div class="form-group">
+      <label class="form-label">Notes (optional)</label>
+      <input type="text" class="form-input" id="es-notes" placeholder="e.g. chapter 3 review">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-save" onclick="saveEditSession()">Save Changes</button>
+      <button class="btn-danger" onclick="deleteFromEditModal()">Delete</button>
+      <button class="btn-cancel" onclick="closeModal('edit-session-overlay')">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // Catch any uncaught JS error and show it on screen so we can debug
 window.addEventListener('error',function(e){
