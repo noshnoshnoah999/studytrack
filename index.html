@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1778728542244">
+<meta name="app-built" content="1778807846557">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -1434,6 +1434,11 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
           <button class="btn-add" style="background:var(--bg3);color:var(--text2);font-size:12px;padding:8px 14px" onclick="exportReport()">📄 Report</button>
           <button class="btn-add" style="background:var(--bg3);color:var(--text2);font-size:12px;padding:8px 14px" onclick="exportJSON()">📦 Backup</button>
         </div>
+      </div>
+      <div style="position:relative;margin-bottom:10px">
+        <svg style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="hist-search" placeholder="Search subject, notes, date…" oninput="renderHistory()" style="width:100%;box-sizing:border-box;padding:10px 36px 10px 36px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--text);font-family:inherit;outline:none">
+        <button id="hist-search-clear" onclick="document.getElementById('hist-search').value='';renderHistory()" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;line-height:1;padding:2px 4px">×</button>
       </div>
       <div class="card" style="margin-bottom:12px" id="hist-week-card"></div>
       <div class="hist-controls">
@@ -4419,9 +4424,25 @@ function renderHistory(){
 
   const subjectFilter=filterEl?filterEl.value:'';
   const sort=document.getElementById('hist-sort')?document.getElementById('hist-sort').value:'newest';
+  const searchEl=document.getElementById('hist-search');
+  const searchQ=(searchEl?searchEl.value:'').trim().toLowerCase();
+  // Toggle clear button
+  const clearBtn=document.getElementById('hist-search-clear');
+  if(clearBtn)clearBtn.style.display=searchQ?'block':'none';
 
-  // Filter
+  // Filter by subject dropdown
   let filtered=subjectFilter?sessions.filter(s=>s.subjectId===subjectFilter):sessions;
+
+  // Filter by search query (subject name, notes, date)
+  if(searchQ){
+    filtered=filtered.filter(s=>{
+      const subj=subjs.find(x=>x.id===s.subjectId);
+      const subjName=subj?subj.name.toLowerCase():'';
+      const notes=(s.notes||'').toLowerCase();
+      const date=(s.date||'').toLowerCase();
+      return subjName.includes(searchQ)||notes.includes(searchQ)||date.includes(searchQ);
+    });
+  }
 
   // Sort
   filtered=[...filtered].sort((a,b)=>{
@@ -4482,7 +4503,7 @@ function renderHistory(){
 
   const entriesEl=document.getElementById('hist-entries');
   if(!entriesEl)return;
-  if(!filtered.length){entriesEl.innerHTML='<div class="empty-state">No sessions yet</div>';return;}
+  if(!filtered.length){entriesEl.innerHTML='<div class="empty-state">'+(searchQ?'No sessions match "'+escHtml(searchQ)+'"':'No sessions yet')+'</div>';return;}
 
   const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',english_11:'#60a5fa',english_12:'#93c5fd',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',geometry:'#a855f7',algebra2:'#7c3aed',el2:'#94a3b8',el3:'#64748b',el4:'#475569',am_hist:'#b45309',jp_exch:'#7c3aed'};
   const today=new Date(); today.setHours(12,0,0,0);
