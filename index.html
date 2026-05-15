@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1778810533627">
+<meta name="app-built" content="1778810828513">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -1289,10 +1289,10 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
           <button onclick="openLayoutEditor('dashboard')" title="Customise layout" style="background:none;border:1px solid var(--border);border-radius:9px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);font-size:15px">⊞</button>
         </div>
       </div>
-      <div id="dash-pace-strip" style="margin-bottom:10px"></div>
       <div id="dash-blocks-container">
         <div id="now-next-banner" data-block="now-next-banner"></div>
         <div id="today-card" data-block="today-card"></div>
+        <div id="dash-pace-strip" style="margin-top:10px"></div>
         <div class="stats-strip" id="stats-strip" style="margin-top:10px" data-block="stats-strip"></div>
         <div class="card" style="margin-top:10px" id="focus-card" data-block="focus-card"></div>
         <div class="card" style="margin-top:10px" id="week-combined-card" data-block="week-combined-card"></div>
