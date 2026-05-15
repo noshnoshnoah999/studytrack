@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1778812470896">
+<meta name="app-built" content="1778812550142">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -2416,6 +2416,8 @@ function loadSubjects(){
   return JSON.parse(JSON.stringify(DEFAULT_SUBJECTS));
 }
 function saveSubjects(s){localStorage.setItem('st_subjs',JSON.stringify(s));sbPush('st_subjs',s);}
+let _schedLocalVersion=0;  // increments every time we save schedule locally
+let _schedCloudVersion=0;  // set to localVersion when push is confirmed
 function loadSchedule(){
   try{
     const s=localStorage.getItem('st_sched');
@@ -2444,10 +2446,13 @@ function loadSchedule(){
   return makeDefaultSchedule();
 }
 function saveSchedule(s){
-  const ts=new Date().toISOString();
   localStorage.setItem('st_sched',JSON.stringify(s));
-  localStorage.setItem('st_sched_local_ts',ts);
-  sbPush('st_sched',s);
+  _schedLocalVersion++;
+  const myVersion=_schedLocalVersion;
+  sbPush('st_sched',s).then(()=>{
+    // Mark the version that's now confirmed in the cloud
+    _schedCloudVersion=myVersion;
+  });
 }
 function loadSessions(){
   try{const s=localStorage.getItem('st_sessions');if(s)return JSON.parse(s);}catch(e){}
@@ -7810,14 +7815,11 @@ async function syncFromCloud(){
           if(merged.length>cloud.length)sbPush('st_sessions',merged);
           localStorage.setItem(k,JSON.stringify(merged));
         } else if(k==='st_sched'){
-          // Only take cloud schedule if it's newer than our last local save
-          const localTs=localStorage.getItem('st_sched_local_ts')||'';
-          const cloudTs=(rows[i].updated_at||'');
-          if(!localTs||cloudTs>localTs){
+          // Only take cloud schedule if we have no unconfirmed local edits
+          if(_schedLocalVersion===0||_schedCloudVersion===_schedLocalVersion){
             localStorage.setItem(k,JSON.stringify(rows[i].value));
-          }
-          // If local is newer, push it back to cloud to keep them in sync
-          else if(localTs>cloudTs){
+          } else {
+            // We have local edits not yet confirmed in cloud — push ours back up
             sbPush('st_sched',JSON.parse(localStorage.getItem('st_sched')||'[]'));
           }
         } else {
