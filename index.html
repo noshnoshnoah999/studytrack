@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1778812347455">
+<meta name="app-built" content="1778812470896">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -8487,7 +8487,14 @@ function markCardsDone(){
 }
 
 // ── AI SCHEDULE COACH ─────────────────────────────────────────────────────────
-function _aiSaveHistory(){try{localStorage.setItem('st_ai_history',JSON.stringify(_aiHistory));}catch(e){}}
+const AI_HISTORY_LIMIT=40; // max messages kept (~20 exchanges)
+function _aiSaveHistory(){
+  // Trim to limit — always keep pairs so we don't cut mid-exchange
+  if(_aiHistory.length>AI_HISTORY_LIMIT){
+    _aiHistory=_aiHistory.slice(_aiHistory.length-AI_HISTORY_LIMIT);
+  }
+  try{localStorage.setItem('st_ai_history',JSON.stringify(_aiHistory));}catch(e){}
+}
 function _aiLoadHistory(){try{const h=localStorage.getItem('st_ai_history');if(h)return JSON.parse(h);}catch(e){}return[];}
 function _aiClearHistory(){if(_aiHistory.length&&!confirm('Clear all chat history?'))return;_aiHistory=[];_aiSaveHistory();_aiRenderMessages();}
 let _aiHistory=_aiLoadHistory();   // [{role,content}] — persisted to localStorage
@@ -8723,12 +8730,8 @@ function _aiRenderMessages(){
     html+='<div class="ai-msg-row assistant"><div class="ai-sender">✦ Coach</div><div class="ai-thinking"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div><span style="margin-left:4px">Thinking…</span></div></div>';
   }
   el.innerHTML=html;
-  // Scroll to bottom
-  setTimeout(()=>{
-    const main=document.getElementById('main')||window;
-    if(main.scrollTo)main.scrollTo({top:main.scrollHeight,behavior:'smooth'});
-    else window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
-  },60);
+  // Scroll chat container to bottom (instant on page load, smooth when sending)
+  requestAnimationFrame(()=>{el.scrollTop=el.scrollHeight;});
 }
 
 async function _aiSendMsg(text){
