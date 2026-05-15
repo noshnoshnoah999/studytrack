@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1778809008040">
+<meta name="app-built" content="1778809231790">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -830,6 +830,9 @@ a{color:inherit;text-decoration:none}
 .img-drop-zone:hover{border-color:var(--o);background:var(--ol);color:var(--o)}
 .img-drop-zone.has-image{border-color:var(--ok);background:var(--okl)}
 .img-preview{max-width:100%;max-height:180px;border-radius:10px;margin-top:10px;display:block}
+#workout-drop-zone{user-select:none;-webkit-user-select:none}
+#workout-drop-zone:hover{border-color:var(--o)!important;background:var(--ol)!important}
+#workout-drop-zone.has-image{border-style:solid;border-color:var(--ok);background:var(--bg3)}
 /* SYNC INDICATOR */
 .sync-row{display:flex;align-items:center;gap:6px;margin-top:8px}
 .sync-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;transition:background 0.3s}
@@ -1857,15 +1860,25 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
       <!-- Paste target — hidden contenteditable so native paste (Cmd+V / long-press) works -->
       <div id="workout-paste-target" contenteditable="true" style="position:absolute;opacity:0;width:1px;height:1px;overflow:hidden;pointer-events:none" aria-hidden="true"></div>
 
+      <!-- Drag-and-drop zone -->
+      <div id="workout-drop-zone"
+        ondragenter="_wDragEnter(event)" ondragover="_wDragOver(event)" ondragleave="_wDragLeave(event)" ondrop="_wDrop(event)"
+        onclick="document.getElementById('workout-file-input').click()"
+        style="border:2px dashed var(--border);border-radius:14px;padding:28px 16px;text-align:center;cursor:pointer;transition:all 0.15s;margin-bottom:10px;position:relative">
+        <div style="font-size:32px;margin-bottom:6px">🖼️</div>
+        <div style="font-size:14px;font-weight:700;color:var(--text2);margin-bottom:4px">Drop image here</div>
+        <div style="font-size:12px;color:var(--text3)">or click to choose a photo</div>
+        <div id="workout-drop-hint" style="font-size:11px;color:var(--text3);margin-top:8px">Mac: Cmd+V to paste · iPhone: long-press → Paste</div>
+      </div>
+
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-        <button onclick="document.getElementById('workout-file-input').click()" style="background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:16px 10px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:6px">
-          <span style="font-size:26px">📂</span>Choose Photo
+        <button onclick="document.getElementById('workout-file-input').click()" style="background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:12px 10px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px">
+          📂 Choose File
         </button>
-        <button onclick="pasteWorkoutImage()" style="background:var(--ol);border:1.5px solid var(--o);border-radius:12px;padding:16px 10px;font-size:13px;font-weight:700;color:var(--o);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:6px">
-          <span style="font-size:26px">📋</span>Paste
+        <button onclick="pasteWorkoutImage()" style="background:var(--ol);border:1.5px solid var(--o);border-radius:12px;padding:12px 10px;font-size:13px;font-weight:700;color:var(--o);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px">
+          📋 Paste
         </button>
       </div>
-      <div style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:10px">Mac: Cmd+V anywhere · iPhone: long-press → Paste</div>
       <input type="file" id="workout-file-input" accept="image/*" style="display:none" onchange="handleWorkoutFile(event)">
       <img id="workout-img-preview" class="img-preview" style="display:none;margin-bottom:8px">
       <div id="workout-spinner" style="display:none;text-align:center;padding:16px;font-size:13px;color:var(--text3)">Analysing… ⏳</div>
@@ -2667,6 +2680,38 @@ function compressWorkoutImage(fileOrBlob,cb){
   };
   img.src=url;
 }
+// ── DRAG-AND-DROP for import ──────────────────────────────────────────────────
+function _wDragEnter(e){
+  e.preventDefault();e.stopPropagation();
+  const dz=document.getElementById('workout-drop-zone');
+  if(dz){dz.style.borderColor='var(--o)';dz.style.background='var(--ol)';dz.querySelector('div').textContent='Drop it!';}
+}
+function _wDragOver(e){e.preventDefault();e.stopPropagation();}
+function _wDragLeave(e){
+  e.preventDefault();e.stopPropagation();
+  const dz=document.getElementById('workout-drop-zone');
+  if(dz){
+    dz.style.borderColor='';dz.style.background='';
+    const label=dz.querySelector('div');
+    if(label)label.textContent='Drop image here';
+  }
+}
+function _wDrop(e){
+  e.preventDefault();e.stopPropagation();
+  const dz=document.getElementById('workout-drop-zone');
+  if(dz){dz.style.borderColor='';dz.style.background='';}
+  const file=[...(e.dataTransfer.files||[])].find(f=>f.type.startsWith('image/'));
+  if(!file){showToast('Please drop an image file','var(--err)');return;}
+  _workoutImageMime='image/jpeg';
+  compressWorkoutImage(file,function(dataUrl){
+    _workoutImageBase64=dataUrl.split(',')[1];
+    const preview=document.getElementById('workout-img-preview');
+    if(preview){preview.src=dataUrl;preview.style.display='block';}
+    document.getElementById('workout-drop-zone')?.classList.add('has-image');
+    runWorkoutAnalysis();
+  });
+}
+
 function openWorkoutImport(){
   // Reset state
   _workoutImageBase64=null;
