@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1778809539866">
+<meta name="app-built" content="1778809777578">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -8475,13 +8475,24 @@ function _aiMakeContext(){
   const recentH=sessions.filter(s=>s.date>=cutStr).reduce((a,s)=>a+s.hours,0).toFixed(1);
   const totalLogged=getTotalLogged();
   const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
-  return{subjLines,schedLines,goals,recentH,totalLogged,TOTAL_REQ,now,DAYS,subjs,schedule};
+  // All sessions (sorted newest first, compact format for context)
+  const sortedSessions=[...sessions].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const sessionLines=sortedSessions.length
+    ?sortedSessions.map(s=>{
+        const subj=subjs.find(x=>x.id===s.subjectId);
+        const subjName=subj?subj.name:(s.subjectId||'Unknown');
+        const timeStr=(s.start&&s.end)?' ('+s.start+'–'+s.end+')':'';
+        const notesStr=s.notes?' | notes: "'+s.notes+'"':'';
+        return '  '+s.date+' '+subjName+' '+s.hours.toFixed(2)+'h'+timeStr+notesStr;
+      }).join('\n')
+    :'  (no sessions logged yet)';
+  return{subjLines,schedLines,goals,recentH,totalLogged,TOTAL_REQ,now,DAYS,subjs,schedule,sessionLines,sessionCount:sessions.length};
 }
 
 function _aiSystemPrompt(ctx){
-  const {subjLines,schedLines,goals,recentH,totalLogged,TOTAL_REQ,now,DAYS,subjs}=ctx;
+  const {subjLines,schedLines,goals,recentH,totalLogged,TOTAL_REQ,now,DAYS,subjs,sessionLines,sessionCount}=ctx;
   const pct=TOTAL_REQ>0?(totalLogged/TOTAL_REQ*100).toFixed(1):0;
-  return `You are an AI study schedule coach for Noah, a TIHS (Texas International Homeschool) student working toward graduation by October 2027.
+  return `You are an AI study coach for Noah, a TIHS (Texas International Homeschool) student working toward graduation by October 2027.
 
 TODAY: ${DAYS[now.getDay()]}, ${now.toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'})}
 OVERALL PROGRESS: ${totalLogged.toFixed(1)}h / ${TOTAL_REQ}h logged (${pct}%)
@@ -8494,11 +8505,21 @@ ${subjLines}
 CURRENT WEEKLY SCHEDULE (recurring, day=0-6 Sun-Sat):
 ${schedLines}
 
+ALL LOGGED SESSIONS (${sessionCount} total, newest first — date subject hours time notes):
+${sessionLines}
+
 SUBJECT IDs: ${subjs.map(s=>s.id+'='+s.name).join(' | ')}
 DAYS: 0=Sunday 1=Monday 2=Tuesday 3=Wednesday 4=Thursday 5=Friday 6=Saturday
 TIME FORMAT: "HH:MM" 24h e.g. "09:00","14:30"
 
-You help Noah view, adjust and optimise his weekly recurring study schedule. Be conversational and concise.
+You have full access to Noah's session history including dates, subjects, durations, and notes. You can answer questions like:
+- How many sessions have "stretches" in the notes?
+- What's my longest session ever?
+- Which days do I study most?
+- How many hours did I log last month?
+- What subjects have I been neglecting recently?
+
+Be conversational and concise. When the user asks questions about their data, search the session list above and give a direct, accurate answer.
 
 When suggesting schedule changes, you MUST append an <actions> block after your message text, like this:
 <actions>[{"type":"add","day":1,"start":"09:00","end":"11:00","subjectId":"japanese","label":"Japanese","blockType":"study"},{"type":"delete","id":"BLOCK_ID"},{"type":"edit","id":"BLOCK_ID","start":"10:00","end":"12:00","label":"New label","day":2}]</actions>
@@ -8591,12 +8612,12 @@ function _aiRenderMessages(){
   const el=document.getElementById('ai-chat-messages');
   if(!el)return;
   const hasKey=!!localStorage.getItem('st_ai_key');
-  const SUGGESTIONS=['What should I study this week?','Build me a balanced weekly schedule','Add more Japanese blocks on weekdays','Which subject needs the most attention?','Recommend morning study blocks Mon-Fri'];
+  const SUGGESTIONS=['What should I study this week?','Which subject needs the most attention?','How many hours did I log this month?','What was my longest session ever?','Add more Japanese blocks on weekdays'];
   if(!_aiHistory.length){
     el.innerHTML='<div style="text-align:center;padding:32px 16px 20px">'+
       '<div style="font-size:36px;margin-bottom:12px">🎓</div>'+
-      '<div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px">Schedule Coach</div>'+
-      '<div style="font-size:13px;color:var(--text3);margin-bottom:24px;line-height:1.5">Ask me anything about your study schedule.<br>I can read your subjects, progress and existing blocks.</div>'+
+      '<div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px">Study Coach</div>'+
+      '<div style="font-size:13px;color:var(--text3);margin-bottom:24px;line-height:1.5">Ask me anything about your study data.<br>I can see every session you\'ve logged — dates, hours, subjects and notes.</div>'+
       (hasKey?'<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center">'+
         SUGGESTIONS.map(s=>'<button class="ai-suggestion-chip" onclick="_aiSendMsg(\''+escHtml(s)+'\')" >'+escHtml(s)+'</button>').join('')+
       '</div>':'<div class="ai-key-setup">'+
