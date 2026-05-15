@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1778809777578">
+<meta name="app-built" content="1778809985063">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -5532,7 +5532,7 @@ async function timerPageLog(){
     hrs=diffMins/60;
   }
   const sessions=loadSessions();
-  sessions.push({id:genId(),subjectId:timerSubjectId,date:ds,hours:hrs,start:startStr,end:endStr,notes});
+  sessions.push({id:genId(),subjectId:timerSubjectId,date:ds,hours:hrs,start:startStr,end:endStr,notes,loggedAt:new Date().toISOString()});
   saveSessions(sessions);
   const hoursStore=loadHours();
   hoursStore[timerSubjectId]=(hoursStore[timerSubjectId]||0)+hrs;
@@ -5749,7 +5749,7 @@ function _doLogSession(){
   const hours=mins/60;
   const sessions=loadSessions();
   const hoursStore=loadHours();
-  sessions.push({id:genId(),subjectId,date,start,end,hours,notes});
+  sessions.push({id:genId(),subjectId,date,start,end,hours,notes,loggedAt:new Date().toISOString()});
   hoursStore[subjectId]=(hoursStore[subjectId]||0)+hours;
   saveSessions(sessions);
   saveHours(hoursStore);
@@ -8243,7 +8243,7 @@ function submitQuickLog(){
   if(hrs<=0){showToast('End time must be after start time');return;}
   const sessions=loadSessions();
   const roundedHrs=parseFloat(hrs.toFixed(2));
-  sessions.push({id:genId(),subjectId,date,start,end,hours:roundedHrs,notes});
+  sessions.push({id:genId(),subjectId,date,start,end,hours:roundedHrs,notes,loggedAt:new Date().toISOString()});
   const hoursStore=loadHours();
   hoursStore[subjectId]=(hoursStore[subjectId]||0)+roundedHrs;
   saveSessions(sessions);
@@ -8483,53 +8483,59 @@ function _aiMakeContext(){
         const subjName=subj?subj.name:(s.subjectId||'Unknown');
         const timeStr=(s.start&&s.end)?' ('+s.start+'–'+s.end+')':'';
         const notesStr=s.notes?' | notes: "'+s.notes+'"':'';
-        return '  '+s.date+' '+subjName+' '+s.hours.toFixed(2)+'h'+timeStr+notesStr;
+        const loggedAtStr=s.loggedAt?' | logged: '+s.loggedAt.replace('T',' ').slice(0,16):'';
+        return '  '+s.date+' '+subjName+' '+s.hours.toFixed(2)+'h'+timeStr+notesStr+loggedAtStr;
       }).join('\n')
     :'  (no sessions logged yet)';
-  return{subjLines,schedLines,goals,recentH,totalLogged,TOTAL_REQ,now,DAYS,subjs,schedule,sessionLines,sessionCount:sessions.length};
+  // Todos
+  const todos=loadTodos();
+  const todoLines=todos.length
+    ?todos.map(t=>'  ['+(t.done?'x':' ')+'] '+(t.date||'')+(t.time?' '+t.time:'')+(t.subjectId?' ['+t.subjectId+']':'')+' '+t.text+(t.createdAt?' (created '+t.createdAt.slice(0,10)+')':'')).join('\n')
+    :'  (no todos)';
+  return{subjLines,schedLines,goals,recentH,totalLogged,TOTAL_REQ,now,DAYS,subjs,schedule,sessionLines,sessionCount:sessions.length,todoLines};
 }
 
 function _aiSystemPrompt(ctx){
-  const {subjLines,schedLines,goals,recentH,totalLogged,TOTAL_REQ,now,DAYS,subjs,sessionLines,sessionCount}=ctx;
+  const {subjLines,schedLines,goals,recentH,totalLogged,TOTAL_REQ,now,DAYS,subjs,sessionLines,sessionCount,todoLines}=ctx;
   const pct=TOTAL_REQ>0?(totalLogged/TOTAL_REQ*100).toFixed(1):0;
   return `You are an AI study coach for Noah, a TIHS (Texas International Homeschool) student working toward graduation by October 2027.
 
 TODAY: ${DAYS[now.getDay()]}, ${now.toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'})}
 OVERALL PROGRESS: ${totalLogged.toFixed(1)}h / ${TOTAL_REQ}h logged (${pct}%)
 RECENT PACE: ${recentH}h in last 7 days
-DAILY GOAL: ${goals.daily}h/day, ${goals.daysPerWeek||5} days/week
+DAILY GOAL: ${goals.daily}h/day | WEEKLY GOAL: ${goals.weekly||((goals.daily||0)*(goals.daysPerWeek||5)).toFixed(1)}h over ${goals.daysPerWeek||5} days/week
 
-SUBJECTS (id: logged / required):
+SUBJECTS (name | id | logged | required | %done):
 ${subjLines}
 
-CURRENT WEEKLY SCHEDULE (recurring, day=0-6 Sun-Sat):
+CURRENT WEEKLY SCHEDULE (recurring blocks, day=0-6 Sun-Sat):
 ${schedLines}
 
-ALL LOGGED SESSIONS (${sessionCount} total, newest first — date subject hours time notes):
+ALL LOGGED SESSIONS (${sessionCount} total, newest first):
+  Format: study-date  subject  hours  (start–end)  | notes: "..."  | logged: YYYY-MM-DD HH:MM (when Noah actually submitted this to the app)
 ${sessionLines}
+
+TODOS / REMINDERS:
+${todoLines}
 
 SUBJECT IDs: ${subjs.map(s=>s.id+'='+s.name).join(' | ')}
 DAYS: 0=Sunday 1=Monday 2=Tuesday 3=Wednesday 4=Thursday 5=Friday 6=Saturday
-TIME FORMAT: "HH:MM" 24h e.g. "09:00","14:30"
+TIME FORMAT: "HH:MM" 24h
 
-You have full access to Noah's session history including dates, subjects, durations, and notes. You can answer questions like:
-- How many sessions have "stretches" in the notes?
-- What's my longest session ever?
-- Which days do I study most?
-- How many hours did I log last month?
-- What subjects have I been neglecting recently?
+You have FULL access to all of Noah's app data. Answer questions about any of it directly and accurately:
+- Session history (dates, hours, subjects, notes, when actually logged)
+- Progress per subject and overall graduation progress
+- Schedule blocks and patterns
+- Todos and reminders
+- Goals and pace
 
-Be conversational and concise. When the user asks questions about their data, search the session list above and give a direct, accurate answer.
+Be conversational and concise. Search the data above and give exact answers — never say you don't have access.
 
-When suggesting schedule changes, you MUST append an <actions> block after your message text, like this:
+When suggesting schedule changes, append an <actions> block:
 <actions>[{"type":"add","day":1,"start":"09:00","end":"11:00","subjectId":"japanese","label":"Japanese","blockType":"study"},{"type":"delete","id":"BLOCK_ID"},{"type":"edit","id":"BLOCK_ID","start":"10:00","end":"12:00","label":"New label","day":2}]</actions>
 
-Action types:
-- "add": requires day(0-6), start, end, label, blockType("study"/"break"/"class"), optional subjectId
-- "delete": requires id (from the schedule list above)
-- "edit": requires id, then any fields to change (start, end, label, day, subjectId)
-
-IMPORTANT: Only include <actions> when you actually want to propose specific schedule changes. Omit it for general discussion or questions.`;
+Action types: "add" (day,start,end,label,blockType,subjectId?), "delete" (id), "edit" (id + any changed fields).
+IMPORTANT: Only include <actions> for actual schedule changes. Omit for questions/discussion.`;
 }
 
 function _simpleMarkdown(text){
