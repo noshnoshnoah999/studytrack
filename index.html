@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1778810828513">
+<meta name="app-built" content="1778811014048">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -3559,11 +3559,12 @@ function renderDashboard(){
 
 // ── LAYOUT EDITOR ─────────────────────────────────────────────────────────────
 const DASH_BLOCK_DEFS=[
-  {id:'now-next-banner', label:'Now / Next banner'},
-  {id:'today-card',      label:"Today's hours"},
-  {id:'stats-strip',     label:'Stats strip'},
-  {id:'focus-card',      label:'Focus Today'},
-  {id:'week-combined-card', label:'This Week & Last 7 Days'},
+  {id:'now-next-banner',  label:'Now / Next banner'},
+  {id:'today-card',       label:"Today's hours"},
+  {id:'dash-pace-strip',  label:'Pace strip (min / target / goal)'},
+  {id:'stats-strip',      label:'Stats strip'},
+  {id:'focus-card',       label:'Focus Today'},
+  {id:'week-combined-card',label:'This Week & Last 7 Days'},
 ];
 
 function loadDashLayout(){
@@ -3578,15 +3579,26 @@ function saveDashLayout(order){
 function applyDashLayout(){
   const container=document.getElementById('dash-blocks-container');
   if(!container)return;
-  const order=loadDashLayout();
+  // Merge saved order with any new blocks added since last save
+  const saved=loadDashLayout();
+  const allIds=DASH_BLOCK_DEFS.map(b=>b.id);
+  // Insert new blocks at their default position relative to neighbours
+  const order=[...saved];
+  allIds.forEach(id=>{
+    if(!order.includes(id)){
+      const defaultIdx=allIds.indexOf(id);
+      // Find the closest preceding block that IS in order
+      let insertAfter=-1;
+      for(let i=defaultIdx-1;i>=0;i--){
+        const pos=order.indexOf(allIds[i]);
+        if(pos!==-1){insertAfter=pos;break;}
+      }
+      order.splice(insertAfter+1,0,id);
+    }
+  });
   order.forEach(id=>{
     const el=document.getElementById(id);
     if(el)container.appendChild(el);
-  });
-  // Append any blocks not in the saved order (safety net)
-  DASH_BLOCK_DEFS.forEach(def=>{
-    const el=document.getElementById(def.id);
-    if(el&&el.parentElement!==container)container.appendChild(el);
   });
 }
 
