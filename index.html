@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1778813055484">
+<meta name="app-built" content="1778894957774">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -6270,65 +6270,7 @@ function _renderGradEstCard(){
   }
 }
 
-function _renderMilestones(){
-  const v=_gradSharedVars();
-  const {TOTAL_REQ,totalLogged,remaining,pace,paceIsGoal,now,MONTHS}=v;
-  const MILESTONES=[
-    {emoji:'⭐',name:'Quarter Way',hours:TOTAL_REQ*0.25},
-    {emoji:'🏅',name:'Halfway There',hours:TOTAL_REQ*0.5},
-    {emoji:'🔥',name:'Three Quarters',hours:TOTAL_REQ*0.75},
-    {emoji:'🏁',name:'Final 100 Hours',hours:TOTAL_REQ-100},
-    {emoji:'🎓',name:'Graduation',hours:TOTAL_REQ},
-  ];
-  const msHtml=MILESTONES.map(m=>{
-    const done=totalLogged>=m.hours;
-    const hoursNeeded=Math.max(0,m.hours-totalLogged);
-    const msPct=Math.min(100,totalLogged/m.hours*100);
-    const isGradMilestone=m.name==='Graduation';
-    let rightTop,rightBot,dotColor,progressBar='';
-    if(done){
-      dotColor='var(--ok)';
-      rightTop='<span style="font-size:11px;font-weight:700;background:var(--okl);color:var(--ok);padding:3px 9px;border-radius:100px">Done</span>';
-      rightBot='';
-    } else {
-      const isNext=hoursNeeded<=remaining;
-      dotColor=isNext?'var(--o)':'var(--text3)';
-      if(isGradMilestone){
-        rightTop='Oct 31, 2027';
-      } else {
-        const weeksAway=pace>0?hoursNeeded/pace:null;
-        const arrivalDate=weeksAway?new Date(now.getTime()+weeksAway*7*24*60*60*1000):null;
-        rightTop=arrivalDate?MONTHS[arrivalDate.getMonth()]+' '+arrivalDate.getFullYear():'—';
-      }
-      rightBot=fmtH(hoursNeeded)+' to go';
-      progressBar='<div class="ms-prog" style="margin-top:7px"><div class="ms-prog-fill" style="width:'+msPct.toFixed(1)+'%"></div></div>';
-    }
-    return'<div class="ms-row" style="display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border)">'+
-      '<div style="width:8px;height:8px;border-radius:50%;background:'+dotColor+';flex-shrink:0"></div>'+
-      '<div class="ms-body">'+
-        '<div class="ms-name">'+m.name+'</div>'+
-        '<div class="ms-sub">'+fmtH(m.hours)+' hrs</div>'+
-        progressBar+
-      '</div>'+
-      '<div class="ms-right" style="min-width:80px">'+
-        '<div class="ms-right-top">'+rightTop+'</div>'+
-        (rightBot?'<div class="ms-right-bot">'+rightBot+'</div>':'')+
-      '</div>'+
-    '</div>';
-  }).join('');
-  document.getElementById('grad-milestones-card').innerHTML=
-    '<div class="card-title" style="margin-bottom:4px">Milestones</div>'+
-    '<div style="font-size:12px;color:var(--text2);margin-bottom:16px">Estimated dates based on '+(paceIsGoal?'weekly goal':'recent pace')+'</div>'+
-    msHtml;
-  // Spring-pop milestone rows
-  const mc=document.getElementById('grad-milestones-card');
-  if(mc){
-    mc.querySelectorAll('.ms-row').forEach((r,i)=>{
-      r.classList.add('spring-pop');
-      r.style.animationDelay=(i*0.08)+'s';
-    });
-  }
-}
+// _renderMilestones removed — milestones card was removed from Graduation page
 
 // ── SUBJECT MODAL ─────────────────────────────────────────────────────────────
 let currentSubjectId=null;
