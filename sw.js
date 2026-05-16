@@ -41,6 +41,7 @@ self.addEventListener('push',e=>{
   }
   if(data.type==='todo'){
     actions.push({action:'mark-done',title:'✅ Mark Done'});
+    actions.push({action:'snooze',title:'⏰ Snooze 10m'});
     actions.push({action:'open-tasks',title:'Open App'});
   }
 
@@ -77,6 +78,25 @@ self.addEventListener('notificationclick',e=>{
   } else if(e.action==='mark-done'&&todoId){
     msgType='mark-todo-done';
     url='/studytrack/';
+  } else if(e.action==='snooze'){
+    // Re-show the notification after 10 minutes
+    e.waitUntil(new Promise(resolve=>{
+      setTimeout(()=>{
+        self.registration.showNotification(e.notification.title,{
+          body:e.notification.body,
+          icon:e.notification.icon||'',
+          tag:(e.notification.tag||'todo')+'-snoozed',
+          renotify:true,
+          actions:[
+            {action:'mark-done',title:'✅ Mark Done'},
+            {action:'snooze',title:'⏰ Snooze 10m'},
+            {action:'open-tasks',title:'Open App'}
+          ],
+          data:notifData
+        }).then(resolve).catch(resolve);
+      },10*60*1000);
+    }));
+    return;
   } else if(e.action==='open-tasks'){
     url='/studytrack/#log';
   } else {
