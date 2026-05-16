@@ -154,12 +154,13 @@ elif timer_start_ms and not timer_running:
     title = f"⏹ {clock}{label}"
 elif active:
     ends_in = to_mins(active.get("end","")) - now_mins
-    title = f"📖 {ends_in}m"
+    title = f"📖 {fmt_h(today_h)}  ▶ {active.get('label','Study')} ({ends_in}m left)"
 elif nxt:
     starts_in = to_mins(nxt.get("start","")) - now_mins
-    title = f"📚 {starts_in}m"
+    title = f"📚 {fmt_h(today_h)}  ⏭ {nxt.get('label','Study')} in {starts_in}m"
 else:
-    title = "✅" if today_h >= daily_goal else "📚"
+    done_icon = "✅" if today_h >= daily_goal else "📚"
+    title = f"{done_icon} {fmt_h(today_h)} today"
 
 print(title)
 print("---")

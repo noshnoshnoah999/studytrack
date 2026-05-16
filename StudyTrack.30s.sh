@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # StudyTrack macOS Menu Bar — paste into SwiftBar plugins folder
-# Refreshes every second. Supabase is only queried every 30s (cached locally).
-# Requires: curl, python3 (both pre-installed on macOS)
+# Refreshes every 1 minute. Requires: curl, python3 (both pre-installed on macOS)
 # <swiftbar.hideAbout>true</swiftbar.hideAbout>
 # <swiftbar.hideRunInTerminal>true</swiftbar.hideRunInTerminal>
 # <swiftbar.hideLastUpdated>true</swiftbar.hideLastUpdated>
@@ -9,38 +8,15 @@
 
 SB_URL="https://epaiazxcdcseijkhrncm.supabase.co"
 SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVwYWlhenhjZGNzZWlqa2hybmNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwMjQ0MzQsImV4cCI6MjA5MjYwMDQzNH0.h2t_kFLZ_YPvuJlzPPiyXVbOnW4Ub_52hdaYosMoOus"
-CACHE_FILE="/tmp/studytrack_cache.json"
-CACHE_TTL=30   # seconds between Supabase fetches
 
 python3 - <<PYEOF
-import json, urllib.request, datetime, time, os, sys
+import json, urllib.request, datetime, time
 
-SB_URL    = "$SB_URL"
-SB_KEY    = "$SB_KEY"
-APP_URL   = "https://noshnoshnoah999.github.io/studytrack/"
-CACHE_FILE = "$CACHE_FILE"
-CACHE_TTL  = $CACHE_TTL
+SB_URL = "$SB_URL"
+SB_KEY = "$SB_KEY"
+APP_URL = "https://noshnoshnoah999.github.io/studytrack/"
 
-# ── Cache helpers ─────────────────────────────────────────────────────────────
-def load_cache():
-    try:
-        with open(CACHE_FILE) as f:
-            c = json.load(f)
-        if time.time() - c.get("_ts", 0) < CACHE_TTL:
-            return c   # still fresh
-    except:
-        pass
-    return None
-
-def save_cache(data):
-    data["_ts"] = time.time()
-    try:
-        with open(CACHE_FILE, "w") as f:
-            json.dump(data, f)
-    except:
-        pass
-
-def sb_get(key, raw):
+def sb_get(key):
     try:
         req = urllib.request.Request(
             f"{SB_URL}/rest/v1/study_data?key=eq.{key}&select=value",
@@ -52,32 +28,8 @@ def sb_get(key, raw):
             v = rows[0]["value"]
             return json.loads(v) if isinstance(v, str) else v
     except:
-        return raw.get(key)   # fall back to cached value on network error
+        return None
 
-# ── Fetch or use cache ────────────────────────────────────────────────────────
-cache = load_cache()
-if cache:
-    sessions  = cache.get("st_sessions")  or []
-    goals     = cache.get("st_goals")     or {}
-    schedule  = cache.get("st_sched")     or []
-    overrides = cache.get("st_sched_overrides") or {}
-    timer     = cache.get("st_timer")     or {}
-    subjects  = cache.get("st_subjs")     or []
-else:
-    raw = {}
-    sessions  = sb_get("st_sessions",  raw) or []
-    goals     = sb_get("st_goals",     raw) or {}
-    schedule  = sb_get("st_sched",     raw) or []
-    overrides = sb_get("st_sched_overrides", raw) or {}
-    timer     = sb_get("st_timer",     raw) or {}
-    subjects  = sb_get("st_subjs",     raw) or []
-    save_cache({
-        "st_sessions": sessions, "st_goals": goals,
-        "st_sched": schedule, "st_sched_overrides": overrides,
-        "st_timer": timer, "st_subjs": subjects,
-    })
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
 def fmt_h(h):
     total = round(h * 60)
     hrs, mins = divmod(total, 60)
@@ -98,6 +50,14 @@ def to_mins(t):
     if not t: return 0
     parts = t.split(":")
     return int(parts[0]) * 60 + int(parts[1] if len(parts) > 1 else 0)
+
+# Fetch all data
+sessions  = sb_get("st_sessions")  or []
+goals     = sb_get("st_goals")     or {}
+schedule  = sb_get("st_sched")     or []
+overrides = sb_get("st_sched_overrides") or {}
+timer     = sb_get("st_timer")     or {}
+subjects  = sb_get("st_subjs")     or []
 
 now      = datetime.datetime.now()
 now_ts   = time.time()
@@ -149,22 +109,25 @@ if timer_running and timer_elapsed_secs > 0:
     label = f" · {timer_subj_name}" if timer_subj_name else ""
     title = f"⏱ {clock}{label}"
 elif timer_start_ms and not timer_running:
+    # Stopped but not yet logged
     clock = fmt_clock(timer_elapsed_secs)
     label = f" · {timer_subj_name}" if timer_subj_name else ""
     title = f"⏹ {clock}{label}"
 elif active:
     ends_in = to_mins(active.get("end","")) - now_mins
-    title = f"📖 {ends_in}m"
+    title = f"📖 {fmt_h(today_h)}  ▶ {active.get('label','Study')} ({ends_in}m left)"
 elif nxt:
     starts_in = to_mins(nxt.get("start","")) - now_mins
-    title = f"📚 {starts_in}m"
+    title = f"📚 {fmt_h(today_h)}  ⏭ {nxt.get('label','Study')} in {starts_in}m"
 else:
-    title = "✅" if today_h >= daily_goal else "📚"
+    done_icon = "✅" if today_h >= daily_goal else "📚"
+    title = f"{done_icon} {fmt_h(today_h)} today"
 
 print(title)
 print("---")
 
 # ── Dropdown ──────────────────────────────────────────────────────────────────
+# Timer section (if active or stopped)
 if timer_start_ms:
     clock = fmt_clock(timer_elapsed_secs)
     if timer_running:
@@ -176,6 +139,7 @@ if timer_start_ms:
     print(f"  Open to log | href={APP_URL}#timer size=11 color=#888888")
     print("---")
 
+# Progress bar
 goal_bar = ("█" * (pct // 10)) + ("░" * (10 - pct // 10))
 print(f"{goal_bar}  {pct}% of {fmt_h(daily_goal)} goal | font=Menlo size=12")
 print("---")
@@ -195,8 +159,9 @@ if not active and not nxt:
     print("No more blocks today | color=#888888 size=12")
     print("---")
 
-week_ago    = (now - datetime.timedelta(days=6)).strftime("%Y-%m-%d")
-week_h      = sum(s["hours"] for s in sessions if s.get("date","") >= week_ago)
+# Weekly total
+week_ago = (now - datetime.timedelta(days=6)).strftime("%Y-%m-%d")
+week_h   = sum(s["hours"] for s in sessions if s.get("date","") >= week_ago)
 weekly_goal = goals.get("weekly", 31.5)
 print(f"This week: {fmt_h(week_h)} of {fmt_h(weekly_goal)} | size=12")
 print("---")
