@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1778944483033">
+<meta name="app-built" content="1778944646011">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -858,8 +858,8 @@ a{color:inherit;text-decoration:none}
 /* ── AI CHAT ────────────────────────────────────────────────────────── */
 #page-ai{display:none;flex-direction:column;padding-bottom:0;overflow:hidden}
 #page-ai.active{display:flex}
-#ai-chat-messages{flex:1;overflow-y:auto;padding-bottom:110px;min-height:0}
-@media(max-width:699px){#ai-chat-messages{padding-bottom:160px}}
+#ai-chat-messages{flex:1;overflow-y:auto;padding-bottom:90px;min-height:0}
+@media(max-width:699px){#ai-chat-messages{padding-bottom:140px}}
 .ai-msg-row{display:flex;flex-direction:column;margin-bottom:16px;animation:slideUp 0.25s ease both}
 .ai-msg-row.user{align-items:flex-end}
 .ai-msg-row.assistant{align-items:flex-start}
@@ -8740,6 +8740,8 @@ function _aiRenderMessages(){
     }
     // Strip <actions> block from display text
     displayText=displayText.replace(/<actions>[\s\S]*?<\/actions>/g,'').trim();
+    // Skip empty messages (nothing to show)
+    if(!displayText&&!imgHtml)return;
     // Parse actions if assistant
     let actions=null;
     if(!isUser){
