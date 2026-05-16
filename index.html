@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1778943783250">
+<meta name="app-built" content="1778943932120">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -644,16 +644,6 @@ a{color:inherit;text-decoration:none}
   --shadow:0 1px 4px rgba(80,20,0,0.07),0 6px 20px rgba(80,20,0,0.1);
 }
 [data-theme="peach"] .modal-sheet,[data-theme="peach"] #bottom-nav{background:var(--bg2)}
-/* ── HONEY THEME ─────────────────────────────────────────────────────────── */
-[data-theme="honey"]{
-  --bg:#f0d070;--bg2:#f8dc88;--bg3:#e0c050;--bg4:#c8a838;
-  --border:rgba(0,0,0,0.09);
-  --text:#1e1400;--text2:#806000;--text3:#b08820;
-  --o:#a87800;--od:#906400;--ol:rgba(168,120,0,0.16);--od2:rgba(168,120,0,0.30);
-  --ok:#287840;--okl:rgba(40,120,64,0.18);--err:#b02828;--errl:rgba(176,40,40,0.13);
-  --shadow:0 1px 4px rgba(60,40,0,0.07),0 6px 20px rgba(60,40,0,0.1);
-}
-[data-theme="honey"] .modal-sheet,[data-theme="honey"] #bottom-nav{background:var(--bg2)}
 /* ── TERRACOTTA THEME ────────────────────────────────────────────────────── */
 [data-theme="terracotta"]{
   --bg:#e8a070;--bg2:#f0b080;--bg3:#d88060;--bg4:#c06848;
@@ -7197,6 +7187,7 @@ function applyTheme(){
   // Migrate removed themes
   if(name==='linen'){name='mocha';localStorage.setItem('st_theme','mocha');}
   if(name==='blush'){name='rose';localStorage.setItem('st_theme','rose');}
+  if(name==='honey'){name='ember';localStorage.setItem('st_theme','ember');}
   document.documentElement.setAttribute('data-theme',name==='pumpkin'?'':name);
 }
 // ── Theme carousel ────────────────────────────────────────────────────────
@@ -7211,7 +7202,6 @@ const THEMES_LIST=[
   {id:'sky',      name:'Sky',        bg:'#cce4f8', dot:'#1060b8'},
   {id:'lavender', name:'Lavender',   bg:'#ddd0f4', dot:'#6830b0'},
   {id:'peach',    name:'Peach',      bg:'#ffd0b0', dot:'#d05828'},
-  {id:'honey',    name:'Honey',      bg:'#f8dc88', dot:'#a87800'},
   {id:'terracotta',name:'Terracotta',bg:'#f0b080', dot:'#a03820'},
   {id:'mint',     name:'Mint',       bg:'#c0f0d8', dot:'#158050'},
   {id:'denim',    name:'Denim',      bg:'#c4d4ec', dot:'#1840a0'},
