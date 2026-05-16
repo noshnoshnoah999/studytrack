@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1778904179352">
+<meta name="app-built" content="1778904312424">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -1295,6 +1295,7 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
         <div id="dash-pace-strip" style="margin-top:10px"></div>
         <div class="stats-strip" id="stats-strip" style="margin-top:10px" data-block="stats-strip"></div>
         <div class="card" style="margin-top:10px" id="focus-card" data-block="focus-card"></div>
+        <div id="dash-tasks-card" style="margin-top:10px" data-block="dash-tasks-card"></div>
         <div class="card" style="margin-top:10px" id="week-combined-card" data-block="week-combined-card"></div>
       </div>
     </div>
@@ -3565,6 +3566,7 @@ function renderDashboard(){
 
 
   renderFocusCard();
+  renderDashTasksCard();
   renderWeeklySummary();
   markCardsDone();
   applyDashLayout();
@@ -3591,6 +3593,7 @@ const DASH_BLOCK_DEFS=[
   {id:'dash-pace-strip',  label:'Pace strip (min / target / goal)'},
   {id:'stats-strip',      label:'Stats strip'},
   {id:'focus-card',       label:'Focus Today'},
+  {id:'dash-tasks-card',  label:"Today's Tasks"},
   {id:'week-combined-card',label:'This Week & Last 7 Days'},
 ];
 
@@ -7537,6 +7540,40 @@ function renderFocusCard(){
   });
 }
 
+// ── DASHBOARD TASKS CARD ──────────────────────────────────────────────────────
+function renderDashTasksCard(){
+  const el=document.getElementById('dash-tasks-card');
+  if(!el)return;
+  const now=new Date();
+  const todayStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  const todos=loadTodos().filter(t=>t.date===todayStr&&!t.done);
+  if(!todos.length){el.innerHTML='';el.style.display='none';return;}
+  el.style.display='';
+  const rows=todos.map(t=>{
+    const timeStr=t.time?'<span style="font-size:11px;color:var(--text3);margin-left:6px">'+t.time+'</span>':'';
+    const subjEl=t.subjectId?'<span style="font-size:10px;font-weight:700;color:var(--o);margin-left:6px;text-transform:uppercase;letter-spacing:0.3px">'+escHtml(t.subjectId)+'</span>':'';
+    return'<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">'+
+      '<button onclick="_dashTaskDone(\''+t.id+'\')" style="flex-shrink:0;width:20px;height:20px;border-radius:50%;border:2px solid var(--border);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:all 0.15s" onmouseenter="this.style.borderColor=\'var(--o)\'" onmouseleave="this.style.borderColor=\'var(--border)\'"></button>'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:13px;font-weight:600;color:var(--text)">'+escHtml(t.text)+timeStr+subjEl+'</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+  el.innerHTML='<div class="card">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">'+
+      '<div class="card-title" style="margin-bottom:0">📋 Today\'s Tasks</div>'+
+      '<span style="font-size:11px;color:var(--text3)">'+todos.length+' remaining</span>'+
+    '</div>'+
+    rows+
+  '</div>';
+}
+function _dashTaskDone(id){
+  const todos=loadTodos();
+  const t=todos.find(x=>x.id===id);
+  if(t){t.done=true;saveTodos(todos);}
+  renderDashTasksCard();
+  _updateTasksBadge();
+}
 // ── WEEKLY SUMMARY ────────────────────────────────────────────────────────────
 function renderWeeklySummary(){
   const sessions=loadSessions();
