@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1778904312424">
+<meta name="app-built" content="1778904431648">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -7567,12 +7567,14 @@ function renderDashTasksCard(){
     rows+
   '</div>';
 }
-function _dashTaskDone(id){
+function _dashTaskDone(id){_markTodoDoneById(id);renderDashTasksCard();}
+function _markTodoDoneById(id){
   const todos=loadTodos();
   const t=todos.find(x=>x.id===id);
-  if(t){t.done=true;saveTodos(todos);}
+  if(t&&!t.done){t.done=true;saveTodos(todos);}
   renderDashTasksCard();
   _updateTasksBadge();
+  if(currentPage==='log')renderTasksPage();
 }
 // ── WEEKLY SUMMARY ────────────────────────────────────────────────────────────
 function renderWeeklySummary(){
@@ -7888,6 +7890,8 @@ async function syncFromCloud(){
         startTimerForSubject(e.data.subjectId, e.data.blockStart||null);
       } else if(e.data.type==='stop-log'){
         stopTimerAndLog();
+      } else if(e.data.type==='mark-todo-done'&&e.data.todoId){
+        _markTodoDoneById(e.data.todoId);
       }
     });
   }
@@ -7898,6 +7902,9 @@ async function syncFromCloud(){
     history.replaceState(null,'','/studytrack/');
   } else if(urlParams.get('stoplog')){
     stopTimerAndLog();
+    history.replaceState(null,'','/studytrack/');
+  } else if(urlParams.get('marktododone')){
+    _markTodoDoneById(urlParams.get('marktododone'));
     history.replaceState(null,'','/studytrack/');
   }
   // Refresh now/next banner every minute — pull latest overrides first so cross-device changes appear

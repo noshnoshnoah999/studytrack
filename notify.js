@@ -361,7 +361,7 @@ async function send(sub, title, body, tag, extra = {}, ttl = 120, urgency = 'hig
     const todoMins = toMins(t.time);
     if (t.date === todayStr && near(todoMins, 2, 7) && !sentTodos.includes(t.id)) {
       // TTL: drop after 5 min — task reminder is useless if delivered much later
-      await sendAll('Task due now', t.text, `todo-${t.id}`, { sentAt: Date.now() }, 300);
+      await sendAll('Task due now', t.text, `todo-${t.id}`, { sentAt: Date.now(), type: 'todo', todoId: t.id, url: '/studytrack/#log' }, 300);
       newlySentTodos.push(t.id);
     }
   }

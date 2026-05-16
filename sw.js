@@ -39,6 +39,10 @@ self.addEventListener('push',e=>{
   if(data.type==='block-end'&&data.subjectId){
     actions.push({action:'stop-log',title:'⏹ Stop & Log'});
   }
+  if(data.type==='todo'){
+    actions.push({action:'mark-done',title:'✅ Mark Done'});
+    actions.push({action:'open-tasks',title:'Open App'});
+  }
 
   e.waitUntil(
     self.registration.showNotification(data.title||'StudyTrack 📚',{
@@ -48,7 +52,7 @@ self.addEventListener('push',e=>{
       tag:data.tag||'studytrack',
       renotify:true,
       actions:actions,
-      data:{url:data.url||'/studytrack/',subjectId:data.subjectId||null,type:data.type||null,blockStart:data.blockStart||null}
+      data:{url:data.url||'/studytrack/',subjectId:data.subjectId||null,type:data.type||null,blockStart:data.blockStart||null,todoId:data.todoId||null}
     })
   );
 });
@@ -60,6 +64,7 @@ self.addEventListener('notificationclick',e=>{
   const subjectId=notifData.subjectId;
   const blockStart=notifData.blockStart;
 
+  const todoId=notifData.todoId;
   let url='/studytrack/';
   let msgType=null;
 
@@ -69,6 +74,11 @@ self.addEventListener('notificationclick',e=>{
   } else if(e.action==='stop-log'){
     url='/studytrack/?stoplog=1';
     msgType='stop-log';
+  } else if(e.action==='mark-done'&&todoId){
+    msgType='mark-todo-done';
+    url='/studytrack/';
+  } else if(e.action==='open-tasks'){
+    url='/studytrack/#log';
   } else {
     url=notifData.url||'/studytrack/';
   }
@@ -81,9 +91,16 @@ self.addEventListener('notificationclick',e=>{
             c.postMessage({type:'start-timer',subjectId:subjectId,blockStart:blockStart||null});
           } else if(msgType==='stop-log'){
             c.postMessage({type:'stop-log'});
+          } else if(msgType==='mark-todo-done'){
+            c.postMessage({type:'mark-todo-done',todoId:todoId});
+            return; // don't focus, keep in background
           }
           return c.focus();
         }
+      }
+      if(msgType==='mark-todo-done'){
+        // App not open — mark done via URL param so it's handled on next open
+        return clients.openWindow('/studytrack/?marktododone='+encodeURIComponent(todoId));
       }
       return clients.openWindow(url);
     })
