@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1779021464536">
+<meta name="app-built" content="1779021597841">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -7846,6 +7846,22 @@ async function syncFromCloud(){
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 (function init(){
+  // ── Purge large data from localStorage FIRST to prevent quota errors ──────
+  // AI chat history may contain leaked base64 image data (_imgDataUrl) from a prior bug.
+  // Strip it now before anything tries to write to localStorage.
+  try{
+    const raw=localStorage.getItem('st_ai_history');
+    if(raw&&raw.length>200000){ // >200KB — definitely has image data
+      localStorage.removeItem('st_ai_history'); // nuke it to free space immediately
+      // Re-save a cleaned version (text only)
+      try{
+        const parsed=JSON.parse(raw);
+        const cleaned=parsed.map(m=>({role:m.role,content:Array.isArray(m.content)?m.content.map(c=>c.type==='image'?{type:'text',text:'[photo]'}:c):m.content}));
+        localStorage.setItem('st_ai_history',JSON.stringify(cleaned));
+      }catch(e2){} // if still fails, history is just gone — sessions matter more
+    }
+  }catch(e){}
+  // ─────────────────────────────────────────────────────────────────────────
   if(!localStorage.getItem('st_subjs'))localStorage.setItem('st_subjs',JSON.stringify(JSON.parse(JSON.stringify(DEFAULT_SUBJECTS))));
   if(!localStorage.getItem('st_sched'))localStorage.setItem('st_sched',JSON.stringify(makeDefaultSchedule()));
   runMigrations(); // one-time data fixes (runs immediately before any render)
