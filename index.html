@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1779021022165">
+<meta name="app-built" content="1779021382232">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -2271,7 +2271,7 @@ function runMigrations(){
         if(el3&&!el3.done){el3.done=true;if(!el3.base||el3.base<150)el3.base=152;changed=true;}
         if(changed){
           localStorage.setItem('st_subjs',JSON.stringify(subjs));
-          sbPush('st_subjs',subjs);
+          sbPush('st_subjs',subjs,{silent:true});
           console.log('[Migration v6] Official credit sheet applied');
         }
       }
@@ -2291,7 +2291,7 @@ function runMigrations(){
           // Force push to cloud so all devices get the fix
           const newV=_getSchedV()+1;
           _setSchedLV(newV);
-          sbPush('st_sched',cleaned).then(()=>{_setSchedCV(newV);});
+          sbPush('st_sched',cleaned,{silent:true}).then(()=>{_setSchedCV(newV);});
         }
       }
     }catch(e){}
@@ -2338,7 +2338,7 @@ function runMigrations(){
 
     if(changed){
       localStorage.setItem('st_subjs',JSON.stringify(subjs));
-      sbPush('st_subjs',subjs);
+      sbPush('st_subjs',subjs,{silent:true});
       console.log('[Migration v4] Subject data updated');
     }
   }catch(e){console.warn('[Migration v4] Error:',e);}
@@ -7840,7 +7840,7 @@ async function syncFromCloud(){
     updateRecPrompt();
     if(updated)showPage(currentPage);
   }catch(e){
-    setSyncUI('error','Offline');
+    setSyncUI('error','Offline — '+e.message);
   }
 }
 
