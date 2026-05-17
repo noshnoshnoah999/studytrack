@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1779021382232">
+<meta name="app-built" content="1779021464536">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -8503,20 +8503,33 @@ function _aiSaveHistory(){
   if(_aiHistory.length>AI_HISTORY_LIMIT){
     _aiHistory=_aiHistory.slice(_aiHistory.length-AI_HISTORY_LIMIT);
   }
-  // Strip base64 image data before persisting (too large for localStorage/Supabase)
-  // Images are kept in memory (_aiHistory) for the current session display
+  // Strip base64 image data + internal display fields before persisting
+  // _imgDataUrl holds the full base64 image and must NOT be saved to localStorage
   const stripped=_aiHistory.map(m=>{
-    if(Array.isArray(m.content)){
-      return{...m,content:m.content.map(c=>c.type==='image'?{type:'text',text:'[photo]'}:c)};
-    }
-    return{role:m.role,content:m.content};
+    const content=Array.isArray(m.content)
+      ? m.content.map(c=>c.type==='image'?{type:'text',text:'[photo]'}:c)
+      : m.content;
+    return{role:m.role,content}; // intentionally omit _imgDataUrl, _isError, etc.
   });
   try{
     localStorage.setItem('st_ai_history',JSON.stringify(stripped));
     sbPush('st_ai_history',stripped,{silent:true});
   }catch(e){}
 }
-function _aiLoadHistory(){try{const h=localStorage.getItem('st_ai_history');if(h)return JSON.parse(h);}catch(e){}return[];}
+function _aiLoadHistory(){
+  try{
+    const h=localStorage.getItem('st_ai_history');
+    if(!h)return[];
+    const parsed=JSON.parse(h);
+    // Strip any _imgDataUrl that leaked into saved history (old bug) and re-save clean
+    const cleaned=parsed.map(m=>({role:m.role,content:Array.isArray(m.content)?m.content.map(c=>c.type==='image'?{type:'text',text:'[photo]'}:c):m.content}));
+    const cleanedStr=JSON.stringify(cleaned);
+    if(cleanedStr.length<h.length){
+      localStorage.setItem('st_ai_history',cleanedStr); // overwrite with cleaned version
+    }
+    return cleaned;
+  }catch(e){}return[];
+}
 function _aiClearHistory(){if(_aiHistory.length&&!confirm('Clear all chat history?'))return;_aiHistory=[];_aiSaveHistory();_aiRenderMessages();}
 function _aiRetry(){
   // Remove the error message, then resend the last user message
