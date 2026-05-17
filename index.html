@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1779021597841">
+<meta name="app-built" content="1779021716007">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -7797,7 +7797,18 @@ async function syncFromCloud(){
           }
           // If local had sessions cloud didn't, push the merged set back
           if(merged.length>cloud.length)sbPush('st_sessions',merged);
-          localStorage.setItem(k,JSON.stringify(merged));
+          // Write with quota recovery — if full, nuke non-critical data and retry
+          const _writeSessionsSafe=(data)=>{
+            try{localStorage.setItem('st_sessions',JSON.stringify(data));}
+            catch(e){
+              // Emergency space recovery: remove large non-critical items
+              ['st_ai_history','st_hours','st_sched_overrides','st_templates','st_notif_templates','st_notif_prefs'].forEach(k2=>localStorage.removeItem(k2));
+              try{localStorage.setItem('st_sessions',JSON.stringify(data));}catch(e2){
+                console.error('localStorage full even after cleanup:',e2.message);
+              }
+            }
+          };
+          _writeSessionsSafe(merged);
         } else if(k==='st_sched'){
           // Only take cloud schedule if local has no unconfirmed edits
           const lv=_getSchedV(),cv=_getSchedCV();
@@ -7840,7 +7851,13 @@ async function syncFromCloud(){
     updateRecPrompt();
     if(updated)showPage(currentPage);
   }catch(e){
-    setSyncUI('error','Offline — '+e.message);
+    if(e.message&&e.message.includes('quota')){
+      // localStorage full — clear non-critical data and retry once
+      ['st_ai_history','st_hours','st_sched_overrides','st_templates','st_notif_templates','st_notif_prefs'].forEach(k=>localStorage.removeItem(k));
+      try{await syncFromCloud();}catch(e2){setSyncUI('error','Offline — '+e2.message);}
+    } else {
+      setSyncUI('error','Offline — '+e.message);
+    }
   }
 }
 
