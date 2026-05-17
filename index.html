@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1779020733370">
+<meta name="app-built" content="1779021022165">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -7747,17 +7747,23 @@ function setSyncUI(status,msg){
   if(lbl)lbl.textContent=msg;
 }
 
-async function sbPush(key,value){
-  setSyncUI('syncing','Saving…');
+async function sbPush(key,value,{silent=false}={}){
+  if(!silent)setSyncUI('syncing','Saving…');
   try{
     const res=await fetch(SB_URL+'/rest/v1/study_data',{
       method:'POST',
       headers:{...SB_HDR,'Prefer':'resolution=merge-duplicates'},
       body:JSON.stringify({key,value,updated_at:new Date().toISOString()})
     });
-    if(res.ok){setSyncUI('synced','Synced ✓');}
-    else{setSyncUI('error','Sync error');}
-  }catch(e){setSyncUI('error','Offline');}
+    if(!silent){
+      if(res.ok){setSyncUI('synced','Synced ✓');}
+      else{setSyncUI('error','Sync error');}
+    }
+    return res.ok;
+  }catch(e){
+    if(!silent)setSyncUI('error','Offline');
+    return false;
+  }
 }
 
 async function sbPull(key){
@@ -7826,7 +7832,7 @@ async function syncFromCloud(){
       const next=JSON.stringify(recomputed);
       if(prev!==next){
         localStorage.setItem('st_hours',next);
-        sbPush('st_hours',recomputed);
+        sbPush('st_hours',recomputed,{silent:true});
       }
     }
     setSyncUI('synced','Synced ✓');
@@ -8507,7 +8513,7 @@ function _aiSaveHistory(){
   });
   try{
     localStorage.setItem('st_ai_history',JSON.stringify(stripped));
-    sbPush('st_ai_history',stripped);
+    sbPush('st_ai_history',stripped,{silent:true});
   }catch(e){}
 }
 function _aiLoadHistory(){try{const h=localStorage.getItem('st_ai_history');if(h)return JSON.parse(h);}catch(e){}return[];}
