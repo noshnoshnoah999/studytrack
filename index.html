@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1779020683012">
+<meta name="app-built" content="1779020733370">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -8512,6 +8512,16 @@ function _aiSaveHistory(){
 }
 function _aiLoadHistory(){try{const h=localStorage.getItem('st_ai_history');if(h)return JSON.parse(h);}catch(e){}return[];}
 function _aiClearHistory(){if(_aiHistory.length&&!confirm('Clear all chat history?'))return;_aiHistory=[];_aiSaveHistory();_aiRenderMessages();}
+function _aiRetry(){
+  // Remove the error message, then resend the last user message
+  if(_aiHistory.length&&_aiHistory[_aiHistory.length-1]._isError)_aiHistory.pop();
+  const lastUser=_aiHistory.slice().reverse().find(m=>m.role==='user');
+  if(!lastUser)return;
+  // Remove it from history so it gets re-added cleanly
+  _aiHistory=_aiHistory.filter(m=>m!==lastUser);
+  _aiSaveHistory();
+  _aiSendMsg(typeof lastUser.content==='string'?lastUser.content:'');
+}
 let _aiHistory=_aiLoadHistory();   // [{role,content}] — persisted to localStorage
 let _aiThinking=false;
 let _aiPendingActions=null; // actions waiting for user confirmation
@@ -8754,7 +8764,8 @@ function _aiRenderMessages(){
     }
     html+='<div class="ai-msg-row '+(isUser?'user':'assistant')+'">'+
       '<div class="ai-sender">'+(isUser?'You':'✦ Coach')+'</div>'+
-      '<div class="ai-bubble '+(isUser?'user':'assistant')+'">'+imgHtml+(displayText?_simpleMarkdown(displayText):'')+'</div>'+
+      '<div class="ai-bubble '+(isUser?'user':'assistant')+'" style="'+(msg._isError?'background:var(--errl);color:var(--err)':'')+'">'+imgHtml+(displayText?_simpleMarkdown(displayText):'')+'</div>'+
+      (msg._isError?'<button onclick="_aiRetry()" style="margin-top:4px;background:var(--o);color:#fff;border:none;border-radius:8px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer">↺ Try again</button>':'')+
       (actions&&actions.length?
         '<div class="ai-actions-card" id="ai-action-card-'+idx+'">'+
           (msg._applied
@@ -8829,7 +8840,17 @@ async function _aiSendMsg(text,image=null){
     _aiRenderMessages();
   }catch(e){
     _aiThinking=false;
-    _aiHistory.push({role:'assistant',content:'⚠ Error: '+e.message+'\n\nCheck your API key in settings.'});
+    const isServerErr=e.message&&(e.message.includes('500')||e.message.toLowerCase().includes('internal server')||e.message.includes('overloaded'));
+    const isKeyErr=e.message&&(e.message.includes('401')||e.message.includes('403')||e.message.toLowerCase().includes('api key'));
+    let errMsg;
+    if(isServerErr){
+      errMsg='⚠ Anthropic had a server hiccup — just try again, it usually resolves immediately.';
+    } else if(isKeyErr){
+      errMsg='⚠ API key error — check your key in Settings.';
+    } else {
+      errMsg='⚠ '+e.message;
+    }
+    _aiHistory.push({role:'assistant',content:errMsg,_isError:true});
     _aiSaveHistory();
     _aiRenderMessages();
   }
