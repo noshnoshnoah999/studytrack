@@ -1886,6 +1886,8 @@ function _openCardioForm(date,start,end,notes){
   if(start){const p=start.split(':');url+='&entry.2130026531_hour='+p[0]+'&entry.2130026531_minute='+(p[1]||'00');}
   if(end){const p=end.split(':');url+='&entry.1426010469_hour='+p[0]+'&entry.1426010469_minute='+(p[1]||'00');}
   if(notes) url+='&entry.706383331='+encodeURIComponent(notes);
+  // Pre-tick the contract confirm checkbox
+  url+='&entry.144075977='+encodeURIComponent('確認しました / Confirmed');
   // Remove any existing overlay first
   const existing=document.getElementById('cardio-form-overlay');
   if(existing)existing.remove();
@@ -1897,7 +1899,7 @@ function _openCardioForm(date,start,end,notes){
     '<div style="background:var(--bg2);border-radius:20px;padding:28px 24px;max-width:340px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,0.3)">'+
       '<div style="font-size:36px;margin-bottom:12px">🏃</div>'+
       '<div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px">Session Logged!</div>'+
-      '<div style="font-size:14px;color:var(--text2);margin-bottom:20px">Date & times pre-filled — just add your notes</div>'+
+      '<div style="font-size:14px;color:var(--text2);margin-bottom:20px">Date, times & confirm checkbox pre-filled</div>'+
       '<a href="'+url+'" target="_blank" rel="noopener" onclick="document.getElementById(\'cardio-form-overlay\').remove()" '+
         'style="display:block;background:var(--o);color:#fff;font-weight:700;font-size:16px;padding:14px;border-radius:12px;text-decoration:none;margin-bottom:12px">'+
         'Open Cardio Form →'+
