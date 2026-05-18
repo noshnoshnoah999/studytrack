@@ -8046,12 +8046,15 @@ async function _checkVersion(){
       el.innerHTML='<span style="width:6px;height:6px;border-radius:50%;background:var(--o);flex-shrink:0;animation:syncpulse 1s infinite"></span><span style="color:var(--o);font-weight:700">Update ready · '+ago+'</span>';
       el.style.cursor='pointer';
       el.onclick=async()=>{
-        // Clear SW caches then force-navigate to bust browser cache
+        // Clear SW caches + unregister SW
         try{
           if('caches' in window){const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)));}
           if('serviceWorker' in navigator){const rs=await navigator.serviceWorker.getRegistrations();await Promise.all(rs.map(r=>r.unregister()));}
         }catch(e){}
-        location.href=location.origin+'/studytrack/?_='+Date.now();
+        // Force a true network fetch of the HTML to bust any CDN/HTTP cache layer,
+        // THEN navigate — this guarantees the browser has the fresh file ready
+        try{await fetch(location.origin+'/studytrack/',{cache:'reload'});}catch(e){}
+        location.replace(location.origin+'/studytrack/?v='+Date.now());
       };
     }
   }catch(e){
