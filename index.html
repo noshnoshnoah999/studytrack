@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1779094614230">
+<meta name="app-built" content="1779095228940">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -2154,7 +2154,7 @@ function daysBetween(a,b){
 // ── DEFAULT DATA ──────────────────────────────────────────────────────────────
 const DEFAULT_SUBJECTS=[
   // Foreign Language — 2 credits = 300h
-  {id:'japanese',    name:'Japanese',            req:300, base:31.3,  passive:false, locked:false, done:false},
+  {id:'japanese',    name:'Japanese',            req:300, base:37.5,  passive:false, locked:false, done:false},
   // Social Studies
   {id:'cwp',         name:'CWP / World History', req:75,  base:13.2,  passive:false, locked:false, done:false},
   // English: Grade 10→11→12 in order, 1 credit (150h) each
@@ -2166,15 +2166,15 @@ const DEFAULT_SUBJECTS=[
   {id:'el2',         name:'Electives 2',         req:150, base:151.4, passive:true,  locked:false, done:true },
   {id:'el3',         name:'Electives 3',         req:150, base:152,   passive:true,  locked:false, done:true },
   // EL4 = extra credit — improves GPA but does NOT count toward graduation hours/credits
-  {id:'el4',         name:'Electives 4',         req:75,  base:6.6,   passive:true,  locked:false, done:false, extraCredit:true},
+  {id:'el4',         name:'Electives 4',         req:75,  base:29.5,  passive:true,  locked:false, done:false, extraCredit:true},
   // History
-  {id:'wa_hist',     name:'WA State History',    req:75,  base:6.7,   passive:false, locked:false, done:false},
-  {id:'us_hist',     name:'US History',          req:150, base:18.8,  passive:false, locked:false, done:false},
+  {id:'wa_hist',     name:'WA State History',    req:75,  base:8.1,   passive:false, locked:false, done:false},
+  {id:'us_hist',     name:'US History',          req:150, base:23.2,  passive:false, locked:false, done:false},
   {id:'civics',      name:'Civics',              req:75,  base:1.7,   passive:false, locked:false, done:false},
   // Art — 2 credits = 300h
   {id:'fine_art',    name:'Fine Art / Film',     req:300, base:28.9,  passive:true,  locked:false, done:false},
   // PE — 1.5 credits = 225h
-  {id:'pe',          name:'PE / Cardio',         req:225, base:34.5,  passive:true,  locked:false, done:false},
+  {id:'pe',          name:'PE / Cardio',         req:225, base:50.1,  passive:true,  locked:false, done:false},
   // Health
   {id:'health',      name:'Health Science',      req:75,  base:3.3,   passive:false, locked:false, done:false},
   // Science — 1 credit each remaining
