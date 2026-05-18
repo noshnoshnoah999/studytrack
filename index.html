@@ -9169,7 +9169,11 @@ window.addEventListener('load',function(){
       var tg=gl.daily||6;
       var d=new Date();d.setDate(d.getDate()-1);
       var ds=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
-      var yh=ss.filter(function(s){return s.date===ds;}).reduce(function(a,s){return a+(s.hours||0);},0);
+      var subjs=JSON.parse(localStorage.getItem('st_subjs')||'[]');
+      var ecSet=new Set(subjs.filter(function(s){return s.extraCredit;}).map(function(s){return s.id;}));
+      // Also add built-in extra credit IDs (el4 etc) in case st_subjs not yet loaded
+      ['el4'].forEach(function(id){ecSet.add(id);});
+      var yh=ss.filter(function(s){return s.date===ds&&!ecSet.has(s.subjectId);}).reduce(function(a,s){return a+(s.hours||0);},0);
       var pc=tg>0?yh/tg:1;
       function hm(h){var tot=Math.round(h*60);var hr=Math.floor(tot/60),mn=tot%60;return hr&&mn?hr+'h '+mn+'m':hr?hr+'h':mn+'m';}
       function yhStr(){return Math.round(yh*10)/10+'h ('+hm(yh)+')';}
