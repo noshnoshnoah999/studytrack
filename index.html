@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1779099495818">
+<meta name="app-built" content="1779099557929">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -1879,12 +1879,13 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
 <script>
 // ── UTILITIES ─────────────────────────────────────────────────────────────────
 function genId(){return Math.random().toString(36).slice(2,9)+Math.random().toString(36).slice(2,5)}
-function _openCardioForm(date,start,end){
+function _openCardioForm(date,start,end,notes){
   // Build pre-filled URL using Google Forms entry IDs extracted from form source
   let url='https://docs.google.com/forms/d/e/1FAIpQLScr3Pp0jDNTQ6P3n6YAFLBzcuKWqb6YiC6lQtJqU3aKFNw-iQ/viewform?usp=pp_url';
   if(date) url+='&entry.911550456='+encodeURIComponent(date);
   if(start){const p=start.split(':');url+='&entry.2130026531_hour='+p[0]+'&entry.2130026531_minute='+(p[1]||'00');}
   if(end){const p=end.split(':');url+='&entry.1426010469_hour='+p[0]+'&entry.1426010469_minute='+(p[1]||'00');}
+  if(notes) url+='&entry.706383331='+encodeURIComponent(notes);
   // Remove any existing overlay first
   const existing=document.getElementById('cardio-form-overlay');
   if(existing)existing.remove();
@@ -5656,7 +5657,7 @@ async function timerPageLog(){
   if(currentPage==='progress')renderProgress();
   if(currentPage==='subjects')renderSubjectsPage();
   if(currentPage==='graduation')renderGraduationPage();
-  if(timerSubjectId==='pe') _openCardioForm(ds,startStr,endStr);
+  if(timerSubjectId==='pe') _openCardioForm(ds,startStr,endStr,notes);
 }
 
 
@@ -5879,7 +5880,7 @@ function _doLogSession(){
   if(currentPage==='subjects')renderSubjectsPage();
   if(currentPage==='graduation')renderGraduationPage();
   // Auto-open cardio Google Form after logging a PE session
-  if(subjectId==='pe') _openCardioForm(date,start,end);
+  if(subjectId==='pe') _openCardioForm(date,start,end,notes);
 }
 
 function deleteEntry(id){
