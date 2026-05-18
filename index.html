@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1779099042049">
+<meta name="app-built" content="1779099157758">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -1881,14 +1881,28 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
 function genId(){return Math.random().toString(36).slice(2,9)+Math.random().toString(36).slice(2,5)}
 function _openCardioForm(){
   const url='https://docs.google.com/forms/d/e/1FAIpQLScr3Pp0jDNTQ6P3n6YAFLBzcuKWqb6YiC6lQtJqU3aKFNw-iQ/viewform';
-  // On macOS Safari PWA, window.open opens inside the app — use Chrome URL scheme instead
-  const isMacPWA=navigator.userAgent.includes('Macintosh')&&!navigator.userAgent.includes('Chrome')&&window.navigator.standalone!==undefined;
-  const isMac=navigator.userAgent.includes('Macintosh')&&!navigator.userAgent.includes('iPhone')&&!navigator.userAgent.includes('iPad');
-  if(isMac){
-    // Force open in Chrome on Mac
-    window.location.href=url.replace('https://','googlechromes://');
-  }else{
-    window.open(url,'_blank');
+  // Show a prompt with a real anchor link — user-click guarantees it opens outside the PWA
+  let overlay=document.getElementById('cardio-form-overlay');
+  if(!overlay){
+    overlay=document.createElement('div');
+    overlay.id='cardio-form-overlay';
+    overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px';
+    overlay.innerHTML=
+      '<div style="background:var(--bg2);border-radius:20px;padding:28px 24px;max-width:340px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,0.3)">'+
+        '<div style="font-size:36px;margin-bottom:12px">🏃</div>'+
+        '<div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px">Session Logged!</div>'+
+        '<div style="font-size:14px;color:var(--text2);margin-bottom:20px">Now fill in your cardio journal form</div>'+
+        '<a href="'+url+'" target="_blank" rel="noopener" onclick="document.getElementById(\'cardio-form-overlay\').remove()" '+
+          'style="display:block;background:var(--o);color:#fff;font-weight:700;font-size:16px;padding:14px;border-radius:12px;text-decoration:none;margin-bottom:12px">'+
+          'Open Cardio Form →'+
+        '</a>'+
+        '<button onclick="document.getElementById(\'cardio-form-overlay\').remove()" '+
+          'style="background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer;padding:6px">'+
+          'Skip for now'+
+        '</button>'+
+      '</div>';
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
   }
 }
 
@@ -5638,11 +5652,7 @@ async function timerPageLog(){
   if(currentPage==='progress')renderProgress();
   if(currentPage==='subjects')renderSubjectsPage();
   if(currentPage==='graduation')renderGraduationPage();
-  if(timerSubjectId==='pe'){
-    setTimeout(()=>{
-      _openCardioForm();
-    },600);
-  }
+  if(timerSubjectId==='pe') _openCardioForm();
 }
 
 
@@ -5865,11 +5875,7 @@ function _doLogSession(){
   if(currentPage==='subjects')renderSubjectsPage();
   if(currentPage==='graduation')renderGraduationPage();
   // Auto-open cardio Google Form after logging a PE session
-  if(subjectId==='pe'){
-    setTimeout(()=>{
-      _openCardioForm();
-    },600);
-  }
+  if(subjectId==='pe') _openCardioForm();
 }
 
 function deleteEntry(id){
