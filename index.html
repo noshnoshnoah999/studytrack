@@ -6775,11 +6775,9 @@ function renderPlan(){
         else if(logged>=baseTarget*0.45){cls='partial';val=fmtH(logged);}
         else{cls='miss';val=fmtH(logged);}
       } else {
-        // Future: project forward day by day
-        // Assume smartTarget is hit every day going forward; deficit pays down
-        const dayTarget=personalTarget;
+        // Future: show empty
         cls='future';
-        val=fmtH(dayTarget);
+        val='—';
       }
       cells+='<div class="plan-cal-cell '+cls+'"><div class="plan-cal-day">'+d+'</div><div class="plan-cal-val">'+val+'</div></div>';
     }
@@ -6961,8 +6959,7 @@ function _renderStudyCalendar(targetElId){
         cells+='<div class="plan-cal-cell '+todayCls+'"><div class="plan-cal-day">'+d+'</div><div class="plan-cal-val">'+val2+'</div></div>';
         continue;
       }else{
-        const dayTarget=personalTarget;
-        cls='future';val=fmtH(dayTarget);
+        cls='future';val='—';
       }
       cells+='<div class="plan-cal-cell '+cls+'"><div class="plan-cal-day">'+d+'</div><div class="plan-cal-val">'+val+'</div></div>';
     }
