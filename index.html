@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1779098650088">
+<meta name="app-built" content="1779099042049">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -1879,6 +1879,18 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
 <script>
 // ── UTILITIES ─────────────────────────────────────────────────────────────────
 function genId(){return Math.random().toString(36).slice(2,9)+Math.random().toString(36).slice(2,5)}
+function _openCardioForm(){
+  const url='https://docs.google.com/forms/d/e/1FAIpQLScr3Pp0jDNTQ6P3n6YAFLBzcuKWqb6YiC6lQtJqU3aKFNw-iQ/viewform';
+  // On macOS Safari PWA, window.open opens inside the app — use Chrome URL scheme instead
+  const isMacPWA=navigator.userAgent.includes('Macintosh')&&!navigator.userAgent.includes('Chrome')&&window.navigator.standalone!==undefined;
+  const isMac=navigator.userAgent.includes('Macintosh')&&!navigator.userAgent.includes('iPhone')&&!navigator.userAgent.includes('iPad');
+  if(isMac){
+    // Force open in Chrome on Mac
+    window.location.href=url.replace('https://','googlechromes://');
+  }else{
+    window.open(url,'_blank');
+  }
+}
 
 // ── NAV CONFIG & ORDER ────────────────────────────────────────────────────────
 const NAV_ITEMS=[
@@ -5628,7 +5640,7 @@ async function timerPageLog(){
   if(currentPage==='graduation')renderGraduationPage();
   if(timerSubjectId==='pe'){
     setTimeout(()=>{
-      window.open('https://docs.google.com/forms/d/e/1FAIpQLScr3Pp0jDNTQ6P3n6YAFLBzcuKWqb6YiC6lQtJqU3aKFNw-iQ/viewform','_blank');
+      _openCardioForm();
     },600);
   }
 }
@@ -5855,7 +5867,7 @@ function _doLogSession(){
   // Auto-open cardio Google Form after logging a PE session
   if(subjectId==='pe'){
     setTimeout(()=>{
-      window.open('https://docs.google.com/forms/d/e/1FAIpQLScr3Pp0jDNTQ6P3n6YAFLBzcuKWqb6YiC6lQtJqU3aKFNw-iQ/viewform','_blank');
+      _openCardioForm();
     },600);
   }
 }
