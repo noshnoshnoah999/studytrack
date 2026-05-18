@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1779095228940">
+<meta name="app-built" content="1779096748655">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -2279,6 +2279,33 @@ function runMigrations(){
     localStorage.setItem('st_migration_v6b','1');
   }
   // ── Migration v7: remove block ka4i74ykol (Science Friday — deleted via Coach) ──
+  // ── Migration v8: sync base hours to teacher's May 2026 progress report ─────
+  if(!localStorage.getItem('st_migration_v8')){
+    try{
+      const raw=localStorage.getItem('st_subjs');
+      if(raw){
+        const subjs=JSON.parse(raw);
+        const sessions=JSON.parse(localStorage.getItem('st_sessions')||'[]');
+        // Teacher's confirmed totals (logged+base combined) from May 2026 report
+        const teacherTotals={japanese:37.5,wa_hist:8.1,us_hist:23.2,pe:50.1,el4:29.5};
+        let changed=false;
+        subjs.forEach(s=>{
+          if(teacherTotals[s.id]!==undefined){
+            // Work out how many hours are logged via sessions for this subject
+            const sessionH=sessions.filter(x=>x.subjectId===s.id).reduce((a,x)=>a+(x.hours||0),0);
+            // New base = teacher total minus session hours (so total = teacher total)
+            const newBase=Math.max(0,parseFloat((teacherTotals[s.id]-sessionH).toFixed(4)));
+            if(Math.abs((s.base||0)-newBase)>0.01){s.base=newBase;changed=true;}
+          }
+        });
+        if(changed){
+          localStorage.setItem('st_subjs',JSON.stringify(subjs));
+          sbPush('st_subjs',subjs,{silent:true});
+        }
+      }
+    }catch(e){}
+    localStorage.setItem('st_migration_v8','1');
+  }
   if(!localStorage.getItem('st_migration_v7')){
     try{
       const raw=localStorage.getItem('st_sched');
