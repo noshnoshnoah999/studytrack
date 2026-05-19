@@ -8115,18 +8115,11 @@ async function _checkVersion(){
       el.title='New update deployed '+ago+'\nClick to reload';
       el.innerHTML='<span style="width:6px;height:6px;border-radius:50%;background:var(--o);flex-shrink:0;animation:syncpulse 1s infinite"></span><span style="color:var(--o);font-weight:700">Update ready · '+ago+'</span>';
       el.style.cursor='pointer';
-      el.onclick=async()=>{
+      el.onclick=()=>{
         el.style.pointerEvents='none';
         el.innerHTML='<span style="color:var(--text2)">Updating…</span>';
-        try{
-          // Clear SW caches & unregister SW first
-          if('caches' in window){const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)));}
-          if('serviceWorker' in navigator){const rs=await navigator.serviceWorker.getRegistrations();await Promise.all(rs.map(r=>r.unregister()));}
-          // Prime the browser HTTP cache with a fresh copy before reloading
-          await fetch(location.origin+'/studytrack/',{cache:'reload'});
-        }catch(e){}
-        // Hard reload — tells WebKit to bypass its cache entirely
-        location.reload(true);
+        // SW now intercepts navigation with cache:'no-cache' so a plain reload gets fresh HTML
+        location.reload();
       };
     }
   }catch(e){

@@ -1,5 +1,5 @@
-// StudyTrack Service Worker — handles background push notifications
-const CACHE='studytrack-v2';
+// StudyTrack Service Worker — handles background push notifications + always-fresh HTML
+const CACHE='studytrack-v3';
 
 self.addEventListener('install',e=>{
   self.skipWaiting();
@@ -7,6 +7,17 @@ self.addEventListener('install',e=>{
 
 self.addEventListener('activate',e=>{
   e.waitUntil(clients.claim());
+});
+
+// Always fetch the main HTML document fresh from network so updates are instant
+self.addEventListener('fetch',e=>{
+  if(e.request.mode==='navigate'){
+    e.respondWith(
+      fetch(e.request,{cache:'no-cache'}).catch(()=>caches.match(e.request))
+    );
+    return;
+  }
+  // Everything else: default browser behaviour
 });
 
 // Show notification when a push arrives
