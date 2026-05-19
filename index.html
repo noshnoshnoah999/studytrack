@@ -1241,7 +1241,6 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
         <div class="sync-dot idle" id="sync-dot-sb"></div>
         <span class="sync-label" id="sync-label-sb">Connecting…</span>
       </div>
-      <div id="version-row" style="display:flex;align-items:center;gap:5px;margin-top:5px;font-size:10px;color:var(--text3);cursor:default" title=""></div>
       <div id="export-panel" style="display:none">
         <div class="export-panel">
           <button class="export-btn" onclick="exportReport()">📄 Print / Save Report</button>
@@ -8092,43 +8091,6 @@ async function syncFromCloud(){
   updateNotifBell(); // initialise badge count on load
 })();
 
-// ── Version / deploy check ────────────────────────────────────────────────────
-const _APP_BUILT=parseInt((document.querySelector('meta[name="app-built"]')||{}).content||'0',10);
-async function _checkVersion(){
-  const el=document.getElementById('version-row');
-  if(!el)return;
-  try{
-    const res=await fetch('/studytrack/version.txt?_='+Date.now(),{cache:'no-store'});
-    if(!res.ok)throw new Error();
-    const deployed=parseInt((await res.text()).trim(),10);
-    const diff=Math.floor((Date.now()-deployed)/1000);
-    let ago='';
-    if(diff<60)ago='just now';
-    else if(diff<3600)ago=Math.floor(diff/60)+'m ago';
-    else if(diff<86400)ago=Math.floor(diff/3600)+'h ago';
-    else ago=Math.floor(diff/86400)+'d ago';
-    if(deployed===_APP_BUILT){
-      el.title='Deployed '+ago;
-      el.innerHTML='<span style="width:6px;height:6px;border-radius:50%;background:var(--ok);flex-shrink:0"></span>Up to date · <span style="opacity:0.7">'+ago+'</span>';
-      el.style.cursor='default';
-      el.onclick=null;
-    }else{
-      el.title='New update deployed '+ago+'\nClick to reload';
-      el.innerHTML='<span style="width:6px;height:6px;border-radius:50%;background:var(--o);flex-shrink:0;animation:syncpulse 1s infinite"></span><span style="color:var(--o);font-weight:700">Update ready · '+ago+'</span>';
-      el.style.cursor='pointer';
-      el.onclick=()=>{
-        el.style.pointerEvents='none';
-        el.innerHTML='<span style="color:var(--text2)">Updating…</span>';
-        // SW now intercepts navigation with cache:'no-cache' so a plain reload gets fresh HTML
-        location.reload();
-      };
-    }
-  }catch(e){
-    if(el)el.innerHTML='';
-  }
-}
-_checkVersion();
-setInterval(_checkVersion,120000);
 
 function jumpTo(id){
   const el=document.getElementById(id);
