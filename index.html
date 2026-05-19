@@ -4672,7 +4672,8 @@ function _renderStudyLineChart(elId,offset,animDir){
     vp.style.height=oldPane.offsetHeight+'px';
     // New pane starts off-screen
     const newPane=document.createElement('div');
-    newPane.style.cssText='position:absolute;top:0;left:0;width:100%;transform:translateX('+(animDir==='back'?'100%':'-100%')+')';
+    // back (older) = new slides in from LEFT, forward (newer) = new slides in from RIGHT
+    newPane.style.cssText='position:absolute;top:0;left:0;width:100%;transform:translateX('+(animDir==='back'?'-100%':'100%')+')';
     newPane.innerHTML=paneHtml;
     vp.appendChild(newPane);
     // Double rAF to ensure paint before transition
@@ -4681,7 +4682,7 @@ function _renderStudyLineChart(elId,offset,animDir){
       newPane.style.transition=ease;
       oldPane.style.transition=ease;
       newPane.style.transform='translateX(0)';
-      oldPane.style.transform='translateX('+(animDir==='back'?'-100%':'100%')+')';
+      oldPane.style.transform='translateX('+(animDir==='back'?'100%':'-100%')+')';
       setTimeout(()=>{
         oldPane.remove();
         newPane.id='slc-pane-'+elId;
