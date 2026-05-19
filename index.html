@@ -1418,26 +1418,38 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
           <button class="btn-add" style="background:var(--bg3);color:var(--text2);font-size:12px;padding:8px 14px" onclick="exportJSON()">📦 Backup</button>
         </div>
       </div>
-      <div style="position:relative;margin-bottom:10px">
-        <svg style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="hist-search" placeholder="Search subject, notes, date…" oninput="renderHistory()" style="width:100%;box-sizing:border-box;padding:10px 36px 10px 36px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--text);font-family:inherit;outline:none">
-        <button id="hist-search-clear" onclick="document.getElementById('hist-search').value='';renderHistory()" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;line-height:1;padding:2px 4px">×</button>
+      <!-- Tab toggle -->
+      <div style="display:flex;gap:6px;margin-bottom:16px">
+        <button id="hist-tab-sessions" onclick="switchHistTab('sessions')" style="flex:1;padding:9px 0;border-radius:100px;font-size:13px;font-weight:700;border:none;cursor:pointer;background:var(--o);color:#fff;transition:all 0.15s;font-family:inherit">Sessions</button>
+        <button id="hist-tab-calendar" onclick="switchHistTab('calendar')" style="flex:1;padding:9px 0;border-radius:100px;font-size:13px;font-weight:700;border:none;cursor:pointer;background:var(--bg2);color:var(--text2);transition:all 0.15s;font-family:inherit">Calendar</button>
       </div>
-      <div class="card" style="margin-bottom:12px" id="hist-week-card"></div>
-      <div class="hist-controls">
-        <select class="form-input hist-filter" id="hist-subject-filter" onchange="renderHistory()">
-          <option value="">All Subjects</option>
-        </select>
-        <select class="form-input hist-filter" id="hist-sort" onchange="renderHistory()">
-          <option value="newest">Newest first</option>
-          <option value="oldest">Oldest first</option>
-          <option value="longest">Longest first</option>
-          <option value="shortest">Shortest first</option>
-        </select>
+      <!-- Sessions view -->
+      <div id="hist-sessions-view">
+        <div style="position:relative;margin-bottom:10px">
+          <svg style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="hist-search" placeholder="Search subject, notes, date…" oninput="renderHistory()" style="width:100%;box-sizing:border-box;padding:10px 36px 10px 36px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;font-size:14px;color:var(--text);font-family:inherit;outline:none">
+          <button id="hist-search-clear" onclick="document.getElementById('hist-search').value='';renderHistory()" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;line-height:1;padding:2px 4px">×</button>
+        </div>
+        <div class="card" style="margin-bottom:12px" id="hist-week-card"></div>
+        <div class="hist-controls">
+          <select class="form-input hist-filter" id="hist-subject-filter" onchange="renderHistory()">
+            <option value="">All Subjects</option>
+          </select>
+          <select class="form-input hist-filter" id="hist-sort" onchange="renderHistory()">
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="longest">Longest first</option>
+            <option value="shortest">Shortest first</option>
+          </select>
+        </div>
+        <div id="hist-archive-banner"></div>
+        <div class="hist-summary" id="hist-summary"></div>
+        <div id="hist-entries"></div>
       </div>
-      <div id="hist-archive-banner"></div>
-      <div class="hist-summary" id="hist-summary"></div>
-      <div id="hist-entries"></div>
+      <!-- Calendar view -->
+      <div id="hist-calendar-view" style="display:none">
+        <div id="hist-calendar-inner"></div>
+      </div>
     </div>
 
     <!-- PAGE: AI COACH -->
@@ -4826,6 +4838,25 @@ function _renderHistWeekChart(){
       setTimeout(()=>{b.style.transition='height 0.6s cubic-bezier(0.25,0.46,0.45,0.94)';b.style.height=h;},i*50);
     });
   },60);
+}
+
+function switchHistTab(tab){
+  const sessions=document.getElementById('hist-sessions-view');
+  const calendar=document.getElementById('hist-calendar-view');
+  const btnS=document.getElementById('hist-tab-sessions');
+  const btnC=document.getElementById('hist-tab-calendar');
+  if(tab==='sessions'){
+    sessions.style.display='';
+    calendar.style.display='none';
+    btnS.style.background='var(--o)';btnS.style.color='#fff';
+    btnC.style.background='var(--bg2)';btnC.style.color='var(--text2)';
+  } else {
+    sessions.style.display='none';
+    calendar.style.display='';
+    btnS.style.background='var(--bg2)';btnS.style.color='var(--text2)';
+    btnC.style.background='var(--o)';btnC.style.color='#fff';
+    _renderStudyCalendar('hist-calendar-inner');
+  }
 }
 
 function renderHistory(){
