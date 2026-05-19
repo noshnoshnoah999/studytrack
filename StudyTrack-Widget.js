@@ -55,18 +55,18 @@ function fmtAmPm(t) {
 }
 
 // ── Load data ────────────────────────────────────────────────────────────────
-const [sessions, goals, schedule] = await Promise.all([
-  sbGet("st_sessions"),
-  sbGet("st_goals"),
-  sbGet("st_sched"),
-]);
+const [sessions,goals,schedule,subjs]=await Promise.all([sbGet("st_sessions"),sbGet("st_goals"),sbGet("st_sched"),sbGet("st_subjs")]);
 
 const today = todayStr();
 const now = new Date();
 const nowMins = now.getHours()*60 + now.getMinutes();
 const dow = now.getDay();
 
-const todaySessions = (sessions||[]).filter(s => s.date === today);
+// Build set of extra-credit subject IDs (e.g. EL4) — excluded from study hour totals
+const EC_IDS = new Set(["el4"]); // built-in fallback
+(subjs||[]).forEach(s => { if (s.extraCredit) EC_IDS.add(s.id); });
+
+const todaySessions = (sessions||[]).filter(s => s.date === today && !EC_IDS.has(s.subjectId));
 const todayH = todaySessions.reduce((a,s) => a + s.hours, 0);
 const dailyGoal = (goals && goals.daily) || 6.3;
 const pct = Math.min(1, todayH / dailyGoal);

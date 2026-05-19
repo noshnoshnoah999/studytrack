@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1779099557929">
+<meta name="app-built" content="1779172548072">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -2548,6 +2548,17 @@ function loadSessions(){
   return[];
 }
 function saveSessions(s){localStorage.setItem('st_sessions',JSON.stringify(s));sbPush('st_sessions',s);}
+
+// Track deleted session IDs so deletions propagate across devices on sync
+function _tombstoneSession(id){
+  try{
+    const list=JSON.parse(localStorage.getItem('st_deleted_sessions')||'[]');
+    if(!list.includes(id))list.push(id);
+    const pruned=list.slice(-500); // keep last 500 tombstones max
+    localStorage.setItem('st_deleted_sessions',JSON.stringify(pruned));
+    sbPush('st_deleted_sessions',pruned,{silent:true});
+  }catch(e){}
+}
 
 // ── TO-DO ──────────────────────────────────────────────────────────────────────
 function loadTodos(){
@@ -5145,6 +5156,7 @@ function deleteFromEditModal(){
   const updated=sessions.filter(x=>x.id!==id);
   const hoursStore=loadHours();
   if(s.subjectId)hoursStore[s.subjectId]=Math.max(0,(hoursStore[s.subjectId]||0)-s.hours);
+  _tombstoneSession(id);
   saveSessions(updated);
   saveHours(hoursStore);
   renderHistory();
@@ -5164,6 +5176,7 @@ function deleteHistEntry(id){
   const updated=sessions.filter(x=>x.id!==id);
   const hoursStore=loadHours();
   if(s.subjectId)hoursStore[s.subjectId]=Math.max(0,(hoursStore[s.subjectId]||0)-s.hours);
+  _tombstoneSession(id);
   saveSessions(updated);
   saveHours(hoursStore);
   renderHistory();
@@ -5994,6 +6007,7 @@ function deleteEntry(id){
   const hoursStore=loadHours();
   hoursStore[s.subjectId]=Math.max(0,(hoursStore[s.subjectId]||0)-s.hours);
   sessions=sessions.filter(x=>x.id!==id);
+  _tombstoneSession(id);
   saveSessions(sessions);
   saveHours(hoursStore);
   renderLogEntries();
@@ -7955,15 +7969,26 @@ async function syncFromCloud(){
           // Merge sessions by ID so local sessions are never lost if a push failed
           const local=JSON.parse(localStorage.getItem('st_sessions')||'[]');
           const cloud=Array.isArray(rows[i].value)?rows[i].value:[];
-          const merged=[...cloud];
+          // Build tombstone set — union of local + cloud deleted IDs so deletions propagate both ways
+          let cloudDeleted=[];
+          try{const r2=await sbPull('st_deleted_sessions');cloudDeleted=Array.isArray(r2&&r2.value)?r2.value:[];}catch(e){}
+          const localDeleted=JSON.parse(localStorage.getItem('st_deleted_sessions')||'[]');
+          const deletedSet=new Set([...cloudDeleted,...localDeleted]);
+          // If cloud had deletions local didn't know about, save them locally
+          if(cloudDeleted.length>localDeleted.length){
+            const merged2=[...new Set([...localDeleted,...cloudDeleted])].slice(-500);
+            localStorage.setItem('st_deleted_sessions',JSON.stringify(merged2));
+          }
+          const merged=cloud.filter(cs=>!deletedSet.has(cs.id));
           for(const ls of local){
-            if(!merged.find(cs=>cs.id===ls.id)){
+            if(!deletedSet.has(ls.id)&&!merged.find(cs=>cs.id===ls.id)){
               merged.push(ls);
               localOnlySessions.push(ls); // track so we can patch st_hours below
             }
           }
-          // If local had sessions cloud didn't, push the merged set back
-          if(merged.length>cloud.length)sbPush('st_sessions',merged);
+          // Push back if local added sessions OR cloud had tombstoned sessions that need cleaning
+          const cloudClean=cloud.filter(cs=>!deletedSet.has(cs.id));
+          if(merged.length!==cloudClean.length)sbPush('st_sessions',merged);
           // Write with quota recovery — if full, nuke non-critical data and retry
           const _writeSessionsSafe=(data)=>{
             try{localStorage.setItem('st_sessions',JSON.stringify(data));}
