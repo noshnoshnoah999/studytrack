@@ -4696,9 +4696,9 @@ function _renderStudyLineChart(elId,offset,animDir){
 }
 
 function _chartNav(elId,dir){
-  // dir: -1 = scroll back in time (older), +1 = scroll forward (newer)
+  // dir: -1 = scroll back in time (older = larger offset), +1 = forward (newer = smaller offset)
   const cur=_chartOffsets[elId]||0;
-  const next=Math.max(0,cur+dir*30);
+  const next=Math.max(0,cur-dir*30);  // subtract dir so ‹(-1) adds 30, ›(+1) subtracts 30
   if(next===cur)return;
   _renderStudyLineChart(elId,next,dir<0?'back':'forward');
 }
