@@ -1878,32 +1878,50 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
 <script>
 // ── UTILITIES ─────────────────────────────────────────────────────────────────
 function genId(){return Math.random().toString(36).slice(2,9)+Math.random().toString(36).slice(2,5)}
-function _openCardioForm(date,start,end,notes){
-  // Build pre-filled URL using Google Forms entry IDs extracted from form source
-  let url='https://docs.google.com/forms/d/e/1FAIpQLScr3Pp0jDNTQ6P3n6YAFLBzcuKWqb6YiC6lQtJqU3aKFNw-iQ/viewform?usp=pp_url';
+// Form URLs for each subject (all share the same entry IDs — same template)
+const _SUBJECT_FORMS={
+  pe:       'https://docs.google.com/forms/d/e/1FAIpQLScr3Pp0jDNTQ6P3n6YAFLBzcuKWqb6YiC6lQtJqU3aKFNw-iQ/viewform',
+  japanese: 'https://docs.google.com/forms/d/e/1FAIpQLSfw8qjM8JkTLAsJgxgeDdd4TfqStnxK3hRz9prObOIqxcTL8w/viewform',
+  cwp:      'https://docs.google.com/forms/d/e/1FAIpQLSdl9Qkm0AreT18YF1Yx-sHXzdMygeR7E3LtZkt1PNEtwc1wvg/viewform',
+  english:  'https://docs.google.com/forms/d/e/1FAIpQLSfS0CMd-ejWxQvAw9Y6x1T_HLgn30j7QFJ_pMs-MpDSdFhqQg/viewform',
+  wa_hist:  'https://docs.google.com/forms/d/e/1FAIpQLSfFsg1IYyXq3-iOiLR1i8tobUu_5PSPo30ItSdX5S9aBsde6g/viewform',
+  fine_art: 'https://docs.google.com/forms/d/e/1FAIpQLSfB0BA-rcYJV2OiwqUzPKDCBNwcAefDPt5kxUEFspSpFnxXcA/viewform',
+  us_hist:  'https://docs.google.com/forms/d/e/1FAIpQLSei-7p9Jbx4tSIXj_Cv-yVorWnDbkJss27MAshXrKiQM9q3WQ/viewform',
+  health:   'https://docs.google.com/forms/d/e/1FAIpQLSctXGYu94ReWdp-Oq5gqcuA1kNbhSD-XF6AH_j-WO2uDJvLFw/viewform',
+  civics:   'https://docs.google.com/forms/d/e/1FAIpQLSfaAmprPIGnvMzTLLPEqep_c1C4mQDg2_GBqI2K3ZGtZyCXLQ/viewform',
+  lab_sci:  'https://docs.google.com/forms/d/e/1FAIpQLScw0KynyQ6IKxDhTVEMUX9nmi1teL2PgBcLMKlDu4H0_izuCQ/viewform',
+  algebra1: 'https://docs.google.com/forms/d/e/1FAIpQLSeNbuYwyIvbTFJMU3CiaMsz080GIlltcCsCouwC_pmGyBXjIg/viewform',
+};
+
+function _openSubjectForm(subjectId,date,start,end,notes){
+  const baseUrl=_SUBJECT_FORMS[subjectId];
+  if(!baseUrl)return; // no form for this subject
+  let url=baseUrl+'?usp=pp_url';
   if(date) url+='&entry.911550456='+encodeURIComponent(date);
   if(start){const p=start.split(':');url+='&entry.2130026531_hour='+p[0]+'&entry.2130026531_minute='+(p[1]||'00');}
   if(end){const p=end.split(':');url+='&entry.1426010469_hour='+p[0]+'&entry.1426010469_minute='+(p[1]||'00');}
   if(notes) url+='&entry.706383331='+encodeURIComponent(notes);
-  // Pre-tick the contract confirm checkbox
   url+='&entry.144075977='+encodeURIComponent('確認しました / Confirmed');
-  // Remove any existing overlay first
-  const existing=document.getElementById('cardio-form-overlay');
+  // Get subject name for the modal
+  const subjs=loadSubjects();
+  const subj=subjs.find(s=>s.id===subjectId);
+  const subjName=subj?subj.name:subjectId;
+  // Remove any existing overlay
+  const existing=document.getElementById('subject-form-overlay');
   if(existing)existing.remove();
-  // Show modal with pre-filled link — user-click opens outside the PWA
   const overlay=document.createElement('div');
-  overlay.id='cardio-form-overlay';
+  overlay.id='subject-form-overlay';
   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px';
   overlay.innerHTML=
     '<div style="background:var(--bg2);border-radius:20px;padding:28px 24px;max-width:340px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,0.3)">'+
-      '<div style="font-size:36px;margin-bottom:12px">🏃</div>'+
+      '<div style="font-size:36px;margin-bottom:12px">📋</div>'+
       '<div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px">Session Logged!</div>'+
       '<div style="font-size:14px;color:var(--text2);margin-bottom:20px">Date, times & confirm checkbox pre-filled</div>'+
-      '<a href="'+url+'" target="_blank" rel="noopener" onclick="document.getElementById(\'cardio-form-overlay\').remove()" '+
+      '<a href="'+url+'" target="_blank" rel="noopener" onclick="document.getElementById(\'subject-form-overlay\').remove()" '+
         'style="display:block;background:var(--o);color:#fff;font-weight:700;font-size:16px;padding:14px;border-radius:12px;text-decoration:none;margin-bottom:12px">'+
-        'Open Cardio Form →'+
+        'Open '+escHtml(subjName)+' Form →'+
       '</a>'+
-      '<button onclick="document.getElementById(\'cardio-form-overlay\').remove()" '+
+      '<button onclick="document.getElementById(\'subject-form-overlay\').remove()" '+
         'style="background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer;padding:6px">'+
         'Skip for now'+
       '</button>'+
@@ -5729,7 +5747,7 @@ async function timerPageLog(){
   if(currentPage==='progress')renderProgress();
   if(currentPage==='subjects')renderSubjectsPage();
   if(currentPage==='graduation')renderGraduationPage();
-  if(timerSubjectId==='pe') _openCardioForm(ds,startStr,endStr,notes);
+  if(_SUBJECT_FORMS[timerSubjectId]) _openSubjectForm(timerSubjectId,ds,startStr,endStr,notes);
 }
 
 
@@ -5952,7 +5970,7 @@ function _doLogSession(){
   if(currentPage==='subjects')renderSubjectsPage();
   if(currentPage==='graduation')renderGraduationPage();
   // Auto-open cardio Google Form after logging a PE session
-  if(subjectId==='pe') _openCardioForm(date,start,end,notes);
+  if(_SUBJECT_FORMS[subjectId]) _openSubjectForm(subjectId,date,start,end,notes);
 }
 
 function deleteEntry(id){
