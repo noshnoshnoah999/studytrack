@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1779172548072">
+<meta name="app-built" content="1779172836666">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -7960,6 +7960,16 @@ async function syncFromCloud(){
   setSyncUI('syncing','Syncing…');
   try{
     const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_templates','st_ai_history']; // st_hours is recomputed from sessions below, not pulled directly
+    // Pull st_deleted_sessions upfront so we can use it synchronously inside forEach
+    let cloudDeletedRaw=null;
+    try{cloudDeletedRaw=await sbPull('st_deleted_sessions');}catch(e){}
+    const cloudDeleted=Array.isArray(cloudDeletedRaw&&cloudDeletedRaw.value)?cloudDeletedRaw.value:[];
+    const localDeleted=JSON.parse(localStorage.getItem('st_deleted_sessions')||'[]');
+    const deletedSet=new Set([...cloudDeleted,...localDeleted]);
+    // If cloud had tombstones local didn't know about, persist them locally
+    if(cloudDeleted.length>localDeleted.length){
+      localStorage.setItem('st_deleted_sessions',JSON.stringify([...new Set([...localDeleted,...cloudDeleted])].slice(-500)));
+    }
     const rows=await Promise.all(KEYS.map(k=>sbPull(k)));
     let updated=false;
     let localOnlySessions=[]; // sessions we have locally that cloud didn't know about
@@ -7969,16 +7979,6 @@ async function syncFromCloud(){
           // Merge sessions by ID so local sessions are never lost if a push failed
           const local=JSON.parse(localStorage.getItem('st_sessions')||'[]');
           const cloud=Array.isArray(rows[i].value)?rows[i].value:[];
-          // Build tombstone set — union of local + cloud deleted IDs so deletions propagate both ways
-          let cloudDeleted=[];
-          try{const r2=await sbPull('st_deleted_sessions');cloudDeleted=Array.isArray(r2&&r2.value)?r2.value:[];}catch(e){}
-          const localDeleted=JSON.parse(localStorage.getItem('st_deleted_sessions')||'[]');
-          const deletedSet=new Set([...cloudDeleted,...localDeleted]);
-          // If cloud had deletions local didn't know about, save them locally
-          if(cloudDeleted.length>localDeleted.length){
-            const merged2=[...new Set([...localDeleted,...cloudDeleted])].slice(-500);
-            localStorage.setItem('st_deleted_sessions',JSON.stringify(merged2));
-          }
           const merged=cloud.filter(cs=>!deletedSet.has(cs.id));
           for(const ls of local){
             if(!deletedSet.has(ls.id)&&!merged.find(cs=>cs.id===ls.id)){
