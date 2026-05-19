@@ -8119,20 +8119,14 @@ async function _checkVersion(){
         el.style.pointerEvents='none';
         el.innerHTML='<span style="color:var(--text2)">Updating…</span>';
         try{
-          // Fetch the latest HTML straight from the network (bypasses SW + HTTP cache)
-          const resp=await fetch(location.origin+'/studytrack/?nocache='+Date.now(),{cache:'no-store'});
-          const html=await resp.text();
-          // Clear SW caches & unregister SW
+          // Clear SW caches & unregister SW first
           if('caches' in window){const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)));}
           if('serviceWorker' in navigator){const rs=await navigator.serviceWorker.getRegistrations();await Promise.all(rs.map(r=>r.unregister()));}
-          // Write fresh HTML into current page — completely bypasses navigation cache
-          document.open('text/html','replace');
-          document.write(html);
-          document.close();
-        }catch(e){
-          // Fallback: hard reload
-          location.reload(true);
-        }
+          // Prime the browser HTTP cache with a fresh copy before reloading
+          await fetch(location.origin+'/studytrack/',{cache:'reload'});
+        }catch(e){}
+        // Hard reload — tells WebKit to bypass its cache entirely
+        location.reload(true);
       };
     }
   }catch(e){
