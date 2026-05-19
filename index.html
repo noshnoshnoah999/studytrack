@@ -4529,9 +4529,32 @@ function renderLogEntries(){
 }
 
 // ── HISTORY PAGE ─────────────────────────────────────────────────────────────
-function _renderStudyLineChart(elId){
+const _chartOffsets={};
+
+function _buildChartPaneHtml(elId,data,pts,gridLines,targetY,fillPath,linePath,dots,cursorLine,hoverRects,yLabels,xLabelsSvg,VW,VH,PL,PR,PT,CH){
+  return '<div style="position:relative">'+
+    '<svg id="slc-svg-'+elId+'" viewBox="0 0 '+VW+' '+VH+'" style="width:100%;height:auto;display:block;overflow:visible" preserveAspectRatio="xMidYMid meet">'+
+      '<defs><linearGradient id="slc-grad-'+elId+'" x1="0" y1="0" x2="0" y2="1">'+
+        '<stop offset="0%" stop-color="var(--o)" stop-opacity="0.3"/>'+
+        '<stop offset="100%" stop-color="var(--o)" stop-opacity="0.01"/>'+
+      '</linearGradient></defs>'+
+      gridLines+
+      '<line x1="'+PL+'" y1="'+targetY.toFixed(1)+'" x2="'+(VW-PR)+'" y2="'+targetY.toFixed(1)+'" stroke="var(--ok)" stroke-width="1" stroke-dasharray="5,4" opacity="0.7"/>'+
+      '<path d="'+fillPath+'" fill="url(#slc-grad-'+elId+')"/>'+
+      '<path d="'+linePath+'" fill="none" stroke="var(--o)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'+
+      dots+cursorLine+hoverRects+
+      yLabels+xLabelsSvg+
+    '</svg>'+
+    '<div id="slc-tip-'+elId+'" style="display:none;position:absolute;top:0;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:7px 11px;font-size:12px;pointer-events:none;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,0.15);z-index:10"></div>'+
+  '</div>';
+}
+
+function _renderStudyLineChart(elId,offset,animDir){
   const el=document.getElementById(elId||'prog-chart-card');
   if(!el)return;
+  if(offset===undefined)offset=_chartOffsets[elId]||0;
+  _chartOffsets[elId]=offset;
+
   const sessions=loadSessions();
   const goals=loadGoals();
   const target=goals.daily||6.3;
@@ -4542,9 +4565,9 @@ function _renderStudyLineChart(elId){
 
   const data=[];
   for(let i=DAYS-1;i>=0;i--){
-    const d=new Date(now);d.setDate(now.getDate()-i);
+    const d=new Date(now);d.setDate(now.getDate()-(i+offset));
     const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-    data.push({ds,h:_hoursOnDate(sessions,ds),d,isToday:i===0,dayIdx:DAYS-1-i});
+    data.push({ds,h:_hoursOnDate(sessions,ds),d,isToday:i===0&&offset===0,dayIdx:DAYS-1-i});
   }
 
   const maxH=Math.max(target*1.2,...data.map(d=>d.h),0.5);
@@ -4583,7 +4606,6 @@ function _renderStudyLineChart(elId){
       (p.isToday?'<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="7" fill="'+col+'" opacity="0.15"/>':'');
   }).join('');
 
-  // Invisible hover strips — one per day, full chart height
   const colW=CW/(DAYS-1);
   const hoverRects=pts.map((p,i)=>{
     const x=(i===0?PL:p.x-colW/2).toFixed(1);
@@ -4595,42 +4617,90 @@ function _renderStudyLineChart(elId){
       'style="cursor:crosshair"/>';
   }).join('');
 
-  // Vertical cursor line (hidden by default)
   const cursorLine='<line id="slc-cursor-'+elId+'" x1="0" y1="'+PT+'" x2="0" y2="'+(PT+CH)+'" stroke="var(--text3)" stroke-width="1" stroke-dasharray="3,2" opacity="0" pointer-events="none"/>';
-
   const gridLines=yTicks.map(h=>'<line x1="'+PL+'" y1="'+py(h).toFixed(1)+'" x2="'+(VW-PR)+'" y2="'+py(h).toFixed(1)+'" stroke="var(--border)" stroke-width="0.5" opacity="0.8"/>').join('');
   const yLabels=yTicks.map(h=>'<text x="'+(PL-4)+'" y="'+(py(h)+3).toFixed(1)+'" text-anchor="end" font-size="8" fill="var(--text3)">'+h+'h</text>').join('');
   const xLabelsSvg=xLabels.map(l=>'<text x="'+l.x.toFixed(1)+'" y="'+(VH-6)+'" text-anchor="middle" font-size="8" fill="var(--text3)">'+l.label+'</text>').join('');
 
-  el.style.position='relative';
-  el.innerHTML=
-    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
-      '<div class="card-title" style="margin-bottom:0">📈 Daily Study Hours</div>'+
-      '<div style="font-size:11px;color:var(--text3);font-weight:600">Last 30 days</div>'+
-    '</div>'+
-    '<div style="position:relative">'+
-      '<svg id="slc-svg-'+elId+'" viewBox="0 0 '+VW+' '+VH+'" style="width:100%;height:auto;display:block;overflow:visible" preserveAspectRatio="xMidYMid meet">'+
-        '<defs><linearGradient id="slc-grad-'+elId+'" x1="0" y1="0" x2="0" y2="1">'+
-          '<stop offset="0%" stop-color="var(--o)" stop-opacity="0.3"/>'+
-          '<stop offset="100%" stop-color="var(--o)" stop-opacity="0.01"/>'+
-        '</linearGradient></defs>'+
-        gridLines+
-        '<line x1="'+PL+'" y1="'+targetY.toFixed(1)+'" x2="'+(VW-PR)+'" y2="'+targetY.toFixed(1)+'" stroke="var(--ok)" stroke-width="1" stroke-dasharray="5,4" opacity="0.7"/>'+
-        '<path d="'+fillPath+'" fill="url(#slc-grad-'+elId+')"/>'+
-        '<path d="'+linePath+'" fill="none" stroke="var(--o)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'+
-        dots+cursorLine+hoverRects+
-        yLabels+xLabelsSvg+
-      '</svg>'+
-      '<div id="slc-tip-'+elId+'" style="display:none;position:absolute;top:0;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:7px 11px;font-size:12px;pointer-events:none;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,0.15);z-index:10"></div>'+
-    '</div>'+
-    '<div style="display:flex;align-items:center;gap:14px;margin-top:8px;font-size:11px;color:var(--text3)">'+
-      '<span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:14px;height:2.5px;background:var(--o);border-radius:2px"></span>Hours studied</span>'+
-      '<span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:14px;height:0;border-top:1.5px dashed var(--ok)"></span>Daily goal</span>'+
-      '<span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok)"></span>Goal hit</span>'+
-    '</div>';
+  // Range label
+  const startD=data[0].d,endD=data[DAYS-1].d;
+  const rangeLabel=offset===0?'Last 30 days':
+    MONTHS[startD.getMonth()]+' '+startD.getDate()+'–'+MONTHS[endD.getMonth()]+' '+endD.getDate();
 
-  // Store data for tooltip handler
+  // Store tooltip data (used by _chartTip which reads el._chartData)
   el._chartData={pts,data,target,VW,PL,PR,MONTHS,DAY_NAMES};
+
+  const paneHtml=_buildChartPaneHtml(elId,data,pts,gridLines,targetY,fillPath,linePath,dots,cursorLine,hoverRects,yLabels,xLabelsSvg,VW,VH,PL,PR,PT,CH);
+  const navBtnBase='background:none;border:none;cursor:pointer;font-size:18px;line-height:1;padding:2px 6px;border-radius:6px;transition:opacity 0.15s,color 0.15s;color:var(--text2)';
+  const fwdDisabled=offset===0;
+
+  const vp=document.getElementById('slc-viewport-'+elId);
+  if(!vp){
+    // First render — build full shell
+    el.style.position='relative';
+    el.innerHTML=
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
+        '<div class="card-title" style="margin-bottom:0">📈 Daily Study Hours</div>'+
+        '<div style="display:flex;align-items:center;gap:4px">'+
+          '<button id="slc-back-'+elId+'" onclick="_chartNav(\''+elId+'\',-1)" style="'+navBtnBase+'">‹</button>'+
+          '<span id="slc-range-'+elId+'" style="font-size:11px;color:var(--text3);font-weight:600;min-width:96px;text-align:center">'+rangeLabel+'</span>'+
+          '<button id="slc-fwd-'+elId+'" onclick="_chartNav(\''+elId+'\',1)" style="'+navBtnBase+';opacity:'+(fwdDisabled?'0.2':'1')+'" '+(fwdDisabled?'disabled':'')+'>›</button>'+
+        '</div>'+
+      '</div>'+
+      '<div id="slc-viewport-'+elId+'" style="position:relative;overflow:hidden">'+
+        '<div id="slc-pane-'+elId+'" style="width:100%">'+paneHtml+'</div>'+
+      '</div>'+
+      '<div style="display:flex;align-items:center;gap:14px;margin-top:8px;font-size:11px;color:var(--text3)">'+
+        '<span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:14px;height:2.5px;background:var(--o);border-radius:2px"></span>Hours studied</span>'+
+        '<span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:14px;height:0;border-top:1.5px dashed var(--ok)"></span>Daily goal</span>'+
+        '<span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok)"></span>Goal hit</span>'+
+      '</div>';
+    return;
+  }
+
+  // Update range label + forward button
+  const rangeEl=document.getElementById('slc-range-'+elId);
+  if(rangeEl)rangeEl.textContent=rangeLabel;
+  const fwdBtn=document.getElementById('slc-fwd-'+elId);
+  if(fwdBtn){fwdBtn.style.opacity=fwdDisabled?'0.2':'1';fwdBtn.disabled=fwdDisabled;}
+
+  // Animated slide
+  if(animDir){
+    const oldPane=document.getElementById('slc-pane-'+elId);
+    if(!oldPane){return;}
+    // Lock viewport height during animation
+    vp.style.height=oldPane.offsetHeight+'px';
+    // New pane starts off-screen
+    const newPane=document.createElement('div');
+    newPane.style.cssText='position:absolute;top:0;left:0;width:100%;transform:translateX('+(animDir==='back'?'100%':'-100%')+')';
+    newPane.innerHTML=paneHtml;
+    vp.appendChild(newPane);
+    // Double rAF to ensure paint before transition
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      const ease='transform 0.38s cubic-bezier(0.4,0,0.2,1)';
+      newPane.style.transition=ease;
+      oldPane.style.transition=ease;
+      newPane.style.transform='translateX(0)';
+      oldPane.style.transform='translateX('+(animDir==='back'?'-100%':'100%')+')';
+      setTimeout(()=>{
+        oldPane.remove();
+        newPane.id='slc-pane-'+elId;
+        newPane.style.cssText='width:100%';
+        vp.style.height='';
+      },420);
+    }));
+  }else{
+    const pane=document.getElementById('slc-pane-'+elId);
+    if(pane)pane.innerHTML=paneHtml;
+  }
+}
+
+function _chartNav(elId,dir){
+  // dir: -1 = scroll back in time (older), +1 = scroll forward (newer)
+  const cur=_chartOffsets[elId]||0;
+  const next=Math.max(0,cur+dir*30);
+  if(next===cur)return;
+  _renderStudyLineChart(elId,next,dir<0?'back':'forward');
 }
 
 function _chartTip(e,elId,idx){
