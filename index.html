@@ -5333,6 +5333,8 @@ async function timerSyncPush(){
       pausedMs:timerPausedMs,
       updatedAt:Date.now()
     });
+    // Instantly broadcast to other connected devices via WebSocket
+    _rtBroadcastTimer();
   }catch(e){}
 }
 
@@ -5416,10 +5418,145 @@ async function timerSyncPull(silent){
 
 function _startTimerSyncPoll(){
   if(_timerSyncInterval)return;
-  _timerSyncInterval=setInterval(()=>timerSyncPull(true),8000);
+  _timerSyncInterval=setInterval(()=>timerSyncPull(true),4000);
+  _rtConnect(); // also open realtime WebSocket for instant cross-device sync
 }
 function _stopTimerSyncPoll(){
   if(_timerSyncInterval){clearInterval(_timerSyncInterval);_timerSyncInterval=null;}
+  _rtDisconnect();
+}
+
+// ── SUPABASE REALTIME (broadcast timer state for instant cross-device sync) ──
+// Uses the raw Supabase Realtime Phoenix WebSocket protocol — no extra library.
+// Strategy: broadcast on every push so OTHER devices get it within ~100 ms.
+//           Keep polling as a fallback for devices that were offline/backgrounded.
+let _rtWs=null;
+let _rtJoined=false;
+let _rtRef=0;
+let _rtReconnTimer=null;
+
+function _rtNextRef(){return String(++_rtRef);}
+
+function _rtConnect(){
+  if(_rtWs&&(_rtWs.readyState===WebSocket.OPEN||_rtWs.readyState===WebSocket.CONNECTING))return;
+  if(_rtReconnTimer){clearTimeout(_rtReconnTimer);_rtReconnTimer=null;}
+  try{
+    const ws=new WebSocket('wss://epaiazxcdcseijkhrncm.supabase.co/realtime/v1/websocket?apikey='+SB_KEY+'&vsn=1.0.0');
+    _rtWs=ws;
+    _rtJoined=false;
+
+    ws.onopen=()=>{
+      // Join a broadcast-only channel (no postgres changes needed)
+      ws.send(JSON.stringify({topic:'realtime:studytrack-timer',event:'phx_join',
+        payload:{config:{broadcast:{self:false,ack:false}},access_token:SB_KEY},
+        ref:_rtNextRef()}));
+      // Pull latest state immediately so we're in sync right away
+      timerSyncPull(true);
+    };
+
+    ws.onmessage=(e)=>{
+      try{
+        const msg=JSON.parse(e.data);
+        if(msg.event==='phx_reply'&&msg.payload&&msg.payload.status==='ok'&&msg.topic==='realtime:studytrack-timer'){
+          _rtJoined=true;
+        }
+        if(msg.event==='broadcast'&&msg.payload&&msg.payload.event==='timer-update'){
+          // Another device changed the timer — apply it immediately
+          const r=msg.payload.payload;
+          if(r)_rtApplyTimerState(r);
+        }
+      }catch(ex){}
+    };
+
+    ws.onclose=()=>{
+      _rtJoined=false;
+      _rtWs=null;
+      // Auto-reconnect only while on timer page
+      if(currentPage==='timer')_rtReconnTimer=setTimeout(_rtConnect,3500);
+    };
+
+    ws.onerror=()=>{ws.close();};
+
+    // Phoenix heartbeat every 25s (server closes connection after ~60s without one)
+    const hb=setInterval(()=>{
+      if(!_rtWs||_rtWs.readyState!==WebSocket.OPEN){clearInterval(hb);return;}
+      _rtWs.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:_rtNextRef()}));
+    },25000);
+  }catch(ex){}
+}
+
+function _rtDisconnect(){
+  if(_rtReconnTimer){clearTimeout(_rtReconnTimer);_rtReconnTimer=null;}
+  if(_rtWs){try{_rtWs.close();}catch(ex){}_rtWs=null;}
+  _rtJoined=false;
+}
+
+function _rtBroadcastTimer(){
+  if(!_rtWs||_rtWs.readyState!==WebSocket.OPEN||!_rtJoined)return;
+  try{
+    _rtWs.send(JSON.stringify({
+      topic:'realtime:studytrack-timer',
+      event:'broadcast',
+      payload:{
+        type:'broadcast',
+        event:'timer-update',
+        payload:{
+          running:!!timerInterval,
+          startMs:timerStart,
+          stopMs:timerStop,
+          subjectId:timerSubjectId,
+          sessionId:timerSessionId,
+          paused:timerPaused,
+          pauseStartMs:timerPauseStart,
+          pausedMs:timerPausedMs,
+          updatedAt:Date.now()
+        }
+      },
+      ref:_rtNextRef()
+    }));
+  }catch(ex){}
+}
+
+// Apply a timer state object received via realtime (same logic as timerSyncPull
+// but skips the fetch since we already have the data)
+function _rtApplyTimerState(r){
+  try{
+    if(r.running===!!timerInterval&&r.startMs===timerStart&&r.subjectId===timerSubjectId&&r.paused===timerPaused)return;
+    if(r.running&&r.startMs){
+      if(!timerInterval){
+        timerSubjectId=r.subjectId||timerSubjectId;timerSessionId=r.sessionId||null;
+        timerStart=r.startMs;timerStop=null;timerPaused=r.paused||false;
+        timerPauseStart=r.pauseStartMs||null;timerPausedMs=r.pausedMs||0;
+        timerStartWallClock=new Date(r.startMs);
+        timerInterval=setInterval(timerTick,1000);_acquireWakeLock();
+        renderTimerPage();showToast(timerPaused?'⏸ Timer paused on another device':'⏱ Timer synced from another device');
+      } else if(r.startMs!==timerStart){
+        timerSubjectId=r.subjectId||timerSubjectId;timerSessionId=r.sessionId||null;
+        timerStart=r.startMs;timerStop=null;timerPaused=r.paused||false;
+        timerPauseStart=r.pauseStartMs||null;timerPausedMs=r.pausedMs||0;
+        timerStartWallClock=new Date(r.startMs);showToast('⏱ Timer updated from another device');
+      } else if(r.paused!==timerPaused){
+        timerPaused=r.paused||false;timerPauseStart=r.pauseStartMs||null;timerPausedMs=r.pausedMs||0;
+        renderTimerPage();showToast(timerPaused?'⏸ Timer paused on another device':'▶ Timer resumed on another device');
+      }
+    } else if(!r.running&&r.startMs){
+      if(timerInterval){
+        clearInterval(timerInterval);_resetTabTitle();timerInterval=null;
+        timerSubjectId=r.subjectId||timerSubjectId;timerSessionId=r.sessionId||null;
+        timerStart=r.startMs;timerStop=r.stopMs||Date.now();
+        timerStartWallClock=new Date(r.startMs);_releaseWakeLock();
+        renderTimerPage();showToast('⏹ Timer stopped on another device');
+      } else if(r.startMs!==timerStart){
+        timerSubjectId=r.subjectId||timerSubjectId;timerSessionId=r.sessionId||null;
+        timerStart=r.startMs;timerStop=r.stopMs||null;
+        timerStartWallClock=new Date(r.startMs);renderTimerPage();
+      }
+    } else if(!r.running&&!r.startMs&&(timerStart||timerInterval)){
+      clearInterval(timerInterval);_resetTabTitle();timerInterval=null;timerStart=null;
+      timerStartWallClock=null;_releaseWakeLock();renderTimerPage();
+      showToast('Timer cleared on another device');
+    }
+  }catch(ex){}
 }
 const SUBJ_COLORS_T={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',english_11:'#60a5fa',english_12:'#93c5fd',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',geometry:'#a855f7',algebra2:'#7c3aed',el2:'#94a3b8',el3:'#64748b',el4:'#475569',am_hist:'#b45309',jp_exch:'#7c3aed'};
 let pomodoroMode=false;
