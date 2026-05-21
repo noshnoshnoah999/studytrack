@@ -1,5 +1,5 @@
 // StudyTrack Service Worker — handles background push notifications + always-fresh HTML
-const CACHE='studytrack-v3';
+const CACHE='studytrack-v4';
 
 self.addEventListener('install',e=>{
   self.skipWaiting();
