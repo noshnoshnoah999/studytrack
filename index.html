@@ -213,10 +213,10 @@ a{color:inherit;text-decoration:none}
 /* DAY TABS */
 .day-tabs{display:flex;gap:6px;margin-bottom:20px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;-ms-overflow-style:none}
 .day-tabs::-webkit-scrollbar{display:none}
-.day-tab{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 16px;border-radius:100px;cursor:pointer;border:none;background:var(--bg2);transition:all 0.15s;font-family:inherit;color:var(--text2)}
+.day-tab{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 14px 7px;border-radius:14px;cursor:pointer;border:none;background:var(--bg2);transition:all 0.15s;font-family:inherit;color:var(--text2)}
 .day-tab:hover{background:var(--bg3);color:var(--text)}
 .day-tab.active{background:var(--o);color:#fff}
-.day-tab.today-tab:not(.active){border:1.5px solid var(--o);color:var(--o);padding:6.5px 14.5px}
+.day-tab.today-tab:not(.active){border:1.5px solid var(--o);color:var(--o);padding:6.5px 12.5px 5.5px}
 .day-tab-name{font-size:13px;font-weight:700;line-height:1}
 .day-tab-num{font-size:10px;font-weight:500;opacity:0.7;margin-top:1px}
 
@@ -294,6 +294,25 @@ a{color:inherit;text-decoration:none}
 .btn-toggle-edit{background:var(--bg2);color:var(--text2);font-size:13px;font-weight:600;padding:8px 18px;border-radius:100px;transition:all 0.15s}
 .btn-toggle-edit:hover{background:var(--bg3);color:var(--text)}
 .btn-toggle-edit.active{background:var(--bg3);color:var(--text)}
+/* SCHEDULE NOW HERO */
+.sched-now-hero{border-radius:18px;padding:20px 20px 16px;margin-bottom:14px;position:relative;overflow:hidden;color:#fff}
+.sched-now-hero-eyebrow{font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;opacity:0.75;margin-bottom:5px;display:flex;align-items:center;gap:6px}
+.sched-now-hero-dot{width:6px;height:6px;border-radius:50%;background:#fff;animation:nowpulse 1.4s ease-in-out infinite;flex-shrink:0}
+.sched-now-hero-name{font-size:21px;font-weight:800;letter-spacing:-0.4px;margin-bottom:2px}
+.sched-now-hero-sub{font-size:13px;opacity:0.65;margin-bottom:14px;font-weight:500}
+.sched-now-hero-prog-bg{height:5px;border-radius:3px;background:rgba(255,255,255,0.22);overflow:hidden;margin-bottom:8px}
+.sched-now-hero-prog-fill{height:100%;border-radius:3px;background:rgba(255,255,255,0.88);transition:width 0.4s}
+.sched-now-hero-footer{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;opacity:0.75}
+/* SCHEDULE NEXT CHIP */
+.sched-next-chip{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--bg2);border-radius:12px;margin-bottom:14px;border:1px solid var(--border)}
+.sched-next-chip-icon{font-size:12px;flex-shrink:0;opacity:0.6}
+.sched-next-chip-body{flex:1;min-width:0}
+.sched-next-chip-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px}
+.sched-next-chip-name{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sched-next-chip-time{font-size:12px;font-weight:600;color:var(--text2);flex-shrink:0}
+/* DAY TAB PIPS */
+.day-busy-pips{display:flex;gap:2px;justify-content:center;margin-top:4px;min-height:5px}
+.day-busy-pip{width:5px;height:5px;border-radius:3px;flex-shrink:0}
 
 /* LOG PAGE */
 .log-layout{display:block}
@@ -1291,8 +1310,7 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
           <button class="btn-toggle-edit" id="btn-edit-sched" onclick="toggleEditMode()">Edit</button>
         </div>
       </div>
-      <div id="sched-content"></div>
-      <div id="schedule-calendar-inner" style="margin-top:8px;margin-bottom:80px"></div>
+      <div id="sched-content" style="margin-bottom:80px"></div>
     </div>
 
     <!-- PAGE: LOG -->
@@ -3494,7 +3512,7 @@ function showPage(id){
   // Scroll to top on page change
   window.scrollTo(0,0);
   if(id==='dashboard')renderDashboard();
-  else if(id==='schedule'){renderSchedule();_renderStudyCalendar('schedule-calendar-inner');}
+  else if(id==='schedule'){renderSchedule();}
   else if(id==='log'){renderLog();renderTemplates();}
   else if(id==='history')renderHistory();
   else if(id==='progress')renderProgress();
@@ -3911,7 +3929,7 @@ function renderSchedule(){
   // Build day tabs (always shown)
   const now2=new Date();
   const overrides=loadOverrides();
-  const tabHtml='<div style="display:flex;align-items:center;margin-bottom:4px"><div class="day-tabs" style="margin-bottom:0;flex:1">'+DAY_ORDER.map(dow=>{
+  const tabHtml='<div style="display:flex;align-items:center;margin-bottom:12px"><div class="day-tabs" style="margin-bottom:0;flex:1">'+DAY_ORDER.map(dow=>{
     const isToday=dow===tdow;
     const isSelected=dow===scheduleDay;
     const todayDow=now2.getDay();
@@ -3922,9 +3940,15 @@ function renderSchedule(){
     const dateNum=d.getDate();
     const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
     const hasOverride=!!overrides[ds];
+    // Build busy pips for this day
+    const dayDateObj=new Date(ds+'T00:00:00');
+    const dayBlocks=getBlocksForDate(dayDateObj,schedule).filter(b=>b.type!=='break').slice(0,4);
+    const pipColors=dayBlocks.map(b=>b.type==='work'?'#d97706':b.type==='class'?'#6366f1':(SUBJ_COLORS[b.subjectId]||'var(--o)'));
+    const pipsHtml=pipColors.length?'<div class="day-busy-pips">'+pipColors.map(c=>'<div class="day-busy-pip" style="background:'+c+(isSelected?';opacity:0.85':';opacity:0.6')+'"></div>').join('')+'</div>':'<div class="day-busy-pips"></div>';
     return'<button class="day-tab'+(isSelected?' active':isToday?' today-tab':'')+'" onclick="selectScheduleDay('+dow+')">'+
       '<span class="day-tab-name">'+DAY_SHORT[dow]+(hasOverride?'<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:'+(isSelected?'#fff':'var(--o)')+';margin-left:3px;vertical-align:middle;margin-bottom:2px"></span>':'')+'</span>'+
       '<span class="day-tab-num">'+dateNum+'</span>'+
+      pipsHtml+
     '</button>';
   }).join('')+'</div>'+weekBadgeHtml+'</div>';
 
@@ -4030,7 +4054,43 @@ function renderSchedule(){
       const nowDate=new Date();
       const nowMins=nowDate.getHours()*60+nowDate.getMinutes();
       const fmtNow=String(nowDate.getHours()).padStart(2,'0')+':'+String(nowDate.getMinutes()).padStart(2,'0');
-      // Day summary bar
+      function fmtAmPm(t){const[hh,mm]=t.split(':');const h=parseInt(hh);return(h%12||12)+':'+(mm||'00')+(h<12?' AM':' PM');}
+
+      // ── NOW hero card ────────────────────────────────────────────────────────
+      if(isToday){
+        const activeBlock=blocks.find(bl=>!bl._isTodo&&nowMins>=toMins(bl.start)&&nowMins<toMins(bl.end));
+        const nextBlock=blocks.find(bl=>!bl._isTodo&&bl.type!=='break'&&toMins(bl.start)>nowMins);
+        if(activeBlock){
+          const startM=toMins(activeBlock.start);
+          const endM=toMins(activeBlock.end);
+          const dur=endM-startM;
+          const progPct=Math.min(100,Math.round((nowMins-startM)/dur*100));
+          const minsLeft=endM-nowMins;
+          const heroColor=activeBlock.type==='work'?'#d97706':activeBlock.type==='class'?'#6366f1':activeBlock.type==='break'?'#6b7280':(SUBJ_COLORS[activeBlock.subjectId]||'#f97316');
+          const heroSubj=activeBlock.subjectId?subjs.find(s=>s.id===activeBlock.subjectId):null;
+          const heroSubLine=(heroSubj&&heroSubj.name!==activeBlock.label?heroSubj.name+' · ':'')+fmtAmPm(activeBlock.start)+' – '+fmtAmPm(activeBlock.end);
+          html+='<div class="sched-now-hero" style="background:'+heroColor+';box-shadow:0 8px 24px '+heroColor+'44">'+
+            '<div class="sched-now-hero-eyebrow"><div class="sched-now-hero-dot"></div>Now</div>'+
+            '<div class="sched-now-hero-name">'+escHtml(activeBlock.label)+'</div>'+
+            '<div class="sched-now-hero-sub">'+heroSubLine+'</div>'+
+            '<div class="sched-now-hero-prog-bg"><div class="sched-now-hero-prog-fill" style="width:'+progPct+'%"></div></div>'+
+            '<div class="sched-now-hero-footer"><span>'+progPct+'% done</span><span>'+durStr(minsLeft)+' left</span></div>'+
+          '</div>';
+        } else if(nextBlock){
+          // No active block — show "up next" as hero-lite
+          const nextColor=nextBlock.type==='work'?'#d97706':nextBlock.type==='class'?'#6366f1':(SUBJ_COLORS[nextBlock.subjectId]||'#f97316');
+          html+='<div class="sched-next-chip">'+
+            '<div style="width:8px;height:8px;border-radius:4px;background:'+nextColor+';flex-shrink:0"></div>'+
+            '<div class="sched-next-chip-body">'+
+              '<div class="sched-next-chip-label">Up next</div>'+
+              '<div class="sched-next-chip-name">'+escHtml(nextBlock.label)+'</div>'+
+            '</div>'+
+            '<div class="sched-next-chip-time">'+fmtAmPm(nextBlock.start)+'</div>'+
+          '</div>';
+        }
+      }
+
+      // ── Day summary bar ──────────────────────────────────────────────────────
       const studyBlocks=blocks.filter(b=>b.type==='study');
       const totalStudyMins=studyBlocks.reduce((a,b)=>a+(toMins(b.end)-toMins(b.start)),0);
       const doneStudyMins=isToday?studyBlocks.filter(b=>nowMins>=toMins(b.end)).reduce((a,b)=>a+(toMins(b.end)-toMins(b.start)),0):0;
@@ -4039,7 +4099,7 @@ function renderSchedule(){
         '<div class="day-summary-stat"><span class="day-summary-val">'+studyBlocks.length+'</span><span class="day-summary-lbl">blocks</span></div>'+
         '<div class="day-summary-div"></div>'+
         '<div class="day-summary-stat"><span class="day-summary-val">'+durStr(totalStudyMins)+'</span><span class="day-summary-lbl">study time</span></div>'+
-        (isToday?'<div class="day-summary-div"></div><div class="day-summary-stat"><span class="day-summary-val">'+pctDone+'%</span><span class="day-summary-lbl">done today</span></div>':'')+
+        (isToday&&pctDone>0?'<div class="day-summary-div"></div><div class="day-summary-stat"><span class="day-summary-val">'+pctDone+'%</span><span class="day-summary-lbl">done</span></div>':'')+
       '</div>';
       // ── Merge todos into timeline ────────────────────────────────────────────
       const baseDate2=new Date();
@@ -4050,8 +4110,6 @@ function renderSchedule(){
       const dayTodos2=loadTodos().filter(t=>t.date===selDateStr2);
       const todoItems=dayTodos2.map(t=>({_isTodo:true,_todo:t,start:t.time||'00:00'}));
       const allItems=[...blocks,...todoItems].sort((a,b)=>toMins(a.start)-toMins(b.start));
-
-      function fmtAmPm(t){const[hh,mm]=t.split(':');const h=parseInt(hh);return(h%12||12)+':'+(mm||'00')+(h<12?' AM':' PM');}
 
       // ── Timeline view ────────────────────────────────────────────────────────
       html+='<div class="tl-wrap">';
