@@ -2174,8 +2174,6 @@ function renderNowNext(){
     const endsIn=toMins(active.end)-nowMins;
     const cls=isBreak?'is-break':'is-now';
     const lbl=isBreak?'On Break':'Studying Now';
-    const qlBtn=(!isBreak&&active.subjectId)?
-      '<button class="nnb-quicklog" onclick="quickLog(\''+active.subjectId+'\',\''+active.start+'\')">⚡ Quick Log</button>':'';
     el.innerHTML=
       '<div class="now-next-banner '+cls+'">'+
         '<div class="nnb-row1">'+
@@ -2185,7 +2183,6 @@ function renderNowNext(){
         '</div>'+
         '<div class="nnb-row2">'+
           '<span class="nnb-name">'+escHtml(active.label)+'</span>'+
-          qlBtn+
         '</div>'+
       '</div>';
     el.querySelector('.now-next-banner').classList.add('drop-in');
