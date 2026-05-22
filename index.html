@@ -682,16 +682,6 @@ a{color:inherit;text-decoration:none}
   --shadow:0 1px 4px rgba(80,20,0,0.08),0 6px 20px rgba(80,20,0,0.12);
 }
 [data-theme="coral"] .modal-sheet,[data-theme="coral"] #bottom-nav{background:var(--bg2)}
-/* ── COSMIC ORANGE THEME (deep space purple-black, electric orange) ──────────── */
-[data-theme="cosmic"]{
-  --bg:#1c1528;--bg2:#251d34;--bg3:#302540;--bg4:#3c2f50;
-  --border:rgba(255,120,30,0.15);
-  --text:#fff2e8;--text2:#c88050;--text3:#907060;
-  --o:#ff6400;--od:#e05500;--ol:rgba(255,100,0,0.18);--od2:rgba(255,100,0,0.35);
-  --ok:#00c896;--okl:rgba(0,200,150,0.13);--err:#ff4d6a;--errl:rgba(255,77,106,0.14);
-  --shadow:none;
-}
-[data-theme="cosmic"] .modal-sheet,[data-theme="cosmic"] #bottom-nav{background:var(--bg2)}
 /* ── CRIMSON THEME (deep red, dark) ─────────────────────────────────────────── */
 [data-theme="crimson"]{
   --bg:#1a0808;--bg2:#260e0e;--bg3:#321414;--bg4:#401a1a;
@@ -717,6 +707,18 @@ a{color:inherit;text-decoration:none}
 .tc-card:hover{background:var(--bg4)}
 .tc-card.active{border-color:var(--o);background:var(--ol);color:var(--o);transform:scale(1.06)}
 .tc-dot{width:26px;height:26px;border-radius:50%;flex-shrink:0}
+/* THEME PREVIEW */
+.tc-preview{border-radius:14px;overflow:hidden;margin-top:12px;border:1.5px solid var(--border);display:none}
+.tc-preview.visible{display:block;animation:fadeIn 0.15s ease}
+.tc-preview-header{padding:10px 14px;display:flex;align-items:center;justify-content:space-between}
+.tc-preview-title{font-size:13px;font-weight:800}
+.tc-preview-body{padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+.tc-preview-card{border-radius:10px;padding:10px 12px}
+.tc-preview-label{font-size:9px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:3px}
+.tc-preview-val{font-size:18px;font-weight:800;letter-spacing:-0.5px}
+.tc-preview-bar-bg{height:4px;border-radius:2px;margin-top:6px;overflow:hidden}
+.tc-preview-bar-fill{height:100%;border-radius:2px;width:65%}
+.tc-preview-btn{border-radius:8px;padding:7px 0;font-size:11px;font-weight:700;text-align:center;margin-top:4px}
 .carousel-arrows{display:flex;justify-content:center;gap:12px;margin-top:8px}
 .carousel-arrow{width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--bg3);color:var(--text2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;line-height:1}
 .carousel-arrow:hover{background:var(--bg4);color:var(--text);border-color:var(--o)}
@@ -1540,6 +1542,7 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
         <button class="carousel-arrow" onclick="_tcScroll(-1)" title="Previous">&#8249;</button>
         <button class="carousel-arrow" onclick="_tcScroll(1)" title="Next">&#8250;</button>
       </div>
+      <div class="tc-preview" id="tc-preview"></div>
     </div>
     <div class="form-group" style="margin-top:6px">
       <label class="form-label">Menu Order</label>
@@ -7546,44 +7549,69 @@ function escHtml(s){
 // ── DARK MODE ─────────────────────────────────────────────────────────────────
 // App is dark by default. Toggle switches to "light" mode.
 function applyTheme(){
-  // Migrate old st_light pref → ember theme
   let name=localStorage.getItem('st_theme');
-  if(!name){name=localStorage.getItem('st_light')==='1'?'ember':'pumpkin';}
+  if(!name){name='slate';}
   // Migrate removed themes
   if(name==='linen'){name='mocha';localStorage.setItem('st_theme','mocha');}
   if(name==='blush'){name='rose';localStorage.setItem('st_theme','rose');}
-  if(name==='honey'){name='ember';localStorage.setItem('st_theme','ember');}
-  document.documentElement.setAttribute('data-theme',name==='pumpkin'?'':name);
+  if(name==='honey'||name==='ember'){name='slate';localStorage.setItem('st_theme','slate');}
+  if(name==='pumpkin'){name='slate';localStorage.setItem('st_theme','slate');}
+  if(name==='cosmic'){name='ocean';localStorage.setItem('st_theme','ocean');}
+  document.documentElement.setAttribute('data-theme',name);
 }
 // ── Theme carousel ────────────────────────────────────────────────────────
 const THEMES_LIST=[
-  {id:'pumpkin',  name:'Pumpkin',    bg:'#211508', dot:'#f97316'},
-  {id:'slate',    name:'Slate',      bg:'#1c1c1c', dot:'#f97316'},
-  {id:'ocean',    name:'Ocean',      bg:'#0f2030', dot:'#00b8d9'},
-  {id:'cosmic',   name:'Cosmic',     bg:'#251d34', dot:'#ff6400'},
-  {id:'rose',     name:'Rose',       bg:'#fdd0e2', dot:'#c02868'},
-  {id:'sage',     name:'Sage',       bg:'#d8ead4', dot:'#3a6a48'},
-  {id:'lavender', name:'Lavender',   bg:'#ddd0f4', dot:'#6830b0'},
-  {id:'peach',    name:'Peach',      bg:'#ffd0b0', dot:'#d05828'},
-  {id:'mint',     name:'Mint',       bg:'#c0f0d8', dot:'#158050'},
-  {id:'denim',    name:'Denim',      bg:'#c4d4ec', dot:'#1840a0'},
-  {id:'mocha',    name:'Mocha',      bg:'#d8b890', dot:'#7a3a10'},
-  {id:'coral',    name:'Coral',      bg:'#ffb090', dot:'#c03020'},
-  {id:'crimson',       name:'Crimson',       bg:'#260e0e', dot:'#dc2626'},
+  {id:'slate',    name:'Slate',    bg:'#0e0e0e', bg2:'#1c1c1c', bg3:'#272727', text:'#f0f0f0', text2:'#909090', o:'#f97316'},
+  {id:'ocean',    name:'Ocean',   bg:'#09141e', bg2:'#0f2030', bg3:'#162840', text:'#d8eeff', text2:'#6898bc', o:'#00b8d9'},
+  {id:'crimson',  name:'Crimson', bg:'#1a0808', bg2:'#260e0e', bg3:'#321414', text:'#fdf0f0', text2:'#c07070', o:'#dc2626'},
+  {id:'rose',     name:'Rose',    bg:'#f5c0d4', bg2:'#fdd0e2', bg3:'#e8a0bc', text:'#280810', text2:'#8a3050', o:'#c02868'},
+  {id:'sage',     name:'Sage',    bg:'#c8ddc4', bg2:'#d8ead4', bg3:'#b4ccb0', text:'#0e1e0c', text2:'#3a5e36', o:'#3a6a48'},
+  {id:'lavender', name:'Lavender',bg:'#d0c0e8', bg2:'#ddd0f4', bg3:'#bca8d8', text:'#160e28', text2:'#583878', o:'#6830b0'},
+  {id:'peach',    name:'Peach',   bg:'#f8c0a0', bg2:'#ffd0b0', bg3:'#e8a888', text:'#2a1008', text2:'#904030', o:'#d05828'},
+  {id:'mint',     name:'Mint',    bg:'#a8e4c8', bg2:'#c0f0d8', bg3:'#88d0b0', text:'#042010', text2:'#186040', o:'#158050'},
+  {id:'denim',    name:'Denim',   bg:'#b0c4e0', bg2:'#c4d4ec', bg3:'#98aed0', text:'#081830', text2:'#284878', o:'#1840a0'},
+  {id:'mocha',    name:'Mocha',   bg:'#c8a882', bg2:'#d8b890', bg3:'#b8946c', text:'#1a0c00', text2:'#6b3a18', o:'#7a3a10'},
+  {id:'coral',    name:'Coral',   bg:'#f8a080', bg2:'#ffb090', bg3:'#e88868', text:'#280800', text2:'#a02818', o:'#c03020'},
 ];
 
 function _tcBuild(){
   const el=document.getElementById('theme-carousel');
   if(!el)return;
   el.innerHTML=THEMES_LIST.map(t=>
-    `<button class="tc-card" data-theme-name="${t.id}" onclick="_tcSelect('${t.id}')">` +
-    `<span class="tc-dot" style="background:${t.dot};box-shadow:0 0 0 3px ${t.bg},0 0 0 5px ${t.dot}"></span>` +
+    `<button class="tc-card" data-theme-name="${t.id}" onclick="_tcSelect('${t.id}')" onmouseenter="_tcPreview('${t.id}')" onfocus="_tcPreview('${t.id}')">` +
+    `<span class="tc-dot" style="background:${t.o};box-shadow:0 0 0 3px ${t.bg2},0 0 0 5px ${t.o}"></span>` +
     `<span>${t.name}</span></button>`
   ).join('');
 }
 
 function _tcSelect(name){
   setTheme(name);
+  _tcPreview(name);
+}
+
+function _tcPreview(id){
+  const t=THEMES_LIST.find(x=>x.id===id);
+  const el=document.getElementById('tc-preview');
+  if(!t||!el)return;
+  const isDark=id==='slate'||id==='ocean'||id==='crimson';
+  el.className='tc-preview visible';
+  el.style.background=t.bg2;
+  el.style.borderColor=t.bg3;
+  el.innerHTML=
+    `<div class="tc-preview-header" style="background:${t.bg3}">` +
+      `<span class="tc-preview-title" style="color:${t.text}">StudyTrack</span>` +
+      `<span style="font-size:11px;font-weight:700;color:${t.o}">${t.name}</span>` +
+    `</div>`+
+    `<div class="tc-preview-body" style="background:${t.bg2}">` +
+      `<div class="tc-preview-card" style="background:${t.bg3}">` +
+        `<div class="tc-preview-label" style="color:${t.text2}">Today's Study Hours</div>`+
+        `<div class="tc-preview-val" style="color:${t.text}">4h 20m</div>`+
+        `<div class="tc-preview-bar-bg" style="background:${t.bg}">` +
+          `<div class="tc-preview-bar-fill" style="background:${t.o}"></div>`+
+        `</div>`+
+      `</div>`+
+      `<div class="tc-preview-btn" style="background:${t.o};color:${isDark?'#fff':t.bg}">Log Session</div>`+
+    `</div>`;
 }
 
 function _tcScroll(dir){
@@ -7613,14 +7641,14 @@ function _tcHighlight(name){
 
 function setTheme(name){
   localStorage.setItem('st_theme',name);
-  document.documentElement.setAttribute('data-theme',name==='pumpkin'?'':name);
+  document.documentElement.setAttribute('data-theme',name);
   updateThemeSwatches();
 }
 function updateThemeSwatches(){
-  const name=localStorage.getItem('st_theme')||
-    (localStorage.getItem('st_light')==='1'?'ember':'pumpkin');
+  const name=localStorage.getItem('st_theme')||'slate';
   if(!document.querySelector('.tc-card'))_tcBuild();
   _tcHighlight(name);
+  _tcPreview(name);
 }
 
 function toggleSidebar(){
