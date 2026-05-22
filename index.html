@@ -753,6 +753,16 @@ a{color:inherit;text-decoration:none}
   --shadow:none;
 }
 [data-theme="cosmic"] .modal-sheet,[data-theme="cosmic"] #bottom-nav{background:var(--bg2)}
+/* ── CRIMSON THEME (deep red, dark) ─────────────────────────────────────────── */
+[data-theme="crimson"]{
+  --bg:#1a0808;--bg2:#260e0e;--bg3:#321414;--bg4:#401a1a;
+  --border:rgba(220,50,50,0.15);
+  --text:#fdf0f0;--text2:#c07070;--text3:#8a4040;
+  --o:#dc2626;--od:#c01f1f;--ol:rgba(220,38,38,0.18);--od2:rgba(220,38,38,0.32);
+  --ok:#00c896;--okl:rgba(0,200,150,0.13);--err:#ff6b6b;--errl:rgba(255,107,107,0.14);
+  --shadow:none;
+}
+[data-theme="crimson"] .modal-sheet,[data-theme="crimson"] #bottom-nav{background:var(--bg2)}
 
 /* THEME BUTTON */
 .btn-dark{background:none;border:none;cursor:pointer;font-size:17px;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0}
@@ -7626,6 +7636,7 @@ const THEMES_LIST=[
   {id:'lime',     name:'Lime',       bg:'#d0f090', dot:'#408010'},
   {id:'lilac',    name:'Lilac',      bg:'#ead8f8', dot:'#7030b0'},
   {id:'coral',    name:'Coral',      bg:'#ffb090', dot:'#c03020'},
+  {id:'crimson',  name:'Crimson',    bg:'#260e0e', dot:'#dc2626'},
 ];
 
 function _tcBuild(){
