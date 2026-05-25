@@ -5270,21 +5270,20 @@ document.addEventListener('visibilitychange',()=>{
 
 // ── TIMER SYNC ────────────────────────────────────────────────────────────────
 async function timerSyncPush(){
-  try{
-    await sbPush('st_timer',{
-      running:!!timerInterval,
-      startMs:timerStart,
-      stopMs:timerStop,
-      subjectId:timerSubjectId,
-      sessionId:timerSessionId,
-      paused:timerPaused,
-      pauseStartMs:timerPauseStart,
-      pausedMs:timerPausedMs,
-      updatedAt:Date.now()
-    });
-    // Instantly broadcast to other connected devices via WebSocket
-    _rtBroadcastTimer();
-  }catch(e){}
+  // Broadcast via WebSocket first — instant delivery to other devices
+  _rtBroadcastTimer();
+  // DB write happens in background for persistence / catch-up on reconnect
+  sbPush('st_timer',{
+    running:!!timerInterval,
+    startMs:timerStart,
+    stopMs:timerStop,
+    subjectId:timerSubjectId,
+    sessionId:timerSessionId,
+    paused:timerPaused,
+    pauseStartMs:timerPauseStart,
+    pausedMs:timerPausedMs,
+    updatedAt:Date.now()
+  }).catch(()=>{});
 }
 
 async function timerSyncPull(silent){
@@ -5372,7 +5371,8 @@ function _startTimerSyncPoll(){
 }
 function _stopTimerSyncPoll(){
   if(_timerSyncInterval){clearInterval(_timerSyncInterval);_timerSyncInterval=null;}
-  _rtDisconnect();
+  // Keep the WebSocket alive — don't disconnect when leaving timer page.
+  // The connection stays warm so the next push is instant with no handshake wait.
 }
 
 // ── SUPABASE REALTIME (broadcast timer state for instant cross-device sync) ──
@@ -5420,8 +5420,8 @@ function _rtConnect(){
     ws.onclose=()=>{
       _rtJoined=false;
       _rtWs=null;
-      // Auto-reconnect only while on timer page
-      if(currentPage==='timer')_rtReconnTimer=setTimeout(_rtConnect,3500);
+      // Auto-reconnect quickly — keep connection alive across all pages
+      _rtReconnTimer=setTimeout(_rtConnect,500);
     };
 
     ws.onerror=()=>{ws.close();};
@@ -9575,6 +9575,9 @@ window.addEventListener('load',function(){
   if(typeof _rd==='function'){
     window.renderDashboard=function(){_rd.apply(this,arguments);fillYesterdayPill();};
   }
+  // Open the Realtime WebSocket immediately at startup so it's already connected
+  // by the time the user navigates to the timer — zero handshake delay.
+  if(typeof _rtConnect==='function')_rtConnect();
 });
 </script>
 
