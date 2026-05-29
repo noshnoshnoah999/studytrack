@@ -95,9 +95,9 @@ jobs:
 
           // ── Main ───────────────────────────────────────────────────────────
           (async () => {
-            // Current time in Perth (AWST = UTC+8, no DST)
+            // Current time in Tokyo (JST = UTC+9, no DST)
             // Use direct UTC offset math — avoids toLocaleString parsing bugs on Linux
-            const nowDate = new Date(Date.now() + 8 * 3600000);
+            const nowDate = new Date(Date.now() + 9 * 3600000);
             const dow     = nowDate.getUTCDay();
             const nowMins = nowDate.getUTCHours() * 60 + nowDate.getUTCMinutes();
             const todayStr =
@@ -105,7 +105,7 @@ jobs:
               String(nowDate.getUTCMonth() + 1).padStart(2, '0') + '-' +
               String(nowDate.getUTCDate()).padStart(2, '0');
             const DAY = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-            console.log(`${DAY[dow]} ${nowDate.getUTCHours()}:${String(nowDate.getUTCMinutes()).padStart(2,'0')} Perth | ${nowMins}m | ${todayStr}`);
+            console.log(`${DAY[dow]} ${nowDate.getUTCHours()}:${String(nowDate.getUTCMinutes()).padStart(2,'0')} Tokyo | ${nowMins}m | ${todayStr}`);
 
             // Is current time within a window around target?
             function near(targetMins, lo=1, hi=2) {
