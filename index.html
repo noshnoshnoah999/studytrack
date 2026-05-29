@@ -8949,6 +8949,8 @@ function _aiMakeContext(){
   const goals=loadGoals();
   const sessions=loadSessions();
   const now=new Date();
+  // Always use Tokyo time (JST = UTC+9) regardless of device timezone
+  const nowTokyo=new Date(now.getTime()+9*3600000);
   const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const DAYS_SHORT=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   // Subjects
@@ -8984,15 +8986,16 @@ function _aiMakeContext(){
   const todoLines=todos.length
     ?todos.map(t=>'  ['+(t.done?'x':' ')+'] '+(t.date||'')+(t.time?' '+t.time:'')+(t.subjectId?' ['+t.subjectId+']':'')+' '+t.text+(t.createdAt?' (created '+t.createdAt.slice(0,10)+')':'')).join('\n')
     :'  (no todos)';
-  return{subjLines,schedLines,goals,recentH,totalLogged,TOTAL_REQ,now,DAYS,subjs,schedule,sessionLines,sessionCount:sessions.length,todoLines};
+  return{subjLines,schedLines,goals,recentH,totalLogged,TOTAL_REQ,now,nowTokyo,DAYS,subjs,schedule,sessionLines,sessionCount:sessions.length,todoLines};
 }
 
 function _aiSystemPrompt(ctx){
-  const {subjLines,schedLines,goals,recentH,totalLogged,TOTAL_REQ,now,DAYS,subjs,sessionLines,sessionCount,todoLines}=ctx;
+  const {subjLines,schedLines,goals,recentH,totalLogged,TOTAL_REQ,now,nowTokyo,DAYS,subjs,sessionLines,sessionCount,todoLines}=ctx;
   const pct=TOTAL_REQ>0?(totalLogged/TOTAL_REQ*100).toFixed(1):0;
-  return `You are an AI study coach for Noah, a TIHS (Texas International Homeschool) student working toward graduation by October 2027.
+  return `You are an AI study coach for Noah, a TIHS homeschool student in Tokyo, Japan, working toward graduation by October 2027.
 
-TODAY: ${DAYS[now.getDay()]}, ${now.toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'})}
+TODAY: ${DAYS[nowTokyo.getUTCDay()]}, ${nowTokyo.getUTCDate()} ${['January','February','March','April','May','June','July','August','September','October','November','December'][nowTokyo.getUTCMonth()]} ${nowTokyo.getUTCFullYear()}
+CURRENT TIME (Tokyo/JST): ${String(nowTokyo.getUTCHours()).padStart(2,'0')}:${String(nowTokyo.getUTCMinutes()).padStart(2,'0')}
 OVERALL PROGRESS: ${totalLogged.toFixed(1)}h / ${TOTAL_REQ}h logged (${pct}%)
 RECENT PACE: ${recentH}h in last 7 days
 TEACHER'S TARGET: ${goals.teacherTarget||6.3}h/day (${_fmtDecimalToHm(goals.teacherTarget||6.3)})
