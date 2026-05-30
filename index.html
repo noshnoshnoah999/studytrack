@@ -7643,6 +7643,8 @@ function setTheme(name){
   localStorage.setItem('st_theme',name);
   document.documentElement.setAttribute('data-theme',name);
   updateThemeSwatches();
+  // Sync theme to cloud so widgets on all devices pick it up
+  sbPush('st_theme',name,{silent:true});
 }
 function updateThemeSwatches(){
   const name=localStorage.getItem('st_theme')||'slate';
@@ -8155,7 +8157,7 @@ async function sbPull(key){
 async function syncFromCloud(){
   setSyncUI('syncing','Syncing…');
   try{
-    const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_templates','st_ai_history']; // st_hours is recomputed from sessions below, not pulled directly
+    const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_templates','st_ai_history','st_theme']; // st_hours is recomputed from sessions below, not pulled directly
     // Pull st_deleted_sessions upfront so we can use it synchronously inside forEach
     let cloudDeletedRaw=null;
     try{cloudDeletedRaw=await sbPull('st_deleted_sessions');}catch(e){}
@@ -8213,6 +8215,14 @@ async function syncFromCloud(){
           if(cloud.length>local.length){
             localStorage.setItem(k,JSON.stringify(cloud));
             _aiHistory=cloud;
+          }
+        } else if(k==='st_theme'){
+          // Apply cloud theme if different from local
+          const cloudTheme=typeof rows[i].value==='string'?rows[i].value:null;
+          if(cloudTheme&&cloudTheme!==localStorage.getItem('st_theme')){
+            localStorage.setItem('st_theme',cloudTheme);
+            document.documentElement.setAttribute('data-theme',cloudTheme);
+            updateThemeSwatches();
           }
         } else if(k==='st_subjs'){
           // For subjects, keep whichever version is newer using updated_at timestamp

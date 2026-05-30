@@ -1,18 +1,22 @@
 // StudyTrack Widget — paste into Scriptable
-// Shows today's hours, next/current block
+// Shows today's hours, next/current block — theme synced from app
 
 const SB_URL = "https://epaiazxcdcseijkhrncm.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVwYWlhenhjZGNzZWlqa2hybmNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwMjQ0MzQsImV4cCI6MjA5MjYwMDQzNH0.h2t_kFLZ_YPvuJlzPPiyXVbOnW4Ub_52hdaYosMoOus";
 
-// ── Colours (Ember theme — warm cream) ─────────────────────────────────────
-const C = {
-  bg:      new Color("#faf7f1"),  // warm cream card background
-  bg2:     new Color("#f0ebe2"),  // slightly darker bg
-  accent:  new Color("#b5654e"),  // terracotta accent
-  text:    new Color("#261a0e"),  // dark warm brown
-  text2:   new Color("#7a5c3e"),  // medium brown
-  text3:   new Color("#b09070"),  // muted label
-  ok:      new Color("#5a8a60"),  // green for on-track
+// ── Theme palette (matches app THEMES_LIST exactly) ──────────────────────────
+const THEMES = {
+  slate:    { bg:"#0e0e0e", bg2:"#1c1c1c", bg3:"#272727", text:"#f0f0f0", text2:"#909090", text3:"#606060", o:"#f97316", ok:"#00c896" },
+  ocean:    { bg:"#09141e", bg2:"#0f2030", bg3:"#162840", text:"#d8eeff", text2:"#6898bc", text3:"#3a6080", o:"#00b8d9", ok:"#00c896" },
+  crimson:  { bg:"#1a0808", bg2:"#260e0e", bg3:"#321414", text:"#fdf0f0", text2:"#c07070", text3:"#884848", o:"#dc2626", ok:"#00c896" },
+  rose:     { bg:"#f5c0d4", bg2:"#fdd0e2", bg3:"#e8a0bc", text:"#280810", text2:"#8a3050", text3:"#b06080", o:"#c02868", ok:"#2a7a4a" },
+  sage:     { bg:"#c8ddc4", bg2:"#d8ead4", bg3:"#b4ccb0", text:"#0e1e0c", text2:"#3a5e36", text3:"#608a5c", o:"#3a6a48", ok:"#1a5a30" },
+  lavender: { bg:"#d0c0e8", bg2:"#ddd0f4", bg3:"#bca8d8", text:"#160e28", text2:"#583878", text3:"#8060a8", o:"#6830b0", ok:"#2a6a3a" },
+  peach:    { bg:"#f8c0a0", bg2:"#ffd0b0", bg3:"#e8a888", text:"#2a1008", text2:"#904030", text3:"#b87050", o:"#d05828", ok:"#2a6a3a" },
+  mint:     { bg:"#a8e4c8", bg2:"#c0f0d8", bg3:"#88d0b0", text:"#042010", text2:"#186040", text3:"#408060", o:"#158050", ok:"#0a5030" },
+  denim:    { bg:"#b0c4e0", bg2:"#c4d4ec", bg3:"#98aed0", text:"#081830", text2:"#284878", text3:"#506898", o:"#1840a0", ok:"#1a6040" },
+  mocha:    { bg:"#c8a882", bg2:"#d8b890", bg3:"#b8946c", text:"#1a0c00", text2:"#6b3a18", text3:"#9a6840", o:"#7a3a10", ok:"#2a5a1a" },
+  coral:    { bg:"#f8a080", bg2:"#ffb090", bg3:"#e88868", text:"#280800", text2:"#a02818", text3:"#c05030", o:"#c03020", ok:"#1a5a2a" },
 };
 
 // ── Fetch from Supabase ──────────────────────────────────────────────────────
@@ -30,10 +34,11 @@ async function sbGet(key) {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function todayStr() {
-  const d = new Date();
-  return d.getFullYear() + "-" +
-    String(d.getMonth()+1).padStart(2,"0") + "-" +
-    String(d.getDate()).padStart(2,"0");
+  // Tokyo time (UTC+9)
+  const d = new Date(Date.now() + 9 * 3600000);
+  return d.getUTCFullYear() + "-" +
+    String(d.getUTCMonth()+1).padStart(2,"0") + "-" +
+    String(d.getUTCDate()).padStart(2,"0");
 }
 function toMins(t) {
   if (!t) return 0;
@@ -53,17 +58,25 @@ function fmtAmPm(t) {
   const h = parseInt(hh);
   return `${h%12||12}:${mm} ${h<12?"AM":"PM"}`;
 }
+function c(hex) { return new Color(hex); }
 
 // ── Load data ────────────────────────────────────────────────────────────────
-const [sessions,goals,schedule,subjs]=await Promise.all([sbGet("st_sessions"),sbGet("st_goals"),sbGet("st_sched"),sbGet("st_subjs")]);
+const [sessions, goals, schedule, subjs, themeRaw] = await Promise.all([
+  sbGet("st_sessions"), sbGet("st_goals"), sbGet("st_sched"),
+  sbGet("st_subjs"), sbGet("st_theme")
+]);
+
+// Pick theme — fall back to slate
+const themeName = (typeof themeRaw === "string" && THEMES[themeRaw]) ? themeRaw : "slate";
+const T = THEMES[themeName];
 
 const today = todayStr();
-const now = new Date();
-const nowMins = now.getHours()*60 + now.getMinutes();
-const dow = now.getDay();
+const nowTokyo = new Date(Date.now() + 9 * 3600000);
+const nowMins = nowTokyo.getUTCHours()*60 + nowTokyo.getUTCMinutes();
+const dow = nowTokyo.getUTCDay();
 
-// Build set of extra-credit subject IDs (e.g. EL4) — excluded from study hour totals
-const EC_IDS = new Set(["el4"]); // built-in fallback
+// Extra credit exclusions
+const EC_IDS = new Set(["el4"]);
 (subjs||[]).forEach(s => { if (s.extraCredit) EC_IDS.add(s.id); });
 
 const todaySessions = (sessions||[]).filter(s => s.date === today && !EC_IDS.has(s.subjectId));
@@ -71,7 +84,7 @@ const todayH = todaySessions.reduce((a,s) => a + s.hours, 0);
 const dailyGoal = (goals && goals.daily) || 6.3;
 const pct = Math.min(1, todayH / dailyGoal);
 
-// Next / current block
+// Today's blocks
 const todayBlocks = (schedule||[])
   .filter(b => b.day === dow && b.type === "study")
   .sort((a,b) => toMins(a.start) - toMins(b.start));
@@ -82,75 +95,92 @@ const focusBlock  = activeBlock || nextBlock;
 
 // ── Build widget ─────────────────────────────────────────────────────────────
 const w = new ListWidget();
-w.backgroundColor = C.bg;
+w.backgroundColor = c(T.bg);
 w.url = "https://noshnoshnoah999.github.io/studytrack/";
 w.setPadding(14, 14, 14, 14);
 
 const size = config.widgetFamily || "small";
 
 if (size === "small") {
-  // ── SMALL WIDGET ───────────────────────────────────────────────────────────
-  // Today's hours — big number
+  // ── SMALL ──────────────────────────────────────────────────────────────────
   const hoursText = w.addText(fmtH(todayH));
   hoursText.font = Font.boldSystemFont(28);
-  hoursText.textColor = todayH >= dailyGoal ? C.ok : C.text;
+  hoursText.textColor = todayH >= dailyGoal ? c(T.ok) : c(T.text);
 
   w.addSpacer(2);
 
   const goalText = w.addText(`of ${fmtH(dailyGoal)} goal`);
   goalText.font = Font.systemFont(13);
-  goalText.textColor = C.text2;
+  goalText.textColor = c(T.text2);
   goalText.minimumScaleFactor = 0.7;
+
+  // Progress bar via stack
+  w.addSpacer(6);
+  const barBg = w.addStack();
+  barBg.backgroundColor = c(T.bg3);
+  barBg.cornerRadius = 3;
+  barBg.size = new Size(0, 4);
+  const barFill = barBg.addStack();
+  barFill.backgroundColor = c(T.o);
+  barFill.cornerRadius = 3;
+  barFill.size = new Size(pct * 100, 4);
 
   w.addSpacer();
 
-  // Next / now block
   if (focusBlock) {
     const label = activeBlock ? "● NOW" : "● NEXT";
     const labelEl = w.addText(label);
     labelEl.font = Font.boldSystemFont(9);
-    labelEl.textColor = C.accent;
+    labelEl.textColor = c(T.o);
 
     w.addSpacer(2);
 
     const blockName = w.addText(focusBlock.label || "Study");
     blockName.font = Font.mediumSystemFont(13);
-    blockName.textColor = C.text;
+    blockName.textColor = c(T.text);
     blockName.lineLimit = 1;
 
     const blockTime = w.addText(`${fmtAmPm(focusBlock.start)} – ${fmtAmPm(focusBlock.end)}`);
     blockTime.font = Font.systemFont(10);
-    blockTime.textColor = C.text2;
+    blockTime.textColor = c(T.text2);
   } else {
-    const freeEl = w.addText("No blocks today");
+    const freeEl = w.addText("Free now");
     freeEl.font = Font.systemFont(11);
-    freeEl.textColor = C.text3;
+    freeEl.textColor = c(T.text3);
   }
 
 } else if (size === "medium") {
-  // ── MEDIUM WIDGET ──────────────────────────────────────────────────────────
+  // ── MEDIUM ─────────────────────────────────────────────────────────────────
   const row = w.addStack();
   row.layoutHorizontally();
   row.centerAlignContent();
 
-  // Left: hours
   const left = row.addStack();
   left.layoutVertically();
 
   const bigHours = left.addText(fmtH(todayH));
   bigHours.font = Font.boldSystemFont(32);
-  bigHours.textColor = todayH >= dailyGoal ? C.ok : C.text;
+  bigHours.textColor = todayH >= dailyGoal ? c(T.ok) : c(T.text);
 
   const goalLbl = left.addText(`of ${fmtH(dailyGoal)} goal`);
   goalLbl.font = Font.systemFont(14);
-  goalLbl.textColor = C.text2;
+  goalLbl.textColor = c(T.text2);
   goalLbl.minimumScaleFactor = 0.7;
 
   left.addSpacer(6);
 
+  // Progress bar
+  const barBg = left.addStack();
+  barBg.backgroundColor = c(T.bg3);
+  barBg.cornerRadius = 3;
+  barBg.size = new Size(120, 5);
+  const barFill = barBg.addStack();
+  barFill.backgroundColor = c(T.o);
+  barFill.cornerRadius = 3;
+  barFill.size = new Size(pct * 120, 5);
+
   row.addSpacer();
 
-  // Right: next block + log button
   const right = row.addStack();
   right.layoutVertically();
   right.centerAlignContent();
@@ -158,33 +188,33 @@ if (size === "small") {
   if (focusBlock) {
     const lbl = right.addText(activeBlock ? "● NOW" : "● NEXT");
     lbl.font = Font.boldSystemFont(10);
-    lbl.textColor = C.accent;
+    lbl.textColor = c(T.o);
 
     right.addSpacer(3);
 
     const bn = right.addText(focusBlock.label || "Study");
     bn.font = Font.mediumSystemFont(14);
-    bn.textColor = C.text;
+    bn.textColor = c(T.text);
     bn.lineLimit = 1;
 
     const bt = right.addText(`${fmtAmPm(focusBlock.start)} – ${fmtAmPm(focusBlock.end)}`);
     bt.font = Font.systemFont(11);
-    bt.textColor = C.text2;
+    bt.textColor = c(T.text2);
   } else {
     const freeEl = right.addText("Free now");
     freeEl.font = Font.systemFont(13);
-    freeEl.textColor = C.text3;
+    freeEl.textColor = c(T.text3);
   }
 
 } else {
-  // Lock screen (accessoryCircular / accessoryRectangular)
+  // ── LOCK SCREEN ────────────────────────────────────────────────────────────
   const pctNum = w.addText(`${Math.round(pct*100)}%`);
   pctNum.font = Font.boldSystemFont(16);
-  pctNum.textColor = C.text;
+  pctNum.textColor = c(T.text);
 
   const sub = w.addText(fmtH(todayH) + " today");
   sub.font = Font.systemFont(10);
-  sub.textColor = C.text2;
+  sub.textColor = c(T.text2);
 }
 
 Script.setWidget(w);
