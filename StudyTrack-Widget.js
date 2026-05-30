@@ -103,18 +103,26 @@ const size = config.widgetFamily || "small";
 
 if (size === "small") {
   // ── SMALL ──────────────────────────────────────────────────────────────────
+  // Day label
+  const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const dayEl = w.addText(dayNames[dow]);
+  dayEl.font = Font.systemFont(11);
+  dayEl.textColor = c(T.text2);
+
+  w.addSpacer(4);
+
+  // Big hours
   const hoursText = w.addText(fmtH(todayH));
-  hoursText.font = Font.boldSystemFont(28);
+  hoursText.font = Font.boldSystemFont(30);
   hoursText.textColor = todayH >= dailyGoal ? c(T.ok) : c(T.text);
+  hoursText.minimumScaleFactor = 0.6;
 
-  w.addSpacer(2);
-
-  const goalText = w.addText(`of ${fmtH(dailyGoal)} goal`);
-  goalText.font = Font.systemFont(13);
-  goalText.textColor = c(T.text2);
+  const goalText = w.addText(todayH >= dailyGoal ? "Goal reached! 🎉" : `of ${fmtH(dailyGoal)} goal`);
+  goalText.font = Font.systemFont(11);
+  goalText.textColor = todayH >= dailyGoal ? c(T.ok) : c(T.text2);
   goalText.minimumScaleFactor = 0.7;
 
-  // Progress bar via stack (only show if any hours logged)
+  // Progress bar
   w.addSpacer(6);
   const barBg = w.addStack();
   barBg.backgroundColor = c(T.bg3);
@@ -122,7 +130,7 @@ if (size === "small") {
   barBg.size = new Size(0, 4);
   if (pct > 0) {
     const barFill = barBg.addStack();
-    barFill.backgroundColor = c(T.o);
+    barFill.backgroundColor = todayH >= dailyGoal ? c(T.ok) : c(T.o);
     barFill.cornerRadius = 3;
     barFill.size = new Size(pct * 100, 4);
   }
@@ -146,9 +154,10 @@ if (size === "small") {
     blockTime.font = Font.systemFont(10);
     blockTime.textColor = c(T.text2);
   } else {
-    const freeEl = w.addText("Free now");
+    const remaining = Math.max(0, dailyGoal - todayH);
+    const freeEl = w.addText(todayH >= dailyGoal ? "All done today ✓" : `${fmtH(remaining)} remaining`);
     freeEl.font = Font.systemFont(11);
-    freeEl.textColor = c(T.text3);
+    freeEl.textColor = c(T.text2);
   }
 
 } else if (size === "medium") {
