@@ -114,16 +114,18 @@ if (size === "small") {
   goalText.textColor = c(T.text2);
   goalText.minimumScaleFactor = 0.7;
 
-  // Progress bar via stack
+  // Progress bar via stack (only show if any hours logged)
   w.addSpacer(6);
   const barBg = w.addStack();
   barBg.backgroundColor = c(T.bg3);
   barBg.cornerRadius = 3;
   barBg.size = new Size(0, 4);
-  const barFill = barBg.addStack();
-  barFill.backgroundColor = c(T.o);
-  barFill.cornerRadius = 3;
-  barFill.size = new Size(pct * 100, 4);
+  if (pct > 0) {
+    const barFill = barBg.addStack();
+    barFill.backgroundColor = c(T.o);
+    barFill.cornerRadius = 3;
+    barFill.size = new Size(pct * 100, 4);
+  }
 
   w.addSpacer();
 
@@ -169,15 +171,17 @@ if (size === "small") {
 
   left.addSpacer(6);
 
-  // Progress bar
+  // Progress bar (only show if any hours logged)
   const barBg = left.addStack();
   barBg.backgroundColor = c(T.bg3);
   barBg.cornerRadius = 3;
   barBg.size = new Size(120, 5);
-  const barFill = barBg.addStack();
-  barFill.backgroundColor = c(T.o);
-  barFill.cornerRadius = 3;
-  barFill.size = new Size(pct * 120, 5);
+  if (pct > 0) {
+    const barFill = barBg.addStack();
+    barFill.backgroundColor = c(T.o);
+    barFill.cornerRadius = 3;
+    barFill.size = new Size(pct * 120, 5);
+  }
 
   row.addSpacer();
 
