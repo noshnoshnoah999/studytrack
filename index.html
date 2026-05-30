@@ -2484,7 +2484,7 @@ function loadSubjects(){
   }catch(e){}
   return JSON.parse(JSON.stringify(DEFAULT_SUBJECTS));
 }
-function saveSubjects(s){localStorage.setItem('st_subjs',JSON.stringify(s));sbPush('st_subjs',s);}
+function saveSubjects(s){const ts=new Date().toISOString();localStorage.setItem('st_subjs',JSON.stringify(s));localStorage.setItem('st_subjs_updated_at',ts);sbPush('st_subjs',s);}
 // Persisted across reloads in localStorage so sync doesn't overwrite local edits
 function _getSchedV(){return parseInt(localStorage.getItem('st_sched_lv')||'0',10);}
 function _setSchedLV(v){localStorage.setItem('st_sched_lv',String(v));}
@@ -8213,6 +8213,18 @@ async function syncFromCloud(){
           if(cloud.length>local.length){
             localStorage.setItem(k,JSON.stringify(cloud));
             _aiHistory=cloud;
+          }
+        } else if(k==='st_subjs'){
+          // For subjects, keep whichever version is newer using updated_at timestamp
+          const cloudUpdatedAt=rows[i].updated_at||'';
+          const localUpdatedAt=localStorage.getItem('st_subjs_updated_at')||'';
+          if(!localUpdatedAt||cloudUpdatedAt>localUpdatedAt){
+            localStorage.setItem(k,JSON.stringify(rows[i].value));
+            localStorage.setItem('st_subjs_updated_at',cloudUpdatedAt);
+          } else {
+            // Local is newer — push it back up to cloud
+            const localVal=JSON.parse(localStorage.getItem('st_subjs')||'[]');
+            sbPush('st_subjs',localVal,{silent:true});
           }
         } else {
           localStorage.setItem(k,JSON.stringify(rows[i].value));
