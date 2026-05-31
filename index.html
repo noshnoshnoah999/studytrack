@@ -2545,11 +2545,11 @@ function loadTodos(){
   try{const s=localStorage.getItem('st_todos');if(s)return JSON.parse(s);}catch(e){}
   return[];
 }
-function saveTodos(t){localStorage.setItem('st_todos',JSON.stringify(t));sbPush('st_todos',t);}
+function saveTodos(t){localStorage.setItem('st_todos',JSON.stringify(t));localStorage.setItem('st_todos_updated_at',new Date().toISOString());sbPush('st_todos',t);}
 
 // ── SESSION TEMPLATES ─────────────────────────────────────────────────────────
 function loadTemplates(){try{return JSON.parse(localStorage.getItem('st_templates')||'[]');}catch(e){return[];}}
-function saveTemplates(t){localStorage.setItem('st_templates',JSON.stringify(t));sbPush('st_templates',t);}
+function saveTemplates(t){localStorage.setItem('st_templates',JSON.stringify(t));localStorage.setItem('st_templates_updated_at',new Date().toISOString());sbPush('st_templates',t);}
 
 const LOG_SUBJ_COLORS_REF={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',english_11:'#60a5fa',english_12:'#93c5fd',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',geometry:'#a855f7',algebra2:'#7c3aed',el2:'#94a3b8',el3:'#64748b',el4:'#475569',am_hist:'#b45309',jp_exch:'#7c3aed'};
 
@@ -3755,6 +3755,7 @@ function loadOverrides(){
 }
 function saveOverrides(o){
   localStorage.setItem('st_sched_overrides',JSON.stringify(o));
+  localStorage.setItem('st_sched_overrides_updated_at',new Date().toISOString());
   sbPush('st_sched_overrides',o);
 }
 // Returns 0 (even/Week A) or 1 (odd/Week B) for any given date using ISO week number
@@ -7700,6 +7701,7 @@ function saveGoalSettings(){
   const teacherTarget=ttEl&&parseFloat(ttEl.value)>0?parseFloat(ttEl.value):6.3;
   const g={daily,daysPerWeek,weekly,teacherTarget};
   localStorage.setItem('st_goals',JSON.stringify(g));
+  localStorage.setItem('st_goals_updated_at',new Date().toISOString());
   sbPush('st_goals',g);
   // Save Anthropic API key
   const keyEl=document.getElementById('settings-anthropic-key');
@@ -8224,17 +8226,18 @@ async function syncFromCloud(){
             document.documentElement.setAttribute('data-theme',cloudTheme);
             updateThemeSwatches();
           }
-        } else if(k==='st_subjs'){
-          // For subjects, keep whichever version is newer using updated_at timestamp
+        } else if(k==='st_subjs'||k==='st_goals'||k==='st_todos'||k==='st_sched_overrides'||k==='st_templates'){
+          // Timestamped last-writer-wins: keep whichever version is newer.
+          // Prevents a device with stale data from reverting a fresh edit.
           const cloudUpdatedAt=rows[i].updated_at||'';
-          const localUpdatedAt=localStorage.getItem('st_subjs_updated_at')||'';
-          if(!localUpdatedAt||cloudUpdatedAt>localUpdatedAt){
+          const localUpdatedAt=localStorage.getItem(k+'_updated_at')||'';
+          if(!localUpdatedAt||cloudUpdatedAt>=localUpdatedAt){
             localStorage.setItem(k,JSON.stringify(rows[i].value));
-            localStorage.setItem('st_subjs_updated_at',cloudUpdatedAt);
+            localStorage.setItem(k+'_updated_at',cloudUpdatedAt);
           } else {
-            // Local is newer — push it back up to cloud
-            const localVal=JSON.parse(localStorage.getItem('st_subjs')||'[]');
-            sbPush('st_subjs',localVal,{silent:true});
+            // Local is newer — push it back up to cloud so other devices catch up
+            const localRaw=localStorage.getItem(k);
+            if(localRaw)sbPush(k,JSON.parse(localRaw),{silent:true});
           }
         } else {
           localStorage.setItem(k,JSON.stringify(rows[i].value));
@@ -8343,18 +8346,29 @@ async function syncFromCloud(){
     _markTodoDoneById(urlParams.get('marktododone'));
     history.replaceState(null,'','/studytrack/');
   }
+  // Only adopt cloud overrides if they're newer than our local copy —
+  // prevents a background pull from clobbering an edit made seconds ago.
+  function _adoptOverridesIfNewer(row){
+    if(!row||row.value===undefined)return;
+    const cloudTs=row.updated_at||'';
+    const localTs=localStorage.getItem('st_sched_overrides_updated_at')||'';
+    if(!localTs||cloudTs>=localTs){
+      localStorage.setItem('st_sched_overrides',JSON.stringify(row.value));
+      localStorage.setItem('st_sched_overrides_updated_at',cloudTs);
+    }
+  }
   // Refresh now/next banner every minute — pull latest overrides first so cross-device changes appear
   setInterval(async()=>{
     if(!document.getElementById('page-dashboard').classList.contains('active'))return;
     const row=await sbPull('st_sched_overrides');
-    if(row&&row.value!==undefined)localStorage.setItem('st_sched_overrides',JSON.stringify(row.value));
+    _adoptOverridesIfNewer(row);
     renderNowNext();
   },60000);
   // Refresh schedule NOW indicator every minute — pull latest overrides first
   setInterval(async()=>{
     if(!document.getElementById('page-schedule').classList.contains('active'))return;
     const row=await sbPull('st_sched_overrides');
-    if(row&&row.value!==undefined)localStorage.setItem('st_sched_overrides',JSON.stringify(row.value));
+    _adoptOverridesIfNewer(row);
     renderSchedule();
   },60000);
   // Check todo due times every minute (in-app notification)
