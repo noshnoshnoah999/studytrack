@@ -2101,12 +2101,24 @@ function durStr(mins){
   return m+'m';
 }
 
+// ── APP TIMEZONE ──────────────────────────────────────────────────────────────
+// The whole app is anchored to Tokyo (JST, UTC+9) so every device agrees with
+// the widgets, AI coach, and notification server (which is hard-wired to Tokyo).
+// nowLocal() returns a Date whose LOCAL getters (getHours/getDay/getDate/…) read
+// as Tokyo wall-clock time, so existing date logic works unchanged.
+const APP_TZ_OFFSET_MIN=9*60; // Tokyo = UTC+9
+// Returns a Date whose LOCAL getters read as Tokyo wall-clock for the given instant.
+function toAppTz(d){
+  return new Date(d.getTime()+(APP_TZ_OFFSET_MIN+d.getTimezoneOffset())*60000);
+}
+function nowLocal(){return toAppTz(new Date());}
+
 function todayStr(){
-  const d=new Date();
+  const d=nowLocal();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 
-function todayDow(){return new Date().getDay();}
+function todayDow(){return nowLocal().getDay();}
 
 // ── NOW / NEXT BANNER ─────────────────────────────────────────────────────────
 function renderNowNext(){
@@ -2114,7 +2126,7 @@ function renderNowNext(){
   if(!el)return;
   const subjs=loadSubjects();
   const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',english_11:'#60a5fa',english_12:'#93c5fd',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',geometry:'#a855f7',algebra2:'#7c3aed',el2:'#94a3b8',el3:'#64748b',el4:'#475569',am_hist:'#b45309',jp_exch:'#7c3aed'};
-  const now=new Date();
+  const now=nowLocal();
   const nowMins=now.getHours()*60+now.getMinutes();
   const dayBlocks=getTodayActualBlocks().sort((a,b)=>toMins(a.start)-toMins(b.start));
 
@@ -2167,7 +2179,7 @@ function renderNowNext(){
 }
 
 function weekRange(){
-  const now=new Date();
+  const now=nowLocal();
   const dow=now.getDay();
   const diff=dow===0?-6:1-dow;
   const mon=new Date(now);
@@ -2645,7 +2657,7 @@ function applyTemplate(id){
   const ld=document.getElementById('log-date');
   if(ld)ld.value=todayStr();
   // Calculate start = now - durationH, end = now
-  const now=new Date();
+  const now=nowLocal();
   const endH=now.getHours();
   const endM=now.getMinutes();
   const startTotalMins=endH*60+endM-Math.round(t.durationH*60);
@@ -2989,7 +3001,7 @@ function renderTodos(){
   const el=document.getElementById('todo-list');
   if(!el)return;
 
-  const now=new Date();
+  const now=nowLocal();
   const todayDate=todayStr();
 
   // Partition
@@ -3083,7 +3095,7 @@ const TASK_SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',engli
 
 function _updateTasksBadge(){
   const todos=loadTodos();
-  const now=new Date();
+  const now=nowLocal();
   const todayDate=todayStr();
   const urgent=todos.filter(t=>!t.done&&(t.date<todayDate||(t.date===todayDate))).length;
   // Sidebar badge
@@ -3118,7 +3130,7 @@ function renderTasksPage(){
 
   const todos=loadTodos();
   const subjs=loadSubjects();
-  const now=new Date();
+  const now=nowLocal();
   const todayDate=todayStr();
 
   // Partition
@@ -3370,7 +3382,7 @@ function saveTodoModal(){
 function checkTodoNotifs(){
   if(!('Notification' in window)||Notification.permission!=='granted')return;
   const todos=loadTodos();
-  const now=new Date();
+  const now=nowLocal();
   const key='todo_notif_sent';
   let sent={};
   try{sent=JSON.parse(localStorage.getItem(key)||'{}');}catch(e){}
@@ -3495,7 +3507,7 @@ function updateSidebar(){
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 function renderDashboard(){
   renderNowNext();
-  const now=new Date();
+  const now=nowLocal();
   const hour=now.getHours();
   let greet='Good Morning';
   if(hour>=12&&hour<17)greet='Good Afternoon';
@@ -3746,7 +3758,7 @@ function resetLayout(){
 
 // ── SCHEDULE ──────────────────────────────────────────────────────────────────
 let scheduleEditMode=false;
-let scheduleDay=new Date().getDay(); // default to today
+let scheduleDay=nowLocal().getDay(); // default to today (Tokyo)
 let scheduleOverrideEdit=false; // true when editing a one-off override
 
 function loadOverrides(){
@@ -3779,7 +3791,7 @@ function getBlocksForDate(date,schedule){
 }
 // Returns today's actual blocks — override if one exists, else weekly schedule
 function getTodayActualBlocks(){
-  const now=new Date();
+  const now=nowLocal();
   const overrides=loadOverrides();
   const ds=todayStr();
   if(overrides[ds])return overrides[ds];
@@ -3787,7 +3799,7 @@ function getTodayActualBlocks(){
 }
 // Get the calendar date string for the currently selected schedule day
 function selDateStr(){
-  const now=new Date();
+  const now=nowLocal();
   const tdow=now.getDay();
   const dowAdj=scheduleDay===0?7:scheduleDay;
   const todayAdj=tdow===0?7:tdow;
@@ -3877,7 +3889,7 @@ function renderSchedule(){
   }
 
   // Build day tabs (always shown)
-  const now2=new Date();
+  const now2=nowLocal();
   const overrides=loadOverrides();
   const tabHtml='<div style="display:flex;align-items:center;margin-bottom:12px"><div class="day-tabs" style="margin-bottom:0;flex:1">'+DAY_ORDER.map(dow=>{
     const isToday=dow===tdow;
@@ -4001,7 +4013,7 @@ function renderSchedule(){
     } else if(!blocks.length){
       html+='<div class="sched-rest">No blocks scheduled</div>';
     } else {
-      const nowDate=new Date();
+      const nowDate=nowLocal();
       const nowMins=nowDate.getHours()*60+nowDate.getMinutes();
       const fmtNow=String(nowDate.getHours()).padStart(2,'0')+':'+String(nowDate.getMinutes()).padStart(2,'0');
       function fmtAmPm(t){const[hh,mm]=t.split(':');const h=parseInt(hh);return(h%12||12)+':'+(mm||'00')+(h<12?' AM':' PM');}
@@ -4205,7 +4217,7 @@ function openBlockModal(blockId,defaultDay){
     }
   } else {
     document.getElementById('bm-day').value=defaultDay!==null?defaultDay:1;
-    const _now=new Date();
+    const _now=nowLocal();
     const _hh=String(_now.getHours()).padStart(2,'0');
     const _mm=String(Math.round(_now.getMinutes()/5)*5%60).padStart(2,'0');
     const _eh=String(Math.min(23,_now.getHours()+1)).padStart(2,'0');
@@ -4318,7 +4330,7 @@ function openOverrideBlockModal(blockId){
       document.getElementById('bm-locked').checked=bl.locked||false;
     }
   } else {
-    const _now=new Date();
+    const _now=nowLocal();
     const _hh=String(_now.getHours()).padStart(2,'0');
     const _mm=String(Math.round(_now.getMinutes()/5)*5%60).padStart(2,'0');
     const _eh=String(Math.min(23,_now.getHours()+1)).padStart(2,'0');
@@ -4418,7 +4430,7 @@ function renderLog(){
   const subjs=loadSubjects();
   const available=subjs.filter(s=>!s.done);
 
-  const now=new Date();
+  const now=nowLocal();
   const nowMins=now.getHours()*60+now.getMinutes();
   const todayStr2=todayStr();
   const sessions=loadSessions();
@@ -4616,7 +4628,7 @@ function _renderStudyLineChart(elId,offset,animDir){
   const sessions=loadSessions();
   const goals=loadGoals();
   const target=goals.daily||6.3;
-  const now=new Date();
+  const now=nowLocal();
   const DAYS=30;
   const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const DAY_NAMES=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -4812,7 +4824,7 @@ function _renderHistWeekChart(){
   const sessions=loadSessions();
   const goals=loadGoals();
   const DAY_SHORT=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const now=new Date();
+  const now=nowLocal();
   const days=[];
   for(let i=6;i>=0;i--){
     const d=new Date(now);d.setDate(now.getDate()-i);
@@ -5629,7 +5641,7 @@ function _updateTimerBubble(){
 function renderTimerPage(){
   const subjs=loadSubjects();
   const available=subjs.filter(s=>!s.done);
-  const now=new Date();
+  const now=nowLocal();
   const nowMins=now.getHours()*60+now.getMinutes();
   const todayBlocks=getTodayActualBlocks().sort((a,b)=>toMins(a.start)-toMins(b.start));
   const activeBlock=todayBlocks.find(b=>b.type==='study'&&nowMins>=toMins(b.start)&&nowMins<toMins(b.end));
@@ -5862,7 +5874,7 @@ function startTimerForSubject(subjectId, blockStartStr){
   clearInterval(timerInterval);_resetTabTitle();
   // If block already started (e.g. notification fires a few mins late), backdate the start
   if(blockStartStr){
-    const now=new Date();
+    const now=nowLocal();
     const [h,m]=blockStartStr.split(':').map(Number);
     const blockStart=new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m,0,0);
     timerStartWallClock=blockStart;
@@ -5881,12 +5893,20 @@ function startTimerForSubject(subjectId, blockStartStr){
 // Called from notification action: stop timer and pre-fill log page
 function stopTimerAndLog(){
   if(!timerStart)return;
+  // Capture studied minutes (excludes pauses) BEFORE clearing timer state
+  const studiedMins=Math.round(timerElapsedSecs()/60);
   clearInterval(timerInterval);_resetTabTitle();
   timerInterval=null;
-  const endTime=timerStop?new Date(timerStop):new Date();
   const fmt=d=>String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
-  const startStr=fmt(timerStartWallClock);
-  const endStr=fmt(endTime);
+  const startStr=fmt(toAppTz(timerStartWallClock));
+  // End = start + studied so the prefilled span excludes paused time
+  let endStr;
+  if(studiedMins>0){
+    const endTotal=((toMins(startStr)+studiedMins)%1440+1440)%1440;
+    endStr=String(Math.floor(endTotal/60)).padStart(2,'0')+':'+String(endTotal%60).padStart(2,'0');
+  }else{
+    endStr=fmt(toAppTz(timerStop?new Date(timerStop):new Date()));
+  }
   // Navigate to log page and pre-fill fields
   showPage('log');
   setTimeout(()=>{
@@ -5918,13 +5938,14 @@ async function timerPageLog(){
       }
     }
   }catch(e){}
-  // Use the recorded stop time (not current time) so logged hours are exact
-  const endTime=timerStop?new Date(timerStop):new Date();
+  // Use the recorded stop time (not current time) so logged hours are exact.
+  // Format in Tokyo time so the session's date/times match the rest of the app.
+  const endTime=toAppTz(timerStop?new Date(timerStop):new Date());
   const fmt=d=>String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
   const ds=endTime.getFullYear()+'-'+String(endTime.getMonth()+1).padStart(2,'0')+'-'+String(endTime.getDate()).padStart(2,'0');
   const notes=document.getElementById('tp-notes')?document.getElementById('tp-notes').value:'';
-  const startStr=fmt(timerStartWallClock);
-  const endStr=fmt(endTime);
+  const startStr=fmt(toAppTz(timerStartWallClock));
+  let endStr=fmt(endTime);
   let hrs;
   if(pomodoroMode){
     // Only count work-phase time — add current phase time if still in work phase
@@ -5932,10 +5953,20 @@ async function timerPageLog(){
     hrs=workMs/3600000;
     if(hrs<=0.005){alert('No work time to log yet.');return;}
   }else{
-    let diffMins=toMins(endStr)-toMins(startStr);
-    if(diffMins<0)diffMins+=1440; // handle midnight crossing
-    if(diffMins<=0){alert('Session too short to log.');return;}
-    hrs=diffMins/60;
+    // Exclude paused time: use the timer's actual studied seconds (which already
+    // subtracts pauses), then set the logged end so end−start matches the hours.
+    let studiedMins=Math.round(timerElapsedSecs()/60);
+    if(studiedMins<=0){
+      // Fallback to wall-clock span if timer state is unavailable
+      let diffMins=toMins(endStr)-toMins(startStr);
+      if(diffMins<0)diffMins+=1440;
+      studiedMins=diffMins;
+    }
+    if(studiedMins<=0){alert('Session too short to log.');return;}
+    hrs=studiedMins/60;
+    // Recompute end = start + studied so the recorded span excludes pauses too
+    let endTotal=((toMins(startStr)+studiedMins)%1440+1440)%1440;
+    endStr=String(Math.floor(endTotal/60)).padStart(2,'0')+':'+String(endTotal%60).padStart(2,'0');
   }
   const sessions=loadSessions();
   sessions.push({id:genId(),subjectId:timerSubjectId,date:ds,hours:hrs,start:startStr,end:endStr,notes,loggedAt:new Date().toISOString()});
@@ -6259,7 +6290,7 @@ function _progStreak(){
   const sessions=loadSessions();
   const goals=loadGoals();
   const target=goals.daily;
-  const now=new Date();
+  const now=nowLocal();
   let streak=0;
   // Check today first — if hit, count it then go back
   const todayStr2=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
@@ -6453,7 +6484,7 @@ function _gradSharedVars(){
   const totalLogged=getTotalLogged();
   const remaining=Math.max(0,TOTAL_REQ-totalLogged);
   const pct=Math.min(100,totalLogged/TOTAL_REQ*100);
-  const now=new Date();
+  const now=nowLocal();
   const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const cutoff=new Date(now);cutoff.setDate(now.getDate()-28);
   const cutoffStr=cutoff.getFullYear()+'-'+String(cutoff.getMonth()+1).padStart(2,'0')+'-'+String(cutoff.getDate()).padStart(2,'0');
@@ -6867,7 +6898,7 @@ function renderTimeline(){
   const goals=loadGoals();
   const COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',english_11:'#60a5fa',english_12:'#93c5fd',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',geometry:'#a855f7',algebra2:'#7c3aed',el2:'#94a3b8',el3:'#64748b',el4:'#475569'};
   const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const now=new Date();
+  const now=nowLocal();
 
   // ── Simulation: week-by-week, distribute goal hours among active subjects ────
   const rem={};
@@ -7010,7 +7041,7 @@ function renderPlan(){
   const sessions=loadSessions();
   const subjs=_canonicalSubjs().filter(s=>!s.extraCredit);
   const goals=loadGoals();
-  const now=new Date();
+  const now=nowLocal();
   const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
   const totalLogged=getTotalLogged();
   const remaining=Math.max(0,TOTAL_REQ-totalLogged);
@@ -7269,7 +7300,7 @@ function _renderStudyCalendar(targetElId){
   const sessions=loadSessions();
   const subjs=_canonicalSubjs().filter(s=>!s.extraCredit);
   const goals=loadGoals();
-  const now=new Date();
+  const now=nowLocal();
   const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
   const totalLogged=getTotalLogged();
   const remaining=Math.max(0,TOTAL_REQ-totalLogged);
@@ -7386,7 +7417,7 @@ function _renderPaceDropCard(){
   const guideEl=document.getElementById('pace-drop-guide-input');
   const guideRate=guideEl&&parseFloat(guideEl.value)>0?parseFloat(guideEl.value):(goals.teacherTarget||goals.daily);
 
-  const now=new Date();
+  const now=nowLocal();
   const deadline=new Date('2027-10-31');
   const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -7909,7 +7940,7 @@ function renderFocusCard(){
 function renderDashTasksCard(){
   const el=document.getElementById('dash-tasks-card');
   if(!el)return;
-  const now=new Date();
+  const now=nowLocal();
   const todayStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
   const todos=loadTodos().filter(t=>t.date===todayStr&&!t.done);
   if(!todos.length){el.innerHTML='';el.style.display='none';return;}
@@ -7946,7 +7977,7 @@ function renderWeeklySummary(){
   const sessions=loadSessions();
   const goals=loadGoals();
   const DAY_SHORT=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const now=new Date();
+  const now=nowLocal();
   const days=[];
   for(let i=6;i>=0;i--){
     const d=new Date(now);d.setDate(now.getDate()-i);
@@ -8093,7 +8124,7 @@ function scheduleNotifications(){
   notifTimers.forEach(t=>clearTimeout(t));
   notifTimers=[];
   const blocks=getTodayActualBlocks().filter(b=>b.type==='study');
-  const now=new Date();
+  const now=nowLocal();
   const nowMins=now.getHours()*60+now.getMinutes();
   blocks.forEach(bl=>{
     const startMins=toMins(bl.start);
@@ -8438,7 +8469,7 @@ function exportReport(){
   const totalLogged=getTotalLogged();
   const remaining=Math.max(0,TOTAL_REQ-totalLogged);
   const pct=Math.min(100,totalLogged/TOTAL_REQ*100);
-  const now=new Date();
+  const now=nowLocal();
   const dateStr2=now.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
   const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -8707,7 +8738,7 @@ function openQuickLog(){
   const subjs=loadSubjects().filter(s=>!s.done&&!s.extraCredit);
   const sel=document.getElementById('ql-subject');
   sel.innerHTML=subjs.map(s=>'<option value="'+s.id+'">'+escHtml(s.name)+'</option>').join('');
-  const now=new Date();
+  const now=nowLocal();
   document.getElementById('ql-date').value=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
   const pad=n=>String(n).padStart(2,'0');
   document.getElementById('ql-end').value=pad(now.getHours())+':'+pad(now.getMinutes());
@@ -8833,7 +8864,7 @@ function _timeAgo(ms){
 
 // Schedule-based in-app notification checks
 function checkInAppNotifs(){
-  const now=new Date();
+  const now=nowLocal();
   const dayBlocks=getTodayActualBlocks();
   const nowMin=now.getHours()*60+now.getMinutes();
 
@@ -8984,9 +9015,10 @@ function _aiMakeContext(){
   const schedule=loadSchedule();
   const goals=loadGoals();
   const sessions=loadSessions();
-  const now=new Date();
-  // Always use Tokyo time (JST = UTC+9) regardless of device timezone
-  const nowTokyo=new Date(now.getTime()+9*3600000);
+  const now=nowLocal();
+  // nowTokyo reads Tokyo wall-clock via getUTC* (computed from real time, not the
+  // already-shifted nowLocal, to avoid double-shifting).
+  const nowTokyo=new Date(Date.now()+9*3600000);
   const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const DAYS_SHORT=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   // Subjects
