@@ -1411,6 +1411,22 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
             <option value="shortest">Shortest first</option>
           </select>
         </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap" id="hist-range-row">
+          <select class="form-input hist-filter" id="hist-date-range" onchange="onHistRangeChange()" style="flex:1;min-width:140px">
+            <option value="all">All time</option>
+            <option value="7">Last 7 days</option>
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 3 months</option>
+            <option value="this_month">This month</option>
+            <option value="last_month">Last month</option>
+            <option value="custom">Custom range…</option>
+          </select>
+          <div id="hist-custom-range" style="display:none;gap:6px;flex:2;min-width:200px">
+            <input type="date" class="form-input hist-filter" id="hist-date-from" onchange="renderHistory()" style="flex:1">
+            <span style="align-self:center;color:var(--text3);font-size:13px">→</span>
+            <input type="date" class="form-input hist-filter" id="hist-date-to" onchange="renderHistory()" style="flex:1">
+          </div>
+        </div>
         <div id="hist-archive-banner"></div>
         <div class="hist-summary" id="hist-summary"></div>
         <div id="hist-entries"></div>
@@ -4879,6 +4895,21 @@ function switchHistTab(tab){
   }
 }
 
+function onHistRangeChange(){
+  const rangeVal=(document.getElementById('hist-date-range')||{}).value||'all';
+  const customDiv=document.getElementById('hist-custom-range');
+  if(customDiv)customDiv.style.display=rangeVal==='custom'?'flex':'none';
+  // Pre-fill date pickers with sensible defaults when switching to custom
+  if(rangeVal==='custom'){
+    const now=nowLocal();
+    const toStr=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const fromEl=document.getElementById('hist-date-from');
+    const toEl=document.getElementById('hist-date-to');
+    if(fromEl&&!fromEl.value){const f=new Date(now);f.setDate(now.getDate()-30);fromEl.value=toStr(f);}
+    if(toEl&&!toEl.value)toEl.value=toStr(now);
+  }
+  renderHistory();
+}
 function renderHistory(){
   _renderHistWeekChart();
   const sessions=loadSessions();
@@ -4901,8 +4932,36 @@ function renderHistory(){
   const clearBtn=document.getElementById('hist-search-clear');
   if(clearBtn)clearBtn.style.display=searchQ?'block':'none';
 
+  // Date range filter
+  const rangeEl=document.getElementById('hist-date-range');
+  const rangeVal=rangeEl?rangeEl.value:'all';
+  let rangeFrom='',rangeTo='';
+  if(rangeVal!=='all'&&rangeVal!=='custom'){
+    const now=nowLocal();
+    const toStr=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    if(rangeVal==='this_month'){
+      rangeFrom=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-01';
+      rangeTo=toStr(now);
+    } else if(rangeVal==='last_month'){
+      const first=new Date(now.getFullYear(),now.getMonth()-1,1);
+      const last=new Date(now.getFullYear(),now.getMonth(),0);
+      rangeFrom=toStr(first);rangeTo=toStr(last);
+    } else {
+      const days=parseInt(rangeVal);
+      const from=new Date(now);from.setDate(now.getDate()-days+1);
+      rangeFrom=toStr(from);rangeTo=toStr(now);
+    }
+  } else if(rangeVal==='custom'){
+    rangeFrom=(document.getElementById('hist-date-from')||{}).value||'';
+    rangeTo=(document.getElementById('hist-date-to')||{}).value||'';
+  }
+
   // Filter by subject dropdown
   let filtered=subjectFilter?sessions.filter(s=>s.subjectId===subjectFilter):sessions;
+
+  // Filter by date range
+  if(rangeFrom)filtered=filtered.filter(s=>s.date>=rangeFrom);
+  if(rangeTo)filtered=filtered.filter(s=>s.date<=rangeTo);
 
   // Filter by search query (subject name, notes, date)
   if(searchQ){
