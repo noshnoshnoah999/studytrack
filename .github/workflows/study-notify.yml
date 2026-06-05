@@ -16,6 +16,8 @@ jobs:
           VAPID_EMAIL:   noah@flouty.uk
           SB_URL:        ${{ vars.SB_URL }}
           SB_KEY:        ${{ secrets.SB_KEY }}
+          RESEND_KEY:    ${{ secrets.RESEND_KEY }}
+          EMAIL_TO:      noah@flouty.uk
         run: |
           npm install --silent web-push
           node << 'SCRIPT'
@@ -387,5 +389,133 @@ jobs:
 
             // Persist the dedup log so repeat runs today don't re-buzz
             if (sentChanged) await sbSet('notif_sent', sentLog);
+
+            // ════════════════ EMAIL DIGESTS (Resend) ════════════════
+            // Sent to EMAIL_TO via Resend. Skips silently if RESEND_KEY isn't set.
+            try {
+              const RESEND_KEY = process.env.RESEND_KEY;
+              const EMAIL_TO = process.env.EMAIL_TO || 'noah@flouty.uk';
+              if (RESEND_KEY) {
+                const emailLog = (await sbGet('email_sent')) || {};
+                let emailChanged = false;
+                async function sendEmail(subject, html) {
+                  try {
+                    const r = await fetch('https://api.resend.com/emails', {
+                      method: 'POST',
+                      headers: { 'Authorization': 'Bearer ' + RESEND_KEY, 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ from: 'StudyTrack <onboarding@resend.dev>', to: [EMAIL_TO], subject, html })
+                    });
+                    if (!r.ok) { console.error('[EMAIL] failed ' + r.status + ': ' + (await r.text())); return false; }
+                    console.log('[EMAIL] sent: ' + subject); return true;
+                  } catch(e) { console.error('[EMAIL] error: ' + e.message); return false; }
+                }
+                async function emailOnce(tag, subject, html) {
+                  if (emailLog[tag] === todayStr) return;
+                  if (await sendEmail(subject, html)) { emailLog[tag] = todayStr; emailChanged = true; }
+                }
+
+                // ── Shared stats (graduation excludes extra-credit subjects) ──
+                const ecIds = new Set(subjects.filter(s => s.extraCredit).map(s => s.id)); ecIds.add('el4');
+                const gradSubjs = subjects.filter(s => !ecIds.has(s.id));
+                const TOTAL_REQ = gradSubjs.reduce((a, s) => a + (s.req || 0), 0);
+                const totalLogged = gradSubjs.reduce((a, s) => a + getLogged(s.id), 0);
+                const remaining = Math.max(0, TOTAL_REQ - totalLogged);
+                const overallPct = TOTAL_REQ > 0 ? (totalLogged / TOTAL_REQ * 100) : 0;
+                const cut28 = new Date(nowDate); cut28.setUTCDate(cut28.getUTCDate() - 28);
+                const cut28Str = cut28.getUTCFullYear()+'-'+String(cut28.getUTCMonth()+1).padStart(2,'0')+'-'+String(cut28.getUTCDate()).padStart(2,'0');
+                const recentH = sessions.filter(s => s.date >= cut28Str && !ecIds.has(s.subjectId)).reduce((a, s) => a + s.hours, 0);
+                const pace = recentH >= 3 ? recentH / 4 : weeklyGoal;
+                const deadline = new Date(Date.UTC(2027, 9, 31));
+                const weeksToDeadline = Math.max(0, (deadline - nowDate) / (1000*60*60*24*7));
+                const neededPace = weeksToDeadline > 0.1 ? remaining / weeksToDeadline : remaining;
+                const weeksLeft = pace > 0 ? remaining / pace : 999;
+                const estDate = new Date(nowDate); estDate.setUTCDate(estDate.getUTCDate() + Math.round(weeksLeft * 7));
+                const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                const estStr = MON[estDate.getUTCMonth()] + ' ' + estDate.getUTCFullYear();
+                const onTrack = estDate <= deadline;
+                const stats = gradSubjs.filter(s => !s.done && s.req > 0)
+                  .map(s => { const lg = getLogged(s.id); return { name: s.name, pct: lg/s.req*100, left: Math.max(0, s.req - lg) }; })
+                  .sort((a, b) => a.pct - b.pct);
+
+                // ── HTML helpers (inline styles for email-client compatibility) ──
+                const C = { o:'#e0502a', text:'#2a1810', text2:'#7a5a48', bg:'#f5ede8', card:'#faf4ef', ok:'#1a8a4a', err:'#d23030', border:'#efe2da' };
+                function wrap(title, sub, inner) {
+                  return `<div style="margin:0;padding:0;background:${C.bg}"><div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:${C.bg};padding:20px 12px"><div style="max-width:560px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid ${C.border}"><div style="background:${C.o};padding:22px 26px"><div style="color:#fff;font-size:20px;font-weight:800;letter-spacing:-0.3px">StudyTrack</div><div style="color:rgba(255,255,255,0.9);font-size:13px;margin-top:3px">${title}${sub ? ' · ' + sub : ''}</div></div><div style="padding:22px 26px">${inner}</div><div style="padding:14px 26px;border-top:1px solid ${C.border};color:#a8978c;font-size:11px">${todayStr} (Tokyo) · <a href="https://noshnoshnoah999.github.io/studytrack/" style="color:${C.o};text-decoration:none;font-weight:600">Open StudyTrack →</a></div></div></div></div>`;
+                }
+                function stat(label, value, color) {
+                  return `<td style="padding:0 5px;width:33%"><div style="background:${C.card};border:1px solid ${C.border};border-radius:12px;padding:14px 6px;text-align:center"><div style="font-size:21px;font-weight:800;color:${color||C.text};letter-spacing:-0.5px">${value}</div><div style="font-size:11px;color:${C.text2};margin-top:3px;font-weight:600">${label}</div></div></td>`;
+                }
+                function bar(pct, color) {
+                  const w = Math.min(100, Math.max(0, pct));
+                  return `<div style="background:${C.border};border-radius:100px;height:7px;overflow:hidden"><div style="background:${color||C.o};height:7px;width:${w}%;border-radius:100px"></div></div>`;
+                }
+                const heading = (t) => `<div style="font-size:12px;font-weight:700;color:${C.text2};text-transform:uppercase;letter-spacing:0.5px;margin:18px 0 8px">${t}</div>`;
+
+                // ── 1. DAILY SUMMARY — 7:00 AM Tokyo ──
+                if (near(7 * 60)) {
+                  const studyBlocks = todayBlocks.filter(b => b.type === 'study');
+                  const yest = new Date(nowDate); yest.setUTCDate(yest.getUTCDate() - 1);
+                  const yestStr = yest.getUTCFullYear()+'-'+String(yest.getUTCMonth()+1).padStart(2,'0')+'-'+String(yest.getUTCDate()).padStart(2,'0');
+                  const yestH = sessions.filter(s => s.date === yestStr && !ecIds.has(s.subjectId)).reduce((a,s)=>a+s.hours, 0);
+                  const dueToday = (todosRaw||[]).filter(t => !t.done && t.date === todayStr);
+                  let inner = `<div style="font-size:15px;color:${C.text};margin-bottom:16px">Good morning, Noah 👋</div>`;
+                  inner += `<table style="width:100%;border-collapse:separate;border-spacing:0;margin-bottom:6px"><tr>${stat('Yesterday', fmtH(yestH), yestH>=dailyGoal?C.ok:C.text)}${stat('This week', fmtH(weekH), C.o)}${stat("Today's goal", fmtH(dailyGoal), C.text)}</tr></table>`;
+                  if (studyBlocks.length) {
+                    inner += heading("Today's schedule");
+                    inner += studyBlocks.map(b => `<div style="display:flex;justify-content:space-between;padding:9px 12px;background:${C.card};border-radius:9px;margin-bottom:5px;font-size:14px"><span style="color:${C.text};font-weight:600">${b.label}</span><span style="color:${C.text2}">${b.start}–${b.end}</span></div>`).join('');
+                  } else {
+                    inner += `<div style="margin-top:14px;padding:12px;background:${C.card};border-radius:9px;color:${C.text2};font-size:14px">No study blocks today — rest up! 🌿</div>`;
+                  }
+                  if (stats.length) {
+                    inner += heading('Most behind');
+                    inner += stats.slice(0,3).map(s => `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="color:${C.text};font-weight:600">${s.name}</span><span style="color:${C.text2}">${Math.round(s.pct)}% · ${fmtH(s.left)} left</span></div>${bar(s.pct)}</div>`).join('');
+                  }
+                  if (dueToday.length) {
+                    inner += heading('Tasks due today');
+                    inner += dueToday.map(t => `<div style="font-size:14px;color:${C.text};padding:5px 0">☐ ${t.text}${t.time ? ' · ' + t.time : ''}</div>`).join('');
+                  }
+                  await emailOnce('email-daily', `☀️ ${todayStr} · ${studyBlocks.length} block${studyBlocks.length!==1?'s':''} today`, wrap('Daily summary', DAY[dow], inner));
+                }
+
+                // ── 2. WEEKLY RECAP — Sunday 18:00 Tokyo ──
+                if (dow === 0 && near(18 * 60)) {
+                  const dayMap = {};
+                  sessions.filter(s => new Date(s.date) >= weekAgo && new Date(s.date) <= nowDate && !ecIds.has(s.subjectId)).forEach(s => { dayMap[s.date] = (dayMap[s.date]||0) + s.hours; });
+                  const daysHit = Object.values(dayMap).filter(h => h >= dailyGoal).length;
+                  let inner = `<div style="font-size:15px;color:${C.text};margin-bottom:16px">Here's how your week went 📊</div>`;
+                  inner += `<table style="width:100%;border-collapse:separate;border-spacing:0;margin-bottom:14px"><tr>${stat('This week', fmtH(weekH), C.o)}${stat('Goal', fmtH(weeklyGoal), C.text)}${stat('Days hit', daysHit + '/7', daysHit>=5?C.ok:C.text)}</tr></table>`;
+                  inner += `<div style="font-size:12px;color:${C.text2};margin-bottom:6px">Weekly goal progress</div>${bar(weekH/weeklyGoal*100, weekH>=weeklyGoal?C.ok:C.o)}`;
+                  inner += `<div style="margin-top:18px;padding:14px;background:${C.card};border-radius:10px;font-size:14px;color:${C.text};line-height:1.5"><strong>Graduation:</strong> at your recent pace (${fmtH(pace)}/wk) you'll finish around <strong style="color:${onTrack?C.ok:C.err}">${estStr}</strong> — ${onTrack ? 'before' : 'after'} the Oct 2027 deadline.</div>`;
+                  await emailOnce('email-weekly', `📆 Weekly recap · ${fmtH(weekH)} · ${daysHit}/7 days hit`, wrap('Weekly recap', null, inner));
+                }
+
+                // ── 3. GRADUATION REPORT — 1st of month, 8:00 AM Tokyo ──
+                if (nowDate.getUTCDate() === 1 && near(8 * 60)) {
+                  let inner = `<div style="font-size:15px;color:${C.text};margin-bottom:16px">Your monthly progress report 🎓</div>`;
+                  inner += `<table style="width:100%;border-collapse:separate;border-spacing:0;margin-bottom:8px"><tr>${stat('Logged', fmtH(totalLogged), C.o)}${stat('Remaining', fmtH(remaining), C.text)}${stat('Complete', Math.round(overallPct)+'%', C.text)}</tr></table>`;
+                  inner += `<div style="margin:14px 0">${bar(overallPct)}</div>`;
+                  inner += `<div style="padding:14px;background:${C.card};border-radius:10px;font-size:14px;color:${C.text};margin-bottom:6px;line-height:1.5"><strong style="color:${onTrack?C.ok:C.err}">${onTrack?'On track ✓':'Behind ⚠️'}</strong> — projected finish <strong>${estStr}</strong> at ${fmtH(pace)}/wk.${!onTrack ? ` You need <strong>${fmtH(neededPace)}/wk</strong> to graduate on time.` : ''}</div>`;
+                  inner += heading('Subjects in progress');
+                  inner += stats.map(s => `<div style="margin-bottom:11px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="color:${C.text};font-weight:600">${s.name}</span><span style="color:${C.text2}">${Math.round(s.pct)}% · ${fmtH(s.left)} left</span></div>${bar(s.pct)}</div>`).join('');
+                  const doneCount = gradSubjs.filter(s => s.done || getLogged(s.id) >= s.req).length;
+                  inner += `<div style="margin-top:16px;font-size:13px;color:${C.text2}">${doneCount}/${gradSubjs.length} subjects complete.</div>`;
+                  await emailOnce('email-grad', `🎓 Monthly report · ${Math.round(overallPct)}% · finish ${estStr}`, wrap('Graduation report', MON[nowDate.getUTCMonth()] + ' ' + nowDate.getUTCFullYear(), inner));
+                }
+
+                // ── 4. BEHIND-SCHEDULE ALERT — Wednesday 9:00 AM Tokyo ──
+                if (dow === 3 && near(9 * 60)) {
+                  const avgPct = stats.length ? stats.reduce((a, s) => a + s.pct, 0) / stats.length : 0;
+                  const behind = stats.filter(s => s.pct < avgPct - 15).slice(0, 5);
+                  if (behind.length) {
+                    let inner = `<div style="font-size:15px;color:${C.text};margin-bottom:8px">A few subjects need attention ⚠️</div>`;
+                    inner += `<div style="font-size:13px;color:${C.text2};margin-bottom:16px;line-height:1.5">These are falling behind your average pace. A little extra time this week keeps your Oct 2027 goal on track.</div>`;
+                    inner += behind.map(s => `<div style="margin-bottom:12px;padding:12px;background:${C.card};border-radius:10px"><div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:6px"><span style="color:${C.text};font-weight:700">${s.name}</span><span style="color:${C.err};font-weight:600">${Math.round(s.pct)}%</span></div>${bar(s.pct, C.err)}<div style="font-size:12px;color:${C.text2};margin-top:6px">${fmtH(s.left)} left</div></div>`).join('');
+                    await emailOnce('email-behind', `⚠️ ${behind.length} subject${behind.length!==1?'s':''} falling behind`, wrap('Behind-schedule alert', null, inner));
+                  }
+                }
+
+                if (emailChanged) await sbSet('email_sent', emailLog);
+              }
+            } catch(e) { console.error('[EMAIL] block error: ' + e.message); }
           })();
           SCRIPT
