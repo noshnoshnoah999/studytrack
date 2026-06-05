@@ -8105,7 +8105,7 @@ function updateNotifBtn(){
   btn.title=on?'Notifications on — tap to disable':'Enable study notifications';
 }
 
-const VAPID_PUBLIC='BON-ERruLdel1VHX6SK8db615k2W2OgIBkMsfMyiUeJI6XcK1W6LYu4HGb3bvm_pCdC8mNREzITXdCuMe7dc1to';
+const VAPID_PUBLIC='BCd61GADGOR0O4y1OIYKniUSqNIbW4o8wDeTaVR8XnaAyccY1qKHLGgmdtnMPOjTuxLEhUcscCbzNWLUFLyVz8Y';
 
 function urlB64ToUint8(base64String){
   const padding='='.repeat((4-base64String.length%4)%4);
@@ -8114,10 +8114,36 @@ function urlB64ToUint8(base64String){
   return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));
 }
 
+// Compare a subscription's existing applicationServerKey to our current VAPID_PUBLIC
+function _subKeyMatches(sub){
+  try{
+    const existing=sub.options&&sub.options.applicationServerKey;
+    if(!existing)return false;
+    const a=new Uint8Array(existing);
+    const b=urlB64ToUint8(VAPID_PUBLIC);
+    if(a.length!==b.length)return false;
+    for(let i=0;i<a.length;i++)if(a[i]!==b[i])return false;
+    return true;
+  }catch(e){return false;}
+}
+
 async function subscribePush(){
   try{
     const reg=await navigator.serviceWorker.ready;
     let sub=await reg.pushManager.getSubscription();
+    // If an existing subscription was made with a DIFFERENT VAPID key, it's dead —
+    // unsubscribe and remove its stale endpoint so we can re-subscribe with the new key.
+    if(sub&&!_subKeyMatches(sub)){
+      const deadEndpoint=sub.endpoint;
+      try{await sub.unsubscribe();}catch(e){}
+      sub=null;
+      try{
+        const ex=await sbPull('push_subscriptions');
+        let arr=ex&&ex.value?(typeof ex.value==='string'?JSON.parse(ex.value):ex.value):[];
+        const cleaned=arr.filter(s=>s.endpoint!==deadEndpoint);
+        if(cleaned.length!==arr.length)await sbPush('push_subscriptions',cleaned);
+      }catch(e){}
+    }
     if(!sub){
       sub=await reg.pushManager.subscribe({
         userVisibleOnly:true,
