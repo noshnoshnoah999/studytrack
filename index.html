@@ -6563,7 +6563,10 @@ function _gradSharedVars(){
   const targetDate=new Date('2027-10-31');
   const diffDays=estDate?Math.round((targetDate-estDate)/(1000*60*60*24)):null;
   const ahead=diffDays!==null&&diffDays>0;
-  const neededPace=TEACHER_WEEKLY;
+  // Pace actually required to clear the remaining hours by the deadline (dynamic).
+  // Using the static teacher standard here contradicted the on-track check when behind.
+  const weeksToDeadline=Math.max(0,(targetDate-now)/(1000*60*60*24*7));
+  const neededPace=weeksToDeadline>0.1?remaining/weeksToDeadline:remaining;
   const totalBase=subjs.reduce((a,s)=>a+(s.base||0),0);
   const basePct=TOTAL_REQ>0?Math.min(100,totalBase/TOTAL_REQ*100):0;
   const startDate=new Date('2025-09-01T12:00:00');
