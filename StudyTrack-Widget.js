@@ -16,7 +16,7 @@ const THEMES = {
   mint:     { bg:"#a8e4c8", bg2:"#c0f0d8", bg3:"#88d0b0", text:"#042010", text2:"#186040", text3:"#408060", o:"#158050", ok:"#0a5030" },
   denim:    { bg:"#b0c4e0", bg2:"#c4d4ec", bg3:"#98aed0", text:"#081830", text2:"#284878", text3:"#506898", o:"#1840a0", ok:"#1a6040" },
   mocha:    { bg:"#c8a882", bg2:"#d8b890", bg3:"#b8946c", text:"#1a0c00", text2:"#6b3a18", text3:"#9a6840", o:"#7a3a10", ok:"#2a5a1a" },
-  coral:    { bg:"#f8a080", bg2:"#ffb090", bg3:"#e88868", text:"#280800", text2:"#a02818", text3:"#c05030", o:"#c03020", ok:"#1a5a2a" },
+  coral:    { bg:"#1a0a06", bg2:"#2a1208", bg3:"#3a1a0e", text:"#fdf0eb", text2:"#d08060", text3:"#a05838", o:"#e0502a", ok:"#00c896" },
 };
 
 // ── Fetch from Supabase ──────────────────────────────────────────────────────
