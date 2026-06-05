@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '*/5 * * * *'   # every 5 minutes
   workflow_dispatch:
+    inputs:
+      test_email:
+        description: 'Send a test email now'
+        type: boolean
+        default: false
 
 jobs:
   notify:
@@ -18,6 +23,7 @@ jobs:
           SB_KEY:        ${{ secrets.SB_KEY }}
           RESEND_KEY:    ${{ secrets.RESEND_KEY }}
           EMAIL_TO:      noah@flouty.uk
+          TEST_EMAIL:    ${{ github.event.inputs.test_email }}
         run: |
           npm install --silent web-push
           node << 'SCRIPT'
@@ -450,6 +456,15 @@ jobs:
                   return `<div style="background:${C.border};border-radius:100px;height:7px;overflow:hidden"><div style="background:${color||C.o};height:7px;width:${w}%;border-radius:100px"></div></div>`;
                 }
                 const heading = (t) => `<div style="font-size:12px;font-weight:700;color:${C.text2};text-transform:uppercase;letter-spacing:0.5px;margin:18px 0 8px">${t}</div>`;
+
+                // ── TEST EMAIL — fired on demand via workflow_dispatch ──
+                if (process.env.TEST_EMAIL === 'true') {
+                  let inner = `<div style="font-size:15px;color:${C.text};margin-bottom:16px">✅ Your email digests are working! This is a live test.</div>`;
+                  inner += `<table style="width:100%;border-collapse:separate;border-spacing:0;margin-bottom:8px"><tr>${stat('Logged', fmtH(totalLogged), C.o)}${stat('Remaining', fmtH(remaining), C.text)}${stat('Complete', Math.round(overallPct)+'%', C.text)}</tr></table>`;
+                  inner += `<div style="margin:14px 0">${bar(overallPct)}</div>`;
+                  inner += `<div style="padding:14px;background:${C.card};border-radius:10px;font-size:14px;color:${C.text};line-height:1.5">At your recent pace (${fmtH(pace)}/wk) you'll finish around <strong style="color:${onTrack?C.ok:C.err}">${estStr}</strong>. You'll now get daily, weekly and monthly digests automatically.</div>`;
+                  await sendEmail('✅ StudyTrack email test', wrap('Email test', null, inner));
+                }
 
                 // ── 1. DAILY SUMMARY — 7:00 AM Tokyo ──
                 if (near(7 * 60)) {
