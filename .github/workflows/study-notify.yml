@@ -81,7 +81,7 @@ jobs:
           async function send(sub, title, body, tag, extra={}) {
             try {
               await webpush.sendNotification(sub, JSON.stringify({
-                title, body, tag, url: '/studytrack/', ...extra
+                title, body, tag, url: '/studytrack/', sentAt: Date.now(), ...extra
               }));
               console.log(`[OK] [${tag}] ${title} - ${body}`);
             } catch(e) {
@@ -137,12 +137,40 @@ jobs:
               }
             }
 
-            // Use one-off override for today if it exists, otherwise use weekly schedule
+            // Per-day dedup: the cron runs every ~1 min, so each timed notification's
+            // window (a few minutes wide) would otherwise re-send and re-buzz 2–3×.
+            // notif_sent maps tag -> the date it last fired; sendOnce skips repeats today.
+            const sentLog = (await sbGet('notif_sent')) || {};
+            let sentChanged = false;
+            async function sendOnce(title, body, tag, extra={}) {
+              if (sentLog[tag] === todayStr) return; // already sent today
+              await sendAll(title, body, tag, extra);
+              sentLog[tag] = todayStr;
+              sentChanged = true;
+            }
+
+            // ISO-week parity (0 = Week A / even, 1 = Week B / odd) — matches the app's getWeekParity
+            function weekParity(y, m, d) {
+              const dt = new Date(Date.UTC(y, m, d));
+              dt.setUTCDate(dt.getUTCDate() + 4 - (dt.getUTCDay() || 7));
+              const yearStart = new Date(Date.UTC(dt.getUTCFullYear(), 0, 1));
+              return Math.ceil((((dt - yearStart) / 86400000) + 1) / 7) % 2;
+            }
+            const parity = weekParity(nowDate.getUTCFullYear(), nowDate.getUTCMonth(), nowDate.getUTCDate());
+
+            // Use one-off override for today if it exists, otherwise the weekly schedule —
+            // respecting each block's recurrence (weekly / biweekly_a / biweekly_b), same as the app.
             const overrides = overridesRaw || {};
             const hasOverride = !!overrides[todayStr];
-            const todayBlocks = (hasOverride ? overrides[todayStr] : (schedule || []).filter(b => b.day === dow))
+            const todayBlocks = (hasOverride ? overrides[todayStr] : (schedule || []).filter(b => {
+                if (b.day !== dow) return false;
+                if (!b.recurrence || b.recurrence === 'weekly') return true;
+                if (b.recurrence === 'biweekly_a') return parity === 0;
+                if (b.recurrence === 'biweekly_b') return parity === 1;
+                return true;
+              }))
               .sort((a, b) => toMins(a.start) - toMins(b.start));
-            console.log(`Schedule source: ${hasOverride ? 'override for ' + todayStr : 'weekly (day ' + dow + ')'} | ${todayBlocks.length} blocks`);
+            console.log(`Schedule source: ${hasOverride ? 'override for ' + todayStr : 'weekly day ' + dow + ' Week ' + (parity===0?'A':'B')} | ${todayBlocks.length} blocks`);
 
             const subjects = subjectsRaw || [];
             const sessions = sessionsRaw || [];
@@ -211,7 +239,7 @@ jobs:
             );
             for (const bl of startingSoon) {
               const {title,body} = tpl('block-soon', {label:bl.label, start:bl.start, end:bl.end});
-              await sendAll(title, body, `soon-${bl.id}`);
+              await sendOnce(title, body, `soon-${bl.id}`);
             }
 
             // ── 1b. Block just started (0–2 min ago) — Start Timer ────────
@@ -222,7 +250,7 @@ jobs:
             );
             for (const bl of justStarted) {
               const {title,body} = tpl('block-start', {label:bl.label, start:bl.start, end:bl.end});
-              await sendAll(title, body, `started-${bl.id}`,
+              await sendOnce(title, body, `started-${bl.id}`,
                 { type: 'block-start', subjectId: bl.subjectId || null, blockStart: bl.start });
             }
 
@@ -234,7 +262,7 @@ jobs:
             );
             for (const bl of endingSoon) {
               const {title,body} = tpl('block-end', {label:bl.label, end:bl.end});
-              await sendAll(title, body, `end-${bl.id}`,
+              await sendOnce(title, body, `end-${bl.id}`,
                 { type: 'block-end', subjectId: bl.subjectId || null, blockStart: bl.start });
             }
 
@@ -250,7 +278,7 @@ jobs:
                 nextLabel: nextBlock ? nextBlock.label : 'next block',
                 nextStart: nextBlock ? nextBlock.start : ''
               });
-              await sendAll(title, body, `break-end-${bl.id}`);
+              await sendOnce(title, body, `break-end-${bl.id}`);
             }
 
             // ── 4. Morning summary — 8:30am ───────────────────────────────
@@ -260,13 +288,13 @@ jobs:
 
               if (studyBlocks.length === 0) {
                 const {title,body} = tpl('morning-empty', {});
-                await sendAll(title, body, 'morning-summary');
+                await sendOnce(title, body, 'morning-summary');
               } else {
                 const blocks = studyBlocks.map(b => `${b.start}–${b.end} ${b.label}`).join('\n');
                 const {title,body} = tpl('morning-schedule', {
                   count: studyBlocks.length, scheduledH: fmtH(scheduledH), blocks
                 });
-                await sendAll(title, body, 'morning-schedule');
+                await sendOnce(title, body, 'morning-schedule');
 
                 const subjectStats = subjects
                   .filter(s => !s.done && !s.passive && s.req > 0)
@@ -284,7 +312,7 @@ jobs:
                 const todayScheduled  = subjectStats.filter(s => todaySubjectIds.includes(s.id)).map(s => s.name);
                 const subjects_str = todayScheduled.length ? todayScheduled.join(', ') : 'Most behind subjects';
                 const {title:ft, body:fb} = tpl('morning-focus', {subjects: subjects_str, focusBody});
-                await sendAll(ft, fb, 'morning-focus');
+                await sendOnce(ft, fb, 'morning-focus');
               }
             }
 
@@ -293,7 +321,7 @@ jobs:
               const remaining = Math.max(0, dailyGoal - todayH);
               const id = todayH >= dailyGoal ? 'wrapup-hit' : 'wrapup-miss';
               const {title,body} = tpl(id, {todayH: fmtH(todayH), remaining: fmtH(remaining)});
-              await sendAll(title, body, 'daily-wrapup');
+              await sendOnce(title, body, 'daily-wrapup');
             }
 
             // ── 6. Monday morning — weekly preview ────────────────────────
@@ -301,7 +329,7 @@ jobs:
               const {title,body} = tpl('monday', {
                 weeklyGoal: fmtH(weeklyGoal), weeklyAvg: fmtH(weeklyAvg)
               });
-              await sendAll(title, body, 'monday-preview');
+              await sendOnce(title, body, 'monday-preview');
             }
 
             // ── 7. Sunday evening — weekly recap ─────────────────────────
@@ -311,7 +339,7 @@ jobs:
                 .reduce((map, s) => { map[s.date] = (map[s.date] || 0) + s.hours; return map; }, {});
               const daysHit = Object.values(hitTarget).filter(h => h >= dailyGoal).length;
               const {title,body} = tpl('weekly-recap', {weekH: fmtH(weekH), daysHit});
-              await sendAll(title, body, 'weekly-recap');
+              await sendOnce(title, body, 'weekly-recap');
             }
 
             // ── 8. Subject complete — first time only ─────────────────────
@@ -343,7 +371,7 @@ jobs:
                 const {title,body} = tpl('subjects-behind', {
                   subjects: wayBehind.map(s => `${s.name} (${Math.round(s.pct)}%)`).join(' · ')
                 });
-                await sendAll(title, body, 'behind-subjects');
+                await sendOnce(title, body, 'behind-subjects');
               }
             }
 
@@ -352,8 +380,12 @@ jobs:
             for (const t of todos.filter(t => !t.done && t.date && t.time)) {
               const todoMins = toMins(t.time);
               if (t.date === todayStr && near(todoMins, 2, 7)) {
-                await sendAll('Task due now', t.text, `todo-${t.id}`);
+                await sendOnce('Task due now', t.text, `todo-${t.id}`,
+                  { type: 'todo', todoId: t.id });
               }
             }
+
+            // Persist the dedup log so repeat runs today don't re-buzz
+            if (sentChanged) await sbSet('notif_sent', sentLog);
           })();
           SCRIPT
