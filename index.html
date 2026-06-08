@@ -1164,11 +1164,42 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
 #inapp-banner.show{display:flex;animation:bannerIn 0.3s cubic-bezier(0.34,1.56,0.64,1)}
 #inapp-banner-title{font-size:13px;font-weight:700;color:var(--text)}
 #inapp-banner-body{font-size:12px;color:var(--text2)}
+
+/* ── LOADING SPLASH ──────────────────────────────────────────────────────── */
+#splash{position:fixed;inset:0;z-index:99999;background:var(--bg);display:flex;align-items:center;justify-content:center;opacity:1;transition:opacity 0.5s ease}
+#splash.hide{opacity:0;pointer-events:none}
+.splash-inner{display:flex;flex-direction:column;align-items:center;gap:26px;animation:splashRise 0.55s cubic-bezier(0.2,0.8,0.2,1)}
+.splash-logo{font-size:34px;font-weight:800;letter-spacing:-0.6px;color:var(--text);line-height:1}
+.splash-logo span{color:var(--o)}
+.splash-sub{font-size:12px;font-weight:500;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-top:-14px}
+.splash-spinner{width:30px;height:30px;border-radius:50%;border:3px solid var(--bg3);border-top-color:var(--o);animation:splashSpin 0.7s linear infinite}
+@keyframes splashSpin{to{transform:rotate(360deg)}}
+@keyframes splashRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.splash-inner{animation:none}.splash-spinner{animation-duration:1.4s}}
 </style>
 <!-- NoSleep.js: prevents screen dim/sleep during timer on Safari/older browsers -->
 <script src="https://cdn.jsdelivr.net/npm/nosleep.js@0.12.0/dist/NoSleep.min.js" onerror="window.NoSleep=undefined"></script>
 </head>
 <body>
+<!-- Apply saved theme immediately so the splash matches (no color flash) -->
+<script>
+  (function(){
+    try{
+      var t=localStorage.getItem('st_theme')||'slate';
+      var migrate={linen:'mocha',blush:'rose',honey:'slate',ember:'slate',pumpkin:'slate',cosmic:'ocean'};
+      if(migrate[t])t=migrate[t];
+      document.documentElement.setAttribute('data-theme',t);
+    }catch(e){}
+  })();
+</script>
+<!-- Loading splash (removed once the app has rendered) -->
+<div id="splash">
+  <div class="splash-inner">
+    <div class="splash-logo">Study<span>Track</span></div>
+    <div class="splash-sub">Loading</div>
+    <div class="splash-spinner"></div>
+  </div>
+</div>
 <!-- Floating toggle shown when sidebar is hidden -->
 <button id="sidebar-toggle" onclick="toggleSidebar()" title="Show menu">
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -9738,6 +9769,29 @@ window.addEventListener('load',function(){
   // by the time the user navigates to the timer — zero handshake delay.
   if(typeof _rtConnect==='function')_rtConnect();
 });
+
+// ── Hide the loading splash once the app is rendered ──────────────────────
+(function(){
+  var hidden=false;
+  function hideSplash(){
+    if(hidden)return;hidden=true;
+    var sp=document.getElementById('splash');
+    if(!sp)return;
+    sp.classList.add('hide');
+    setTimeout(function(){if(sp&&sp.parentNode)sp.parentNode.removeChild(sp);},550);
+  }
+  // Show the splash for at least 600ms (so the animation reads), then hide
+  // after the first paint. 'load' is the normal trigger; the timeout is a
+  // hard fallback so the splash can never get stuck if a resource hangs.
+  var MIN_MS=600, start=Date.now();
+  function tryHide(){
+    var wait=Math.max(0,MIN_MS-(Date.now()-start));
+    setTimeout(function(){requestAnimationFrame(hideSplash);},wait);
+  }
+  if(document.readyState==='complete'){tryHide();}
+  else{window.addEventListener('load',tryHide);}
+  setTimeout(hideSplash,4000); // absolute fallback
+})();
 </script>
 
 <!-- Mobile timer bar (above bottom nav) -->
