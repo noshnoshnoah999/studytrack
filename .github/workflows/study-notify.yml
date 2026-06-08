@@ -116,7 +116,10 @@ jobs:
             console.log(`${DAY[dow]} ${nowDate.getUTCHours()}:${String(nowDate.getUTCMinutes()).padStart(2,'0')} Tokyo | ${nowMins}m | ${todayStr}`);
 
             // Is current time within a window around target?
-            function near(targetMins, lo=1, hi=2) {
+            // lo=0 by default: never fire BEFORE the target minute (the cron runs
+            // every minute, so a slightly-early fire used to send at e.g. 6:59 for a
+            // 7:00 notification). Window is [target, target+hi) — fires exactly on time.
+            function near(targetMins, lo=0, hi=2) {
               return nowMins >= targetMins - lo && nowMins < targetMins + hi;
             }
 
