@@ -8252,30 +8252,23 @@ async function toggleNotifications(){
 }
 
 function scheduleNotifications(){
-  if(!('Notification' in window)||Notification.permission!=='granted'||localStorage.getItem('st_notif')!=='1')return;
+  // ── DISABLED on purpose ─────────────────────────────────────────────────
+  // Study reminders are now sent ONLY by the server (GitHub Actions web-push),
+  // which is the single source of truth. The server has per-day dedup and the
+  // service worker drops any push that arrives >20 min late.
+  //
+  // This old in-app scheduler used setTimeout(), which caused two bugs:
+  //   1. It duplicated every server push while the app was open (double buzz).
+  //   2. A setTimeout with a negative delay fires *immediately*, so reopening
+  //      the app after some blocks had passed (e.g. after travelling to a
+  //      different timezone) dumped a backlog of stale "Starting in 5 min"
+  //      reminders all at once — with no stale-guard, because local
+  //      notifications bypass the service worker.
+  //
+  // We keep the function so existing callers don't break; it now only clears
+  // any timers a previous (cached) version may have queued, and fires nothing.
   notifTimers.forEach(t=>clearTimeout(t));
   notifTimers=[];
-  const blocks=getTodayActualBlocks().filter(b=>b.type==='study');
-  const now=nowLocal();
-  const nowMins=now.getHours()*60+now.getMinutes();
-  blocks.forEach(bl=>{
-    const startMins=toMins(bl.start);
-    // 5-min warning
-    const warnMins=startMins-5;
-    if(warnMins>nowMins){
-      const t=setTimeout(()=>{
-        new Notification('⏰ Starting in 5 min',{body:bl.label+' · '+bl.start,tag:'warn-'+bl.id,icon:''});
-      },(warnMins-nowMins)*60000);
-      notifTimers.push(t);
-    }
-    // On-time
-    if(startMins>nowMins){
-      const t=setTimeout(()=>{
-        new Notification('📚 Study time!',{body:bl.label+' · '+bl.start+' – '+bl.end,tag:'start-'+bl.id,icon:''});
-      },(startMins-nowMins)*60000);
-      notifTimers.push(t);
-    }
-  });
 }
 
 // ── SUPABASE SYNC ─────────────────────────────────────────────────────────────
