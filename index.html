@@ -1273,6 +1273,7 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
           <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.5px;color:var(--text)" id="greeting"></h1>
           <p style="font-size:11px;color:var(--text3);margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px" id="greeting-date"></p>
           <div id="dash-yesterday-pill" style="display:none;margin-top:6px;font-size:12px;color:var(--text2);font-weight:500;line-height:1.4"></div>
+          <div id="holiday-dash-pill" style="display:none;margin-top:6px;font-size:12px;color:var(--text2);font-weight:600;line-height:1.4"></div>
         </div>
         <div style="display:flex;gap:4px;align-items:center" id="mobile-top-bar">
           <button id="notif-bell-mb" onclick="openNotifCenter()" style="position:relative;background:none;border:1px solid var(--border);border-radius:9px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2)" title="Notifications">
@@ -1305,6 +1306,7 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
           <button class="btn-toggle-edit" id="btn-edit-sched" onclick="toggleEditMode()">Edit</button>
         </div>
       </div>
+      <div id="holiday-bar"></div>
       <div id="sched-content" style="margin-bottom:80px"></div>
     </div>
 
@@ -3923,6 +3925,7 @@ function _scrollActiveTabIntoView(){
 }
 
 function renderSchedule(){
+  renderHolidayBar();
   const schedule=loadSchedule();
   const subjs=loadSubjects();
   const tdow=todayDow();
@@ -8271,6 +8274,77 @@ function scheduleNotifications(){
   notifTimers=[];
 }
 
+// ── HOLIDAY / PAUSE-SCHEDULE MODE ─────────────────────────────────────────────
+// When on, the server (web-push workflow) skips ALL study reminders + emails
+// until the chosen return date (or until manually resumed). State is synced to
+// Supabase as st_holiday = {paused, until, updatedAt} so the server can read it.
+function loadHoliday(){try{return JSON.parse(localStorage.getItem('st_holiday')||'{}');}catch(e){return{};}}
+function isOnHoliday(){
+  const h=loadHoliday();
+  if(!h||!h.paused)return false;
+  if(h.until&&todayStr()>h.until)return false; // past the return date — auto-resumed
+  return true;
+}
+function _fmtHolidayDate(ds){
+  try{return new Date(ds+'T00:00:00').toLocaleDateString(undefined,{day:'numeric',month:'short'});}catch(e){return ds;}
+}
+function setHoliday(paused,until){
+  const h={paused:!!paused,until:until||null,updatedAt:new Date().toISOString()};
+  localStorage.setItem('st_holiday',JSON.stringify(h));
+  localStorage.setItem('st_holiday_updated_at',h.updatedAt);
+  if(typeof sbPush==='function')sbPush('st_holiday',h);
+  renderHolidayUI();
+  if(typeof showToast==='function'){
+    if(h.paused)showToast(h.until?('🏖 Holiday mode on — paused until '+_fmtHolidayDate(h.until)):'🏖 Holiday mode on — reminders paused');
+    else showToast('✅ Reminders resumed');
+  }
+}
+function onHolidayDateChange(val){
+  const h=loadHoliday();
+  if(h.paused)setHoliday(true,val||null);
+}
+function renderHolidayUI(){renderHolidayBar();renderHolidayDashPill();}
+function renderHolidayBar(){
+  const el=document.getElementById('holiday-bar');
+  if(!el)return;
+  const h=loadHoliday();
+  if(isOnHoliday()){
+    el.innerHTML=
+      '<div style="background:var(--ol);border:1px solid var(--od2);border-radius:14px;padding:14px 16px;margin-bottom:14px">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'+
+          '<div style="display:flex;align-items:center;gap:11px">'+
+            '<span style="font-size:22px">🏖</span>'+
+            '<div>'+
+              '<div style="font-size:14px;font-weight:700;color:var(--text)">Holiday mode is on</div>'+
+              '<div style="font-size:12px;color:var(--text2);margin-top:1px">All study reminders are paused'+(h.until?(' until '+_fmtHolidayDate(h.until)):'')+'.</div>'+
+            '</div>'+
+          '</div>'+
+          '<button onclick="setHoliday(false,null)" style="background:var(--o);color:#fff;border:none;border-radius:10px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Resume now</button>'+
+        '</div>'+
+        '<div style="display:flex;align-items:center;gap:8px;margin-top:12px">'+
+          '<label style="font-size:12px;color:var(--text3);font-weight:600;white-space:nowrap">Auto-resume on</label>'+
+          '<input type="date" value="'+(h.until||'')+'" min="'+todayStr()+'" onchange="onHolidayDateChange(this.value)" style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:7px 10px;color:var(--text);font-family:inherit;font-size:13px">'+
+        '</div>'+
+      '</div>';
+  } else {
+    el.innerHTML=
+      '<button onclick="setHoliday(true,null)" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:13px;font-size:14px;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit;margin-bottom:14px">'+
+        '🏖 Pause schedule (holiday mode)'+
+      '</button>';
+  }
+}
+function renderHolidayDashPill(){
+  const el=document.getElementById('holiday-dash-pill');
+  if(!el)return;
+  if(isOnHoliday()){
+    const h=loadHoliday();
+    el.style.display='block';
+    el.innerHTML='🏖 Holiday mode — reminders paused'+(h.until?(' until '+_fmtHolidayDate(h.until)):'')+' · <a onclick="setHoliday(false,null)" style="color:var(--o);font-weight:700;cursor:pointer;text-decoration:underline">Resume</a>';
+  } else {
+    el.style.display='none';
+  }
+}
+
 // ── SUPABASE SYNC ─────────────────────────────────────────────────────────────
 const SB_URL='https://epaiazxcdcseijkhrncm.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVwYWlhenhjZGNzZWlqa2hybmNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwMjQ0MzQsImV4cCI6MjA5MjYwMDQzNH0.h2t_kFLZ_YPvuJlzPPiyXVbOnW4Ub_52hdaYosMoOus';
@@ -8315,7 +8389,7 @@ async function sbPull(key){
 async function syncFromCloud(){
   setSyncUI('syncing','Syncing…');
   try{
-    const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_templates','st_ai_history','st_theme']; // st_hours is recomputed from sessions below, not pulled directly
+    const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_templates','st_ai_history','st_theme','st_holiday']; // st_hours is recomputed from sessions below, not pulled directly
     // Pull st_deleted_sessions upfront so we can use it synchronously inside forEach
     let cloudDeletedRaw=null;
     try{cloudDeletedRaw=await sbPull('st_deleted_sessions');}catch(e){}
@@ -8382,7 +8456,7 @@ async function syncFromCloud(){
             document.documentElement.setAttribute('data-theme',cloudTheme);
             updateThemeSwatches();
           }
-        } else if(k==='st_subjs'||k==='st_goals'||k==='st_todos'||k==='st_sched_overrides'||k==='st_templates'){
+        } else if(k==='st_subjs'||k==='st_goals'||k==='st_todos'||k==='st_sched_overrides'||k==='st_templates'||k==='st_holiday'){
           // Timestamped last-writer-wins: keep whichever version is newer.
           // Prevents a device with stale data from reverting a fresh edit.
           const cloudUpdatedAt=rows[i].updated_at||'';
@@ -8418,6 +8492,7 @@ async function syncFromCloud(){
     setSyncUI('synced','Synced ✓');
     computeGoalRec(); // recompute after fresh cloud data
     updateRecPrompt();
+    renderHolidayUI(); // reflect any holiday state pulled from cloud
     if(updated)showPage(currentPage);
   }catch(e){
     if(e.message&&e.message.includes('quota')){
@@ -8466,6 +8541,7 @@ async function syncFromCloud(){
   syncFromCloud();
   updateNotifBtn();
   scheduleNotifications();
+  renderHolidayUI();
   // Register service worker and re-subscribe this device if notifications already granted
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/studytrack/sw.js',{scope:'/studytrack/'})
@@ -9767,9 +9843,10 @@ window.addEventListener('load',function(){
     }catch(e){}
   }
   fillYesterdayPill();
+  if(typeof renderHolidayDashPill==='function')renderHolidayDashPill();
   var _rd=window.renderDashboard;
   if(typeof _rd==='function'){
-    window.renderDashboard=function(){_rd.apply(this,arguments);fillYesterdayPill();};
+    window.renderDashboard=function(){_rd.apply(this,arguments);fillYesterdayPill();if(typeof renderHolidayDashPill==='function')renderHolidayDashPill();};
   }
   // Open the Realtime WebSocket immediately at startup so it's already connected
   // by the time the user navigates to the timer — zero handshake delay.

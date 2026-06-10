@@ -124,7 +124,7 @@ jobs:
             }
 
             // Fetch everything in parallel
-            const [schedule, subjectsRaw, sessionsRaw, hoursRaw, subsRaw, notifDone, todosRaw, overridesRaw, goalsRaw, templatesRaw] = await Promise.all([
+            const [schedule, subjectsRaw, sessionsRaw, hoursRaw, subsRaw, notifDone, todosRaw, overridesRaw, goalsRaw, templatesRaw, holidayRaw] = await Promise.all([
               sbGet('st_sched'),
               sbGet('st_subjs'),
               sbGet('st_sessions'),
@@ -135,14 +135,24 @@ jobs:
               sbGet('st_sched_overrides'),
               sbGet('st_goals'),
               sbGet('st_notif_templates'),
+              sbGet('st_holiday'),
             ]);
 
             if (!subsRaw) { console.log('No push subscriptions found'); return; }
             const subs = Array.isArray(subsRaw) ? subsRaw : [subsRaw];
             console.log(`Sending to ${subs.length} device(s)`);
 
-            // Helper: send to ALL subscribed devices
+            // ── Holiday / pause-schedule mode ──────────────────────────────
+            // When the user turns on holiday mode in the app, st_holiday is
+            // {paused, until}. While active we suppress ALL reminders + emails
+            // (auto-resuming once today is past the chosen return date).
+            const onHoliday = !!(holidayRaw && holidayRaw.paused &&
+              (!holidayRaw.until || todayStr <= holidayRaw.until));
+            if (onHoliday) console.log(`Holiday mode ON${holidayRaw.until ? ' until ' + holidayRaw.until : ''} — suppressing all notifications`);
+
+            // Helper: send to ALL subscribed devices (no-op while on holiday)
             async function sendAll(title, body, tag, extra={}) {
+              if (onHoliday) return;
               for (const sub of subs) {
                 await send(sub, title, body, tag, extra);
               }
@@ -404,7 +414,9 @@ jobs:
             try {
               const RESEND_KEY = process.env.RESEND_KEY;
               const EMAIL_TO = process.env.EMAIL_TO || 'noah@flouty.uk';
-              if (RESEND_KEY) {
+              // Holiday mode suppresses scheduled digests, but a manually
+              // triggered test email still goes through.
+              if (RESEND_KEY && (!onHoliday || process.env.TEST_EMAIL === 'true')) {
                 const emailLog = (await sbGet('email_sent')) || {};
                 let emailChanged = false;
                 async function sendEmail(subject, html) {
