@@ -1301,6 +1301,7 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
       <div class="sched-header">
         <h2>Schedule</h2>
         <div style="display:flex;gap:8px;align-items:center">
+          <button id="btn-holiday" onclick="toggleHolidayQuick()" title="Holiday mode — pause reminders" style="background:none;border:1px solid var(--border);border-radius:9px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;flex-shrink:0">🏖</button>
           <button class="btn-notif" id="btn-notif" onclick="toggleNotifications()" title="Enable notifications">🔕</button>
           <button class="btn-toggle-edit" id="btn-override-day" onclick="startOverrideEdit()" title="Override just this day" style="background:var(--bg3);color:var(--text2);border:1px solid var(--border)">One-off</button>
           <button class="btn-toggle-edit" id="btn-edit-sched" onclick="toggleEditMode()">Edit</button>
@@ -8303,7 +8304,22 @@ function onHolidayDateChange(val){
   const h=loadHoliday();
   if(h.paused)setHoliday(true,val||null);
 }
-function renderHolidayUI(){renderHolidayBar();renderHolidayDashPill();}
+function toggleHolidayQuick(){
+  if(isOnHoliday())setHoliday(false,null);
+  else setHoliday(true,null);
+}
+function renderHolidayBtn(){
+  const b=document.getElementById('btn-holiday');
+  if(!b)return;
+  if(isOnHoliday()){
+    b.style.background='var(--o)';b.style.borderColor='var(--o)';
+    b.title='Holiday mode is ON — tap to resume reminders';
+  } else {
+    b.style.background='none';b.style.borderColor='var(--border)';
+    b.title='Holiday mode — pause reminders';
+  }
+}
+function renderHolidayUI(){renderHolidayBtn();renderHolidayBar();renderHolidayDashPill();}
 function renderHolidayBar(){
   const el=document.getElementById('holiday-bar');
   if(!el)return;
@@ -8327,10 +8343,7 @@ function renderHolidayBar(){
         '</div>'+
       '</div>';
   } else {
-    el.innerHTML=
-      '<button onclick="setHoliday(true,null)" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:13px;font-size:14px;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit;margin-bottom:14px">'+
-        '🏖 Pause schedule (holiday mode)'+
-      '</button>';
+    el.innerHTML=''; // off-state lives as the small 🏖 icon in the header
   }
 }
 function renderHolidayDashPill(){
