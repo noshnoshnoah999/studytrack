@@ -8321,6 +8321,9 @@ function setHoliday(paused,until){
   localStorage.setItem('st_holiday_updated_at',h.updatedAt);
   if(typeof sbPush==='function')sbPush('st_holiday',h);
   renderHolidayUI();
+  // Keep the at-school greeting in sync: hide it while paused, re-detect on resume.
+  if(typeof checkAtSchool==='function')checkAtSchool(true);
+  else if(typeof renderSchoolCard==='function')renderSchoolCard();
   if(typeof showToast==='function'){
     if(h.paused)showToast(h.until?('🏖 Holiday mode on — paused until '+_fmtHolidayDate(h.until)):'🏖 Holiday mode on — reminders paused');
     else showToast('✅ Reminders resumed');
@@ -8460,6 +8463,8 @@ function _saveSchoolFromModal(){
 }
 function checkAtSchool(force){
   const s=loadSchool();
+  // Holiday mode suppresses the at-school greeting — don't even read GPS.
+  if(typeof isOnHoliday==='function'&&isOnHoliday()){_atSchool=false;renderSchoolCard();return;}
   if(!s.enabled||s.lat==null||s.lng==null){_atSchool=false;renderSchoolCard();return;}
   if(_schoolChecking)return;
   if(_schoolChecked&&!force){renderSchoolCard();return;}
@@ -8488,6 +8493,7 @@ function schoolStartBlock(){
 function renderSchoolCard(){
   const el=document.getElementById('school-card');if(!el)return;
   const s=loadSchool();
+  if(typeof isOnHoliday==='function'&&isOnHoliday()){el.innerHTML='';return;} // hidden during holiday mode
   if(!s.enabled||!_atSchool){el.innerHTML='';return;}
   const ci=_loadCheckin();
   if(ci.state==='seated'){
