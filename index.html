@@ -1199,6 +1199,8 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
   (function(){
     try{
       var t=localStorage.getItem('st_theme')||'slate';
+      // Theme rename map — MUST mirror applyTheme()'s migrations. This inline copy
+      // has to stay here so the saved theme applies before first paint (no flash).
       var migrate={linen:'mocha',blush:'rose',honey:'slate',ember:'slate',pumpkin:'slate',cosmic:'ocean'};
       if(migrate[t])t=migrate[t];
       document.documentElement.setAttribute('data-theme',t);
@@ -3464,25 +3466,13 @@ function saveTodoModal(){
   _updateTasksBadge();
 }
 
-// In-app todo notification check (when app is open)
-function checkTodoNotifs(){
-  if(!('Notification' in window)||Notification.permission!=='granted')return;
-  const todos=loadTodos();
-  const now=nowLocal();
-  const key='todo_notif_sent';
-  let sent={};
-  try{sent=JSON.parse(localStorage.getItem(key)||'{}');}catch(e){}
-  todos.filter(t=>!t.done&&t.date&&t.time).forEach(t=>{
-    const dt=new Date(t.date+'T'+t.time);
-    const diffMs=dt-now;
-    // Fire when within 1 minute of due time
-    if(diffMs>=-60000&&diffMs<=60000&&!sent[t.id]){
-      sent[t.id]=true;
-      localStorage.setItem(key,JSON.stringify(sent));
-      new Notification('📋 Task due now',{body:t.text,icon:'/studytrack/icon-192.png'});
-    }
-  });
-}
+// DISABLED on purpose (kept so the setInterval caller doesn't break).
+// Todo reminders are sent ONLY by the server (web-push), which is the single
+// source of truth. This old local path fired a duplicate Notification when the
+// app was open AND compared a device-local Date (new Date(t.date+'T'+t.time))
+// against a Tokyo-shifted nowLocal(), so it triggered at the wrong wall-clock
+// time when travelling. Removed — see scheduleNotifications() for the same call.
+function checkTodoNotifs(){ /* no-op: server push handles todo reminders */ }
 
 function loadHours(){
   try{const s=localStorage.getItem('st_hours');if(s)return JSON.parse(s);}catch(e){}
@@ -3583,7 +3573,7 @@ function updateSidebar(){
   const todayH=getTodayH();
   const goals=loadGoals();
   const target=goals.daily;
-  const wknd=!isWeekday(new Date());
+  const wknd=!isWeekday(nowLocal());
   const pct=Math.min(100,todayH/target*100);
   document.getElementById('sb-bar').style.width=pct+'%';
   document.getElementById('sb-val').textContent=wknd?fmtH(todayH)+' today (weekend)':fmtH(todayH)+' / '+fmtH(target);
@@ -3658,7 +3648,7 @@ function renderDashboard(){
   }
 
   // Pace strip — minimum / teacher target / my goal
-  const deadline=new Date('2027-10-31');
+  const deadline=new Date(GRAD_DEADLINE);
   const daysLeft=Math.max(1,(deadline-now)/(1000*60*60*24));
   const studyDaysLeft=Math.max(1,daysLeft/7*(goals.daysPerWeek||5));
   const minRequired=Math.max(0,remaining/studyDaysLeft);
@@ -4151,7 +4141,7 @@ function renderSchedule(){
         (isToday&&pctDone>0?'<div class="day-summary-div"></div><div class="day-summary-stat"><span class="day-summary-val">'+pctDone+'%</span><span class="day-summary-lbl">done</span></div>':'')+
       '</div>';
       // ── Merge todos into timeline ────────────────────────────────────────────
-      const baseDate2=new Date();
+      const baseDate2=nowLocal(); // Tokyo time — so the selected day maps to the right date abroad
       const diff2=(dow-baseDate2.getDay()+7)%7;
       const selDate2=new Date(baseDate2);
       selDate2.setDate(baseDate2.getDate()+(dow===tdow?0:dow>tdow?diff2:-(7-diff2)));
@@ -5107,7 +5097,7 @@ function renderHistory(){
   if(!filtered.length){entriesEl.innerHTML='<div class="empty-state">'+(searchQ?'No sessions match "'+escHtml(searchQ)+'"':'No sessions yet')+'</div>';return;}
 
   const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',english_11:'#60a5fa',english_12:'#93c5fd',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',geometry:'#a855f7',algebra2:'#7c3aed',el2:'#94a3b8',el3:'#64748b',el4:'#475569',am_hist:'#b45309',jp_exch:'#7c3aed'};
-  const today=new Date(); today.setHours(12,0,0,0);
+  const today=nowLocal(); today.setHours(12,0,0,0); // Tokyo time — correct Today/Yesterday labels abroad
   const yesterday=new Date(today); yesterday.setDate(today.getDate()-1);
 
   const _ecH=_extraCreditIds();
@@ -6631,7 +6621,7 @@ function _gradSharedVars(){
     estDate=new Date(now);estDate.setDate(now.getDate()+Math.round(weeksLeft*7));
     estDateStr=MONTHS[estDate.getMonth()]+' '+estDate.getFullYear();
   }
-  const targetDate=new Date('2027-10-31');
+  const targetDate=new Date(GRAD_DEADLINE);
   const diffDays=estDate?Math.round((targetDate-estDate)/(1000*60*60*24)):null;
   const ahead=diffDays!==null&&diffDays>0;
   // Pace actually required to clear the remaining hours by the deadline (dynamic).
@@ -7068,7 +7058,7 @@ function renderTimeline(){
   // ── Summary numbers ───────────────────────────────────────────────────────────
   const futureDates=Object.values(completedAt).filter(d=>d>now);
   const finishDate=futureDates.length?new Date(Math.max(...futureDates.map(d=>d.getTime()))):new Date(now);
-  const deadline=new Date('2027-10-31');
+  const deadline=new Date(GRAD_DEADLINE);
   const bufferDays=Math.round((deadline-finishDate)/86400000);
   const bufferMonths=Math.abs(Math.round(bufferDays/30.4));
   const monthsToFinish=Math.round((finishDate-now)/86400000/30.4);
@@ -7178,7 +7168,7 @@ function renderPlan(){
   const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
   const totalLogged=getTotalLogged();
   const remaining=Math.max(0,TOTAL_REQ-totalLogged);
-  const targetDate=new Date('2027-10-31');
+  const targetDate=new Date(GRAD_DEADLINE);
   const daysLeft=Math.max(1,(targetDate-now)/(1000*60*60*24));
   const personalTarget=goals.daily;       // what YOU want to do per day
   const daysPerWeek=goals.daysPerWeek||5; // days per week you plan to study
@@ -7208,7 +7198,7 @@ function renderPlan(){
   const finishAtActual=actualWeeklyPace?estFinish(actualWeeklyPace):null;
   const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   function fmtDate(d){return d?MONTHS[d.getMonth()]+' '+d.getFullYear():'—';}
-  const targetDate2=new Date('2027-10-31');
+  const targetDate2=new Date(GRAD_DEADLINE);
   const personalOnTime=finishAtPersonal&&finishAtPersonal<=targetDate2;
   const teacherOnTime=finishAtTeacher&&finishAtTeacher<=targetDate2;
   const actualOnTime=finishAtActual&&finishAtActual<=targetDate2;
@@ -7439,7 +7429,7 @@ function _renderStudyCalendar(targetElId){
   const remaining=Math.max(0,TOTAL_REQ-totalLogged);
   const personalTarget=goals.daily;
   const daysPerWeek=goals.daysPerWeek||5;
-  const targetDate=new Date('2027-10-31');
+  const targetDate=new Date(GRAD_DEADLINE);
   const daysLeft=Math.max(1,(targetDate-now)/(1000*60*60*24));
   const weeksLeft=daysLeft/7;
   const studyDaysLeft=weeksLeft*daysPerWeek;
@@ -7551,7 +7541,7 @@ function _renderPaceDropCard(){
   const guideRate=guideEl&&parseFloat(guideEl.value)>0?parseFloat(guideEl.value):(goals.teacherTarget||goals.daily);
 
   const now=nowLocal();
-  const deadline=new Date('2027-10-31');
+  const deadline=new Date(GRAD_DEADLINE);
   const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
   const studyDaysPerMonth=daysPerWeek*4.33;
@@ -7713,6 +7703,8 @@ function escHtml(s){
 
 // ── DARK MODE ─────────────────────────────────────────────────────────────────
 // App is dark by default. Toggle switches to "light" mode.
+// NOTE: the theme-rename migrations below are duplicated in the inline <script>
+// right after <body> (for pre-paint application) — update both together.
 function applyTheme(){
   let name=localStorage.getItem('st_theme');
   if(!name){name='slate';}
@@ -7847,6 +7839,9 @@ const TEACHER_WEEKLY=TEACHER_DAILY*TEACHER_DAYS; // 31.5
 // That leaves 19.5 to earn at TIHS, of which EL1+EL2+EL3=3cr are now complete → 16.5 left.
 const GRAD_TOTAL_CREDITS=24.0;
 const GRAD_TRANSFER_CREDITS=4.5; // English9(1) + Lab Sci(1) + Soc.Studies.Elect.(0.5) + CTE(1) + Electives(1)
+// Graduation deadline — single source of truth. Used by all pace/estimate math.
+// NOTE: keep in sync with the copy in .github/workflows/study-notify.yml (Date.UTC(2027, 9, 31)).
+const GRAD_DEADLINE='2027-10-31';
 
 function loadGoals(){
   try{const g=localStorage.getItem('st_goals');if(g){const p=JSON.parse(g);if(!p.daysPerWeek)p.daysPerWeek=5;if(!p.teacherTarget)p.teacherTarget=6.3;return p;}}catch(e){}
@@ -7894,7 +7889,7 @@ function computeGoalRec(){
     const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
     const totalLogged=getTotalLogged();
     const remaining=Math.max(0,TOTAL_REQ-totalLogged);
-    const daysLeft=Math.max(1,(new Date('2027-10-31')-Date.now())/(1000*60*60*24));
+    const daysLeft=Math.max(1,(new Date(GRAD_DEADLINE)-Date.now())/(1000*60*60*24));
     const bareMin=remaining/Math.max(1,(daysLeft/7)*daysPerWeek);
     const cutoffStr=new Date(Date.now()-28*24*3600000).toISOString().slice(0,10);
     const _ec=_extraCreditIds();
@@ -7942,7 +7937,7 @@ function openGoalSettings(){
     const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
     const totalLogged=getTotalLogged();
     const remaining=Math.max(0,TOTAL_REQ-totalLogged);
-    const targetDate=new Date('2027-10-31');
+    const targetDate=new Date(GRAD_DEADLINE);
     const nowMs=Date.now();
     const daysLeft=Math.max(1,(targetDate-nowMs)/(1000*60*60*24));
     const weeksLeft=daysLeft/7;
@@ -8309,7 +8304,7 @@ function loadHoliday(){try{return JSON.parse(localStorage.getItem('st_holiday')|
 function isOnHoliday(){
   const h=loadHoliday();
   if(!h||!h.paused)return false;
-  if(h.until&&todayStr()>h.until)return false; // past the return date — auto-resumed
+  if(h.until&&todayStr()>=h.until)return false; // resume ON the chosen return date (matches "Auto-resume on")
   return true;
 }
 function _fmtHolidayDate(ds){
@@ -8929,7 +8924,7 @@ function exportReport(){
   <div class="stat"><div class="stat-val orange">${totalLogged.toFixed(1)}h</div><div class="stat-lbl">Hours Logged</div></div>
   <div class="stat"><div class="stat-val">${remaining.toFixed(1)}h</div><div class="stat-lbl">Hours Remaining</div></div>
   <div class="stat"><div class="stat-val orange">${Math.round(pct)}%</div><div class="stat-lbl">Complete</div></div>
-  <div class="stat"><div class="stat-val ${estDate&&estDate<=new Date('2027-10-31')?'green':'orange'}">${estDateStr}</div><div class="stat-lbl">Est. Finish</div></div>
+  <div class="stat"><div class="stat-val ${estDate&&estDate<=new Date(GRAD_DEADLINE)?'green':'orange'}">${estDateStr}</div><div class="stat-lbl">Est. Finish</div></div>
 </div>
 <div class="big-bar-wrap"><div class="big-bar-fill" style="width:${pct.toFixed(1)}%"></div></div>
 <div class="bar-labels"><span>${totalLogged.toFixed(1)}h logged</span><span>${TOTAL_REQ}h required</span></div>
@@ -8960,6 +8955,7 @@ function exportReport(){
 // ── NOTIFICATION PREFERENCES ──────────────────────────────────────────────────
 const NOTIF_TYPES=[
   {id:'block_soon',    label:'Block starting soon',    desc:'~10 min before a study block starts'},
+  {id:'block_start',   label:'Block start',            desc:'When a study block begins — start timer'},
   {id:'block_end',     label:'Block ending reminder',  desc:'When a study block is ending — log prompt'},
   {id:'break_end',     label:'Break ending',           desc:'When a break between blocks is almost over'},
   {id:'morning',       label:'Morning summary',        desc:'Daily overview at 8:30am'},
@@ -9062,10 +9058,9 @@ function resetNotifMessages(){
 function loadNotifPrefs(){
   try{return JSON.parse(localStorage.getItem('st_notif_prefs')||'{}');}catch(e){return{};}
 }
-function isNotifEnabled(id){
-  const p=loadNotifPrefs();
-  return p[id]!==false;
-}
+// NOTE: push toggles are enforced server-side (the GitHub Actions workflow reads
+// st_notif_prefs and skips disabled types) — the client can't suppress a push it
+// doesn't send. In-app toggles are enforced here via isInAppEnabled().
 
 function openNotifSettings(){
   const prefs=loadNotifPrefs();
@@ -9997,7 +9992,7 @@ window.addEventListener('load',function(){
       var ss=JSON.parse(localStorage.getItem('st_sessions')||'[]');
       var gl=JSON.parse(localStorage.getItem('st_goals')||'{}');
       var tg=gl.daily||6;
-      var d=new Date();d.setDate(d.getDate()-1);
+      var d=(typeof nowLocal==='function'?nowLocal():new Date());d.setDate(d.getDate()-1); // Tokyo "yesterday"
       var ds=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
       var subjs=JSON.parse(localStorage.getItem('st_subjs')||'[]');
       var ecSet=new Set(subjs.filter(function(s){return s.extraCredit;}).map(function(s){return s.id;}));
