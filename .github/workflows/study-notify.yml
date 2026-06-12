@@ -124,7 +124,7 @@ jobs:
             }
 
             // Fetch everything in parallel
-            const [schedule, subjectsRaw, sessionsRaw, hoursRaw, subsRaw, notifDone, todosRaw, overridesRaw, goalsRaw, templatesRaw, holidayRaw] = await Promise.all([
+            const [schedule, subjectsRaw, sessionsRaw, hoursRaw, subsRaw, notifDone, todosRaw, overridesRaw, goalsRaw, templatesRaw, holidayRaw, prefsRaw] = await Promise.all([
               sbGet('st_sched'),
               sbGet('st_subjs'),
               sbGet('st_sessions'),
@@ -136,6 +136,7 @@ jobs:
               sbGet('st_goals'),
               sbGet('st_notif_templates'),
               sbGet('st_holiday'),
+              sbGet('st_notif_prefs'),
             ]);
 
             if (!subsRaw) { console.log('No push subscriptions found'); return; }
@@ -147,8 +148,14 @@ jobs:
             // {paused, until}. While active we suppress ALL reminders + emails
             // (auto-resuming once today is past the chosen return date).
             const onHoliday = !!(holidayRaw && holidayRaw.paused &&
-              (!holidayRaw.until || todayStr <= holidayRaw.until));
+              (!holidayRaw.until || todayStr < holidayRaw.until)); // resume ON the chosen date
             if (onHoliday) console.log(`Holiday mode ON${holidayRaw.until ? ' until ' + holidayRaw.until : ''} — suppressing all notifications`);
+
+            // ── Per-type push toggles (st_notif_prefs, set in the app's 🔔 panel) ──
+            // prefs[id] === false means the user turned that push type OFF.
+            // Missing/true = on. Ids match NOTIF_TYPES in index.html.
+            const prefs = prefsRaw || {};
+            function pushOn(id) { return prefs[id] !== false; }
 
             // Helper: send to ALL subscribed devices (no-op while on holiday)
             async function sendAll(title, body, tag, extra={}) {
@@ -253,7 +260,7 @@ jobs:
             }
 
             // ── 1a. Block starting in ~10 min (9–11 min window) ───────────
-            const startingSoon = todayBlocks.filter(b =>
+            const startingSoon = !pushOn('block_soon') ? [] : todayBlocks.filter(b =>
               b.type === 'study' &&
               toMins(b.start) - nowMins >= 9 &&
               toMins(b.start) - nowMins <= 11
@@ -264,7 +271,7 @@ jobs:
             }
 
             // ── 1b. Block just started (0–2 min ago) — Start Timer ────────
-            const justStarted = todayBlocks.filter(b =>
+            const justStarted = !pushOn('block_start') ? [] : todayBlocks.filter(b =>
               b.type === 'study' &&
               nowMins >= toMins(b.start) &&
               nowMins < toMins(b.start) + 2
@@ -276,7 +283,7 @@ jobs:
             }
 
             // ── 2. Study block ending in ~5 min (4–6 min window) ─────────
-            const endingSoon = todayBlocks.filter(b =>
+            const endingSoon = !pushOn('block_end') ? [] : todayBlocks.filter(b =>
               b.type === 'study' &&
               toMins(b.end) - nowMins >= 4 &&
               toMins(b.end) - nowMins <= 6
@@ -288,7 +295,7 @@ jobs:
             }
 
             // ── 3. Break ending in 0–2 min — next block preview ──────────
-            const breakEndingSoon = todayBlocks.filter(b =>
+            const breakEndingSoon = !pushOn('break_end') ? [] : todayBlocks.filter(b =>
               b.type === 'break' &&
               toMins(b.end) - nowMins >= 0 &&
               toMins(b.end) - nowMins <= 2
@@ -303,7 +310,7 @@ jobs:
             }
 
             // ── 4. Morning summary — 8:30am ───────────────────────────────
-            if (near(8 * 60 + 30)) {
+            if (near(8 * 60 + 30) && pushOn('morning')) {
               const studyBlocks = todayBlocks.filter(b => b.type === 'study');
               const scheduledH  = studyBlocks.reduce((a, b) => a + (toMins(b.end) - toMins(b.start)) / 60, 0);
 
@@ -338,7 +345,7 @@ jobs:
             }
 
             // ── 5. Daily wrap-up — 6pm ────────────────────────────────────
-            if (near(18 * 60)) {
+            if (near(18 * 60) && pushOn('wrapup')) {
               const remaining = Math.max(0, dailyGoal - todayH);
               const id = todayH >= dailyGoal ? 'wrapup-hit' : 'wrapup-miss';
               const {title,body} = tpl(id, {todayH: fmtH(todayH), remaining: fmtH(remaining)});
@@ -346,7 +353,7 @@ jobs:
             }
 
             // ── 6. Monday morning — weekly preview ────────────────────────
-            if (dow === 1 && near(8 * 60)) {
+            if (dow === 1 && near(8 * 60) && pushOn('weekly_preview')) {
               const {title,body} = tpl('monday', {
                 weeklyGoal: fmtH(weeklyGoal), weeklyAvg: fmtH(weeklyAvg)
               });
@@ -354,7 +361,7 @@ jobs:
             }
 
             // ── 7. Sunday evening — weekly recap ─────────────────────────
-            if (dow === 0 && near(18 * 60)) {
+            if (dow === 0 && near(18 * 60) && pushOn('weekly_recap')) {
               const hitTarget = sessions
                 .filter(s => new Date(s.date) >= weekAgo && new Date(s.date) <= nowDate)
                 .reduce((map, s) => { map[s.date] = (map[s.date] || 0) + s.hours; return map; }, {});
@@ -364,18 +371,26 @@ jobs:
             }
 
             // ── 8. Subject complete — first time only ─────────────────────
+            // Skip ENTIRELY while on holiday so completion isn't marked-as-sent
+            // without delivery — it then fires on the first run after holiday.
+            // When not on holiday we mark it handled either way (even if the push
+            // toggle is off) so re-enabling later doesn't dump a backlog.
             const alreadyNotified = notifDone || [];
             const newlyDone = subjects.filter(s => s.done && !alreadyNotified.includes(s.id));
-            for (const s of newlyDone) {
-              const {title,body} = tpl('subject-done', {name: s.name});
-              await sendAll(title, body, `done-${s.id}`);
-            }
-            if (newlyDone.length) {
+            if (newlyDone.length && !onHoliday) {
+              if (pushOn('subj_complete')) {
+                for (const s of newlyDone) {
+                  const {title,body} = tpl('subject-done', {name: s.name});
+                  await sendAll(title, body, `done-${s.id}`);
+                }
+              }
               await sbSet('notif_done_subjs', [...alreadyNotified, ...newlyDone.map(s => s.id)]);
             }
 
-            // ── 9. Subjects falling behind — 9am ─────────────────────────
-            if (near(9 * 60)) {
+            // ── 9. Subjects falling behind — Wednesday 9am ───────────────
+            // Wednesday-only (matches the behind-schedule email cadence) so it's
+            // a weekly nudge, not a daily nag.
+            if (dow === 3 && near(9 * 60) && pushOn('falling_behind')) {
               const avgPct = subjects
                 .filter(s => !s.done && s.req > 0)
                 .reduce((a, s) => a + getLogged(s.id) / s.req, 0) /
@@ -446,7 +461,7 @@ jobs:
                 const cut28Str = cut28.getUTCFullYear()+'-'+String(cut28.getUTCMonth()+1).padStart(2,'0')+'-'+String(cut28.getUTCDate()).padStart(2,'0');
                 const recentH = sessions.filter(s => s.date >= cut28Str && !ecIds.has(s.subjectId)).reduce((a, s) => a + s.hours, 0);
                 const pace = recentH >= 3 ? recentH / 4 : weeklyGoal;
-                const deadline = new Date(Date.UTC(2027, 9, 31));
+                const deadline = new Date(Date.UTC(2027, 9, 31)); // keep in sync with GRAD_DEADLINE in index.html
                 const weeksToDeadline = Math.max(0, (deadline - nowDate) / (1000*60*60*24*7));
                 const neededPace = weeksToDeadline > 0.1 ? remaining / weeksToDeadline : remaining;
                 const weeksLeft = pace > 0 ? remaining / pace : 999;
