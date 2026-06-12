@@ -61,9 +61,9 @@ function fmtAmPm(t) {
 function c(hex) { return new Color(hex); }
 
 // ── Load data ────────────────────────────────────────────────────────────────
-const [sessions, goals, schedule, subjs, themeRaw] = await Promise.all([
+const [sessions, goals, schedule, subjs, themeRaw, overridesRaw] = await Promise.all([
   sbGet("st_sessions"), sbGet("st_goals"), sbGet("st_sched"),
-  sbGet("st_subjs"), sbGet("st_theme")
+  sbGet("st_subjs"), sbGet("st_theme"), sbGet("st_sched_overrides")
 ]);
 
 // Pick theme — fall back to slate
@@ -84,9 +84,30 @@ const todayH = todaySessions.reduce((a,s) => a + s.hours, 0);
 const dailyGoal = (goals && goals.daily) || 6.3;
 const pct = Math.min(1, todayH / dailyGoal);
 
-// Today's blocks
-const todayBlocks = (schedule||[])
-  .filter(b => b.day === dow && b.type === "study")
+// ISO-week parity (0 = Week A, 1 = Week B) — must match study-notify.yml & the app
+function weekParity(y, m, d) {
+  const dt = new Date(Date.UTC(y, m, d));
+  dt.setUTCDate(dt.getUTCDate() + 4 - (dt.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(dt.getUTCFullYear(), 0, 1));
+  return Math.ceil((((dt - yearStart) / 86400000) + 1) / 7) % 2;
+}
+
+// Today's blocks — respect one-off date overrides + biweekly Week A/B recurrence
+const overrides = overridesRaw || {};
+let dayBlocksRaw;
+if (overrides[today]) {
+  // A one-off override replaces the whole day's schedule
+  dayBlocksRaw = overrides[today];
+} else {
+  const parity = weekParity(nowTokyo.getUTCFullYear(), nowTokyo.getUTCMonth(), nowTokyo.getUTCDate());
+  dayBlocksRaw = (schedule||[]).filter(b => b.day === dow && (
+    !b.recurrence || b.recurrence === "weekly" ||
+    (b.recurrence === "biweekly_a" && parity === 0) ||
+    (b.recurrence === "biweekly_b" && parity === 1)
+  ));
+}
+const todayBlocks = dayBlocksRaw
+  .filter(b => b.type === "study")
   .sort((a,b) => toMins(a.start) - toMins(b.start));
 
 const activeBlock = todayBlocks.find(b => nowMins >= toMins(b.start) && nowMins < toMins(b.end));

@@ -1,5 +1,5 @@
 // StudyTrack Service Worker — handles background push notifications + always-fresh HTML
-const CACHE='studytrack-v5';
+const CACHE='studytrack-v6';
 
 self.addEventListener('install',e=>{
   self.skipWaiting();
@@ -52,7 +52,7 @@ self.addEventListener('push',e=>{
   }
   if(data.type==='todo'){
     actions.push({action:'mark-done',title:'✅ Mark Done'});
-    actions.push({action:'snooze',title:'⏰ Snooze 10m'});
+    actions.push({action:'snooze',title:'⏰ Snooze'});
     actions.push({action:'open-tasks',title:'Open App'});
   }
 
@@ -90,7 +90,12 @@ self.addEventListener('notificationclick',e=>{
     msgType='mark-todo-done';
     url='/studytrack/';
   } else if(e.action==='snooze'){
-    // Re-show the notification after 10 minutes
+    // Re-show the notification after ~10 minutes.
+    // LIMITATION: this relies on setTimeout staying alive inside the service
+    // worker. iOS terminates idle SWs aggressively, so on iPhone the snoozed
+    // re-notification often never fires. Label kept as "Snooze" (no fixed time)
+    // to avoid implying a guarantee. A reliable fix would need the server to
+    // re-queue the push — not done here.
     e.waitUntil(new Promise(resolve=>{
       setTimeout(()=>{
         self.registration.showNotification(e.notification.title,{
@@ -100,7 +105,7 @@ self.addEventListener('notificationclick',e=>{
           renotify:true,
           actions:[
             {action:'mark-done',title:'✅ Mark Done'},
-            {action:'snooze',title:'⏰ Snooze 10m'},
+            {action:'snooze',title:'⏰ Snooze'},
             {action:'open-tasks',title:'Open App'}
           ],
           data:notifData
