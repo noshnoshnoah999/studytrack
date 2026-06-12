@@ -106,13 +106,28 @@ if (overrides[today]) {
     (b.recurrence === "biweekly_b" && parity === 1)
   ));
 }
+// study sessions (for the daily-hours bar etc.)
 const todayBlocks = dayBlocksRaw
   .filter(b => b.type === "study")
   .sort((a,b) => toMins(a.start) - toMins(b.start));
 
-const activeBlock = todayBlocks.find(b => nowMins >= toMins(b.start) && nowMins < toMins(b.end));
-const nextBlock   = todayBlocks.find(b => toMins(b.start) > nowMins);
-const focusBlock  = activeBlock || nextBlock;
+// Focus block: what's happening RIGHT NOW (any block type), falling back to the
+// next study/class block only when nothing is currently on the schedule.
+//  - in a study/class block  -> "NOW" (e.g. US History (School))
+//  - in a break              -> "ON BREAK"
+//  - nothing now             -> "NEXT" study/class block
+const allBlocks = dayBlocksRaw.slice().sort((a,b) => toMins(a.start) - toMins(b.start));
+const isSession = b => b && (b.type === "study" || b.type === "class" || b.type === "work");
+const activeAny   = allBlocks.find(b => nowMins >= toMins(b.start) && nowMins < toMins(b.end));
+const nextSession = allBlocks.find(b => toMins(b.start) > nowMins && (b.type === "study" || b.type === "class"));
+
+let focusBlock = null, focusState = null;
+if (activeAny && activeAny.type === "break") { focusBlock = activeAny; focusState = "break"; }
+else if (isSession(activeAny))               { focusBlock = activeAny; focusState = "now"; }
+else if (nextSession)                        { focusBlock = nextSession; focusState = "next"; }
+
+const stateLabel = focusState === "break" ? "● ON BREAK" : focusState === "now" ? "● NOW" : "● NEXT";
+const focusName  = focusState === "break" ? (focusBlock.label || "On break") : (focusBlock ? (focusBlock.label || "Study") : "");
 
 // ── Build widget ─────────────────────────────────────────────────────────────
 const w = new ListWidget();
@@ -146,14 +161,13 @@ if (size === "small") {
   w.addSpacer();
 
   if (focusBlock) {
-    const label = activeBlock ? "● NOW" : "● NEXT";
-    const labelEl = w.addText(label);
+    const labelEl = w.addText(stateLabel);
     labelEl.font = Font.boldSystemFont(9);
     labelEl.textColor = c(T.o);
 
     w.addSpacer(2);
 
-    const blockName = w.addText(focusBlock.label || "Study");
+    const blockName = w.addText(focusName);
     blockName.font = Font.mediumSystemFont(13);
     blockName.textColor = c(T.text);
     blockName.lineLimit = 1;
@@ -193,13 +207,13 @@ if (size === "small") {
   right.centerAlignContent();
 
   if (focusBlock) {
-    const lbl = right.addText(activeBlock ? "● NOW" : "● NEXT");
+    const lbl = right.addText(stateLabel);
     lbl.font = Font.boldSystemFont(10);
     lbl.textColor = c(T.o);
 
     right.addSpacer(3);
 
-    const bn = right.addText(focusBlock.label || "Study");
+    const bn = right.addText(focusName);
     bn.font = Font.mediumSystemFont(14);
     bn.textColor = c(T.text);
     bn.lineLimit = 1;
