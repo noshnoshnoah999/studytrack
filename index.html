@@ -327,6 +327,10 @@ a{color:inherit;text-decoration:none}
 .form-label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;display:block}
 .form-input{width:100%;border:none;border-radius:10px;padding:11px 14px;background:var(--bg3);font-size:14px;color:var(--text);transition:all 0.15s}
 .form-input:focus{background:var(--bg4)}
+/* iOS/WebKit native date & time inputs have intrinsic chrome that ignores
+   width:100% and overflows the container on the right — strip the native
+   appearance so they respect box-sizing. Still opens the native picker on tap. */
+.form-input[type=date],.form-input[type=time]{-webkit-appearance:none;appearance:none;max-width:100%}
 .time-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .time-split-input{display:flex;align-items:center;background:var(--bg3);border-radius:10px;padding:11px 14px;gap:2px}
 .time-split-input:focus-within{box-shadow:0 0 0 3px rgba(249,115,22,0.2)}
