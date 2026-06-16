@@ -1654,6 +1654,20 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
   </div>
 </div>
 
+<!-- AFTER-RUN STRETCHES PROMPT -->
+<div class="modal-overlay" id="stretch-modal-overlay" onclick="handleOverlayClick(event,'stretch-modal-overlay')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🧘 After Run Stretches?</div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:14px">Log your post-run stretches? I'll fill the form in — just review and tap Log Session (the stretches form opens after).</div>
+    <div id="stretch-preview" style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:13px;line-height:1.7"></div>
+    <div class="modal-actions">
+      <button class="btn-save" onclick="fillStretchLog()">Fill it in</button>
+      <button class="btn-cancel" onclick="closeModal('stretch-modal-overlay')">Not now</button>
+    </div>
+  </div>
+</div>
+
 <!-- BLOCK MODAL -->
 <div class="modal-overlay" id="block-modal-overlay" onclick="handleOverlayClick(event,'block-modal-overlay')">
   <div class="modal-sheet" onclick="event.stopPropagation()">
@@ -6331,6 +6345,55 @@ function _doLogSession(){
   if(currentPage==='graduation')renderGraduationPage();
   // Auto-open cardio Google Form after logging a PE session
   if(_SUBJECT_FORMS[subjectId]) _openSubjectForm(subjectId,date,start,end,notes);
+  // After a PE *run*, offer to pre-fill the post-run stretches (shows behind the
+  // form card above, so it's revealed once that's dismissed — i.e. after the form)
+  _maybeOfferStretches(subjectId,date,start,end,notes);
+}
+
+// ── After-run stretches auto-fill ───────────────────────────────────────────
+// After logging a PE run, offer to pre-fill the post-run stretches session:
+// PE/Cardio, starts 5 min after the run ends, lasts 15 min, note
+// "{15th June} - After Run Stretches" (matches Noah's existing log entries).
+let _pendingStretch=null;
+function _addMins(t,n){let x=(toMins(t)+n)%1440;if(x<0)x+=1440;return String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0');}
+function _ordinalDate(ds){
+  const p=(ds||'').split('-');if(p.length<3)return ds;
+  const d=parseInt(p[2],10),mi=parseInt(p[1],10)-1;
+  const suf=(d%10===1&&d!==11)?'st':(d%10===2&&d!==12)?'nd':(d%10===3&&d!==13)?'rd':'th';
+  const M=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return d+suf+' '+(M[mi]||'');
+}
+function _maybeOfferStretches(subjectId,date,start,end,notes){
+  if(subjectId!=='pe')return;
+  const n=(notes||'').toLowerCase();
+  if(!n.includes('run'))return;     // only runs, not cycles/walks
+  if(n.includes('stretch'))return;  // don't loop after logging the stretch itself
+  _pendingStretch={date,end};
+  _showStretchPrompt(date,end);
+}
+function _showStretchPrompt(date,end){
+  const sStart=_addMins(end,5),sEnd=_addMins(sStart,15);
+  const note=_ordinalDate(date)+' - After Run Stretches';
+  const el=document.getElementById('stretch-preview');
+  if(el)el.innerHTML='<b style="color:var(--text)">PE / Cardio</b> · 15 min<br>'+sStart+' – '+sEnd+'<br><span style="color:var(--text2)">'+escHtml(note)+'</span>';
+  const ov=document.getElementById('stretch-modal-overlay');
+  if(ov)ov.classList.add('open');
+}
+function fillStretchLog(){
+  if(!_pendingStretch){closeModal('stretch-modal-overlay');return;}
+  const {date,end}=_pendingStretch;
+  const sStart=_addMins(end,5),sEnd=_addMins(sStart,15);
+  showPage('log');
+  const sub=document.getElementById('log-subject'); if(sub)sub.value='pe';
+  if(typeof updateLogFormColour==='function')updateLogFormColour();
+  const dEl=document.getElementById('log-date'); if(dEl)dEl.value=date;
+  setLogTime('log-start',sStart);
+  setLogTime('log-end',sEnd);
+  const nEl=document.getElementById('log-notes'); if(nEl)nEl.value=_ordinalDate(date)+' - After Run Stretches';
+  updateLogDuration();
+  _pendingStretch=null;
+  closeModal('stretch-modal-overlay');
+  showToast('Stretches filled in — review & log ✓','var(--ok)');
 }
 
 function deleteEntry(id){
