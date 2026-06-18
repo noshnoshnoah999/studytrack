@@ -350,6 +350,17 @@ a{color:inherit;text-decoration:none}
 .entry-name{font-size:14px;font-weight:600;color:var(--text)}
 .entry-meta{font-size:12px;color:var(--text2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .entry-dur{font-size:13px;font-weight:700;color:var(--o);flex-shrink:0}
+.form-pill{border:none;border-radius:8px;padding:3px 8px;font-size:11px;font-weight:800;cursor:pointer;flex-shrink:0;white-space:nowrap;line-height:1.4}
+.form-pill.done{background:var(--okl);color:var(--ok)}
+.form-pill.pending{background:rgba(245,158,11,0.18);color:#f59e0b}
+.forms-pending-banner{display:none;background:rgba(245,158,11,0.14);border:1px solid rgba(245,158,11,0.4);border-radius:12px;padding:11px 14px;margin-bottom:12px;font-size:13px;color:var(--text);cursor:pointer;align-items:center;gap:8px}
+.forms-pending-banner.show{display:flex}
+.fp-row{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border)}
+.fp-info{flex:1;min-width:0}
+.fp-name{font-size:13px;font-weight:700;color:var(--text)}
+.fp-meta{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fp-open{background:var(--o);color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0}
+.fp-done{background:var(--okl);color:var(--ok);border:none;border-radius:8px;width:30px;height:30px;font-size:14px;font-weight:800;cursor:pointer;flex-shrink:0}
 .btn-del{background:none;color:var(--text3);font-size:18px;line-height:1;padding:2px 6px;border-radius:6px;transition:all 0.15s;flex-shrink:0}
 .btn-del:hover{background:var(--errl);color:var(--err)}
 .empty-state{text-align:center;padding:40px 20px;color:var(--text3);font-size:14px}
@@ -1325,6 +1336,7 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
       <div id="class-log-prompts"></div>
       <!-- QUICK TEMPLATES -->
       <div class="template-section" id="template-section"></div>
+      <div class="forms-pending-banner" id="forms-pending-banner" onclick="openFormsPending()"></div>
       <div class="card log-form-card" id="log-form-card" style="margin-bottom:12px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
           <div class="card-title" style="margin-bottom:0">Log a Session</div>
@@ -1668,6 +1680,19 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
   </div>
 </div>
 
+<!-- GOOGLE FORMS PENDING REVIEW -->
+<div class="modal-overlay" id="forms-pending-modal-overlay" onclick="handleOverlayClick(event,'forms-pending-modal-overlay')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📋 Forms to submit</div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:14px">Sessions logged in StudyTrack whose Google Form hasn't been submitted yet. Open the form, or tap ✓ if you've already done it.</div>
+    <div id="forms-pending-list" style="max-height:60vh;overflow-y:auto"></div>
+    <div class="modal-actions" style="margin-top:14px">
+      <button class="btn-cancel" onclick="closeModal('forms-pending-modal-overlay')">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- BLOCK MODAL -->
 <div class="modal-overlay" id="block-modal-overlay" onclick="handleOverlayClick(event,'block-modal-overlay')">
   <div class="modal-sheet" onclick="event.stopPropagation()">
@@ -1990,10 +2015,81 @@ function _openFormForSession(sessionId){
   const sessions=loadSessions();
   const s=sessions.find(x=>x.id===sessionId);
   if(!s)return;
-  _openSubjectForm(s.subjectId,s.date,s.start,s.end,s.notes);
+  _openSubjectForm(s.subjectId,s.date,s.start,s.end,s.notes,sessionId);
 }
 
-function _openSubjectForm(subjectId,date,start,end,notes){
+// ── GOOGLE FORM SUBMISSION TRACKER ──────────────────────────────────────────
+// A session "needs a form" if its subject has a Google Form and it hasn't been
+// marked submitted. Opening the form marks it submitted (optimistic — the form
+// is pre-filled, so opening = about to submit); a tap on the row pill corrects it.
+// Cutoff: only sessions logged AFTER the tracker first ran are considered — so
+// existing/historical sessions (whose forms were already handled) aren't flagged.
+// Set once, at script load, before the user can log anything new.
+if(!localStorage.getItem('st_form_tracker_since'))localStorage.setItem('st_form_tracker_since',new Date().toISOString());
+// A session is "tracked" if its subject has a form AND it was logged after the
+// cutoff. Only tracked sessions show a form pill / count toward pending.
+function _isTracked(s){
+  if(!s||!_SUBJECT_FORMS[s.subjectId])return false;
+  const since=localStorage.getItem('st_form_tracker_since')||'';
+  return !!(since && s.loggedAt && s.loggedAt>=since);
+}
+function _needsForm(s){ return _isTracked(s) && !s.formSubmitted; }
+function _markFormSubmitted(sessionId,val){
+  const sessions=loadSessions();
+  const s=sessions.find(x=>x.id===sessionId);
+  if(!s)return;
+  s.formSubmitted=(val!==false);
+  saveSessions(sessions);
+  if(typeof renderLogEntries==='function')renderLogEntries();
+  if(currentPage==='history'&&typeof renderHistory==='function')renderHistory();
+  if(typeof updateFormsPending==='function')updateFormsPending();
+  const ov=document.getElementById('forms-pending-modal-overlay');
+  if(ov&&ov.classList.contains('open'))openFormsPending(); // keep the review list fresh
+}
+function toggleFormSubmitted(sessionId){
+  const sessions=loadSessions();
+  const s=sessions.find(x=>x.id===sessionId);
+  if(!s)return;
+  _markFormSubmitted(sessionId, !s.formSubmitted);
+}
+// Every logged session whose subject has a form, that hasn't been marked submitted.
+function _pendingFormSessions(){
+  return loadSessions().filter(_needsForm).sort((a,b)=>(b.date+b.start).localeCompare(a.date+a.start));
+}
+function updateFormsPending(){
+  const banner=document.getElementById('forms-pending-banner');
+  if(!banner)return;
+  const n=_pendingFormSessions().length;
+  if(n>0){
+    banner.innerHTML='📋 <span><b>'+n+'</b> session'+(n>1?'s':'')+' still need'+(n>1?'':'s')+' a Google Form — tap to review</span>';
+    banner.classList.add('show');
+  }else{
+    banner.classList.remove('show');
+  }
+}
+function openFormsPending(){
+  const list=document.getElementById('forms-pending-list');
+  if(!list)return;
+  const subjs=loadSubjects();
+  const pend=_pendingFormSessions();
+  if(!pend.length){
+    list.innerHTML='<div class="empty-state">All forms submitted ✓</div>';
+  }else{
+    list.innerHTML=pend.map(s=>{
+      const subj=subjs.find(x=>x.id===s.subjectId);
+      const name=subj?subj.name:s.subjectId;
+      return '<div class="fp-row">'+
+        '<div class="fp-info"><div class="fp-name">'+escHtml(name)+'</div>'+
+          '<div class="fp-meta">'+s.date+' · '+s.start+'–'+s.end+(s.notes?' · '+escHtml(s.notes):'')+'</div></div>'+
+        '<button class="fp-open" onclick="_openFormForSession(\''+s.id+'\')">Open form →</button>'+
+        '<button class="fp-done" onclick="toggleFormSubmitted(\''+s.id+'\')" title="Mark as submitted">✓</button>'+
+      '</div>';
+    }).join('');
+  }
+  document.getElementById('forms-pending-modal-overlay').classList.add('open');
+}
+
+function _openSubjectForm(subjectId,date,start,end,notes,sessionId){
   const cfg=_SUBJECT_FORMS[subjectId];
   if(!cfg)return; // no form for this subject
   let url=cfg.url+'?usp=pp_url';
@@ -2017,7 +2113,7 @@ function _openSubjectForm(subjectId,date,start,end,notes){
       '<div style="font-size:36px;margin-bottom:12px">📋</div>'+
       '<div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px">Session Logged!</div>'+
       '<div style="font-size:14px;color:var(--text2);margin-bottom:20px">Date, times & confirm checkbox pre-filled</div>'+
-      '<a href="'+url+'" target="_blank" rel="noopener" onclick="document.getElementById(\'subject-form-overlay\').remove()" '+
+      '<a href="'+url+'" target="_blank" rel="noopener" onclick="'+(sessionId?'_markFormSubmitted(\''+sessionId+'\');':'')+'document.getElementById(\'subject-form-overlay\').remove()" '+
         'style="display:block;background:var(--o);color:#fff;font-weight:700;font-size:16px;padding:14px;border-radius:12px;text-decoration:none;margin-bottom:12px">'+
         'Open '+escHtml(subjName)+' Form →'+
       '</a>'+
@@ -4685,16 +4781,21 @@ function renderLogEntries(){
     const subj=subjs.find(x=>x.id===s.subjectId);
     const name=subj?subj.name:s.subjectId;
     const meta=s.date+' · '+s.start+'–'+s.end+(s.notes?' · '+escHtml(s.notes):'');
+    const formPill=_isTracked(s)
+      ? '<button class="form-pill '+(s.formSubmitted?'done':'pending')+'" onclick="toggleFormSubmitted(\''+s.id+'\')" title="'+(s.formSubmitted?'Form submitted — tap to mark not sent':'Form not submitted yet — tap to mark sent')+'">📋'+(s.formSubmitted?' ✓':' !')+'</button>'
+      : '';
     return'<div class="entry-row">'+
       '<div class="entry-dot"></div>'+
       '<div class="entry-info">'+
         '<div class="entry-name">'+escHtml(name)+'</div>'+
         '<div class="entry-meta">'+meta+'</div>'+
       '</div>'+
+      formPill+
       '<div class="entry-dur">'+fmtH(s.hours)+'</div>'+
       '<button class="btn-del" onclick="deleteEntry(\''+s.id+'\')">×</button>'+
     '</div>';
   }).join('');
+  updateFormsPending();
   // Stagger entry rows
   el.querySelectorAll('.entry-row').forEach((r,i)=>{
     r.classList.add('slide-up');
@@ -6116,7 +6217,8 @@ async function timerPageLog(){
     endStr=String(Math.floor(endTotal/60)).padStart(2,'0')+':'+String(endTotal%60).padStart(2,'0');
   }
   const sessions=loadSessions();
-  sessions.push({id:genId(),subjectId:timerSubjectId,date:ds,hours:hrs,start:startStr,end:endStr,notes,loggedAt:new Date().toISOString()});
+  const _timerId=genId();
+  sessions.push({id:_timerId,subjectId:timerSubjectId,date:ds,hours:hrs,start:startStr,end:endStr,notes,loggedAt:new Date().toISOString()});
   saveSessions(sessions);
   const hoursStore=loadHours();
   hoursStore[timerSubjectId]=(hoursStore[timerSubjectId]||0)+hrs;
@@ -6128,7 +6230,7 @@ async function timerPageLog(){
   if(currentPage==='progress')renderProgress();
   if(currentPage==='subjects')renderSubjectsPage();
   if(currentPage==='graduation')renderGraduationPage();
-  if(_SUBJECT_FORMS[timerSubjectId]) _openSubjectForm(timerSubjectId,ds,startStr,endStr,notes);
+  if(_SUBJECT_FORMS[timerSubjectId]) _openSubjectForm(timerSubjectId,ds,startStr,endStr,notes,_timerId);
 }
 
 
@@ -6334,7 +6436,8 @@ function _doLogSession(){
   const hours=mins/60;
   const sessions=loadSessions();
   const hoursStore=loadHours();
-  sessions.push({id:genId(),subjectId,date,start,end,hours,notes,loggedAt:new Date().toISOString()});
+  const _newId=genId();
+  sessions.push({id:_newId,subjectId,date,start,end,hours,notes,loggedAt:new Date().toISOString()});
   hoursStore[subjectId]=(hoursStore[subjectId]||0)+hours;
   saveSessions(sessions);
   saveHours(hoursStore);
@@ -6351,7 +6454,7 @@ function _doLogSession(){
   if(currentPage==='subjects')renderSubjectsPage();
   if(currentPage==='graduation')renderGraduationPage();
   // Auto-open cardio Google Form after logging a PE session
-  if(_SUBJECT_FORMS[subjectId]) _openSubjectForm(subjectId,date,start,end,notes);
+  if(_SUBJECT_FORMS[subjectId]) _openSubjectForm(subjectId,date,start,end,notes,_newId);
   // After a PE *run*, offer to pre-fill the post-run stretches (shows behind the
   // form card above, so it's revealed once that's dismissed — i.e. after the form)
   _maybeOfferStretches(subjectId,date,start,end,notes);
