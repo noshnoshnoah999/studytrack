@@ -3079,7 +3079,14 @@ async function useWorkoutResult(){
     if(notesEl)notesEl.value='';
     showToast('KOT shift imported — check times and submit');
   }else{
-    const activityLabel=result.timeLabel&&result.activity?(result.timeLabel+' '+result.activity):(result.activity||'Workout');
+    // Normalise any run-type activity (jog, 5k, easy 10km, "Lunch Run"…) to the
+    // standard "<Daypart> Run" wording, regardless of how the screenshot phrased it.
+    let activityLabel;
+    if(_looksLikeRun((result.activity||'')+' '+(result.timeLabel||''))){
+      activityLabel=_timeOfDay(result.startTime,result.timeLabel)+' Run';
+    } else {
+      activityLabel=result.timeLabel&&result.activity?(result.timeLabel+' '+result.activity):(result.activity||'Workout');
+    }
     const fullMonths=['January','February','March','April','May','June','July','August','September','October','November','December'];
     function ordinal(n){const s=['th','st','nd','rd'];const v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
     let dayLabel='';
@@ -6363,11 +6370,28 @@ function _ordinalDate(ds){
   const M=['January','February','March','April','May','June','July','August','September','October','November','December'];
   return d+suf+' '+(M[mi]||'');
 }
+// Does this text describe a RUN (run/jog/sprint or a 5k/10k-style distance)?
+// Explicitly excludes other cardio (cycle/walk/swim/row) so they never trigger
+// the stretches flow — even if they mention a distance like "20km".
+function _looksLikeRun(str){
+  const n=(str||'').toLowerCase();
+  if(/\b(cycle|cycling|bike|biking|walk|walking|swim|swimming|row|rowing)\b/.test(n))return false;
+  if(/\b(run|running|jog|jogging|sprint|sprints)\b/.test(n))return true;
+  if(/\b\d+\s?k(m)?\b/.test(n))return true; // 5k, 10k, 5km, 10km, "easy 10km"
+  return false;
+}
+// Daypart label ("Morning"/"Afternoon"/"Evening") — prefer an explicit label,
+// else derive from the start time.
+function _timeOfDay(startStr,label){
+  if(label){const m=label.toLowerCase().match(/morning|afternoon|evening|night/);if(m)return m[0].charAt(0).toUpperCase()+m[0].slice(1);}
+  const h=startStr?parseInt(String(startStr).split(':')[0],10):NaN;
+  if(isNaN(h))return 'Morning';
+  return h<12?'Morning':h<17?'Afternoon':'Evening';
+}
 function _maybeOfferStretches(subjectId,date,start,end,notes){
   if(subjectId!=='pe')return;
-  const n=(notes||'').toLowerCase();
-  if(!n.includes('run'))return;     // only runs, not cycles/walks
-  if(n.includes('stretch'))return;  // don't loop after logging the stretch itself
+  if((notes||'').toLowerCase().includes('stretch'))return; // don't loop after the stretch session
+  if(!_looksLikeRun(notes))return;                          // runs/jogs/5k-10k only, not cycles/walks
   _pendingStretch={date,end};
   _showStretchPrompt(date,end);
 }
