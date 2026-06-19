@@ -9670,11 +9670,16 @@ You have FULL access to all of Noah's app data. Answer questions about any of it
 
 Be conversational and concise. Search the data above and give exact answers — never say you don't have access.
 
-When suggesting schedule changes, append an <actions> block:
-<actions>[{"type":"add","day":1,"start":"09:00","end":"11:00","subjectId":"japanese","label":"Japanese","blockType":"study"},{"type":"delete","id":"BLOCK_ID"},{"type":"edit","id":"BLOCK_ID","start":"10:00","end":"12:00","label":"New label","day":2}]</actions>
+When the user asks you to add, move, change, or remove study blocks, you MUST append an <actions> block at the very END of your reply. This block is the ONLY thing that actually edits the schedule — if you describe a change in words but omit the block, NOTHING happens and the user is left thinking it worked when it didn't.
 
-Action types: "add" (day,start,end,label,blockType,subjectId?), "delete" (id), "edit" (id + any changed fields).
-IMPORTANT: Only include <actions> for actual schedule changes. Omit for questions/discussion.`;
+Rules for the <actions> block — follow exactly:
+- Put RAW JSON directly between the tags. Do NOT wrap it in a code fence (no \`\`\`), no comments, no text inside the tags. Just the array.
+- It is one array of action objects. Copy this format exactly:
+<actions>[{"type":"add","day":1,"start":"09:00","end":"11:00","subjectId":"japanese","label":"Japanese","blockType":"study"},{"type":"edit","id":"BLOCK_ID","start":"10:00","end":"12:00","label":"New label","day":2},{"type":"delete","id":"BLOCK_ID"}]</actions>
+- "add" → day,start,end,label,blockType,subjectId? · "edit" → id + only the fields that change · "delete" → id. For edit/delete, use the exact block id from the CURRENT WEEKLY SCHEDULE above.
+
+In the visible part of your reply, present the changes as a PROPOSAL the user still needs to confirm — e.g. end with "Tap 'Apply changes' below to add these to your schedule." Do NOT say you've already updated/changed/moved anything: the schedule only changes when the user taps Apply.
+Only include an <actions> block for real schedule changes — omit it entirely for questions or discussion.`;
 }
 
 function _simpleMarkdown(text){
@@ -9714,6 +9719,33 @@ function _aiActionSummary(action){
     return{icon:'✏️',text:'Edit '+(b?escHtml(b.label||b.type):'block')+': '+parts.join(', ')};
   }
   return{icon:'•',text:JSON.stringify(action)};
+}
+
+// Pull the schedule-change actions out of an assistant reply. Tolerant on purpose: the
+// model (esp. Haiku) often wraps the JSON in a ```json code fence, adds a trailing comma,
+// or forgets the <actions> tags and just fences the array — all of which used to silently
+// fail (catch{} → no Apply button → "it said it'd change but didn't"). Handles all of those.
+function _aiParseActions(raw){
+  if(!raw) return null;
+  let body=null;
+  const tag=raw.match(/<actions>([\s\S]*?)<\/actions>/i);
+  if(tag){ body=tag[1]; }
+  else {
+    const fence=raw.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/i);  // fenced array, no tags
+    if(fence) body=fence[1];
+  }
+  if(body==null) return null;
+  body=body.replace(/```(?:json)?/gi,'').replace(/```/g,'')   // strip any inner code fences
+           .replace(/,\s*([\]}])/g,'$1')                       // tolerate trailing commas
+           .trim();
+  try{
+    const a=JSON.parse(body);
+    if(!Array.isArray(a)||!a.length) return null;
+    // Only treat it as actions if every item is a real schedule action (keeps the fenced-
+    // array fallback from mis-firing on some other JSON the model happened to show).
+    if(!a.every(x=>x&&(x.type==='add'||x.type==='edit'||x.type==='delete'))) return null;
+    return a;
+  }catch(e){ return null; }
 }
 
 function _aiApplyActions(actions,msgIdx){
@@ -9801,17 +9833,18 @@ function _aiRenderMessages(){
     }else{
       displayText=typeof msg.content==='string'?msg.content:'';
     }
-    // Strip <actions> block from display text
-    displayText=displayText.replace(/<actions>[\s\S]*?<\/actions>/g,'').trim();
+    // Parse actions if assistant (tolerant — see _aiParseActions)
+    const raw=(!isUser&&typeof msg.content==='string')?msg.content:'';
+    let actions=isUser?null:_aiParseActions(raw);
+    // Strip the actions payload from the visible text — <actions> tags always, and the
+    // fenced-array form too when that's where the actions came from.
+    displayText=displayText.replace(/<actions>[\s\S]*?<\/actions>/gi,'');
+    if(actions&&!/<actions>/i.test(raw)){
+      displayText=displayText.replace(/```(?:json)?\s*\[[\s\S]*?\]\s*```/i,'');
+    }
+    displayText=displayText.trim();
     // Skip empty messages (nothing to show)
     if(!displayText&&!imgHtml)return;
-    // Parse actions if assistant
-    let actions=null;
-    if(!isUser){
-      const raw=typeof msg.content==='string'?msg.content:'';
-      const m=raw.match(/<actions>([\s\S]*?)<\/actions>/);
-      if(m){try{actions=JSON.parse(m[1].trim());}catch(e){}}
-    }
     html+='<div class="ai-msg-row '+(isUser?'user':'assistant')+'">'+
       '<div class="ai-sender">'+(isUser?'You':'✦ Coach')+'</div>'+
       '<div class="ai-bubble '+(isUser?'user':'assistant')+'" style="'+(msg._isError?'background:var(--errl);color:var(--err)':'')+'">'+imgHtml+(displayText?_simpleMarkdown(displayText):'')+'</div>'+
