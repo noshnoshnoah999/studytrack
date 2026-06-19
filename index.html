@@ -5246,6 +5246,9 @@ function renderHistory(){
       const color=SUBJ_COLORS[s.subjectId]||'var(--o)';
       const timeStr=(s.start&&s.end)?s.start+' – '+s.end:'';
       const hasForm=!!_SUBJECT_FORMS[s.subjectId];
+      const formPill=_isTracked(s)
+        ? '<button class="form-pill '+(s.formSubmitted?'done':'pending')+'" onclick="toggleFormSubmitted(\''+s.id+'\')" title="'+(s.formSubmitted?'Form submitted — tap to mark not sent':'Form not submitted yet — tap to mark sent')+'">📋'+(s.formSubmitted?' ✓':' !')+'</button>'
+        : '';
       return '<div class="hist-card">'+
         '<div class="hist-card-dot" style="background:'+color+'"></div>'+
         '<div class="hist-card-main">'+
@@ -5256,6 +5259,7 @@ function renderHistory(){
             (s.notes?'<span class="hist-card-notes">'+escHtml(s.notes)+'</span>':'')+
           '</div>'+
         '</div>'+
+        formPill+
         '<div class="hist-card-dur">'+fmtH(s.hours)+'</div>'+
         (hasForm?'<button class="hist-card-edit" onclick="_openFormForSession(\''+s.id+'\')" title="Open journal form" style="color:var(--o)">'+
           '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>'+
