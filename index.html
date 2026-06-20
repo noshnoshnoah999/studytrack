@@ -1307,6 +1307,7 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
         </div>
       </div>
       <div id="school-card"></div>
+      <div id="home-pinned-card"></div>
       <div id="dash-blocks-container">
         <div id="now-next-banner" data-block="now-next-banner"></div>
         <div id="today-card" data-block="today-card"></div>
@@ -1705,6 +1706,19 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
   </div>
 </div>
 
+<!-- OVERDUE TASKS -->
+<div class="modal-overlay" id="overdue-modal-overlay" onclick="handleOverlayClick(event,'overdue-modal-overlay')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">⏰ Unfinished tasks</div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:14px">These had a date that's already passed and still aren't done. Pick a new day/time, or tick them off.</div>
+    <div id="overdue-list" style="max-height:60vh;overflow-y:auto"></div>
+    <div class="modal-actions" style="margin-top:14px">
+      <button class="btn-cancel" onclick="closeModal('overdue-modal-overlay')">Later</button>
+    </div>
+  </div>
+</div>
+
 <!-- GOOGLE FORMS PENDING REVIEW -->
 <div class="modal-overlay" id="forms-pending-modal-overlay" onclick="handleOverlayClick(event,'forms-pending-modal-overlay')">
   <div class="modal-sheet" onclick="event.stopPropagation()">
@@ -1923,6 +1937,13 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
         <label class="form-label">Time (optional)</label>
         <input type="time" class="form-input" id="todo-time" disabled style="opacity:0.4">
       </div>
+    </div>
+    <div class="form-group" id="todo-pin-row" style="opacity:0.4;transition:opacity 0.15s">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text)">
+        <input type="checkbox" id="todo-pin" disabled style="width:18px;height:18px;accent-color:var(--o);flex-shrink:0">
+        📌 Show on home screen on its day
+      </label>
+      <div style="font-size:11px;color:var(--text3);margin-top:5px;margin-left:28px">A prominent reminder appears on your home page that day. (Needs a date.)</div>
     </div>
     <div class="form-group">
       <label class="form-label">Subject (optional)</label>
@@ -3562,6 +3583,10 @@ function openTodoModal(editId){
   timeEl.value='';
   timeEl.disabled=true;
   timeEl.style.opacity='0.4';
+  const pinEl=document.getElementById('todo-pin');
+  const pinRow=document.getElementById('todo-pin-row');
+  if(pinEl){pinEl.checked=false;pinEl.disabled=true;}
+  if(pinRow)pinRow.style.opacity='0.4';
   // Populate subject dropdown
   const subjEl=document.getElementById('todo-subject');
   if(subjEl){
@@ -3578,6 +3603,8 @@ function openTodoModal(editId){
       if(t.date){timeEl.disabled=false;timeEl.style.opacity='1';}
       timeEl.value=t.time||'';
       if(subjEl&&t.subjectId)subjEl.value=t.subjectId;
+      if(pinEl&&t.date){pinEl.disabled=false;pinEl.checked=!!t.pinHome;}
+      if(pinRow&&t.date)pinRow.style.opacity='1';
     }
   }
   overlay.classList.add('open');
@@ -3590,6 +3617,11 @@ function onTodoDateChange(){
   timeEl.disabled=!date;
   timeEl.style.opacity=date?'1':'0.4';
   if(!date)timeEl.value='';
+  // Pin-to-home only makes sense with a date
+  const pinEl=document.getElementById('todo-pin');
+  const pinRow=document.getElementById('todo-pin-row');
+  if(pinEl){pinEl.disabled=!date; if(!date)pinEl.checked=false;}
+  if(pinRow)pinRow.style.opacity=date?'1':'0.4';
 }
 
 function saveTodoModal(){
@@ -3598,20 +3630,24 @@ function saveTodoModal(){
   const editId=document.getElementById('todo-edit-id').value;
   const date=document.getElementById('todo-date').value||null;
   const time=document.getElementById('todo-time').value||null;
+  const pinEl=document.getElementById('todo-pin');
+  const pinHome=!!(date&&pinEl&&pinEl.checked); // only with a date
   const subjEl=document.getElementById('todo-subject');
   const subjectId=subjEl?subjEl.value||null:null;
   const todos=loadTodos();
   if(editId){
     const t=todos.find(x=>x.id===editId);
-    if(t){t.text=text;t.date=date;t.time=time;t.subjectId=subjectId;}
+    if(t){t.text=text;t.date=date;t.time=time;t.subjectId=subjectId;t.pinHome=pinHome;}
   }else{
-    todos.push({id:genId(),text,date,time,subjectId,done:false,createdAt:new Date().toISOString()});
+    todos.push({id:genId(),text,date,time,subjectId,pinHome,done:false,createdAt:new Date().toISOString()});
   }
   saveTodos(todos);
   closeModal('todo-modal-overlay');
   renderTodos();
   renderTasksPage();
   _updateTasksBadge();
+  if(typeof renderHomePinned==='function')renderHomePinned();
+  if(typeof renderDashTasksCard==='function')renderDashTasksCard();
 }
 
 // DISABLED on purpose (kept so the setInterval caller doesn't break).
@@ -3866,6 +3902,7 @@ function renderDashboard(){
 
 
   renderFocusCard();
+  renderHomePinned();
   renderDashTasksCard();
   renderWeeklySummary();
   markCardsDone();
@@ -8293,12 +8330,104 @@ function renderFocusCard(){
 }
 
 // ── DASHBOARD TASKS CARD ──────────────────────────────────────────────────────
+// Prominent card at the top of the dashboard for pinned tasks due TODAY.
+function renderHomePinned(){
+  const el=document.getElementById('home-pinned-card');
+  if(!el)return;
+  const today=todayStr();
+  const pinned=loadTodos().filter(t=>t.pinHome&&t.date===today&&!t.done)
+    .sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99'));
+  if(!pinned.length){el.innerHTML='';el.style.display='none';return;}
+  el.style.display='';
+  const rows=pinned.map(t=>{
+    const timeStr=t.time?'<span style="font-size:12px;font-weight:700;color:var(--o);flex-shrink:0">'+t.time+'</span>':'';
+    return'<div style="display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--od2)">'+
+      '<button onclick="_homePinnedDone(\''+t.id+'\')" title="Mark done" style="flex-shrink:0;width:24px;height:24px;border-radius:50%;border:2px solid var(--o);background:none;cursor:pointer;padding:0"></button>'+
+      '<div style="flex:1;min-width:0;font-size:14px;font-weight:700;color:var(--text)">'+escHtml(t.text)+'</div>'+
+      timeStr+
+    '</div>';
+  }).join('');
+  el.innerHTML='<div style="background:var(--ol);border:1.5px solid var(--o);border-radius:16px;padding:14px 16px;margin-bottom:12px">'+
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'+
+      '<span style="font-size:16px">📌</span>'+
+      '<span style="font-size:13px;font-weight:800;color:var(--o);text-transform:uppercase;letter-spacing:0.5px">Today\'s pinned '+(pinned.length>1?'tasks':'task')+'</span>'+
+    '</div>'+
+    rows+
+  '</div>';
+}
+function _homePinnedDone(id){_markTodoDoneById(id);renderHomePinned();}
+
+// ── OVERDUE TASK CHECK (on app open) ────────────────────────────────────────
+// Any dated, not-done task whose date is before today. Shown once per day so it
+// nags but doesn't spam every open.
+function _overdueList(){
+  const today=todayStr();
+  return loadTodos().filter(t=>!t.done&&t.date&&t.date<today).sort((a,b)=>a.date.localeCompare(b.date));
+}
+function _runOverdueCheck(){ try{ checkOverdueTasks(); }catch(e){} }
+function checkOverdueTasks(){
+  const today=todayStr();
+  if(localStorage.getItem('st_overdue_shown')===today)return; // already nagged today
+  const overdue=_overdueList();
+  localStorage.setItem('st_overdue_shown',today);
+  if(!overdue.length)return;
+  _renderOverdueList();
+  document.getElementById('overdue-modal-overlay').classList.add('open');
+}
+function _renderOverdueList(){
+  const el=document.getElementById('overdue-list');
+  if(!el)return;
+  const list=_overdueList();
+  if(!list.length){closeModal('overdue-modal-overlay');return;}
+  const today=todayStr();
+  el.innerHTML=list.map(t=>
+    '<div style="padding:12px 0;border-bottom:1px solid var(--border)">'+
+      '<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px">'+(t.pinHome?'📌 ':'')+escHtml(t.text)+'</div>'+
+      '<div style="font-size:11px;color:var(--err);margin-bottom:8px">was due '+_fmtHolidayDate(t.date)+(t.time?' · '+t.time:'')+'</div>'+
+      '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+
+        '<input type="date" class="form-input" id="ovd-date-'+t.id+'" value="'+today+'" min="'+today+'" style="flex:1;min-width:130px;padding:7px 10px;font-size:13px">'+
+        '<input type="time" class="form-input" id="ovd-time-'+t.id+'" value="'+(t.time||'')+'" style="width:104px;padding:7px 10px;font-size:13px">'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;margin-top:8px">'+
+        '<button onclick="_rescheduleOverdue(\''+t.id+'\')" style="flex:1;background:var(--o);color:#fff;border:none;border-radius:9px;padding:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Reschedule</button>'+
+        '<button onclick="_overdueMarkDone(\''+t.id+'\')" style="background:var(--okl);color:var(--ok);border:none;border-radius:9px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">✓ Done</button>'+
+      '</div>'+
+    '</div>'
+  ).join('');
+}
+function _rescheduleOverdue(id){
+  const d=document.getElementById('ovd-date-'+id);
+  const tm=document.getElementById('ovd-time-'+id);
+  if(!d||!d.value){if(typeof showToast==='function')showToast('Pick a new date first','var(--err)');return;}
+  const todos=loadTodos();
+  const t=todos.find(x=>x.id===id);
+  if(t){t.date=d.value;t.time=(tm&&tm.value)||null;saveTodos(todos);}
+  _afterOverdueChange('Rescheduled to '+_fmtHolidayDate(d.value));
+}
+function _overdueMarkDone(id){
+  const todos=loadTodos();
+  const t=todos.find(x=>x.id===id);
+  if(t){t.done=true;saveTodos(todos);}
+  _afterOverdueChange('Marked done ✓');
+}
+function _afterOverdueChange(msg){
+  if(typeof showToast==='function')showToast(msg,'var(--ok)');
+  _updateTasksBadge();
+  if(typeof renderTodos==='function')renderTodos();
+  if(typeof renderTasksPage==='function')renderTasksPage();
+  if(typeof renderHomePinned==='function')renderHomePinned();
+  if(typeof renderDashTasksCard==='function')renderDashTasksCard();
+  if(!_overdueList().length)closeModal('overdue-modal-overlay');
+  else _renderOverdueList();
+}
+
 function renderDashTasksCard(){
   const el=document.getElementById('dash-tasks-card');
   if(!el)return;
   const now=nowLocal();
   const todayStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
-  const todos=loadTodos().filter(t=>t.date===todayStr&&!t.done);
+  // Pinned tasks show in the prominent card above, so exclude them here (no dupe).
+  const todos=loadTodos().filter(t=>t.date===todayStr&&!t.done&&!t.pinHome);
   if(!todos.length){el.innerHTML='';el.style.display='none';return;}
   el.style.display='';
   const rows=todos.map(t=>{
@@ -8324,6 +8453,7 @@ function _markTodoDoneById(id){
   const todos=loadTodos();
   const t=todos.find(x=>x.id===id);
   if(t&&!t.done){t.done=true;saveTodos(todos);}
+  renderHomePinned();
   renderDashTasksCard();
   _updateTasksBadge();
   if(currentPage==='log')renderTasksPage();
@@ -8956,7 +9086,9 @@ async function syncFromCloud(){
   const validPages=['dashboard','schedule','log','progress','subjects','graduation','timer','history','tasks','ai'];
   showPage(validPages.includes(hash)?hash:'dashboard');
   _updateTasksBadge();
-  syncFromCloud();
+  // Run the overdue-task check once the cloud sync settles (so it reflects tasks
+  // completed/rescheduled on other devices), falling back to local data if it fails.
+  try{ syncFromCloud().then(_runOverdueCheck,_runOverdueCheck); }catch(e){ _runOverdueCheck(); }
   updateNotifBtn();
   scheduleNotifications();
   renderHolidayUI();
