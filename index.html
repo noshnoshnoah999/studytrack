@@ -2467,7 +2467,7 @@ const DEFAULT_SUBJECTS=[
   {id:'el2',         name:'Electives 2',         req:150, base:151.4, passive:true,  locked:false, done:true },
   {id:'el3',         name:'Electives 3',         req:150, base:152,   passive:true,  locked:false, done:true },
   // EL4 = extra credit — improves GPA but does NOT count toward graduation hours/credits
-  {id:'el4',         name:'Electives 4',         req:75,  base:29.5,  passive:true,  locked:false, done:false, extraCredit:true},
+  {id:'el4',         name:'Electives 4',         req:150, base:29.5,  passive:true,  locked:false, done:false, extraCredit:true},
   // History
   {id:'wa_hist',     name:'WA State History',    req:75,  base:8.1,   passive:false, locked:false, done:false},
   {id:'us_hist',     name:'US History',          req:150, base:23.2,  passive:false, locked:false, done:false},
@@ -2524,10 +2524,9 @@ function runMigrations(){
           const s=subjs.find(x=>x.id===id);
           if(s&&s.req!==req){s.req=req;changed=true;}
         });
-        // EL4: teacher shows 75h required with ~6.6h logged
+        // EL4: 150h required (Noah set this; do NOT force back to 75)
         const el4=subjs.find(s=>s.id==='el4');
         if(el4){
-          if(el4.req!==75){el4.req=75;changed=true;}
           if((el4.base||0)<6.6){el4.base=6.6;changed=true;}
         }
         // Civics: teacher shows 1.7h logged (was 0)
@@ -2612,6 +2611,25 @@ function runMigrations(){
       }
     }catch(e){}
     localStorage.setItem('st_migration_v8','1');
+  }
+  // ── Migration v9: EL4 requirement is 150h (Noah's value). Older builds had a
+  // migration that forced it back to 75 on every fresh device, then pushed that
+  // to the cloud — overwriting the corrected value. Run once per device to heal. ──
+  if(!localStorage.getItem('st_migration_v9_el4_150')){
+    try{
+      const raw=localStorage.getItem('st_subjs');
+      if(raw){
+        const subjs=JSON.parse(raw);
+        const el4=subjs.find(s=>s.id==='el4');
+        if(el4&&el4.req!==150){
+          el4.req=150;
+          localStorage.setItem('st_subjs',JSON.stringify(subjs));
+          sbPush('st_subjs',subjs,{silent:true});
+          console.log('[Migration v9] EL4 requirement set to 150h');
+        }
+      }
+    }catch(e){}
+    localStorage.setItem('st_migration_v9_el4_150','1');
   }
   if(!localStorage.getItem('st_migration_v7')){
     try{
