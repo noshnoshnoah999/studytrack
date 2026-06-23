@@ -211,21 +211,26 @@ jobs:
               return (s.base || 0) + (hours[id] || 0);
             }
 
+            // Extra-credit subjects (e.g. el4) do NOT count as study hours —
+            // mirror the app, which excludes them from all study-hour totals.
+            const ecHourIds = new Set(subjects.filter(s => s.extraCredit).map(s => s.id)); ecHourIds.add('el4');
+            const countsAsStudy = s => !ecHourIds.has(s.subjectId);
+
             // Today's total hours
             const todayH = sessions
-              .filter(s => s.date === todayStr)
+              .filter(s => s.date === todayStr && countsAsStudy(s))
               .reduce((a, s) => a + s.hours, 0);
 
             // Weekly hours (last 7 days)
             const weekAgo = new Date(nowDate); weekAgo.setDate(weekAgo.getDate() - 6);
             const weekH = sessions
-              .filter(s => new Date(s.date) >= weekAgo)
+              .filter(s => new Date(s.date) >= weekAgo && countsAsStudy(s))
               .reduce((a, s) => a + s.hours, 0);
 
             // Weekly avg over last 4 weeks
             const monthAgo = new Date(nowDate); monthAgo.setDate(monthAgo.getDate() - 28);
             const monthH = sessions
-              .filter(s => new Date(s.date) >= monthAgo)
+              .filter(s => new Date(s.date) >= monthAgo && countsAsStudy(s))
               .reduce((a, s) => a + s.hours, 0);
             const weeklyAvg = monthH / 4;
 
@@ -363,7 +368,7 @@ jobs:
             // ── 7. Sunday evening — weekly recap ─────────────────────────
             if (dow === 0 && near(18 * 60) && pushOn('weekly_recap')) {
               const hitTarget = sessions
-                .filter(s => new Date(s.date) >= weekAgo && new Date(s.date) <= nowDate)
+                .filter(s => new Date(s.date) >= weekAgo && new Date(s.date) <= nowDate && countsAsStudy(s))
                 .reduce((map, s) => { map[s.date] = (map[s.date] || 0) + s.hours; return map; }, {});
               const daysHit = Object.values(hitTarget).filter(h => h >= dailyGoal).length;
               const {title,body} = tpl('weekly-recap', {weekH: fmtH(weekH), daysHit});
