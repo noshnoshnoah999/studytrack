@@ -275,7 +275,7 @@ a{color:inherit;text-decoration:none}
 .hist-card-subject{font-size:14px;font-weight:600;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hist-card-meta{font-size:12px;color:var(--text3);display:flex;align-items:center;gap:4px}
 .hist-card-time{font-weight:500;white-space:nowrap;flex-shrink:0}
-.hist-card-notes{font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px}
+.hist-card-notes{font-style:italic;font-size:12px;color:var(--text3);margin-top:3px;line-height:1.35;white-space:normal;overflow-wrap:anywhere}
 .hist-card-dur{font-size:12px;font-weight:700;flex-shrink:0;padding:3px 9px;border-radius:100px;background:var(--bg3);color:var(--text2);margin-left:10px}
 .hist-card-del{background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;margin-left:2px}
 .hist-card-del:hover{background:var(--errl);color:var(--err)}
@@ -5335,9 +5335,8 @@ function renderHistory(){
           '<div class="hist-card-subject" style="color:'+color+'">'+escHtml(name)+'</div>'+
           '<div class="hist-card-meta">'+
             (timeStr?'<span class="hist-card-time">'+timeStr+'</span>':'')+
-            (s.notes&&timeStr?'<span style="color:var(--border)">·</span>':'')+
-            (s.notes?'<span class="hist-card-notes">'+escHtml(s.notes)+'</span>':'')+
           '</div>'+
+          (s.notes?'<div class="hist-card-notes">'+escHtml(s.notes)+'</div>':'')+
         '</div>'+
         formPill+
         '<div class="hist-card-dur">'+fmtH(s.hours)+'</div>'+
@@ -8849,18 +8848,29 @@ function _saveSchoolFromModal(){
   if(!isNaN(latV)&&!isNaN(lngV)){patch.lat=latV;patch.lng=lngV;}
   saveSchool(patch);
 }
+// Cache one GPS reading per day so we don't re-prompt for location on every
+// app open. st_school_geo = {date, atSchool}. The result is reused all day;
+// a manual re-check (Settings toggle / force=true) bypasses the cache.
+function _loadGeoDay(){try{const g=JSON.parse(localStorage.getItem('st_school_geo')||'{}');return g.date===todayStr()?g:null;}catch(e){return null;}}
+function _saveGeoDay(atSchool){localStorage.setItem('st_school_geo',JSON.stringify({date:todayStr(),atSchool:!!atSchool}));}
 function checkAtSchool(force){
   const s=loadSchool();
   // Holiday mode suppresses the at-school greeting — don't even read GPS.
   if(typeof isOnHoliday==='function'&&isOnHoliday()){_atSchool=false;renderSchoolCard();return;}
   if(!s.enabled||s.lat==null||s.lng==null){_atSchool=false;renderSchoolCard();return;}
   if(_schoolChecking)return;
-  if(_schoolChecked&&!force){renderSchoolCard();return;}
+  // Already read GPS earlier today? Reuse it — no second permission prompt.
+  if(!force){
+    const g=_loadGeoDay();
+    if(g){_atSchool=g.atSchool;_schoolChecked=true;renderSchoolCard();return;}
+    if(_schoolChecked){renderSchoolCard();return;}
+  }
   _schoolChecking=true;
   _getPosition().then(p=>{
     _schoolChecked=true;_schoolChecking=false;
     const d=_haversineM(p.coords.latitude,p.coords.longitude,s.lat,s.lng);
     _atSchool=d<=(s.radius||150);
+    _saveGeoDay(_atSchool);
     renderSchoolCard();
   }).catch(()=>{ _schoolChecked=true;_schoolChecking=false;_atSchool=false;renderSchoolCard(); });
 }
