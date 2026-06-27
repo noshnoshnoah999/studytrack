@@ -7468,10 +7468,12 @@ function renderPlan(){
     const weeksNeeded=remaining/weeklyH;
     const d=new Date(now);d.setDate(now.getDate()+Math.round(weeksNeeded*7));return d;
   }
-  // Actual pace: same method as Graduation page (last 28 days / 4 weeks)
+  // Actual pace: same method as Graduation page (last 28 days / 4 weeks),
+  // excluding extra-credit hours so it matches the non-EC remaining total.
   const cutoff28=new Date(now);cutoff28.setDate(now.getDate()-28);
   const cutoff28Str=cutoff28.getFullYear()+'-'+String(cutoff28.getMonth()+1).padStart(2,'0')+'-'+String(cutoff28.getDate()).padStart(2,'0');
-  const recentH28=sessions.filter(s=>s.date>=cutoff28Str).reduce((a,s)=>a+s.hours,0);
+  const ecIds28=_extraCreditIds();
+  const recentH28=sessions.filter(s=>s.date>=cutoff28Str&&!ecIds28.has(s.subjectId)).reduce((a,s)=>a+s.hours,0);
   const actualWeeklyPace=recentH28>=1?recentH28/4:null; // null = not enough data
   const finishAtPersonal=estFinish(weeklyPersonal);
   const finishAtTeacher=estFinish(weeklyTeacher);
