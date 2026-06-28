@@ -516,10 +516,6 @@ jobs:
                   } else {
                     inner += `<div style="margin-top:14px;padding:12px;background:${C.card};border-radius:9px;color:${C.text2};font-size:14px">No study blocks today — rest up! 🌿</div>`;
                   }
-                  if (stats.length) {
-                    inner += heading('Most behind');
-                    inner += stats.slice(0,3).map(s => `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="color:${C.text};font-weight:600">${s.name}</span><span style="color:${C.text2}">${Math.round(s.pct)}% · ${fmtH(s.left)} left</span></div>${bar(s.pct)}</div>`).join('');
-                  }
                   if (dueToday.length) {
                     inner += heading('Tasks due today');
                     inner += dueToday.map(t => `<div style="font-size:14px;color:${C.text};padding:5px 0">☐ ${t.text}${t.time ? ' · ' + t.time : ''}</div>`).join('');
@@ -536,6 +532,10 @@ jobs:
                   inner += `<table style="width:100%;border-collapse:separate;border-spacing:0;margin-bottom:14px"><tr>${stat('This week', fmtH(weekH), C.o)}${stat('Goal', fmtH(weeklyGoal), C.text)}${stat('Days hit', daysHit + '/7', daysHit>=5?C.ok:C.text)}</tr></table>`;
                   inner += `<div style="font-size:12px;color:${C.text2};margin-bottom:6px">Weekly goal progress</div>${bar(weekH/weeklyGoal*100, weekH>=weeklyGoal?C.ok:C.o)}`;
                   inner += `<div style="margin-top:18px;padding:16px;background:${C.card};border:1px solid ${C.border};border-radius:12px;font-size:14px;color:${C.text};line-height:1.55"><strong>Graduation:</strong> at your recent pace (${fmtH(pace)}/wk) you'll finish around <strong style="color:${onTrack?C.ok:C.err}">${estStr}</strong> — ${onTrack ? 'before' : 'after'} the Oct 2027 deadline.</div>`;
+                  if (stats.length) {
+                    inner += heading('Most behind');
+                    inner += stats.slice(0,3).map(s => `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="color:${C.text};font-weight:600">${s.name}</span> <span style="color:${C.text2}">${Math.round(s.pct)}% &middot; ${fmtH(s.left)} left</span></div>${bar(s.pct)}</div>`).join('');
+                  }
                   await emailOnce('email-weekly', `📆 Weekly recap · ${fmtH(weekH)} · ${daysHit}/7 days hit`, wrap('Weekly recap', null, inner));
                 }
 
