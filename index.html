@@ -2632,6 +2632,32 @@ function runMigrations(){
     }catch(e){}
     localStorage.setItem('st_migration_v9_el4_150','1');
   }
+  // ── Migration v10: Japanese/Fine Art credit transfer (Jul 2026) ────────────
+  // Teacher-approved: Japanese 300h→450h (2→3 credits), Fine Art 300h→150h
+  // (2→1 credit). v6b above still hardcodes japanese/fine_art to 300 and will
+  // re-fire this exact regression on any fresh device/tab — heal it here every
+  // time, same pattern as v9 for el4, and push the fix to the cloud so it
+  // doesn't get clobbered back onto other synced devices.
+  if(!localStorage.getItem('st_migration_v10_lang_art_transfer')){
+    try{
+      const raw=localStorage.getItem('st_subjs');
+      if(raw){
+        const subjs=JSON.parse(raw);
+        let changed=false;
+        [['japanese',450],['fine_art',150]].forEach(([id,req])=>{
+          const s=subjs.find(x=>x.id===id);
+          if(s&&s.req!==req){s.req=req;changed=true;}
+        });
+        if(changed){
+          localStorage.setItem('st_subjs',JSON.stringify(subjs));
+          localStorage.setItem('st_subjs_updated_at',new Date().toISOString());
+          sbPush('st_subjs',subjs,{silent:true});
+          console.log('[Migration v10] Japanese/Fine Art credit transfer applied');
+        }
+      }
+    }catch(e){console.warn('[Migration v10] Error:',e);}
+    localStorage.setItem('st_migration_v10_lang_art_transfer','1');
+  }
   if(!localStorage.getItem('st_migration_v7')){
     try{
       const raw=localStorage.getItem('st_sched');
