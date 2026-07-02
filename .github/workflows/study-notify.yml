@@ -512,7 +512,7 @@ jobs:
                   inner += `<table style="width:100%;border-collapse:separate;border-spacing:0;margin-bottom:6px"><tr>${stat('Yesterday', fmtH(yestH), yestH>=dailyGoal?C.ok:C.text)}${stat('This week', fmtH(weekH), C.o)}${stat("Today's goal", fmtH(dailyGoal), C.text)}</tr></table>`;
                   if (studyBlocks.length) {
                     inner += heading("Today's schedule");
-                    inner += studyBlocks.map(b => `<div style="display:flex;justify-content:space-between;padding:9px 12px;background:${C.card};border-radius:9px;margin-bottom:5px;font-size:14px"><span style="color:${C.text};font-weight:600">${b.label}</span><span style="color:${C.text2}">${b.start}–${b.end}</span></div>`).join('');
+                    inner += studyBlocks.map(b => `<table style="width:100%;border-collapse:separate;border-spacing:0;background:${C.card};border-radius:9px;margin-bottom:5px"><tr><td style="padding:9px 12px;font-size:14px;color:${C.text};font-weight:600">${b.label}</td><td style="padding:9px 12px;font-size:14px;color:${C.text2};text-align:right;white-space:nowrap">${b.start}–${b.end}</td></tr></table>`).join('');
                   } else {
                     inner += `<div style="margin-top:14px;padding:12px;background:${C.card};border-radius:9px;color:${C.text2};font-size:14px">No study blocks today — rest up! 🌿</div>`;
                   }
@@ -534,7 +534,7 @@ jobs:
                   inner += `<div style="margin-top:18px;padding:16px;background:${C.card};border:1px solid ${C.border};border-radius:12px;font-size:14px;color:${C.text};line-height:1.55"><strong>Graduation:</strong> at your recent pace (${fmtH(pace)}/wk) you'll finish around <strong style="color:${onTrack?C.ok:C.err}">${estStr}</strong> — ${onTrack ? 'before' : 'after'} the Oct 2027 deadline.</div>`;
                   if (stats.length) {
                     inner += heading('Most behind');
-                    inner += stats.slice(0,3).map(s => `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="color:${C.text};font-weight:600">${s.name}</span> <span style="color:${C.text2}">${Math.round(s.pct)}% &middot; ${fmtH(s.left)} left</span></div>${bar(s.pct)}</div>`).join('');
+                    inner += stats.slice(0,3).map(s => `<div style="margin-bottom:10px"><table style="width:100%;border-collapse:separate;border-spacing:0;margin-bottom:4px"><tr><td style="font-size:13px;color:${C.text};font-weight:600">${s.name}</td><td style="font-size:13px;color:${C.text2};text-align:right;white-space:nowrap">${Math.round(s.pct)}% &middot; ${fmtH(s.left)} left</td></tr></table>${bar(s.pct)}</div>`).join('');
                   }
                   await emailOnce('email-weekly', `📆 Weekly recap · ${fmtH(weekH)} · ${daysHit}/7 days hit`, wrap('Weekly recap', null, inner));
                 }
@@ -546,7 +546,7 @@ jobs:
                   inner += `<div style="margin:14px 0">${bar(overallPct)}</div>`;
                   inner += `<div style="padding:16px;background:${C.card};border:1px solid ${C.border};border-radius:12px;font-size:14px;color:${C.text};margin-bottom:6px;line-height:1.55"><strong style="color:${onTrack?C.ok:C.err}">${onTrack?'On track':'Behind'}</strong> — projected finish <strong>${estStr}</strong> at ${fmtH(pace)}/wk.${!onTrack ? ` You need <strong>${fmtH(neededPace)}/wk</strong> to graduate on time.` : ''}</div>`;
                   inner += heading('Subjects in progress');
-                  inner += stats.map(s => `<div style="margin-bottom:11px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="color:${C.text};font-weight:600">${s.name}</span><span style="color:${C.text2}">${Math.round(s.pct)}% · ${fmtH(s.left)} left</span></div>${bar(s.pct)}</div>`).join('');
+                  inner += stats.map(s => `<div style="margin-bottom:11px"><table style="width:100%;border-collapse:separate;border-spacing:0;margin-bottom:4px"><tr><td style="font-size:13px;color:${C.text};font-weight:600">${s.name}</td><td style="font-size:13px;color:${C.text2};text-align:right;white-space:nowrap">${Math.round(s.pct)}% · ${fmtH(s.left)} left</td></tr></table>${bar(s.pct)}</div>`).join('');
                   const doneCount = gradSubjs.filter(s => s.done || getLogged(s.id) >= s.req).length;
                   inner += `<div style="margin-top:16px;font-size:13px;color:${C.text2}">${doneCount}/${gradSubjs.length} subjects complete.</div>`;
                   await emailOnce('email-grad', `🎓 Monthly report · ${Math.round(overallPct)}% · finish ${estStr}`, wrap('Graduation report', MON[nowDate.getUTCMonth()] + ' ' + nowDate.getUTCFullYear(), inner));
@@ -559,7 +559,7 @@ jobs:
                   if (behind.length) {
                     let inner = `<div style="font-size:16px;color:${C.text};margin-bottom:8px;font-weight:500">A few subjects need attention</div>`;
                     inner += `<div style="font-size:13px;color:${C.text2};margin-bottom:16px;line-height:1.5">These are falling behind your average pace. A little extra time this week keeps your Oct 2027 goal on track.</div>`;
-                    inner += behind.map(s => `<div style="margin-bottom:12px;padding:12px;background:${C.card};border-radius:10px"><div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:6px"><span style="color:${C.text};font-weight:700">${s.name}</span><span style="color:${C.err};font-weight:600">${Math.round(s.pct)}%</span></div>${bar(s.pct, C.err)}<div style="font-size:12px;color:${C.text2};margin-top:6px">${fmtH(s.left)} left</div></div>`).join('');
+                    inner += behind.map(s => `<div style="margin-bottom:12px;padding:12px;background:${C.card};border-radius:10px"><table style="width:100%;border-collapse:separate;border-spacing:0;margin-bottom:6px"><tr><td style="font-size:14px;color:${C.text};font-weight:700">${s.name}</td><td style="font-size:14px;color:${C.err};font-weight:600;text-align:right;white-space:nowrap">${Math.round(s.pct)}%</td></tr></table>${bar(s.pct, C.err)}<div style="font-size:12px;color:${C.text2};margin-top:6px">${fmtH(s.left)} left</div></div>`).join('');
                     await emailOnce('email-behind', `⚠️ ${behind.length} subject${behind.length!==1?'s':''} falling behind`, wrap('Behind-schedule alert', null, inner));
                   }
                 }
