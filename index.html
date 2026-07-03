@@ -9282,10 +9282,11 @@ function exportReport(){
   const dateStr2=now.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
   const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-  // Pace
+  // Pace — excludes extraCredit subjects (e.g. EL4), same as the live Graduation page
   const cutoff=new Date(now);cutoff.setDate(now.getDate()-28);
   const cutStr=cutoff.getFullYear()+'-'+String(cutoff.getMonth()+1).padStart(2,'0')+'-'+String(cutoff.getDate()).padStart(2,'0');
-  const recent=sessions.filter(s=>s.date>=cutStr).reduce((a,s)=>a+s.hours,0);
+  const ecIdsReport=_extraCreditIds();
+  const recent=sessions.filter(s=>s.date>=cutStr&&!ecIdsReport.has(s.subjectId)).reduce((a,s)=>a+s.hours,0);
   const pace=recent>0?recent/4:goals.daily*5;
   const estWeeks=pace>0?remaining/pace:null;
   const estDate=estWeeks!=null?new Date(now.getTime()+estWeeks*7*24*3600*1000):null;
