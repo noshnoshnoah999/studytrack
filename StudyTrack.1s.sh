@@ -99,11 +99,29 @@ def to_mins(t):
     parts = t.split(":")
     return int(parts[0]) * 60 + int(parts[1] if len(parts) > 1 else 0)
 
-now      = datetime.datetime.now()
+now      = datetime.datetime.utcnow() + datetime.timedelta(hours=9)  # Tokyo (UTC+9)
 now_ts   = time.time()
 today    = now.strftime("%Y-%m-%d")
 dow      = now.isoweekday() % 7   # Sun=0, Mon=1 … Sat=6
 now_mins = now.hour * 60 + now.minute
+
+# ── Tokyo-time week parity (epoch-anchored — matches the app's getWeekParity) ──
+def week_parity(d):
+    monday = d - datetime.timedelta(days=d.isoweekday() - 1)  # Monday of this week
+    anchor = datetime.date(2026, 6, 22)                       # a Week A Monday
+    return ((monday - anchor).days // 7) % 2                  # 0=Week A, 1=Week B
+_parity = week_parity(now.date())
+def block_recurs(b):
+    rec = b.get("recurrence")
+    if not rec or rec == "weekly": return True
+    if rec == "biweekly_a": return _parity == 0
+    if rec == "biweekly_b": return _parity == 1
+    return True
+# Extra-credit subjects (el4 + any extraCredit:true) are excluded from study totals,
+# matching the app / push / email.
+ec_ids = set(s.get("id") for s in subjects if s.get("extraCredit"))
+ec_ids.add("el4")
+
 
 # ── Timer state ───────────────────────────────────────────────────────────────
 timer_running  = timer.get("running", False)
@@ -125,7 +143,7 @@ if timer_subj_id:
         timer_subj_name = match.get("name", timer_subj_id)
 
 # ── Today's logged hours ──────────────────────────────────────────────────────
-today_h    = sum(s["hours"] for s in sessions if s.get("date") == today)
+today_h    = sum(s["hours"] for s in sessions if s.get("date") == today and s.get("subjectId") not in ec_ids)
 daily_goal = goals.get("daily", 6.3)
 pct        = min(100, round(today_h / daily_goal * 100)) if daily_goal else 0
 
@@ -134,7 +152,7 @@ if today in overrides:
     today_blocks = sorted(overrides[today], key=lambda b: to_mins(b.get("start","0:0")))
 else:
     today_blocks = sorted(
-        [b for b in schedule if b.get("day") == dow and b.get("type") == "study"],
+        [b for b in schedule if b.get("day") == dow and b.get("type") == "study" and block_recurs(b)],
         key=lambda b: to_mins(b.get("start","0:0"))
     )
 
@@ -197,7 +215,7 @@ if not active and not nxt:
     print("---")
 
 week_ago    = (now - datetime.timedelta(days=6)).strftime("%Y-%m-%d")
-week_h      = sum(s["hours"] for s in sessions if s.get("date","") >= week_ago)
+week_h      = sum(s["hours"] for s in sessions if s.get("date","") >= week_ago and s.get("subjectId") not in ec_ids)
 weekly_goal = goals.get("weekly", 31.5)
 print(f"This week: {fmt_h(week_h)} of {fmt_h(weekly_goal)} | size=12")
 print("---")
