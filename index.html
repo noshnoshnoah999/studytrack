@@ -5288,7 +5288,7 @@ function renderHistory(){
   });
 
   // Archive banner — show if there are sessions older than 4 months
-  const cutoff=new Date(); cutoff.setMonth(cutoff.getMonth()-4);
+  const cutoff=nowLocal(); cutoff.setMonth(cutoff.getMonth()-4); // Tokyo time (was raw new Date())
   const cutoffStr=cutoff.getFullYear()+'-'+String(cutoff.getMonth()+1).padStart(2,'0')+'-'+String(cutoff.getDate()).padStart(2,'0');
   const archivable=sessions.filter(s=>s.date<cutoffStr);
   const bannerEl=document.getElementById('hist-archive-banner');
@@ -5975,7 +5975,10 @@ function timerTick(){
 function _updateTimerBubble(){
   const onTimerPage=document.getElementById('page-timer')&&document.getElementById('page-timer').classList.contains('active');
   const show=timerInterval&&!onTimerPage;
-  const clock=timerFmtClock(timerElapsedSecs());
+  // In pomodoro mode show the countdown to the end of the current phase; otherwise elapsed.
+  const clock=(pomodoroMode&&pomodoroEndMs)
+    ?timerFmtClock(Math.max(0,(pomodoroEndMs-Date.now())/1000))
+    :timerFmtClock(timerElapsedSecs());
   const subjs=loadSubjects();
   const subj=subjs.find(s=>s.id===timerSubjectId);
   const label=subj?subj.name:'';
@@ -6528,7 +6531,7 @@ function checkAndShowDupWarn(subjectId,date,start,end){
     return days[dt.getDay()]+' '+dt.getDate()+' '+months[dt.getMonth()];
   }
   const dateLabel=_fmtDupDate(s.date);
-  sessEl.innerHTML='<div style="font-size:11px;color:var(--text3);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px">Submitted: <span style="color:var(--text2)">'+dateLabel+'</span></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-weight:700;color:var(--text)">'+subjName+'</span><span>'+_fmtTime(s.start)+'–'+_fmtTime(s.end)+'</span><span style="color:var(--text3)">'+_fmtHm(durMins)+'</span>'+(s.notes?'<span style="color:var(--text3)">· '+s.notes+'</span>':'')+'</div>';
+  sessEl.innerHTML='<div style="font-size:11px;color:var(--text3);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px">Submitted: <span style="color:var(--text2)">'+dateLabel+'</span></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-weight:700;color:var(--text)">'+subjName+'</span><span>'+_fmtTime(s.start)+'–'+_fmtTime(s.end)+'</span><span style="color:var(--text3)">'+_fmtHm(durMins)+'</span>'+(s.notes?'<span style="color:var(--text3)">· '+escHtml(s.notes)+'</span>':'')+'</div>';
   warn.classList.add('visible');
   return true;
 }
@@ -9334,7 +9337,10 @@ function exportReport(){
   const cutStr=cutoff.getFullYear()+'-'+String(cutoff.getMonth()+1).padStart(2,'0')+'-'+String(cutoff.getDate()).padStart(2,'0');
   const ecIdsReport=_extraCreditIds();
   const recent=sessions.filter(s=>s.date>=cutStr&&!ecIdsReport.has(s.subjectId)).reduce((a,s)=>a+s.hours,0);
-  const pace=recent>0?recent/4:goals.daily*5;
+  // Match the Graduation page exactly: need >=3h in the last 28 days for a real pace,
+  // otherwise fall back to the weekly goal (avoids the July-3 bug class where 0-3h logged
+  // made the report and the Graduation estimate disagree).
+  const pace=recent>=3?recent/4:goals.weekly;
   const estWeeks=pace>0?remaining/pace:null;
   const estDate=estWeeks!=null?new Date(now.getTime()+estWeeks*7*24*3600*1000):null;
   const estDateStr=estDate?MONTHS[estDate.getMonth()]+' '+estDate.getFullYear():'—';
@@ -9595,49 +9601,8 @@ function saveNotifPrefs(){
   showToast('Notification preferences saved');
 }
 
-// ── QUICK LOG FAB ─────────────────────────────────────────────────────────────
-function openQuickLog(){
-  const subjs=loadSubjects().filter(s=>!s.done&&!s.extraCredit);
-  const sel=document.getElementById('ql-subject');
-  sel.innerHTML=subjs.map(s=>'<option value="'+s.id+'">'+escHtml(s.name)+'</option>').join('');
-  const now=nowLocal();
-  document.getElementById('ql-date').value=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
-  const pad=n=>String(n).padStart(2,'0');
-  document.getElementById('ql-end').value=pad(now.getHours())+':'+pad(now.getMinutes());
-  const start=new Date(now.getTime()-60*60*1000);
-  document.getElementById('ql-start').value=pad(start.getHours())+':'+pad(start.getMinutes());
-  document.getElementById('ql-notes').value='';
-  document.getElementById('quick-log-modal-overlay').classList.add('open');
-}
-
-function submitQuickLog(){
-  const subjectId=document.getElementById('ql-subject').value;
-  const start=document.getElementById('ql-start').value;
-  const end=document.getElementById('ql-end').value;
-  const date=document.getElementById('ql-date').value;
-  const notes=document.getElementById('ql-notes').value.trim();
-  if(!subjectId||!start||!end||!date){showToast('Please fill in all fields');return;}
-  const [sh,sm]=start.split(':').map(Number);
-  const [eh,em]=end.split(':').map(Number);
-  const hrs=((eh*60+em)-(sh*60+sm))/60;
-  if(hrs<=0){showToast('End time must be after start time');return;}
-  const sessions=loadSessions();
-  const roundedHrs=parseFloat(hrs.toFixed(2));
-  sessions.push({id:genId(),subjectId,date,start,end,hours:roundedHrs,notes,loggedAt:new Date().toISOString()});
-  const hoursStore=loadHours();
-  hoursStore[subjectId]=(hoursStore[subjectId]||0)+roundedHrs;
-  saveSessions(sessions);
-  saveHours(hoursStore);
-  closeModal('quick-log-modal-overlay');
-  showToast('✓ Logged '+fmtH(hrs)+' · '+date);
-  updateSidebar();
-  if(currentPage==='dashboard')renderDashboard();
-  if(currentPage==='progress')renderProgress();
-  if(currentPage==='subjects')renderSubjectsPage();
-  if(currentPage==='graduation')renderGraduationPage();
-  if(currentPage==='log')renderLog();
-  if(currentPage==='history')renderHistory();
-}
+// (Removed dead Quick Log FAB code — openQuickLog()/submitQuickLog() had no caller;
+//  the #quick-log-modal-overlay markup was also removed. 2026-07-05 cleanup.)
 
 // ── IN-APP NOTIFICATIONS ──────────────────────────────────────────────────────
 function loadInAppNotifs(){
@@ -10420,41 +10385,6 @@ function renderAIPage(){
   </div>
 </div>
 
-<!-- QUICK LOG MODAL -->
-<div class="modal-overlay" id="quick-log-modal-overlay" onclick="handleOverlayClick(event,'quick-log-modal-overlay')">
-  <div class="modal-sheet" onclick="event.stopPropagation()">
-    <div class="modal-handle"></div>
-    <div class="modal-title">Quick Log</div>
-    <div style="display:flex;flex-direction:column;gap:12px">
-      <div>
-        <label class="form-label">Subject</label>
-        <select id="ql-subject" class="form-input"></select>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div>
-          <label class="form-label">Start time</label>
-          <input type="time" id="ql-start" class="form-input">
-        </div>
-        <div>
-          <label class="form-label">End time</label>
-          <input type="time" id="ql-end" class="form-input">
-        </div>
-      </div>
-      <div>
-        <label class="form-label">Date</label>
-        <input type="date" id="ql-date" class="form-input">
-      </div>
-      <div>
-        <label class="form-label">Notes (optional)</label>
-        <input type="text" id="ql-notes" class="form-input" placeholder="What did you work on?">
-      </div>
-    </div>
-    <div style="margin-top:16px;display:flex;gap:8px">
-      <button class="btn-cancel" onclick="closeModal('quick-log-modal-overlay')">Cancel</button>
-      <button class="btn-save" onclick="submitQuickLog()">Log Session</button>
-    </div>
-  </div>
-</div>
 <!-- EDIT SESSION MODAL -->
 <div class="modal-overlay" id="edit-session-overlay" onclick="handleOverlayClick(event,'edit-session-overlay')">
   <div class="modal-sheet" onclick="event.stopPropagation()">
