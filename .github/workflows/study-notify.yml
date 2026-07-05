@@ -177,12 +177,17 @@ jobs:
               sentChanged = true;
             }
 
-            // ISO-week parity (0 = Week A / even, 1 = Week B / odd) — matches the app's getWeekParity
+            // Epoch-anchored biweekly parity (0 = Week A, 1 = Week B) — MUST stay
+            // identical to getWeekParity() in index.html and weekParity() in
+            // StudyTrack-Widget.js. Anchor Monday 2026-06-22 is a Week A start.
+            // (Old ISO-week%2 double-flipped at 2026's 53rd ISO week -> 2027-01-04.)
             function weekParity(y, m, d) {
               const dt = new Date(Date.UTC(y, m, d));
-              dt.setUTCDate(dt.getUTCDate() + 4 - (dt.getUTCDay() || 7));
-              const yearStart = new Date(Date.UTC(dt.getUTCFullYear(), 0, 1));
-              return Math.ceil((((dt - yearStart) / 86400000) + 1) / 7) % 2;
+              const day = dt.getUTCDay() || 7;            // Mon=1..Sun=7
+              dt.setUTCDate(dt.getUTCDate() - (day - 1));  // Monday of this week
+              const anchor = Date.UTC(2026, 5, 22);        // 2026-06-22, a Week A Monday
+              const weeks = Math.floor((dt - anchor) / (7 * 86400000));
+              return ((weeks % 2) + 2) % 2;                // 0 = Week A, 1 = Week B
             }
             const parity = weekParity(nowDate.getUTCFullYear(), nowDate.getUTCMonth(), nowDate.getUTCDate());
 

@@ -4077,12 +4077,19 @@ function saveOverrides(o){
   localStorage.setItem('st_sched_overrides_updated_at',new Date().toISOString());
   sbPush('st_sched_overrides',o);
 }
-// Returns 0 (even/Week A) or 1 (odd/Week B) for any given date using ISO week number
+// Returns 0 (Week A) or 1 (Week B) for any given date, using an epoch-anchored
+// biweekly counter. The old ISO-week%2 method double-flipped at 53-ISO-week year
+// boundaries (2026 has 53 ISO weeks -> two consecutive "Week B" at 2027-01-04).
+// Anchor Monday 2026-06-22 is a Week A start, chosen so today's A/B labels are
+// unchanged from the old method for the entire current era. MUST stay identical to
+// weekParity() in .github/workflows/study-notify.yml and StudyTrack-Widget.js.
 function getWeekParity(date){
   const d=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));
-  d.setUTCDate(d.getUTCDate()+4-(d.getUTCDay()||7));
-  const yearStart=new Date(Date.UTC(d.getUTCFullYear(),0,1));
-  return Math.ceil((((d-yearStart)/86400000)+1)/7)%2; // 0=even(A), 1=odd(B)
+  const day=d.getUTCDay()||7;            // Mon=1..Sun=7
+  d.setUTCDate(d.getUTCDate()-(day-1));  // Monday of this week
+  const anchor=Date.UTC(2026,5,22);      // 2026-06-22, a Week A Monday
+  const weeks=Math.floor((d-anchor)/(7*86400000));
+  return ((weeks%2)+2)%2; // 0=Week A, 1=Week B
 }
 // Filter schedule blocks for a specific date, respecting recurrence rules
 function getBlocksForDate(date,schedule){

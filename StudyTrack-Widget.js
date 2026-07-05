@@ -85,11 +85,17 @@ const dailyGoal = (goals && goals.daily) || 6.3;
 const pct = Math.min(1, todayH / dailyGoal);
 
 // ISO-week parity (0 = Week A, 1 = Week B) — must match study-notify.yml & the app
+// Epoch-anchored biweekly parity (0 = Week A, 1 = Week B) — MUST stay identical
+// to getWeekParity() in index.html and weekParity() in study-notify.yml.
+// Anchor Monday 2026-06-22 is a Week A start. (Old ISO-week%2 double-flipped at
+// 2026's 53rd ISO week -> two consecutive "Week B" at 2027-01-04.)
 function weekParity(y, m, d) {
   const dt = new Date(Date.UTC(y, m, d));
-  dt.setUTCDate(dt.getUTCDate() + 4 - (dt.getUTCDay() || 7));
-  const yearStart = new Date(Date.UTC(dt.getUTCFullYear(), 0, 1));
-  return Math.ceil((((dt - yearStart) / 86400000) + 1) / 7) % 2;
+  const day = dt.getUTCDay() || 7;            // Mon=1..Sun=7
+  dt.setUTCDate(dt.getUTCDate() - (day - 1));  // Monday of this week
+  const anchor = Date.UTC(2026, 5, 22);        // 2026-06-22, a Week A Monday
+  const weeks = Math.floor((dt - anchor) / (7 * 86400000));
+  return ((weeks % 2) + 2) % 2;                // 0 = Week A, 1 = Week B
 }
 
 // Today's blocks — respect one-off date overrides + biweekly Week A/B recurrence
