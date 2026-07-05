@@ -9037,7 +9037,7 @@ async function sbPull(key){
 async function syncFromCloud(){
   setSyncUI('syncing','Syncing…');
   try{
-    const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_templates','st_ai_history','st_theme','st_holiday','st_school']; // st_hours is recomputed from sessions below, not pulled directly
+    const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_templates','st_ai_history','st_theme','st_holiday','st_school','st_notif_prefs','st_notif_templates']; // st_hours is recomputed from sessions below, not pulled directly
     // Pull st_deleted_sessions upfront so we can use it synchronously inside forEach
     let cloudDeletedRaw=null;
     try{cloudDeletedRaw=await sbPull('st_deleted_sessions');}catch(e){}
@@ -9071,8 +9071,11 @@ async function syncFromCloud(){
           const _writeSessionsSafe=(data)=>{
             try{localStorage.setItem('st_sessions',JSON.stringify(data));}
             catch(e){
-              // Emergency space recovery: remove large non-critical items
-              ['st_ai_history','st_hours','st_sched_overrides','st_templates','st_notif_templates','st_notif_prefs'].forEach(k2=>localStorage.removeItem(k2));
+              // Emergency space recovery: remove large non-critical items.
+              // NOTE: st_notif_prefs/st_notif_templates are intentionally NOT purged —
+              // deleting them makes loadNotifPrefs() return defaults (all types ON), and a
+              // later Save & Sync would push those defaults, silently re-enabling toggles.
+              ['st_ai_history','st_hours','st_sched_overrides','st_templates'].forEach(k2=>localStorage.removeItem(k2));
               try{localStorage.setItem('st_sessions',JSON.stringify(data));}catch(e2){
                 console.error('localStorage full even after cleanup:',e2.message);
               }
@@ -9104,7 +9107,7 @@ async function syncFromCloud(){
             document.documentElement.setAttribute('data-theme',cloudTheme);
             updateThemeSwatches();
           }
-        } else if(k==='st_subjs'||k==='st_goals'||k==='st_todos'||k==='st_sched_overrides'||k==='st_templates'||k==='st_holiday'||k==='st_school'){
+        } else if(k==='st_subjs'||k==='st_goals'||k==='st_todos'||k==='st_sched_overrides'||k==='st_templates'||k==='st_holiday'||k==='st_school'||k==='st_notif_prefs'||k==='st_notif_templates'){
           // Timestamped last-writer-wins: keep whichever version is newer.
           // Prevents a device with stale data from reverting a fresh edit.
           const cloudUpdatedAt=rows[i].updated_at||'';
@@ -9144,8 +9147,9 @@ async function syncFromCloud(){
     if(updated)showPage(currentPage);
   }catch(e){
     if(e.message&&e.message.includes('quota')){
-      // localStorage full — clear non-critical data and retry once
-      ['st_ai_history','st_hours','st_sched_overrides','st_templates','st_notif_templates','st_notif_prefs'].forEach(k=>localStorage.removeItem(k));
+      // localStorage full — clear non-critical data and retry once.
+      // st_notif_prefs/st_notif_templates deliberately excluded (see note in _writeSessionsSafe).
+      ['st_ai_history','st_hours','st_sched_overrides','st_templates'].forEach(k=>localStorage.removeItem(k));
       try{await syncFromCloud();}catch(e2){setSyncUI('error','Offline — '+e2.message);}
     } else {
       setSyncUI('error','Offline — '+e.message);
@@ -9490,6 +9494,7 @@ function loadNotifTemplates(){
 }
 function saveNotifTemplates(t){
   localStorage.setItem('st_notif_templates',JSON.stringify(t));
+  localStorage.setItem('st_notif_templates_updated_at',new Date().toISOString());
   sbPush('st_notif_templates',t);
 }
 
@@ -9577,10 +9582,14 @@ function onNotifToggle(id,checked){
   const prefs=loadNotifPrefs();
   prefs[id]=checked;
   localStorage.setItem('st_notif_prefs',JSON.stringify(prefs));
+  // Stamp for timestamped last-writer-wins so syncFromCloud pulls/pushes correctly
+  // and a stale device can't silently revert this toggle.
+  localStorage.setItem('st_notif_prefs_updated_at',new Date().toISOString());
 }
 
 function saveNotifPrefs(){
   const prefs=loadNotifPrefs();
+  localStorage.setItem('st_notif_prefs_updated_at',new Date().toISOString());
   sbPush('st_notif_prefs',prefs);
   closeModal('notif-settings-modal-overlay');
   showToast('Notification preferences saved');
