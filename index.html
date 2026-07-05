@@ -5445,14 +5445,29 @@ function toggleHistMonth(bodyId, headerEl){
 }
 
 function archiveOldSessions(){
-  const cutoff=new Date(); cutoff.setMonth(cutoff.getMonth()-4);
+  const cutoff=nowLocal(); cutoff.setMonth(cutoff.getMonth()-4); // Tokyo time (was raw new Date())
   const cutoffStr=cutoff.getFullYear()+'-'+String(cutoff.getMonth()+1).padStart(2,'0')+'-'+String(cutoff.getDate()).padStart(2,'0');
   const sessions=loadSessions();
   const old=sessions.filter(s=>s.date<cutoffStr);
   const keep=sessions.filter(s=>s.date>=cutoffStr);
   if(!old.length)return;
 
-  // st_hours already contains these sessions' hours (added at log time) — just remove from session list
+  // IMPORTANT: st_hours is a derived cache — syncFromCloud() recomputes it from
+  // st_sessions on every sync, so hours left only in st_hours would VANISH after
+  // archiving. To truly preserve them, fold the archived sessions' hours into
+  // each subject's base (base = pre-app/teacher hours + archived hours), and
+  // subtract them from st_hours so totals (base + st_hours) stay constant.
+  const subjsArch=loadSubjects();
+  const hoursArch=loadHours();
+  let subjChanged=false;
+  old.forEach(s=>{
+    if(!s.subjectId)return;
+    const subj=subjsArch.find(x=>x.id===s.subjectId);
+    if(subj){subj.base=Math.round(((subj.base||0)+s.hours)*100)/100;subjChanged=true;}
+    hoursArch[s.subjectId]=Math.max(0,(hoursArch[s.subjectId]||0)-s.hours);
+  });
+  if(subjChanged)saveSubjects(subjsArch);
+  saveHours(hoursArch);
   saveSessions(keep); // saveSessions already calls sbPush internally
 
   const count=old.length;
@@ -6275,9 +6290,15 @@ function stopTimerAndLog(){
     setLogTime('log-end',endStr);
     updateLogDuration();
   },100);
-  // Reset timer state
+  // Reset timer state — and push the cleared state to sync. Without this push,
+  // the cloud/other devices still see "running", and the 4s poll or realtime
+  // broadcast resurrects the timer seconds after Stop & Log.
   timerStart=null;
+  timerStop=null;
+  timerSessionId=null;
   timerStartWallClock=null;
+  timerPaused=false;timerPauseStart=null;timerPausedMs=0;
+  timerSyncPush();
 }
 
 async function timerPageLog(){
@@ -7208,7 +7229,15 @@ function _coachPasteHandler(e){
   for(const item of items){
     if(item.type.startsWith('image/')){
       const blob=item.getAsFile();
-      if(blob)compressWorkoutImage(blob,function(b64,mime){_coachImgBase64=b64;_coachImgMime=mime;_showCoachPreview('Pasted image',b64,mime);});
+      // compressWorkoutImage's callback receives ONE arg: a full data URL.
+      // Split it into mime + raw base64 (the old (b64,mime) signature was wrong
+      // and broke the coach scan entirely — undefined mime + prefixed base64).
+      if(blob)compressWorkoutImage(blob,function(dataUrl){
+        const m=(dataUrl||'').match(/^data:([^;]+);base64,(.+)$/);
+        if(!m){showToast('Could not read image','var(--err)');return;}
+        _coachImgBase64=m[2];_coachImgMime=m[1];
+        _showCoachPreview('Pasted image',_coachImgBase64,_coachImgMime);
+      });
       break;
     }
   }
@@ -7218,7 +7247,13 @@ function _coachPasteHandler(e){
 function handleCoachImage(e){
   const file=e.target.files[0];
   if(!file)return;
-  compressWorkoutImage(file,function(b64,mime){_coachImgBase64=b64;_coachImgMime=mime;_showCoachPreview(file.name,b64,mime);});
+  // Same single-arg dataUrl callback as above — split into mime + raw base64
+  compressWorkoutImage(file,function(dataUrl){
+    const m=(dataUrl||'').match(/^data:([^;]+);base64,(.+)$/);
+    if(!m){showToast('Could not read image','var(--err)');return;}
+    _coachImgBase64=m[2];_coachImgMime=m[1];
+    _showCoachPreview(file.name,_coachImgBase64,_coachImgMime);
+  });
   e.target.value='';
 }
 
