@@ -1185,37 +1185,12 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
 #inapp-banner-title{font-size:13px;font-weight:700;color:var(--text)}
 #inapp-banner-body{font-size:12px;color:var(--text2)}
 
-/* ── LOADING SPLASH ──────────────────────────────────────────────────────── */
-#splash{position:fixed;inset:0;z-index:99999;background:var(--bg);display:flex;align-items:center;justify-content:center;opacity:1;transition:opacity 0.45s ease}
-#splash.hide{opacity:0;pointer-events:none}
-#splash.instant{display:none} /* recent re-open: skip the intro entirely */
-.splash-inner{display:flex;flex-direction:column;align-items:center;gap:18px}
-.splash-logo{font-size:42px;font-weight:800;letter-spacing:-0.8px;color:var(--text);line-height:1;animation:splashPop 0.65s cubic-bezier(0.2,0.9,0.3,1.4) both, splashGlow 1.8s ease-in-out 0.65s infinite}
-.splash-logo span{color:var(--o)}
-.splash-sub{font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--text3);animation:splashFade 0.5s ease 0.25s both}
-.splash-bar{position:relative;width:180px;height:4px;border-radius:100px;background:var(--bg3);overflow:hidden;animation:splashFade 0.5s ease 0.35s both}
-.splash-bar-fill{position:absolute;left:0;top:0;height:100%;border-radius:100px;background:var(--o);width:0;animation:splashLoad 1s cubic-bezier(0.4,0,0.15,1) 0.25s forwards}
-/* moving sheen sweeping along the progress bar */
-.splash-bar-fill::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.55),transparent);transform:translateX(-100%);animation:splashSheen 1s ease-in-out 0.5s infinite}
-@keyframes splashPop{from{opacity:0;transform:scale(0.82) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
-@keyframes splashGlow{0%,100%{text-shadow:0 0 0 transparent;transform:scale(1)}50%{text-shadow:0 0 26px var(--od2);transform:scale(1.035)}}
-@keyframes splashFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-@keyframes splashLoad{0%{width:0}55%{width:70%}100%{width:100%}}
-@keyframes splashSheen{0%{transform:translateX(-100%)}100%{transform:translateX(220%)}}
-/* Reduced-motion: keep the bar filling (it's a progress indicator) + a gentle
-   opacity-only intro. Don't freeze everything — that made the splash look dead. */
-@media(prefers-reduced-motion:reduce){
-  .splash-logo{animation:splashFadeOnly 0.5s ease both}
-  .splash-bar-fill{animation:splashLoad 1s ease 0.15s forwards}
-  .splash-bar-fill::after{animation:none}
-}
-@keyframes splashFadeOnly{from{opacity:0}to{opacity:1}}
 </style>
 <!-- NoSleep.js: prevents screen dim/sleep during timer on Safari/older browsers -->
 <script src="https://cdn.jsdelivr.net/npm/nosleep.js@0.12.0/dist/NoSleep.min.js" onerror="window.NoSleep=undefined"></script>
 </head>
 <body>
-<!-- Apply saved theme immediately so the splash matches (no color flash) -->
+<!-- Apply saved theme immediately (no color flash) -->
 <script>
   (function(){
     try{
@@ -1228,14 +1203,6 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
     }catch(e){}
   })();
 </script>
-<!-- Loading splash (removed once the app has rendered) -->
-<div id="splash">
-  <div class="splash-inner">
-    <div class="splash-logo">Study<span>Track</span></div>
-    <div class="splash-sub">Loading</div>
-    <div class="splash-bar"><div class="splash-bar-fill"></div></div>
-  </div>
-</div>
 <!-- Floating toggle shown when sidebar is hidden -->
 <button id="sidebar-toggle" onclick="toggleSidebar()" title="Show menu">
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -10478,35 +10445,6 @@ window.addEventListener('load',function(){
   if(typeof _rtConnect==='function')_rtConnect();
 });
 
-// ── Hide the loading splash once the app is rendered ──────────────────────
-(function(){
-  var hidden=false;
-  function hideSplash(){
-    if(hidden)return;hidden=true;
-    var sp=document.getElementById('splash');
-    if(!sp)return;
-    sp.classList.add('hide');
-    setTimeout(function(){if(sp&&sp.parentNode)sp.parentNode.removeChild(sp);},550);
-  }
-  // Skip the intro entirely if the app was opened recently (within 10 min) —
-  // a quick re-open shouldn't replay the whole animation. Otherwise show the
-  // splash long enough for the intro to play, then hide after the first paint.
-  var RECENT_MS=10*60*1000; // 10 minutes
-  var last=0; try{last=parseInt(localStorage.getItem('st_last_open')||'0',10)||0;}catch(e){}
-  var recent=(Date.now()-last)<RECENT_MS;
-  try{localStorage.setItem('st_last_open',String(Date.now()));}catch(e){}
-  // Trim the splash CSS animations to match the shorter window (skip if recent)
-  if(recent){var sp0=document.getElementById('splash');if(sp0)sp0.classList.add('instant');}
-  var MIN_MS=recent?0:1300, start=Date.now();
-  function tryHide(){
-    var wait=Math.max(0,MIN_MS-(Date.now()-start));
-    setTimeout(function(){requestAnimationFrame(hideSplash);},wait);
-  }
-  if(recent){requestAnimationFrame(hideSplash);}
-  else if(document.readyState==='complete'){tryHide();}
-  else{window.addEventListener('load',tryHide);}
-  setTimeout(hideSplash,5000); // absolute fallback
-})();
 </script>
 
 <!-- Mobile timer bar (above bottom nav) -->
