@@ -20,7 +20,7 @@ jobs:
           VAPID_PRIVATE: ${{ secrets.VAPID_PRIVATE }}
           VAPID_EMAIL:   noah@flouty.uk
           SB_URL:        ${{ vars.SB_URL }}
-          SB_KEY:        ${{ secrets.SB_KEY }}
+          SB_SERVICE_KEY: ${{ secrets.SB_SERVICE_KEY }}
           RESEND_KEY:    ${{ secrets.RESEND_KEY }}
           EMAIL_TO:      noah@flouty.uk
           TEST_EMAIL:    ${{ github.event.inputs.test_email }}
@@ -30,12 +30,23 @@ jobs:
           const webpush = require('web-push');
 
           const SB_URL = process.env.SB_URL;
-          const SB_KEY = process.env.SB_KEY;
+          // Service-role key — bypasses RLS entirely for this server-side job.
+          // Never exposed to browsers/client code; lives only in GitHub Actions
+          // secrets (private to the repo). study_data is now protected by
+          // auth.uid() = user_id, and a cron job can't do an interactive login,
+          // so this is the intended way for an unattended job to read/write it.
+          const SB_SERVICE_KEY = process.env.SB_SERVICE_KEY;
           const HDR = {
-            'apikey': SB_KEY,
-            'Authorization': 'Bearer ' + SB_KEY,
+            'apikey': SB_SERVICE_KEY,
+            'Authorization': 'Bearer ' + SB_SERVICE_KEY,
             'Content-Type': 'application/json'
           };
+          // Rows written by this job still need an owner so the app/widget
+          // (which read under auth.uid() = user_id) can see them afterward.
+          // The service-role key bypasses RLS for permission purposes, but
+          // does NOT set auth.uid() automatically — without this, sbSet()
+          // would write rows with user_id = null that the app could never read back.
+          const OWNER_USER_ID = '5c8b57ab-2646-472d-9996-664c0758f71d'; // noah@flouty.uk
 
           webpush.setVapidDetails(
             'mailto:' + process.env.VAPID_EMAIL,
@@ -64,7 +75,7 @@ jobs:
               await fetch(`${SB_URL}/rest/v1/study_data`, {
                 method: 'POST',
                 headers: { ...HDR, 'Prefer': 'resolution=merge-duplicates' },
-                body: JSON.stringify({ key, value: val, updated_at: new Date().toISOString() })
+                body: JSON.stringify({ key, value: val, updated_at: new Date().toISOString(), user_id: OWNER_USER_ID })
               });
             } catch(e) {}
           }
