@@ -2460,6 +2460,24 @@ function isSubjPrereqLocked(id, subjs){
 // One-time data migration: fixes existing stored subjects to match new structure.
 // Runs once per device; migration flag stored in localStorage so it never repeats.
 function runMigrations(){
+  // ── Migration v12: clear schedule so user can rebuild from scratch ─────────
+  // One-time wipe of the weekly schedule, local AND cloud. Runs once per device
+  // (guarded by st_migration_v12_clear_sched). Bumps the sched version counter so
+  // the sync layer treats this empty schedule as an unconfirmed local edit and
+  // pushes it up, rather than pulling the old cloud copy back down.
+  if(!localStorage.getItem('st_migration_v12_clear_sched')){
+    try{
+      const prev=localStorage.getItem('st_sched');
+      if(prev){console.log('[Migration v12] Backup of pre-clear schedule:',prev);}
+      localStorage.setItem('st_sched',JSON.stringify([]));
+      const newV=_getSchedV()+1;
+      _setSchedLV(newV);
+      // Push empty to cloud, then confirm the version so a later pull won't revert it.
+      sbPush('st_sched',[],{silent:true}).then(()=>{_setSchedCV(newV);});
+      console.log('[Migration v12] Schedule cleared (local + cloud). Build from scratch in the Schedule tab.');
+    }catch(e){console.warn('[Migration v12] Error:',e);}
+    localStorage.setItem('st_migration_v12_clear_sched','1');
+  }
   // IMPORTANT: v5 must run BEFORE v6 — v6 has the final correct values and must win.
   // ── Migration v5: teacher progress report corrections (May 2026) ──────────
   if(!localStorage.getItem('st_migration_v5')){
@@ -2773,29 +2791,12 @@ function _setSchedLV(v){localStorage.setItem('st_sched_lv',String(v));}
 function _setSchedCV(v){localStorage.setItem('st_sched_cv',String(v));}
 function _getSchedCV(){return parseInt(localStorage.getItem('st_sched_cv')||'0',10);}
 function loadSchedule(){
+  // Pure read: return exactly what is stored, never mutate/re-inject on load.
+  // (Previously this force-re-added and re-synced two hardcoded blocks on every
+  // load, which silently reverted the user's edits. That logic has been removed.)
   try{
     const s=localStorage.getItem('st_sched');
-    if(s){
-      const sched=JSON.parse(s);
-      // Inject new class blocks if not already present
-      const NEW_BLOCKS=[
-        {id:'block_am_hist', day:5, type:'class', start:'11:00', end:'12:00', label:'US History (School)', subjectId:'us_hist', locked:false},
-        {id:'block_jp_exch', day:5, type:'class', start:'14:00', end:'15:00', label:'Japanese Exchange', subjectId:'japanese', locked:false},
-      ];
-      let changed=false;
-      NEW_BLOCKS.forEach(nb=>{
-        const existing=sched.find(b=>b.id===nb.id);
-        if(!existing){sched.push(nb);changed=true;}
-        else{
-          // Sync label, type and subjectId from definition
-          if(existing.label!==nb.label){existing.label=nb.label;changed=true;}
-          if(existing.type!==nb.type){existing.type=nb.type;changed=true;}
-          if(existing.subjectId!==nb.subjectId){existing.subjectId=nb.subjectId;changed=true;}
-        }
-      });
-      if(changed){localStorage.setItem('st_sched',JSON.stringify(sched));sbPush('st_sched',sched);}
-      return sched;
-    }
+    if(s)return JSON.parse(s);
   }catch(e){}
   return makeDefaultSchedule();
 }
@@ -5998,6 +5999,13 @@ function _updateTimerBubble(){
 
 function renderTimerPage(){
   const subjs=loadSubjects();
+  // Subject stats
+  const hours=loadHours();
+  const sessions=loadSessions();
+  function getLogged(id){
+    const s=subjs.find(x=>x.id===id);if(!s)return 0;
+    return(s.base||0)+(hours[id]||0);
+  }
   const available=subjs.filter(s=>!s.done&&getLogged(s.id)<s.req);
   const now=nowLocal();
   const nowMins=now.getHours()*60+now.getMinutes();
@@ -6014,13 +6022,6 @@ function renderTimerPage(){
   const currentSubj=subjs.find(s=>s.id===timerSubjectId)||available[0];
   const subjColor=currentSubj?SUBJ_COLORS_T[currentSubj.id]||'var(--o)':'var(--o)';
 
-  // Subject stats
-  const hours=loadHours();
-  const sessions=loadSessions();
-  function getLogged(id){
-    const s=subjs.find(x=>x.id===id);if(!s)return 0;
-    return(s.base||0)+(hours[id]||0);
-  }
   const logged=currentSubj?getLogged(currentSubj.id):0;
   const req=currentSubj?currentSubj.req:0;
   const pct=req>0?Math.min(100,logged/req*100):100;
