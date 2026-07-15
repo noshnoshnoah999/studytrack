@@ -8817,10 +8817,192 @@ function renderHolidayDashPill(){
   }
 }
 
-// ── SUPABASE SYNC ─────────────────────────────────────────────────────────────
+// ── SUPABASE AUTH (raw fetch, no SDK — matches this file's existing style) ────
 const SB_URL='https://epaiazxcdcseijkhrncm.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVwYWlhenhjZGNzZWlqa2hybmNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwMjQ0MzQsImV4cCI6MjA5MjYwMDQzNH0.h2t_kFLZ_YPvuJlzPPiyXVbOnW4Ub_52hdaYosMoOus';
-const SB_HDR={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'};
+const ST_AUTH_EMAIL='noah@flouty.uk'; // single-user app — login is locked to this email
+const ST_AUTH_KEY='st_auth_session';
+let _stRefreshTimer=null;
+
+function getAuthSession(){
+  try{return JSON.parse(localStorage.getItem(ST_AUTH_KEY)||'null');}catch(e){return null;}
+}
+function setAuthSession(sess){
+  if(!sess){localStorage.removeItem(ST_AUTH_KEY);return;}
+  localStorage.setItem(ST_AUTH_KEY,JSON.stringify(sess));
+}
+function getUserId(){
+  const s=getAuthSession();
+  return s&&s.user_id?s.user_id:null;
+}
+
+// Step 1: request a one-time code emailed to ST_AUTH_EMAIL
+async function requestLoginCode(){
+  const res=await fetch(SB_URL+'/auth/v1/otp',{
+    method:'POST',
+    headers:{'apikey':SB_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({email:ST_AUTH_EMAIL,create_user:false})
+  });
+  return res.ok;
+}
+
+// Step 2: verify the code, store the session
+async function verifyLoginCode(code){
+  const res=await fetch(SB_URL+'/auth/v1/verify',{
+    method:'POST',
+    headers:{'apikey':SB_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({email:ST_AUTH_EMAIL,token:code,type:'email'})
+  });
+  if(!res.ok)return false;
+  const data=await res.json();
+  if(!data.access_token)return false;
+  setAuthSession({
+    access_token:data.access_token,
+    refresh_token:data.refresh_token,
+    user_id:data.user&&data.user.id,
+    expires_at:Date.now()+(data.expires_in||3600)*1000
+  });
+  scheduleTokenRefresh();
+  return true;
+}
+
+// Silently refresh the access token before it expires, so the session
+// behaves as "indefinite" without ever showing the login screen again
+// on this device (until the refresh token itself is revoked/expired).
+async function refreshSession(){
+  const s=getAuthSession();
+  if(!s||!s.refresh_token)return false;
+  try{
+    const res=await fetch(SB_URL+'/auth/v1/token?grant_type=refresh_token',{
+      method:'POST',
+      headers:{'apikey':SB_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({refresh_token:s.refresh_token})
+    });
+    if(!res.ok)return false;
+    const data=await res.json();
+    if(!data.access_token)return false;
+    setAuthSession({
+      access_token:data.access_token,
+      refresh_token:data.refresh_token||s.refresh_token,
+      user_id:data.user&&data.user.id||s.user_id,
+      expires_at:Date.now()+(data.expires_in||3600)*1000
+    });
+    return true;
+  }catch(e){return false;}
+}
+
+function scheduleTokenRefresh(){
+  if(_stRefreshTimer)clearTimeout(_stRefreshTimer);
+  const s=getAuthSession();
+  if(!s)return;
+  // refresh 10 min before expiry, floor of 30s so we never spin
+  const delay=Math.max((s.expires_at-Date.now())-10*60*1000,30*1000);
+  _stRefreshTimer=setTimeout(async()=>{
+    const ok=await refreshSession();
+    if(ok)scheduleTokenRefresh();
+    else showLoginScreen(); // refresh token dead — need a fresh code
+  },delay);
+}
+
+function logoutSession(){
+  setAuthSession(null);
+  if(_stRefreshTimer)clearTimeout(_stRefreshTimer);
+  showLoginScreen();
+}
+
+// Resolves once the user successfully verifies a login code.
+// ensureAuthed() awaits this so init() naturally pauses until login completes,
+// instead of duplicating the rest of init()'s body in a second code path.
+let _loginResolve=null;
+function _waitForLogin(){
+  return new Promise(res=>{_loginResolve=res;});
+}
+
+function showLoginScreen(){
+  let el=document.getElementById('st-login-screen');
+  if(el){el.style.display='flex';return;}
+  el=document.createElement('div');
+  el.id='st-login-screen';
+  el.style.cssText='position:fixed;inset:0;z-index:99999;background:var(--bg,#0b0b0f);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:24px;';
+  el.innerHTML=`
+    <div style="max-width:320px;width:100%;text-align:center">
+      <div style="font-size:18px;font-weight:700;margin-bottom:4px">StudyTrack</div>
+      <div style="opacity:.7;font-size:13px;margin-bottom:20px">Sign in as ${ST_AUTH_EMAIL}</div>
+      <div id="st-login-step1">
+        <button id="st-login-send" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--o,#f60);color:#fff;font-weight:700;cursor:pointer">Send login code</button>
+        <div id="st-login-msg1" style="font-size:12px;opacity:.7;margin-top:10px"></div>
+      </div>
+      <div id="st-login-step2" style="display:none">
+        <input id="st-login-code" inputmode="numeric" placeholder="6-digit code" style="width:100%;padding:12px;border-radius:10px;border:1px solid #444;background:transparent;color:inherit;text-align:center;font-size:18px;letter-spacing:2px;box-sizing:border-box;margin-bottom:10px">
+        <button id="st-login-verify" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--o,#f60);color:#fff;font-weight:700;cursor:pointer">Verify</button>
+        <div id="st-login-msg2" style="font-size:12px;opacity:.7;margin-top:10px"></div>
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+  document.getElementById('st-login-send').onclick=async()=>{
+    const btn=document.getElementById('st-login-send');
+    const msg=document.getElementById('st-login-msg1');
+    btn.disabled=true;msg.textContent='Sending…';
+    const ok=await requestLoginCode();
+    btn.disabled=false;
+    if(ok){
+      msg.textContent='Code sent — check '+ST_AUTH_EMAIL;
+      document.getElementById('st-login-step1').style.display='none';
+      document.getElementById('st-login-step2').style.display='block';
+    }else{
+      msg.textContent='Could not send code — check connection and try again';
+    }
+  };
+  document.getElementById('st-login-verify').onclick=async()=>{
+    const btn=document.getElementById('st-login-verify');
+    const msg=document.getElementById('st-login-msg2');
+    const code=document.getElementById('st-login-code').value.trim();
+    if(!code){msg.textContent='Enter the code from your email';return;}
+    btn.disabled=true;msg.textContent='Verifying…';
+    const ok=await verifyLoginCode(code);
+    btn.disabled=false;
+    if(ok){
+      hideLoginScreen();
+      if(_loginResolve){_loginResolve();_loginResolve=null;}
+    }else{
+      msg.textContent='Invalid or expired code — try again';
+    }
+  };
+}
+
+function hideLoginScreen(){
+  const el=document.getElementById('st-login-screen');
+  if(el)el.style.display='none';
+}
+
+// Call this once on app load. Blocks (via _waitForLogin) until a usable
+// session exists, showing the login screen in the meantime if needed.
+// Always resolves true — init() can proceed unconditionally after awaiting this.
+async function ensureAuthed(){
+  const s=getAuthSession();
+  if(!s){
+    showLoginScreen();
+    await _waitForLogin();
+    return true;
+  }
+  if(Date.now()>s.expires_at-60*1000){
+    const ok=await refreshSession();
+    if(!ok){
+      showLoginScreen();
+      await _waitForLogin();
+      return true;
+    }
+  }
+  scheduleTokenRefresh();
+  return true;
+}
+
+// ── SUPABASE SYNC ─────────────────────────────────────────────────────────────
+function sbHeaders(){
+  const s=getAuthSession();
+  const token=s&&s.access_token?s.access_token:SB_KEY; // fall back to anon key if logged out (read-only under RLS once policy is scoped)
+  return {'apikey':SB_KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json'};
+}
 
 function setSyncUI(status,msg){
   document.querySelectorAll('.sync-dot').forEach(el=>{
@@ -8832,11 +9014,14 @@ function setSyncUI(status,msg){
 
 async function sbPush(key,value,{silent=false}={}){
   if(!silent)setSyncUI('syncing','Saving…');
+  const uid=getUserId();
   try{
+    const body={key,value,updated_at:new Date().toISOString()};
+    if(uid)body.user_id=uid; // required once the RLS policy checks auth.uid() = user_id
     const res=await fetch(SB_URL+'/rest/v1/study_data',{
       method:'POST',
-      headers:{...SB_HDR,'Prefer':'resolution=merge-duplicates'},
-      body:JSON.stringify({key,value,updated_at:new Date().toISOString()})
+      headers:{...sbHeaders(),'Prefer':'resolution=merge-duplicates'},
+      body:JSON.stringify(body)
     });
     if(!silent){
       if(res.ok){setSyncUI('synced','Synced ✓');}
@@ -8851,7 +9036,7 @@ async function sbPush(key,value,{silent=false}={}){
 
 async function sbPull(key){
   try{
-    const res=await fetch(SB_URL+'/rest/v1/study_data?key=eq.'+key+'&select=value,updated_at',{headers:SB_HDR});
+    const res=await fetch(SB_URL+'/rest/v1/study_data?key=eq.'+key+'&select=value,updated_at',{headers:sbHeaders()});
     if(!res.ok)return null;
     const rows=await res.json();
     return rows&&rows[0]?rows[0]:null;
@@ -8986,7 +9171,12 @@ async function syncFromCloud(){
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
-(function init(){
+(async function init(){
+  // Auth gate — must resolve before any sync/render so cloud calls always carry
+  // a valid session once RLS is scoped to auth.uid(). Local-only UI (theme,
+  // cached localStorage data) still renders underneath the login overlay so the
+  // screen isn't blank while waiting on the network.
+  await ensureAuthed(); // blocks here until login completes, if needed
   // ── Purge large data from localStorage FIRST to prevent quota errors ──────
   // AI chat history may contain leaked base64 image data (_imgDataUrl) from a prior bug.
   // Strip it now before anything tries to write to localStorage.
