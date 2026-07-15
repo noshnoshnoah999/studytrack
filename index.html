@@ -2413,7 +2413,11 @@ const DEFAULT_SUBJECTS=[
   {id:'el2',         name:'Electives 2',         req:150, base:151.4, passive:true,  locked:false, done:true },
   {id:'el3',         name:'Electives 3',         req:150, base:152,   passive:true,  locked:false, done:true },
   // EL4 = extra credit — improves GPA but does NOT count toward graduation hours/credits
-  {id:'el4',         name:'Electives 4',         req:150, base:29.5,  passive:true,  locked:false, done:false, extraCredit:true},
+  // base=0: unlike el1-3, el4's session log (24 entries, verified against the Google
+  // Form journal PDF) already covers its FULL history — the old base:29.5 was a stale
+  // May-2026 teacher-report snapshot that predates full session logging, and was being
+  // double-counted on top of sessions that already include that same period (2026-07-15).
+  {id:'el4',         name:'Electives 4',         req:150, base:0,  passive:true,  locked:false, done:false, extraCredit:true},
   // History
   {id:'wa_hist',     name:'WA State History',    req:75,  base:8.1,   passive:false, locked:false, done:false},
   {id:'us_hist',     name:'US History',          req:150, base:23.2,  passive:false, locked:false, done:false},
@@ -2602,6 +2606,32 @@ function runMigrations(){
       }
     }catch(e){console.warn('[Migration v10] Error:',e);}
     localStorage.setItem('st_migration_v10_lang_art_transfer','1');
+  }
+  // ── Migration v11: EL4 base double-counted stale offset (Jul 2026) ─────────
+  // el4.base was set to 29.5 from a May-2026 teacher report snapshot, taken BEFORE
+  // full session logging existed for el4. Since then, all 24 el4 sessions logged in
+  // the app (verified 121.1h against the actual Google Form journal PDF, 2026-07-15)
+  // already cover that same period — so base+sessions was double-counting ~29.5h,
+  // showing 150h36m/100%/DONE on the Subjects page when only 121h is actually
+  // submitted (confirmed by teacher and AI coach). Heal by zeroing base once per
+  // device, same pattern as v9/v10, and push to cloud so it doesn't get clobbered
+  // back onto other synced devices.
+  if(!localStorage.getItem('st_migration_v11_el4_base_zero')){
+    try{
+      const raw=localStorage.getItem('st_subjs');
+      if(raw){
+        const subjs=JSON.parse(raw);
+        const el4=subjs.find(s=>s.id==='el4');
+        if(el4&&el4.base!==0){
+          el4.base=0;
+          localStorage.setItem('st_subjs',JSON.stringify(subjs));
+          localStorage.setItem('st_subjs_updated_at',new Date().toISOString());
+          sbPush('st_subjs',subjs,{silent:true});
+          console.log('[Migration v11] EL4 base reset to 0 (was double-counting stale May report)');
+        }
+      }
+    }catch(e){console.warn('[Migration v11] Error:',e);}
+    localStorage.setItem('st_migration_v11_el4_base_zero','1');
   }
   if(!localStorage.getItem('st_migration_v7')){
     try{
@@ -8887,8 +8917,12 @@ async function syncFromCloud(){
           }
         } else if(k==='st_ai_history'){
           // Take whichever is longer (most messages) — don't overwrite a longer local history
+          // Filter out any corrupted entries (missing/empty content) so a bad cloud copy
+          // can't reintroduce the "messages.N.content: Field required" API error.
+          const _hasContent=c=>Array.isArray(c)?c.length>0:(typeof c==='string'?c.trim().length>0:!!c);
           const local=JSON.parse(localStorage.getItem('st_ai_history')||'[]');
-          const cloud=Array.isArray(rows[i].value)?rows[i].value:[];
+          const cloudRaw=Array.isArray(rows[i].value)?rows[i].value:[];
+          const cloud=cloudRaw.filter(m=>m&&m.role&&_hasContent(m.content));
           if(cloud.length>local.length){
             localStorage.setItem(k,JSON.stringify(cloud));
             _aiHistory=cloud;
@@ -9588,7 +9622,10 @@ function _aiLoadHistory(){
     if(!h)return[];
     const parsed=JSON.parse(h);
     // Strip any _imgDataUrl that leaked into saved history (old bug) and re-save clean
-    const cleaned=parsed.map(m=>({role:m.role,content:Array.isArray(m.content)?m.content.map(c=>c.type==='image'?{type:'text',text:'[photo]'}:c.type==='document'?{type:'text',text:'[PDF]'}:c):m.content}));
+    const _hasContent=c=>Array.isArray(c)?c.length>0:(typeof c==='string'?c.trim().length>0:!!c);
+    const cleaned=parsed
+      .filter(m=>m&&m.role&&_hasContent(m.content)) // drop corrupted entries (missing/empty content)
+      .map(m=>({role:m.role,content:Array.isArray(m.content)?m.content.map(c=>c.type==='image'?{type:'text',text:'[photo]'}:c.type==='document'?{type:'text',text:'[PDF]'}:c):m.content}));
     const cleanedStr=JSON.stringify(cleaned);
     if(cleanedStr.length<h.length){
       localStorage.setItem('st_ai_history',cleanedStr); // overwrite with cleaned version
@@ -9944,7 +9981,15 @@ async function _aiSendMsg(text,image=null){
     const ctx=_aiMakeContext();
     const model=localStorage.getItem('st_ai_model')||'claude-haiku-4-5-20251001';
     // Build messages for API — use full content (incl. images) for current session
-    const apiMessages=_aiHistory.map(m=>({role:m.role,content:m.content}));
+    // Drop any corrupted entries (missing/empty content) so one bad message can't
+    // permanently break every future request — see messages.N.content: Field required
+    const _hasContent=c=>Array.isArray(c)?c.length>0:(typeof c==='string'?c.trim().length>0:!!c);
+    const validHistory=_aiHistory.filter(m=>m&&m.role&&_hasContent(m.content));
+    if(validHistory.length!==_aiHistory.length){
+      _aiHistory=validHistory;
+      _aiSaveHistory();
+    }
+    const apiMessages=validHistory.map(m=>({role:m.role,content:m.content}));
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{
