@@ -8837,13 +8837,25 @@ function getUserId(){
 }
 
 // Step 1: request a one-time code emailed to ST_AUTH_EMAIL
+// Returns {ok, reason} instead of a bare boolean so the UI can tell a rate
+// limit (very common — Supabase throttles OTP emails to a few per hour)
+// apart from an actual network/connection failure, rather than showing a
+// misleading "no internet connection" message for both.
 async function requestLoginCode(){
-  const res=await fetch(SB_URL+'/auth/v1/otp',{
-    method:'POST',
-    headers:{'apikey':SB_KEY,'Content-Type':'application/json'},
-    body:JSON.stringify({email:ST_AUTH_EMAIL,create_user:false})
-  });
-  return res.ok;
+  try{
+    const res=await fetch(SB_URL+'/auth/v1/otp',{
+      method:'POST',
+      headers:{'apikey':SB_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({email:ST_AUTH_EMAIL,create_user:false})
+    });
+    if(res.ok)return{ok:true};
+    if(res.status===429)return{ok:false,reason:'rate_limited'};
+    return{ok:false,reason:'server_error'};
+  }catch(e){
+    // fetch only throws for actual network failures (offline, DNS, CORS) —
+    // an HTTP error response (4xx/5xx) is caught by res.ok above, not here.
+    return{ok:false,reason:'network'};
+  }
 }
 
 // Step 2: verify the code, store the session
@@ -8943,14 +8955,21 @@ function showLoginScreen(){
     const btn=document.getElementById('st-login-send');
     const msg=document.getElementById('st-login-msg1');
     btn.disabled=true;msg.textContent='Sending…';
-    const ok=await requestLoginCode();
+    const result=await requestLoginCode();
     btn.disabled=false;
-    if(ok){
+    if(result.ok){
       msg.textContent='Code sent — check '+ST_AUTH_EMAIL;
       document.getElementById('st-login-step1').style.display='none';
       document.getElementById('st-login-step2').style.display='block';
+    }else if(result.reason==='rate_limited'){
+      // Supabase throttles OTP emails per address — common if you've
+      // requested a code on another device/browser recently. Not a real
+      // error, just needs a short wait.
+      msg.textContent='Too many codes requested — wait a bit and try again (or check earlier emails for a still-valid code)';
+    }else if(result.reason==='network'){
+      msg.textContent='No connection — check your internet and try again';
     }else{
-      msg.textContent='Could not send code — check connection and try again';
+      msg.textContent='Could not send code — try again in a moment';
     }
   };
   document.getElementById('st-login-verify').onclick=async()=>{
