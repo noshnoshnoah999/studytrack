@@ -1,8 +1,40 @@
 // StudyTrack Widget — paste into Scriptable
 // Shows today's hours, next/current block — theme synced from app
+//
+// AUTH: study_data is protected by Row Level Security (auth.uid() = user_id).
+// This script never contains a login credential — it reads a refresh token
+// from Scriptable's on-device Keychain (set once via the separate setup
+// script, never committed to git) and exchanges it for a short-lived access
+// token on every run. If Keychain has no token yet, the widget shows a
+// "Setup needed" state instead of crashing or silently showing stale/empty data.
+// See: studytrack-widget-keychain-setup.md for the one-time setup steps.
 
 const SB_URL = "https://epaiazxcdcseijkhrncm.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVwYWlhenhjZGNzZWlqa2hybmNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwMjQ0MzQsImV4cCI6MjA5MjYwMDQzNH0.h2t_kFLZ_YPvuJlzPPiyXVbOnW4Ub_52hdaYosMoOus";
+const KEYCHAIN_KEY = "st_refresh_token";
+
+// Exchange the stored refresh token for a fresh access token.
+// Returns null if no token is stored yet, or if the exchange fails
+// (e.g. the refresh token was revoked — re-run the setup script).
+async function getAccessToken() {
+  if (!Keychain.contains(KEYCHAIN_KEY)) return null;
+  const refreshToken = Keychain.get(KEYCHAIN_KEY);
+  try {
+    const r = new Request(`${SB_URL}/auth/v1/token?grant_type=refresh_token`);
+    r.method = "POST";
+    r.headers = { apikey: SB_KEY, "Content-Type": "application/json" };
+    r.body = JSON.stringify({ refresh_token: refreshToken });
+    const data = await r.loadJSON();
+    if (!data || !data.access_token) return null;
+    // Supabase rotates the refresh token on each use — persist the new one
+    // so the next widget refresh keeps working (Scriptable's default
+    // refresh interval is generous, but store it regardless).
+    if (data.refresh_token) Keychain.set(KEYCHAIN_KEY, data.refresh_token);
+    return data.access_token;
+  } catch (e) {
+    return null;
+  }
+}
 
 // ── Theme palette (matches app THEMES_LIST exactly) ──────────────────────────
 const THEMES = {
@@ -20,10 +52,13 @@ const THEMES = {
 };
 
 // ── Fetch from Supabase ──────────────────────────────────────────────────────
-async function sbGet(key) {
+// bearerToken resolved once per widget run in the "Load data" section below
+// and passed in here, rather than re-fetched per call, to avoid 6 separate
+// token-refresh round trips for one widget render.
+async function sbGet(key, bearerToken) {
   try {
     const r = await new Request(`${SB_URL}/rest/v1/study_data?key=eq.${key}&select=value`);
-    r.headers = { apikey: SB_KEY, Authorization: "Bearer " + SB_KEY };
+    r.headers = { apikey: SB_KEY, Authorization: "Bearer " + (bearerToken || SB_KEY) };
     const rows = await r.loadJSON();
     if (!rows || !rows[0]) return null;
     const v = rows[0].value;
@@ -60,10 +95,37 @@ function fmtAmPm(t) {
 }
 function c(hex) { return new Color(hex); }
 
+// Everything below is wrapped in an async function (rather than left at top
+// level) purely so the "no token yet" case can `return` early and skip
+// straight to Script.complete() without duplicating the render logic.
+async function run() {
+
 // ── Load data ────────────────────────────────────────────────────────────────
+const bearerToken = await getAccessToken();
+
+if (!bearerToken) {
+  // No valid session — either Keychain setup was never run on this device,
+  // or the stored refresh token was revoked. Show a clear state instead of
+  // silently rendering empty/zeroed data (RLS would return 0 rows either way,
+  // which would otherwise look identical to "no sessions logged today").
+  const w = new ListWidget();
+  w.backgroundColor = new Color("#1c1c1c");
+  w.setPadding(14, 14, 14, 14);
+  const t1 = w.addText("⚠️ Setup needed");
+  t1.font = Font.boldSystemFont(13);
+  t1.textColor = new Color("#f97316");
+  w.addSpacer(4);
+  const t2 = w.addText("Run the Keychain setup script once on this device.");
+  t2.font = Font.systemFont(10);
+  t2.textColor = new Color("#909090");
+  Script.setWidget(w);
+  Script.complete();
+  return;
+}
+
 const [sessions, goals, schedule, subjs, themeRaw, overridesRaw] = await Promise.all([
-  sbGet("st_sessions"), sbGet("st_goals"), sbGet("st_sched"),
-  sbGet("st_subjs"), sbGet("st_theme"), sbGet("st_sched_overrides")
+  sbGet("st_sessions", bearerToken), sbGet("st_goals", bearerToken), sbGet("st_sched", bearerToken),
+  sbGet("st_subjs", bearerToken), sbGet("st_theme", bearerToken), sbGet("st_sched_overrides", bearerToken)
 ]);
 
 // Pick theme — fall back to slate
@@ -246,3 +308,7 @@ if (size === "small") {
 
 Script.setWidget(w);
 Script.complete();
+
+} // end run()
+
+await run();
