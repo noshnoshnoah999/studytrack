@@ -1530,9 +1530,9 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
     <div class="form-group">
       <label class="form-label">Model</label>
       <select class="form-input" id="ai-model-select">
-        <option value="claude-haiku-4-5">claude-haiku-4 (fast, cheap)</option>
-        <option value="claude-sonnet-4-5">claude-sonnet-4 (balanced)</option>
-        <option value="claude-opus-4-5">claude-opus-4 (smartest)</option>
+        <option value="claude-haiku-4-5-20251001">claude-haiku-4.5 (fast, cheap)</option>
+        <option value="claude-sonnet-5">claude-sonnet-5 (balanced)</option>
+        <option value="claude-opus-4-8">claude-opus-4.8 (smartest)</option>
       </select>
     </div>
     <div class="modal-actions">
@@ -1840,10 +1840,10 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
         <!-- Model picker -->
         <div style="display:flex;gap:8px;margin-bottom:10px">
           <label style="flex:1;display:flex;align-items:center;gap:6px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text2)">
-            <input type="radio" name="coach-model" value="claude-haiku-4-5" checked style="accent-color:var(--o)"> Haiku <span style="font-size:10px;color:var(--text3);font-weight:400">~$0.002</span>
+            <input type="radio" name="coach-model" value="claude-haiku-4-5-20251001" checked style="accent-color:var(--o)"> Haiku <span style="font-size:10px;color:var(--text3);font-weight:400">~$0.002</span>
           </label>
           <label style="flex:1;display:flex;align-items:center;gap:6px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text2)">
-            <input type="radio" name="coach-model" value="claude-sonnet-4-5" style="accent-color:var(--o)"> Sonnet <span style="font-size:10px;color:var(--text3);font-weight:400">~$0.01</span>
+            <input type="radio" name="coach-model" value="claude-sonnet-5" style="accent-color:var(--o)"> Sonnet <span style="font-size:10px;color:var(--text3);font-weight:400">~$0.01</span>
           </label>
         </div>
         <div id="coach-img-preview" style="display:none;margin-bottom:8px;text-align:center">
@@ -2955,7 +2955,7 @@ async function analyseWorkoutImage(base64,mimeType){
         'content-type':'application/json'
       },
       body:JSON.stringify({
-        model:'claude-haiku-4-5',
+        model:'claude-haiku-4-5-20251001',
         max_tokens:120,
         messages:[{role:'user',content:[
           {type:'image',source:{type:'base64',media_type:mimeType,data:base64}},
@@ -7227,7 +7227,7 @@ async function runCoachAnalysis(){
   const key=localStorage.getItem('st_anthropic_key');
   if(!key){showToast('Add Anthropic API key in ⚙ Settings','var(--err)');return;}
   const modelEl=document.querySelector('input[name="coach-model"]:checked');
-  const model=modelEl?modelEl.value:'claude-haiku-4-5';
+  const model=modelEl?modelEl.value:'claude-haiku-4-5-20251001';
   const btn=document.getElementById('coach-analyse-btn');
   const status=document.getElementById('coach-scan-status');
   if(btn)btn.disabled=true;
@@ -9615,12 +9615,12 @@ function openAISettings(){
   const keyEl=document.getElementById('ai-api-key-input');
   const modelEl=document.getElementById('ai-model-select');
   if(keyEl)keyEl.value=localStorage.getItem('st_ai_key')||'';
-  if(modelEl)modelEl.value=localStorage.getItem('st_ai_model')||'claude-haiku-4-5';
+  if(modelEl)modelEl.value=localStorage.getItem('st_ai_model')||'claude-haiku-4-5-20251001';
   document.getElementById('ai-settings-overlay').classList.add('open');
 }
 function saveAISettings(){
   const key=(document.getElementById('ai-api-key-input').value||'').trim();
-  const model=document.getElementById('ai-model-select').value||'claude-haiku-4-5';
+  const model=document.getElementById('ai-model-select').value||'claude-haiku-4-5-20251001';
   if(key)localStorage.setItem('st_ai_key',key);else localStorage.removeItem('st_ai_key');
   localStorage.setItem('st_ai_model',model);
   closeModal('ai-settings-overlay');
@@ -9942,7 +9942,7 @@ async function _aiSendMsg(text,image=null){
   _aiRenderMessages();
   try{
     const ctx=_aiMakeContext();
-    const model=localStorage.getItem('st_ai_model')||'claude-haiku-4-5';
+    const model=localStorage.getItem('st_ai_model')||'claude-haiku-4-5-20251001';
     // Build messages for API — use full content (incl. images) for current session
     const apiMessages=_aiHistory.map(m=>({role:m.role,content:m.content}));
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
@@ -10112,7 +10112,7 @@ function renderAIPage(){
   const statusEl=document.getElementById('ai-key-status');
   if(statusEl){
     const hasKey=!!localStorage.getItem('st_ai_key');
-    const model=localStorage.getItem('st_ai_model')||'claude-haiku-4-5';
+    const model=localStorage.getItem('st_ai_model')||'claude-haiku-4-5-20251001';
     statusEl.textContent=hasKey?model.replace('claude-','').replace('-2024',''):'No API key';
     statusEl.style.color=hasKey?'var(--ok)':'var(--err)';
   }
