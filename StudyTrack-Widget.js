@@ -16,8 +16,14 @@ const KEYCHAIN_KEY = "st_refresh_token";
 // Exchange the stored refresh token for a fresh access token.
 // Returns null if no token is stored yet, or if the exchange fails
 // (e.g. the refresh token was revoked — re-run the setup script).
+// Returns {token, error} instead of a bare value/null so run() can show
+// exactly what failed (no Keychain entry / token exchange rejected /
+// network error) instead of a generic "Setup needed" for every case —
+// added after a real incident where the widget silently fell back to
+// stale/default data instead of erroring, making a broken token exchange
+// look like correct-but-old data.
 async function getAccessToken() {
-  if (!Keychain.contains(KEYCHAIN_KEY)) return null;
+  if (!Keychain.contains(KEYCHAIN_KEY)) return { token: null, error: "no_token" };
   const refreshToken = Keychain.get(KEYCHAIN_KEY);
   try {
     const r = new Request(`${SB_URL}/auth/v1/token?grant_type=refresh_token`);
@@ -25,14 +31,17 @@ async function getAccessToken() {
     r.headers = { apikey: SB_KEY, "Content-Type": "application/json" };
     r.body = JSON.stringify({ refresh_token: refreshToken });
     const data = await r.loadJSON();
-    if (!data || !data.access_token) return null;
-    // Supabase rotates the refresh token on each use — persist the new one
-    // so the next widget refresh keeps working (Scriptable's default
-    // refresh interval is generous, but store it regardless).
+    if (!data || !data.access_token) {
+      // Refresh token was rejected (revoked, already rotated/consumed,
+      // or expired). r.response.statusCode is available on Scriptable's
+      // Request object after loadJSON() resolves.
+      const status = r.response ? r.response.statusCode : "unknown";
+      return { token: null, error: "refresh_rejected_" + status };
+    }
     if (data.refresh_token) Keychain.set(KEYCHAIN_KEY, data.refresh_token);
-    return data.access_token;
+    return { token: data.access_token, error: null };
   } catch (e) {
-    return null;
+    return { token: null, error: "network_" + (e.message || "unknown") };
   }
 }
 
@@ -55,16 +64,28 @@ const THEMES = {
 // bearerToken resolved once per widget run in the "Load data" section below
 // and passed in here, rather than re-fetched per call, to avoid 6 separate
 // token-refresh round trips for one widget render.
+// sbGetErrors collects any non-2xx/network failures across all sbGet calls
+// in a run, so run() can show a real diagnostic instead of silently
+// rendering whatever partial/empty data came back.
+const sbGetErrors = [];
 async function sbGet(key, bearerToken) {
   try {
-    const r = await new Request(`${SB_URL}/rest/v1/study_data?key=eq.${key}&select=value`);
+    const r = new Request(`${SB_URL}/rest/v1/study_data?key=eq.${key}&select=value`);
     r.headers = { apikey: SB_KEY, Authorization: "Bearer " + (bearerToken || SB_KEY) };
     const rows = await r.loadJSON();
-    if (!rows || !rows[0]) return null;
+    const status = r.response ? r.response.statusCode : null;
+    if (status && (status < 200 || status >= 300)) {
+      sbGetErrors.push(`${key}: HTTP ${status}`);
+      return null;
+    }
+    if (!rows || !rows[0]) return null; // legitimately no row for this key yet — not an error
     const v = rows[0].value;
     if (typeof v === "string") { try { return JSON.parse(v); } catch(e) { return v; } }
     return v;
-  } catch(e) { return null; }
+  } catch(e) {
+    sbGetErrors.push(`${key}: ${e.message || "fetch failed"}`);
+    return null;
+  }
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -101,13 +122,11 @@ function c(hex) { return new Color(hex); }
 async function run() {
 
 // ── Load data ────────────────────────────────────────────────────────────────
-const bearerToken = await getAccessToken();
+const { token: bearerToken, error: authError } = await getAccessToken();
 
 if (!bearerToken) {
-  // No valid session — either Keychain setup was never run on this device,
-  // or the stored refresh token was revoked. Show a clear state instead of
-  // silently rendering empty/zeroed data (RLS would return 0 rows either way,
-  // which would otherwise look identical to "no sessions logged today").
+  // No valid session — Keychain empty, or the token exchange itself was
+  // rejected/failed. Show which one so a real fix (vs. a guess) is possible.
   const w = new ListWidget();
   w.backgroundColor = new Color("#1c1c1c");
   w.setPadding(14, 14, 14, 14);
@@ -115,7 +134,10 @@ if (!bearerToken) {
   t1.font = Font.boldSystemFont(13);
   t1.textColor = new Color("#f97316");
   w.addSpacer(4);
-  const t2 = w.addText("Run the Keychain setup script once on this device.");
+  const t2 = w.addText(
+    authError === "no_token" ? "Run the Keychain setup script once on this device." :
+    "Auth failed: " + authError + " — re-run Keychain setup."
+  );
   t2.font = Font.systemFont(10);
   t2.textColor = new Color("#909090");
   Script.setWidget(w);
@@ -127,6 +149,26 @@ const [sessions, goals, schedule, subjs, themeRaw, overridesRaw] = await Promise
   sbGet("st_sessions", bearerToken), sbGet("st_goals", bearerToken), sbGet("st_sched", bearerToken),
   sbGet("st_subjs", bearerToken), sbGet("st_theme", bearerToken), sbGet("st_sched_overrides", bearerToken)
 ]);
+
+// If any read actually failed (RLS denial, expired access token, network
+// blip), show that clearly instead of quietly rendering fallback/zeroed
+// values that look plausible but are wrong — this is exactly what
+// happened before this fix: goal/hours silently fell back to defaults.
+if (sbGetErrors.length) {
+  const w = new ListWidget();
+  w.backgroundColor = new Color("#1c1c1c");
+  w.setPadding(14, 14, 14, 14);
+  const t1 = w.addText("⚠️ Sync error");
+  t1.font = Font.boldSystemFont(13);
+  t1.textColor = new Color("#f97316");
+  w.addSpacer(4);
+  const t2 = w.addText(sbGetErrors[0]);
+  t2.font = Font.systemFont(9);
+  t2.textColor = new Color("#909090");
+  Script.setWidget(w);
+  Script.complete();
+  return;
+}
 
 // Pick theme — fall back to slate
 const themeName = (typeof themeRaw === "string" && THEMES[themeRaw]) ? themeRaw : "slate";
