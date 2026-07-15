@@ -1275,7 +1275,6 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
           <button onclick="openLayoutEditor('dashboard')" title="Customise layout" style="background:none;border:1px solid var(--border);border-radius:9px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);font-size:15px">⊞</button>
         </div>
       </div>
-      <div id="school-card"></div>
       <div id="home-pinned-card"></div>
       <div id="dash-blocks-container">
         <div id="now-next-banner" data-block="now-next-banner"></div>
@@ -1608,28 +1607,6 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
       <label class="form-label">Anthropic API Key <span style="font-weight:400;color:var(--text3)">(for workout import)</span></label>
       <input type="password" class="form-input" id="settings-anthropic-key" placeholder="sk-ant-...">
       <div style="font-size:11px;color:var(--text3);margin-top:4px">Stored locally on your device only. Get yours at console.anthropic.com</div>
-    </div>
-    <div class="form-group" style="margin-top:6px">
-      <label class="form-label">📍 At-school greeting</label>
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:11px 13px">
-        <div style="font-size:12px;color:var(--text2);line-height:1.4">Greet you when you reach school and ask if you're settled in. Location is read <strong>only while the app is open</strong> and never leaves your phone.</div>
-        <label class="notif-toggle" style="flex-shrink:0"><input type="checkbox" id="school-enabled-chk" onchange="onSchoolToggle(this.checked)"><span class="notif-slider"></span></label>
-      </div>
-      <div id="school-loc-controls" style="display:none;margin-top:10px">
-        <button type="button" onclick="captureSchoolLocation()" style="width:100%;background:var(--o);color:#fff;border:none;border-radius:9px;padding:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">📍 Use my current location as school</button>
-        <div id="school-loc-status" style="font-size:12px;color:var(--text3);margin-top:8px;line-height:1.4">No school location saved yet.</div>
-        <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
-          <label style="font-size:12px;color:var(--text3);white-space:nowrap">Trigger radius (m)</label>
-          <input type="number" class="form-input" id="school-radius" value="150" min="50" max="1000" step="25" style="flex:1">
-        </div>
-        <details style="margin-top:10px">
-          <summary style="font-size:12px;color:var(--text3);cursor:pointer">Or enter coordinates manually</summary>
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <input type="number" class="form-input" id="school-lat" placeholder="Latitude" step="any" style="flex:1">
-            <input type="number" class="form-input" id="school-lng" placeholder="Longitude" step="any" style="flex:1">
-          </div>
-        </details>
-      </div>
     </div>
     <div class="modal-actions">
       <button class="btn-save" onclick="saveGoalSettings()">Save</button>
@@ -8186,8 +8163,6 @@ function saveGoalSettings(){
   // Save Anthropic API key
   const keyEl=document.getElementById('settings-anthropic-key');
   if(keyEl)localStorage.setItem('st_anthropic_key',keyEl.value.trim());
-  if(typeof _saveSchoolFromModal==='function')_saveSchoolFromModal();
-  if(typeof checkAtSchool==='function')checkAtSchool(true); // re-check with new location/settings
   // Dismiss the recommendation — user has reviewed and saved a goal
   localStorage.setItem('st_rec_dismissed',_latestRecDaily.toFixed(2));
   closeModal('goal-modal-overlay');
@@ -8308,7 +8283,6 @@ function openGoalSettings(){
     }
   }catch(e){console.warn('Goal rec error',e);}
 
-  if(typeof _fillSchoolSettings==='function')_fillSchoolSettings();
   document.getElementById('goal-modal-overlay').classList.add('open');
 }
 
@@ -8730,9 +8704,6 @@ function setHoliday(paused,until){
   localStorage.setItem('st_holiday_updated_at',h.updatedAt);
   if(typeof sbPush==='function')sbPush('st_holiday',h);
   renderHolidayUI();
-  // Keep the at-school greeting in sync: hide it while paused, re-detect on resume.
-  if(typeof checkAtSchool==='function')checkAtSchool(true);
-  else if(typeof renderSchoolCard==='function')renderSchoolCard();
   if(typeof showToast==='function'){
     if(h.paused)showToast(h.until?('🏖 Holiday mode on — paused until '+_fmtHolidayDate(h.until)):'🏖 Holiday mode on — reminders paused');
     else showToast('✅ Reminders resumed');
@@ -8816,153 +8787,6 @@ function renderHolidayDashPill(){
   }
 }
 
-// ── AT-SCHOOL LOCATION GREETING ───────────────────────────────────────────────
-// Opt-in. Reads GPS ONLY while the app is open; coordinates never leave the
-// device. st_school = {enabled, lat, lng, radius} is a fixed building location +
-// settings (synced), NOT live tracking. The per-day check-in (st_school_checkin)
-// is device-local.
-let _atSchool=false, _schoolChecked=false, _schoolChecking=false;
-function loadSchool(){try{return JSON.parse(localStorage.getItem('st_school')||'{}');}catch(e){return{};}}
-function saveSchool(patch){
-  const s=Object.assign(loadSchool(),patch,{updatedAt:new Date().toISOString()});
-  localStorage.setItem('st_school',JSON.stringify(s));
-  localStorage.setItem('st_school_updated_at',s.updatedAt);
-  if(typeof sbPush==='function')sbPush('st_school',s);
-  return s;
-}
-function _loadCheckin(){try{const c=JSON.parse(localStorage.getItem('st_school_checkin')||'{}');if(c.date!==todayStr())return{date:todayStr(),state:'pending'};return c;}catch(e){return{date:todayStr(),state:'pending'};}}
-function _saveCheckin(state){localStorage.setItem('st_school_checkin',JSON.stringify({date:todayStr(),state:state}));}
-function _haversineM(la1,lo1,la2,lo2){
-  const R=6371000,toR=x=>x*Math.PI/180;
-  const dLa=toR(la2-la1),dLo=toR(lo2-lo1);
-  const a=Math.sin(dLa/2)**2+Math.cos(toR(la1))*Math.cos(toR(la2))*Math.sin(dLo/2)**2;
-  return 2*R*Math.asin(Math.min(1,Math.sqrt(a)));
-}
-function _getPosition(){
-  return new Promise((res,rej)=>{
-    if(!('geolocation' in navigator))return rej(new Error('no geolocation'));
-    navigator.geolocation.getCurrentPosition(p=>res(p),e=>rej(e),{enableHighAccuracy:true,timeout:12000,maximumAge:60000});
-  });
-}
-function onSchoolToggle(checked){
-  const ctrls=document.getElementById('school-loc-controls');
-  if(ctrls)ctrls.style.display=checked?'block':'none';
-  saveSchool({enabled:!!checked});
-  if(checked){
-    _getPosition().then(()=>updateSchoolStatus()).catch(e=>{
-      if(typeof showToast==='function')showToast(e&&e.code===1?'Location permission denied':'Couldn\'t read location');
-    });
-  } else { _atSchool=false; renderSchoolCard(); }
-}
-function captureSchoolLocation(){
-  const st=document.getElementById('school-loc-status');
-  if(st)st.textContent='Getting your location…';
-  _getPosition().then(p=>{
-    saveSchool({lat:p.coords.latitude,lng:p.coords.longitude});
-    const latI=document.getElementById('school-lat'),lngI=document.getElementById('school-lng');
-    if(latI)latI.value=p.coords.latitude.toFixed(6);
-    if(lngI)lngI.value=p.coords.longitude.toFixed(6);
-    updateSchoolStatus();
-    if(typeof showToast==='function')showToast('📍 School location saved');
-  }).catch(e=>{ if(st)st.textContent=e&&e.code===1?'Permission denied — allow location to capture.':'Couldn\'t get location (try again outdoors).'; });
-}
-function updateSchoolStatus(){
-  const st=document.getElementById('school-loc-status');if(!st)return;
-  const s=loadSchool();
-  if(s.lat!=null&&s.lng!=null)st.innerHTML='Saved: '+s.lat.toFixed(5)+', '+s.lng.toFixed(5)+' · radius '+(s.radius||150)+'m';
-  else st.textContent='No school location saved yet.';
-}
-function _fillSchoolSettings(){
-  const s=loadSchool();
-  const chk=document.getElementById('school-enabled-chk');if(chk)chk.checked=!!s.enabled;
-  const ctrls=document.getElementById('school-loc-controls');if(ctrls)ctrls.style.display=s.enabled?'block':'none';
-  const r=document.getElementById('school-radius');if(r)r.value=s.radius||150;
-  const latI=document.getElementById('school-lat');if(latI&&s.lat!=null)latI.value=s.lat;
-  const lngI=document.getElementById('school-lng');if(lngI&&s.lng!=null)lngI.value=s.lng;
-  updateSchoolStatus();
-}
-function _saveSchoolFromModal(){
-  const rEl=document.getElementById('school-radius');if(!rEl)return; // section not present
-  const r=parseInt(rEl.value)||150;
-  const latV=parseFloat((document.getElementById('school-lat')||{}).value);
-  const lngV=parseFloat((document.getElementById('school-lng')||{}).value);
-  const patch={radius:Math.max(50,Math.min(1000,r))};
-  if(!isNaN(latV)&&!isNaN(lngV)){patch.lat=latV;patch.lng=lngV;}
-  saveSchool(patch);
-}
-// Cache one GPS reading per day so we don't re-prompt for location on every
-// app open. st_school_geo = {date, atSchool}. The result is reused all day;
-// a manual re-check (Settings toggle / force=true) bypasses the cache.
-function _loadGeoDay(){try{const g=JSON.parse(localStorage.getItem('st_school_geo')||'{}');return g.date===todayStr()?g:null;}catch(e){return null;}}
-function _saveGeoDay(atSchool){localStorage.setItem('st_school_geo',JSON.stringify({date:todayStr(),atSchool:!!atSchool}));}
-function checkAtSchool(force){
-  const s=loadSchool();
-  // Holiday mode suppresses the at-school greeting — don't even read GPS.
-  if(typeof isOnHoliday==='function'&&isOnHoliday()){_atSchool=false;renderSchoolCard();return;}
-  if(!s.enabled||s.lat==null||s.lng==null){_atSchool=false;renderSchoolCard();return;}
-  if(_schoolChecking)return;
-  // Already read GPS earlier today? Reuse it — no second permission prompt.
-  if(!force){
-    const g=_loadGeoDay();
-    if(g){_atSchool=g.atSchool;_schoolChecked=true;renderSchoolCard();return;}
-    if(_schoolChecked){renderSchoolCard();return;}
-  }
-  _schoolChecking=true;
-  _getPosition().then(p=>{
-    _schoolChecked=true;_schoolChecking=false;
-    const d=_haversineM(p.coords.latitude,p.coords.longitude,s.lat,s.lng);
-    _atSchool=d<=(s.radius||150);
-    _saveGeoDay(_atSchool);
-    renderSchoolCard();
-  }).catch(()=>{ _schoolChecked=true;_schoolChecking=false;_atSchool=false;renderSchoolCard(); });
-}
-function _currentOrNextStudyBlock(){
-  try{
-    // Include class blocks (e.g. "US History (School)") — they have a subjectId
-    // and count as the current session, so the at-school card shows what you're
-    // actually in now rather than skipping to the next plain study block.
-    const blocks=getTodayActualBlocks().filter(b=>b.type==='study'||b.type==='class').sort((a,b)=>toMins(a.start)-toMins(b.start));
-    const now=nowLocal();const nm=now.getHours()*60+now.getMinutes();
-    return blocks.find(b=>nm>=toMins(b.start)&&nm<toMins(b.end))||blocks.find(b=>toMins(b.start)>nm)||null;
-  }catch(e){return null;}
-}
-function schoolSeated(){_saveCheckin('seated');renderSchoolCard();}
-function schoolNotYet(){_saveCheckin('notyet');renderSchoolCard();}
-function schoolStartBlock(){
-  const bl=_currentOrNextStudyBlock();
-  if(bl&&bl.subjectId&&typeof startTimerForSubject==='function')startTimerForSubject(bl.subjectId,bl.start);
-  else if(typeof showPage==='function')showPage('timer');
-}
-function renderSchoolCard(){
-  const el=document.getElementById('school-card');if(!el)return;
-  const s=loadSchool();
-  if(typeof isOnHoliday==='function'&&isOnHoliday()){el.innerHTML='';return;} // hidden during holiday mode
-  if(!s.enabled||!_atSchool){el.innerHTML='';return;}
-  const ci=_loadCheckin();
-  if(ci.state==='seated'){
-    const bl=_currentOrNextStudyBlock();
-    const blLine=bl?('<div style="font-size:12px;color:var(--text2);margin-top:2px">'+escHtml(bl.label||'Study')+' · '+bl.start+'–'+bl.end+'</div>'):'';
-    el.innerHTML='<div style="background:var(--ol);border:1px solid var(--od2);border-radius:14px;padding:14px 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">'+
-        '<div><div style="font-size:14px;font-weight:700;color:var(--text)">📍 You\'re at school — ready to study?</div>'+blLine+'</div>'+
-        (bl?'<button onclick="schoolStartBlock()" style="background:var(--o);color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">▶ Start</button>':'')+
-      '</div>';
-  } else if(ci.state==='notyet'){
-    el.innerHTML='<div style="background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:13px 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">'+
-        '<div style="font-size:13px;font-weight:600;color:var(--text2)">📍 You\'re at school</div>'+
-        '<button onclick="schoolSeated()" style="background:var(--o);color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">I\'m at my table</button>'+
-      '</div>';
-  } else {
-    el.innerHTML='<div style="background:var(--ol);border:1px solid var(--od2);border-radius:14px;padding:15px 16px;margin-bottom:12px">'+
-        '<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px">📍 Looks like you\'re at school!</div>'+
-        '<div style="font-size:12px;color:var(--text2);margin-bottom:12px">Sitting at your table yet?</div>'+
-        '<div style="display:flex;gap:8px">'+
-          '<button onclick="schoolSeated()" style="flex:1;background:var(--o);color:#fff;border:none;border-radius:10px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Yes, I\'m seated</button>'+
-          '<button onclick="schoolNotYet()" style="flex:1;background:var(--bg3);color:var(--text2);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Not yet</button>'+
-        '</div>'+
-      '</div>';
-  }
-}
-
 // ── SUPABASE SYNC ─────────────────────────────────────────────────────────────
 const SB_URL='https://epaiazxcdcseijkhrncm.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVwYWlhenhjZGNzZWlqa2hybmNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwMjQ0MzQsImV4cCI6MjA5MjYwMDQzNH0.h2t_kFLZ_YPvuJlzPPiyXVbOnW4Ub_52hdaYosMoOus';
@@ -9007,7 +8831,7 @@ async function sbPull(key){
 async function syncFromCloud(){
   setSyncUI('syncing','Syncing…');
   try{
-    const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_templates','st_ai_history','st_theme','st_holiday','st_school','st_notif_prefs','st_notif_templates']; // st_hours is recomputed from sessions below, not pulled directly
+    const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_templates','st_ai_history','st_theme','st_holiday','st_notif_prefs','st_notif_templates']; // st_hours is recomputed from sessions below, not pulled directly
     // Pull st_deleted_sessions upfront so we can use it synchronously inside forEach
     let cloudDeletedRaw=null;
     try{cloudDeletedRaw=await sbPull('st_deleted_sessions');}catch(e){}
@@ -9077,7 +8901,7 @@ async function syncFromCloud(){
             document.documentElement.setAttribute('data-theme',cloudTheme);
             updateThemeSwatches();
           }
-        } else if(k==='st_subjs'||k==='st_goals'||k==='st_todos'||k==='st_sched_overrides'||k==='st_templates'||k==='st_holiday'||k==='st_school'||k==='st_notif_prefs'||k==='st_notif_templates'){
+        } else if(k==='st_subjs'||k==='st_goals'||k==='st_todos'||k==='st_sched_overrides'||k==='st_templates'||k==='st_holiday'||k==='st_notif_prefs'||k==='st_notif_templates'){
           // Timestamped last-writer-wins: keep whichever version is newer.
           // Prevents a device with stale data from reverting a fresh edit.
           const cloudUpdatedAt=rows[i].updated_at||'';
@@ -9166,7 +8990,6 @@ async function syncFromCloud(){
   updateNotifBtn();
   scheduleNotifications();
   renderHolidayUI();
-  checkAtSchool(); // reads GPS once (only if the feature is enabled)
   // Register service worker and re-subscribe this device if notifications already granted
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/studytrack/sw.js',{scope:'/studytrack/'})
@@ -10435,10 +10258,9 @@ window.addEventListener('load',function(){
   }
   fillYesterdayPill();
   if(typeof renderHolidayDashPill==='function')renderHolidayDashPill();
-  if(typeof renderSchoolCard==='function')renderSchoolCard();
   var _rd=window.renderDashboard;
   if(typeof _rd==='function'){
-    window.renderDashboard=function(){_rd.apply(this,arguments);fillYesterdayPill();if(typeof renderHolidayDashPill==='function')renderHolidayDashPill();if(typeof renderSchoolCard==='function')renderSchoolCard();};
+    window.renderDashboard=function(){_rd.apply(this,arguments);fillYesterdayPill();if(typeof renderHolidayDashPill==='function')renderHolidayDashPill();};
   }
   // Open the Realtime WebSocket immediately at startup so it's already connected
   // by the time the user navigates to the timer — zero handshake delay.
