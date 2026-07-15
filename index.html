@@ -3610,7 +3610,7 @@ function openTodoModal(editId){
   // Populate subject dropdown
   const subjEl=document.getElementById('todo-subject');
   if(subjEl){
-    const subjs=loadSubjects();
+    const subjs=loadSubjects().filter(s=>!s.done&&getLogged(s.id)<s.req);
     subjEl.innerHTML='<option value="">No subject</option>'+
       subjs.map(s=>'<option value="'+s.id+'">'+escHtml(s.name)+'</option>').join('');
     subjEl.value='';
@@ -4717,7 +4717,7 @@ function clearLogForm(){
 }
 function renderLog(){
   const subjs=loadSubjects();
-  const available=subjs.filter(s=>!s.done);
+  const available=subjs.filter(s=>!s.done&&getLogged(s.id)<s.req);
 
   const now=nowLocal();
   const nowMins=now.getHours()*60+now.getMinutes();
@@ -5998,7 +5998,7 @@ function _updateTimerBubble(){
 
 function renderTimerPage(){
   const subjs=loadSubjects();
-  const available=subjs.filter(s=>!s.done);
+  const available=subjs.filter(s=>!s.done&&getLogged(s.id)<s.req);
   const now=nowLocal();
   const nowMins=now.getHours()*60+now.getMinutes();
   const todayBlocks=getTodayActualBlocks().sort((a,b)=>toMins(a.start)-toMins(b.start));
