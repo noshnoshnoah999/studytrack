@@ -9857,18 +9857,42 @@ let _aiHistory=_aiLoadHistory();   // [{role,content}] — persisted to localSto
 let _aiThinking=false;
 let _aiPendingActions=null; // actions waiting for user confirmation
 
+// ── UNIFIED API KEY ───────────────────────────────────────────────────────────
+// The whole app now uses ONE key store: st_anthropic_key (same as the Coach Report
+// and workout scanners). Older builds stored the coach key separately in st_ai_key;
+// migrate it once so nobody has to re-enter it.
+function _aiGetKey(){
+  let k=localStorage.getItem('st_anthropic_key');
+  if(!k){
+    const legacy=localStorage.getItem('st_ai_key');
+    if(legacy){
+      localStorage.setItem('st_anthropic_key',legacy);
+      localStorage.removeItem('st_ai_key');
+      k=legacy;
+    }
+  }
+  return k||'';
+}
 function openAISettings(){
-  const keyEl=document.getElementById('ai-api-key-input');
+  // The coach no longer has its own key panel — the API key lives in the main
+  // Settings modal alongside every other Anthropic-powered feature. Model choice
+  // still has its own small panel.
   const modelEl=document.getElementById('ai-model-select');
-  if(keyEl)keyEl.value=localStorage.getItem('st_ai_key')||'';
   if(modelEl)modelEl.value=localStorage.getItem('st_ai_model')||'claude-haiku-4-5-20251001';
+  const keyEl=document.getElementById('ai-api-key-input');
+  if(keyEl)keyEl.value=_aiGetKey();
   document.getElementById('ai-settings-overlay').classList.add('open');
 }
 function saveAISettings(){
-  const key=(document.getElementById('ai-api-key-input').value||'').trim();
   const model=document.getElementById('ai-model-select').value||'claude-haiku-4-5-20251001';
-  if(key)localStorage.setItem('st_ai_key',key);else localStorage.removeItem('st_ai_key');
   localStorage.setItem('st_ai_model',model);
+  // Key: write to the shared store so main Settings and the scanners see it too.
+  const keyEl=document.getElementById('ai-api-key-input');
+  if(keyEl){
+    const key=(keyEl.value||'').trim();
+    if(key)localStorage.setItem('st_anthropic_key',key);else localStorage.removeItem('st_anthropic_key');
+    localStorage.removeItem('st_ai_key'); // never leave a stale split key behind
+  }
   closeModal('ai-settings-overlay');
   renderAIPage();
 }
@@ -9878,29 +9902,56 @@ function _aiMakeContext(){
   const schedule=loadSchedule();
   const goals=loadGoals();
   const sessions=loadSessions();
+  // ── SINGLE CLOCK ──────────────────────────────────────────────────────────
+  // One Tokyo-anchored Date, read with LOCAL getters (nowLocal is already shifted
+  // to Tokyo wall-clock). Every date/day calc below uses THIS, so the "today",
+  // "this week", and 7-day-cutoff figures can never disagree with each other.
   const now=nowLocal();
-  // nowTokyo reads Tokyo wall-clock via getUTC* (computed from real time, not the
-  // already-shifted nowLocal, to avoid double-shifting).
-  const nowTokyo=new Date(Date.now()+9*3600000);
   const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  const DAYS_SHORT=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  // Subjects
+  const MONTHS_FULL=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const ecIds=_extraCreditIds();
+
+  // ── PRECOMPUTED FIGURES ───────────────────────────────────────────────────
+  // These come straight from the app's own (correct) functions. The model is told
+  // to REPORT them, never to recompute — LLM mental math over a text dump was the
+  // main source of wrong answers.
+  const totalLogged=getTotalLogged();
+  const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
+  const overallPct=TOTAL_REQ>0?(totalLogged/TOTAL_REQ*100):0;
+  const todayH=getTodayH();
+  const weekH=getWeekH();
+  // last-7-days rolling total (distinct from calendar-week getWeekH), excl. extra credit
+  const cut=new Date(now);cut.setDate(now.getDate()-7);
+  const cutStr=cut.getFullYear()+'-'+String(cut.getMonth()+1).padStart(2,'0')+'-'+String(cut.getDate()).padStart(2,'0');
+  const rolling7H=sessions.filter(s=>s.date>=cutStr&&!ecIds.has(s.subjectId)).reduce((a,s)=>a+s.hours,0);
+  // month-to-date, excl. extra credit
+  const monStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const monthH=sessions.filter(s=>(s.date||'').startsWith(monStr)&&!ecIds.has(s.subjectId)).reduce((a,s)=>a+s.hours,0);
+  // Graduation projection — reuse the exact figures the Graduation page shows so the
+  // coach and the app never contradict each other.
+  let grad={};
+  try{ grad=_gradSharedVars(); }catch(e){ grad={}; }
+  const remaining=(grad.remaining!=null)?grad.remaining:Math.max(0,TOTAL_REQ-totalLogged);
+  const pace=grad.pace||0;                 // h/week the app is actually projecting from
+  const estDateStr=grad.estDateStr||'—';   // projected finish month/year
+  const neededPace=grad.neededPace||0;     // h/week required to hit the deadline
+  const onTrack=grad.ahead===true;         // app's own on-track verdict
+
+  // ── SUBJECT LINES (with remaining, from precomputed values) ────────────────
   const subjLines=subjs.map(s=>{
     const logged=getLogged(s.id);
     const pct=s.req>0?Math.round(logged/s.req*100):100;
-    return '  '+s.name+' ('+s.id+'): '+logged.toFixed(1)+'h / '+s.req+'h = '+pct+'%'+(s.done?' ✓ DONE':'');
+    const rem=Math.max(0,s.req-logged);
+    return '  '+s.name+' ('+s.id+'): '+logged.toFixed(1)+'h / '+s.req+'h = '+pct+'%'
+      +(s.done||rem<=0?' ✓ DONE':' — '+rem.toFixed(1)+'h left');
   }).join('\n');
-  // Schedule blocks
+
+  // ── SCHEDULE (NOTE: no escHtml — this is plain text for the model, not HTML) ─
   const schedLines=schedule.length?schedule.map(b=>
-    '  ['+b.id+'] '+DAYS[b.day||0]+' '+b.start+'-'+b.end+': '+escHtml(b.label||b.type||'Study')+(b.subjectId?' → '+b.subjectId:'')+(b.locked?' 🔒':'')
+    '  ['+b.id+'] '+DAYS[b.day||0]+' '+b.start+'-'+b.end+': '+(b.label||b.type||'Study')+(b.subjectId?' → '+b.subjectId:'')+(b.locked?' [locked]':'')
   ).join('\n'):'  (no blocks set)';
-  // Recent pace
-  const cut=new Date(now);cut.setDate(now.getDate()-7);
-  const cutStr=cut.getFullYear()+'-'+String(cut.getMonth()+1).padStart(2,'0')+'-'+String(cut.getDate()).padStart(2,'0');
-  const recentH=sessions.filter(s=>s.date>=cutStr).reduce((a,s)=>a+s.hours,0).toFixed(1);
-  const totalLogged=getTotalLogged();
-  const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
-  // All sessions (sorted newest first, compact format for context)
+
+  // ── SESSIONS (newest first) ────────────────────────────────────────────────
   const sortedSessions=[...sessions].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   const sessionLines=sortedSessions.length
     ?sortedSessions.map(s=>{
@@ -9912,62 +9963,77 @@ function _aiMakeContext(){
         return '  '+s.date+' '+subjName+' '+s.hours.toFixed(2)+'h'+timeStr+notesStr+loggedAtStr;
       }).join('\n')
     :'  (no sessions logged yet)';
-  // Todos
+
+  // ── TODOS ──────────────────────────────────────────────────────────────────
   const todos=loadTodos();
   const todoLines=todos.length
     ?todos.map(t=>'  ['+(t.done?'x':' ')+'] '+(t.date||'')+(t.time?' '+t.time:'')+(t.subjectId?' ['+t.subjectId+']':'')+' '+t.text+(t.createdAt?' (created '+t.createdAt.slice(0,10)+')':'')).join('\n')
     :'  (no todos)';
-  return{subjLines,schedLines,goals,recentH,totalLogged,TOTAL_REQ,now,nowTokyo,DAYS,subjs,schedule,sessionLines,sessionCount:sessions.length,todoLines};
+
+  return{
+    subjLines,schedLines,sessionLines,todoLines,goals,subjs,schedule,now,DAYS,MONTHS_FULL,
+    totalLogged,TOTAL_REQ,overallPct,todayH,weekH,rolling7H,monthH,
+    remaining,pace,estDateStr,neededPace,onTrack,sessionCount:sessions.length
+  };
 }
 
 function _aiSystemPrompt(ctx){
-  const {subjLines,schedLines,goals,recentH,totalLogged,TOTAL_REQ,now,nowTokyo,DAYS,subjs,sessionLines,sessionCount,todoLines}=ctx;
-  const pct=TOTAL_REQ>0?(totalLogged/TOTAL_REQ*100).toFixed(1):0;
-  return `You are an AI study coach for Noah, a TIHS homeschool student in Tokyo, Japan, working toward graduation by October 2027.
+  const {
+    subjLines,schedLines,sessionLines,todoLines,goals,subjs,now,DAYS,MONTHS_FULL,
+    totalLogged,TOTAL_REQ,overallPct,todayH,weekH,rolling7H,monthH,
+    remaining,pace,estDateStr,neededPace,onTrack,sessionCount
+  }=ctx;
+  const hm=_fmtDecimalToHm;
+  return `You are the Schedule Coach inside Noah's StudyTrack app. Noah is a TIHS student in Tokyo (JST) on a self-paced US-diploma track, working toward graduation by ${GRAD_DEADLINE}.
 
-TODAY: ${DAYS[nowTokyo.getUTCDay()]}, ${nowTokyo.getUTCDate()} ${['January','February','March','April','May','June','July','August','September','October','November','December'][nowTokyo.getUTCMonth()]} ${nowTokyo.getUTCFullYear()}
-CURRENT TIME (Tokyo/JST): ${String(nowTokyo.getUTCHours()).padStart(2,'0')}:${String(nowTokyo.getUTCMinutes()).padStart(2,'0')}
-OVERALL PROGRESS: ${totalLogged.toFixed(1)}h / ${TOTAL_REQ}h logged (${pct}%)
-RECENT PACE: ${recentH}h in last 7 days
-TEACHER'S TARGET: ${goals.teacherTarget||6.3}h/day (${_fmtDecimalToHm(goals.teacherTarget||6.3)})
-MY DAILY GOAL: ${goals.daily}h/day | WEEKLY GOAL: ${goals.weekly||((goals.daily||0)*(goals.daysPerWeek||5)).toFixed(1)}h over ${goals.daysPerWeek||5} days/week
+=== PRECOMPUTED FIGURES (authoritative — REPORT these, never recalculate) ===
+The app has already done all the math. When Noah asks about progress, pace, hours, or timing, quote these numbers directly. Do NOT add up sessions yourself or estimate — you will get it wrong; trust these.
 
-SUBJECTS (name | id | logged | required | %done):
+TODAY: ${DAYS[now.getDay()]}, ${now.getDate()} ${MONTHS_FULL[now.getMonth()]} ${now.getFullYear()}
+CURRENT TIME (Tokyo/JST): ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}
+
+OVERALL: ${totalLogged.toFixed(1)}h logged of ${TOTAL_REQ}h required (${overallPct.toFixed(1)}%). ${remaining.toFixed(1)}h remaining.
+TODAY SO FAR: ${todayH.toFixed(1)}h (${hm(todayH)})
+THIS CALENDAR WEEK (Mon–Sun): ${weekH.toFixed(1)}h (${hm(weekH)})
+LAST 7 DAYS (rolling): ${rolling7H.toFixed(1)}h
+THIS MONTH SO FAR: ${monthH.toFixed(1)}h
+PROJECTED PACE: ${pace.toFixed(1)}h/week → estimated finish ${estDateStr}
+PACE NEEDED to hit ${GRAD_DEADLINE}: ${neededPace.toFixed(1)}h/week
+ON TRACK FOR DEADLINE: ${onTrack?'yes, ahead of/at the required pace':'no, currently behind the required pace'}
+TEACHER'S TARGET: ${(goals.teacherTarget||6.3)}h/day (${hm(goals.teacherTarget||6.3)})
+NOAH'S GOAL: ${goals.daily}h/day, ${goals.weekly||((goals.daily||0)*(goals.daysPerWeek||5))}h/week over ${goals.daysPerWeek||5} days
+
+SUBJECTS (name (id): logged / required = % — remaining):
 ${subjLines}
 
-CURRENT WEEKLY SCHEDULE (recurring blocks, day=0-6 Sun-Sat):
+CURRENT WEEKLY SCHEDULE (recurring blocks; day 0=Sun … 6=Sat):
 ${schedLines}
 
 ALL LOGGED SESSIONS (${sessionCount} total, newest first):
-  Format: study-date  subject  hours  (start–end)  | notes: "..."  | logged: YYYY-MM-DD HH:MM (when Noah actually submitted this to the app)
+  Format: date  subject  hours  (start–end) | notes | logged: when Noah submitted it
 ${sessionLines}
 
 TODOS / REMINDERS:
 ${todoLines}
 
 SUBJECT IDs: ${subjs.map(s=>s.id+'='+s.name).join(' | ')}
-DAYS: 0=Sunday 1=Monday 2=Tuesday 3=Wednesday 4=Thursday 5=Friday 6=Saturday
-TIME FORMAT: "HH:MM" 24h
+TIME FORMAT: "HH:MM" 24h. DAYS: 0=Sun 1=Mon 2=Tue 3=Wed 4=Thu 5=Fri 6=Sat.
 
-You have FULL access to all of Noah's app data. Answer questions about any of it directly and accurately:
-- Session history (dates, hours, subjects, notes, when actually logged)
-- Progress per subject and overall graduation progress
-- Schedule blocks and patterns
-- Todos and reminders
-- Goals and pace
+=== HOW TO ANSWER ===
+- Be direct and concise. Report the precomputed figures above; do not redo arithmetic.
+- If something Noah asks about is genuinely NOT in the data above (a subject with no sessions, a date outside the list, info the app doesn't track), say so plainly — e.g. "There's nothing logged for that." Do NOT invent an answer. An honest "I don't have that" is always better than a confident guess.
+- When counting or listing specific sessions, read them off the SESSIONS list exactly as written.
 
-Be conversational and concise. Search the data above and give exact answers — never say you don't have access.
+=== SCHEDULE EDITS ===
+When Noah asks you to add, move, change, or remove study blocks, you MUST append an <actions> block at the very END of your reply. This block is the ONLY thing that actually edits the schedule — if you describe a change in words but omit the block, NOTHING happens.
 
-When the user asks you to add, move, change, or remove study blocks, you MUST append an <actions> block at the very END of your reply. This block is the ONLY thing that actually edits the schedule — if you describe a change in words but omit the block, NOTHING happens and the user is left thinking it worked when it didn't.
-
-Rules for the <actions> block — follow exactly:
-- Put RAW JSON directly between the tags. Do NOT wrap it in a code fence (no \`\`\`), no comments, no text inside the tags. Just the array.
-- It is one array of action objects. Copy this format exactly:
+Rules — follow exactly:
+- Put RAW JSON directly between the tags. No code fence (no \`\`\`), no comments, no text inside the tags. Just the array.
+- One array of action objects. Copy this format exactly:
 <actions>[{"type":"add","day":1,"start":"09:00","end":"11:00","subjectId":"japanese","label":"Japanese","blockType":"study"},{"type":"edit","id":"BLOCK_ID","start":"10:00","end":"12:00","label":"New label","day":2},{"type":"delete","id":"BLOCK_ID"}]</actions>
-- "add" → day,start,end,label,blockType,subjectId? · "edit" → id + only the fields that change · "delete" → id. For edit/delete, use the exact block id from the CURRENT WEEKLY SCHEDULE above.
-
-In the visible part of your reply, present the changes as a PROPOSAL the user still needs to confirm — e.g. end with "Tap 'Apply changes' below to add these to your schedule." Do NOT say you've already updated/changed/moved anything: the schedule only changes when the user taps Apply.
-Only include an <actions> block for real schedule changes — omit it entirely for questions or discussion.`;
+- "add" → day,start,end,label,blockType,subjectId? · "edit" → id + only the fields that change · "delete" → id. For edit/delete, use the exact block id from the schedule above.
+- In the visible reply, present changes as a PROPOSAL — end with "Tap 'Apply changes' below." Do NOT claim you've already changed anything; the schedule only changes when Noah taps Apply.
+- Only include an <actions> block for real schedule changes — omit it for questions or discussion.`;
 }
 
 function _simpleMarkdown(text){
@@ -10081,7 +10147,7 @@ function _aiApplyActions(actions,msgIdx){
 function _aiRenderMessages(){
   const el=document.getElementById('ai-chat-messages');
   if(!el)return;
-  const hasKey=!!localStorage.getItem('st_ai_key');
+  const hasKey=!!_aiGetKey();
   const SUGGESTIONS=['What should I study this week?','Which subject needs the most attention?','How many hours did I log this month?','What was my longest session ever?','Add more Japanese blocks on weekdays'];
   if(!_aiHistory.length){
     el.innerHTML='<div style="text-align:center;padding:32px 16px 20px">'+
@@ -10159,7 +10225,7 @@ function _aiRenderMessages(){
 
 async function _aiSendMsg(text,image=null){
   if(_aiThinking||(!text.trim()&&!image))return;
-  const apiKey=localStorage.getItem('st_ai_key');
+  const apiKey=_aiGetKey();
   if(!apiKey){openAISettings();return;}
   // Clear input
   const inp=document.getElementById('ai-input-field');
@@ -10209,7 +10275,7 @@ async function _aiSendMsg(text,image=null){
       },
       body:JSON.stringify({
         model,
-        max_tokens:1500,
+        max_tokens:3000,
         system:_aiSystemPrompt(ctx),
         messages:apiMessages
       })
@@ -10365,7 +10431,7 @@ function renderAIPage(){
   // Key status
   const statusEl=document.getElementById('ai-key-status');
   if(statusEl){
-    const hasKey=!!localStorage.getItem('st_ai_key');
+    const hasKey=!!_aiGetKey();
     const model=localStorage.getItem('st_ai_model')||'claude-haiku-4-5-20251001';
     statusEl.textContent=hasKey?model.replace('claude-','').replace('-2024',''):'No API key';
     statusEl.style.color=hasKey?'var(--ok)':'var(--err)';
