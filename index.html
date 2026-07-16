@@ -4789,8 +4789,7 @@ function renderLog(){
     '';
   const restOpts=available.map(s=>{
     const pre=s.locked?'🔒 ':'';
-    const suf=s.passive?' (passive)':'';
-    return'<option value="'+s.id+'">'+pre+escHtml(s.name)+suf+'</option>';
+    return'<option value="'+s.id+'">'+pre+escHtml(s.name)+'</option>';
   }).join('');
   const opts=schedOpt+restOpts;
 
