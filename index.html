@@ -2810,7 +2810,20 @@ function loadSessions(){
   try{const s=localStorage.getItem('st_sessions');if(s)return JSON.parse(s);}catch(e){}
   return[];
 }
-function saveSessions(s){localStorage.setItem('st_sessions',JSON.stringify(s));sbPush('st_sessions',s);}
+// Version guard (same pattern as st_sched, see _getSchedV/_setSchedLV/_setSchedCV):
+// lv bumps on every local edit; cv only bumps once that edit's push is confirmed.
+// syncFromCloud must not let a stale cloud pull overwrite an unconfirmed local edit —
+// this is what caused "edit a logged session, hit Save, it reverts."
+function _getSessV(){return parseInt(localStorage.getItem('st_sessions_lv')||'0',10);}
+function _setSessLV(v){localStorage.setItem('st_sessions_lv',String(v));}
+function _setSessCV(v){localStorage.setItem('st_sessions_cv',String(v));}
+function _getSessCV(){return parseInt(localStorage.getItem('st_sessions_cv')||'0',10);}
+function saveSessions(s){
+  localStorage.setItem('st_sessions',JSON.stringify(s));
+  const newV=_getSessV()+1;
+  _setSessLV(newV);
+  sbPush('st_sessions',s).then(()=>{_setSessCV(newV);});
+}
 
 // Track deleted session IDs so deletions propagate across devices on sync
 function _tombstoneSession(id){
@@ -6578,7 +6591,7 @@ function _doLogSession(){
 
 // ── After-run stretches auto-fill ───────────────────────────────────────────
 // After logging a PE run, offer to pre-fill the post-run stretches session:
-// PE/Cardio, starts 5 min after the run ends, lasts 15 min, note
+// PE/Cardio, starts 5 min after the run ends, lasts 20 min, note
 // "{15th June} - After Run Stretches" (matches Noah's existing log entries).
 let _pendingStretch=null;
 function _addMins(t,n){let x=(toMins(t)+n)%1440;if(x<0)x+=1440;return String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0');}
@@ -6615,17 +6628,17 @@ function _maybeOfferStretches(subjectId,date,start,end,notes){
   _showStretchPrompt(date,end);
 }
 function _showStretchPrompt(date,end){
-  const sStart=_addMins(end,5),sEnd=_addMins(sStart,15);
+  const sStart=_addMins(end,5),sEnd=_addMins(sStart,20);
   const note=_ordinalDate(date)+' - After Run Stretches';
   const el=document.getElementById('stretch-preview');
-  if(el)el.innerHTML='<b style="color:var(--text)">PE / Cardio</b> · 15 min<br>'+sStart+' – '+sEnd+'<br><span style="color:var(--text2)">'+escHtml(note)+'</span>';
+  if(el)el.innerHTML='<b style="color:var(--text)">PE / Cardio</b> · 20 min<br>'+sStart+' – '+sEnd+'<br><span style="color:var(--text2)">'+escHtml(note)+'</span>';
   const ov=document.getElementById('stretch-modal-overlay');
   if(ov)ov.classList.add('open');
 }
 function fillStretchLog(){
   if(!_pendingStretch){closeModal('stretch-modal-overlay');return;}
   const {date,end}=_pendingStretch;
-  const sStart=_addMins(end,5),sEnd=_addMins(sStart,15);
+  const sStart=_addMins(end,5),sEnd=_addMins(sStart,20);
   showPage('log');
   const sub=document.getElementById('log-subject'); if(sub)sub.value='pe';
   if(typeof updateLogFormColour==='function')updateLogFormColour();
@@ -9082,6 +9095,18 @@ async function syncFromCloud(){
     KEYS.forEach((k,i)=>{
       if(rows[i]&&rows[i].value!==undefined){
         if(k==='st_sessions'){
+          // Version guard: if there's a local edit (saveEditSession/saveSessions)
+          // whose push hasn't been confirmed yet, do NOT merge in the cloud copy —
+          // the ID-based merge below only adds sessions cloud doesn't have at all,
+          // so an *edited* session (same ID, changed fields) would otherwise have
+          // its cloud (stale) fields silently win. Instead re-push local and bail
+          // on this cycle; next sync will pick up the confirmed state.
+          const sessLv=_getSessV(),sessCv=_getSessCV();
+          if(sessLv!==0&&sessCv!==sessLv){
+            const localUnconfirmed=JSON.parse(localStorage.getItem('st_sessions')||'[]');
+            sbPush('st_sessions',localUnconfirmed).then(()=>{_setSessCV(sessLv);});
+            return; // skip merge for st_sessions this cycle — forEach `return` = continue
+          }
           // Merge sessions by ID so local sessions are never lost if a push failed
           const local=JSON.parse(localStorage.getItem('st_sessions')||'[]');
           const cloud=Array.isArray(rows[i].value)?rows[i].value:[];
