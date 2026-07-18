@@ -135,7 +135,7 @@ jobs:
             }
 
             // Fetch everything in parallel
-            const [schedule, subjectsRaw, sessionsRaw, hoursRaw, subsRaw, notifDone, todosRaw, overridesRaw, goalsRaw, templatesRaw, holidayRaw, prefsRaw] = await Promise.all([
+            const [schedule, subjectsRaw, sessionsRaw, hoursRaw, subsRaw, notifDone, todosRaw, overridesRaw, goalsRaw, templatesRaw, holidayRaw, prefsRaw, teacherPlanRaw] = await Promise.all([
               sbGet('st_sched'),
               sbGet('st_subjs'),
               sbGet('st_sessions'),
@@ -148,6 +148,7 @@ jobs:
               sbGet('st_notif_templates'),
               sbGet('st_holiday'),
               sbGet('st_notif_prefs'),
+              sbGet('st_teacher_plan'),   // teacher-pushed daily timetable; wins over st_sched when present
             ]);
 
             if (!subsRaw) { console.log('No push subscriptions found'); return; }
@@ -206,15 +207,38 @@ jobs:
             // respecting each block's recurrence (weekly / biweekly_a / biweekly_b), same as the app.
             const overrides = overridesRaw || {};
             const hasOverride = !!overrides[todayStr];
-            const todayBlocks = (hasOverride ? overrides[todayStr] : (schedule || []).filter(b => {
-                if (b.day !== dow) return false;
-                if (!b.recurrence || b.recurrence === 'weekly') return true;
-                if (b.recurrence === 'biweekly_a') return parity === 0;
-                if (b.recurrence === 'biweekly_b') return parity === 1;
-                return true;
-              }))
-              .sort((a, b) => toMins(a.start) - toMins(b.start));
-            console.log(`Schedule source: ${hasOverride ? 'override for ' + todayStr : 'weekly day ' + dow + ' Week ' + (parity===0?'A':'B')} | ${todayBlocks.length} blocks`);
+            // Teacher plan (pushed via set_teacher_plan) is the authoritative timetable
+            // for today. When it exists we build EVERY block-based push and the daily
+            // email from it and ignore st_sched entirely, so the two never contradict.
+            // Teacher blocks carry no id (schedule blocks do, and the dedup tags below
+            // key on b.id), so synthesise a stable one from start + subject/type.
+            const teacherToday = teacherPlanRaw && teacherPlanRaw[todayStr];
+            const hasTeacherPlan = !!(teacherToday && Array.isArray(teacherToday.blocks) && teacherToday.blocks.length);
+            let blockSource;
+            let todayBlocks;
+            if (hasTeacherPlan) {
+              blockSource = 'teacher plan for ' + todayStr;
+              todayBlocks = teacherToday.blocks
+                .map((b, i) => ({
+                  id: 'tp-' + todayStr + '-' + i,
+                  start: b.start, end: b.end,
+                  subjectId: b.subjectId || null,
+                  label: b.label || '',
+                  type: b.type || 'study'
+                }))
+                .sort((a, b) => toMins(a.start) - toMins(b.start));
+            } else {
+              blockSource = hasOverride ? 'override for ' + todayStr : 'weekly day ' + dow + ' Week ' + (parity===0?'A':'B');
+              todayBlocks = (hasOverride ? overrides[todayStr] : (schedule || []).filter(b => {
+                  if (b.day !== dow) return false;
+                  if (!b.recurrence || b.recurrence === 'weekly') return true;
+                  if (b.recurrence === 'biweekly_a') return parity === 0;
+                  if (b.recurrence === 'biweekly_b') return parity === 1;
+                  return true;
+                }))
+                .sort((a, b) => toMins(a.start) - toMins(b.start));
+            }
+            console.log(`Schedule source: ${blockSource} | ${todayBlocks.length} blocks`);
 
             const subjects = subjectsRaw || [];
             const sessions = sessionsRaw || [];
