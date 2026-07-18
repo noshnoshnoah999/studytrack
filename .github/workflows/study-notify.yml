@@ -207,16 +207,22 @@ jobs:
             // respecting each block's recurrence (weekly / biweekly_a / biweekly_b), same as the app.
             const overrides = overridesRaw || {};
             const hasOverride = !!overrides[todayStr];
-            // Teacher plan (pushed via set_teacher_plan) is the authoritative timetable
-            // for today. When it exists we build EVERY block-based push and the daily
-            // email from it and ignore st_sched entirely, so the two never contradict.
-            // Teacher blocks carry no id (schedule blocks do, and the dedup tags below
-            // key on b.id), so synthesise a stable one from start + subject/type.
+            // Precedence: one-off override for today > teacher plan > weekly schedule.
+            // A deliberate override for today always wins; otherwise the teacher plan
+            // (pushed via set_teacher_plan) is authoritative and every block-based push
+            // + the daily email are built from it, ignoring the weekly st_sched so the
+            // two never contradict. Teacher blocks carry no id (schedule blocks do, and
+            // the dedup tags below key on b.id), so synthesise a stable one from index.
             const teacherToday = teacherPlanRaw && teacherPlanRaw[todayStr];
             const hasTeacherPlan = !!(teacherToday && Array.isArray(teacherToday.blocks) && teacherToday.blocks.length);
             let blockSource;
             let todayBlocks;
-            if (hasTeacherPlan) {
+            if (hasOverride) {
+              blockSource = 'override for ' + todayStr;
+              todayBlocks = overrides[todayStr]
+                .slice()
+                .sort((a, b) => toMins(a.start) - toMins(b.start));
+            } else if (hasTeacherPlan) {
               blockSource = 'teacher plan for ' + todayStr;
               todayBlocks = teacherToday.blocks
                 .map((b, i) => ({
@@ -228,14 +234,14 @@ jobs:
                 }))
                 .sort((a, b) => toMins(a.start) - toMins(b.start));
             } else {
-              blockSource = hasOverride ? 'override for ' + todayStr : 'weekly day ' + dow + ' Week ' + (parity===0?'A':'B');
-              todayBlocks = (hasOverride ? overrides[todayStr] : (schedule || []).filter(b => {
+              blockSource = 'weekly day ' + dow + ' Week ' + (parity===0?'A':'B');
+              todayBlocks = (schedule || []).filter(b => {
                   if (b.day !== dow) return false;
                   if (!b.recurrence || b.recurrence === 'weekly') return true;
                   if (b.recurrence === 'biweekly_a') return parity === 0;
                   if (b.recurrence === 'biweekly_b') return parity === 1;
                   return true;
-                }))
+                })
                 .sort((a, b) => toMins(a.start) - toMins(b.start));
             }
             console.log(`Schedule source: ${blockSource} | ${todayBlocks.length} blocks`);

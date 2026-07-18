@@ -4187,18 +4187,18 @@ function getBlocksForDate(date,schedule){
     return true;
   });
 }
-// Returns today's actual blocks. Precedence: teacher plan (pushed by the digital
-// teacher for *today*) > one-off override > weekly schedule. The teacher plan is
-// the authoritative daily timetable, so it wins over anything built from st_sched
-// and keeps the app, notifications and timer from contradicting it.
+// Returns today's actual blocks. Precedence: one-off override for today >
+// teacher plan (pushed by the digital teacher for *today*) > weekly schedule.
+// A deliberate user override for today always wins; otherwise the teacher plan
+// is the authoritative daily timetable and beats the weekly template.
 function getTodayActualBlocks(){
-  const tp=teacherPlanBlocksToday();
-  if(tp.length)return tp;
   const now=nowLocal();
   const overrides=loadOverrides();
   const ds=todayStr();
-  if(overrides[ds])return overrides[ds];
-  return getBlocksForDate(now,loadSchedule());
+  if(overrides[ds])return overrides[ds];        // user one-off override wins
+  const tp=teacherPlanBlocksToday();
+  if(tp.length)return tp;                        // then the teacher plan
+  return getBlocksForDate(now,loadSchedule());   // else the weekly template
 }
 // Get the calendar date string for the currently selected schedule day
 function selDateStr(){
