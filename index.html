@@ -1278,6 +1278,7 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
       <div id="home-pinned-card"></div>
       <div id="dash-blocks-container">
         <div id="now-next-banner" data-block="now-next-banner"></div>
+        <div id="teacher-plan-card" data-block="teacher-plan-card"></div>
         <div id="today-card" data-block="today-card"></div>
         <div id="dash-pace-strip" style="margin-top:10px"></div>
         <div class="stats-strip" id="stats-strip" style="margin-top:10px" data-block="stats-strip"></div>
@@ -2372,6 +2373,68 @@ function renderNowNext(){
 
   // Nothing scheduled today or day is done
   el.innerHTML='';
+}
+
+// ── TODAY'S PLAN (teacher-pushed timetable) ─────────────────────────────────────
+// Renders the digital teacher's timetable for today with visual priority on Home.
+// When there's no plan for today the card is emptied and the rest of the dashboard
+// behaves exactly as before (Now/Next, schedule, etc. all fall back to st_sched).
+function renderTeacherPlan(){
+  const el=document.getElementById('teacher-plan-card');
+  if(!el)return;
+  const plan=teacherPlanToday();
+  if(!plan){el.innerHTML='';return;}
+  const SUBJ_COLORS={japanese:'#6366f1',cwp:'#10b981',english:'#3b82f6',english_11:'#60a5fa',english_12:'#93c5fd',el1:'#94a3b8',wa_hist:'#ec4899',fine_art:'#8b5cf6',us_hist:'#f97316',pe:'#22c55e',health:'#ef4444',civics:'#f59e0b',science:'#06b6d4',lab_sci:'#14b8a6',algebra1:'#d946ef',geometry:'#a855f7',algebra2:'#7c3aed',el2:'#94a3b8',el3:'#64748b',el4:'#475569',am_hist:'#b45309',jp_exch:'#7c3aed'};
+  const TYPE_COLORS={break:'#9ca3af',lunch:'#f59e0b',admin:'#64748b',work:'#d97706'};
+  const blockColor=b=>b.type==='study'?(SUBJ_COLORS[b.subjectId]||'var(--o)'):(TYPE_COLORS[b.type]||'var(--text3)');
+  const now=nowLocal();
+  const nowMins=now.getHours()*60+now.getMinutes();
+  const blocks=[...plan.blocks].sort((a,b)=>toMins(a.start)-toMins(b.start));
+  // "Generated at" — show wall-clock time the teacher built this plan
+  let genLabel='';
+  if(plan.generatedAt){
+    const g=new Date(plan.generatedAt);
+    if(!isNaN(g)){const gl=toAppTz(g);genLabel='Updated '+String(gl.getHours()).padStart(2,'0')+':'+String(gl.getMinutes()).padStart(2,'0');}
+  }
+  const rows=blocks.map(b=>{
+    const color=blockColor(b);
+    const active=nowMins>=toMins(b.start)&&nowMins<toMins(b.end);
+    const past=toMins(b.end)<=nowMins;
+    const topic=b.topic?'<div style="font-size:12px;color:var(--text2);margin-top:2px;line-height:1.35">'+escHtml(b.topic)+'</div>':'';
+    const firstAction=b.firstAction?
+      '<div style="margin-top:8px;padding:8px 10px;background:var(--bg3);border-radius:8px;font-size:12px;color:var(--text2);line-height:1.4"><span style="font-weight:700;color:var(--text)">First action:</span> '+escHtml(b.firstAction)+'</div>':'';
+    const nowPill=active?'<span style="font-size:10px;font-weight:800;letter-spacing:0.3px;color:#fff;background:'+ (b.type==='study'?color:'var(--o)') +';border-radius:100px;padding:2px 8px;margin-left:6px;vertical-align:middle">NOW</span>':'';
+    const head=
+      '<div style="display:flex;align-items:flex-start;gap:10px">'+
+        '<div style="width:9px;height:9px;border-radius:50%;background:'+color+';margin-top:5px;flex-shrink:0"></div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'+
+            '<span style="font-size:14px;font-weight:700;color:var(--text)">'+escHtml(b.label||'')+nowPill+'</span>'+
+            '<span style="font-size:12px;color:var(--text3);white-space:nowrap;font-variant-numeric:tabular-nums">'+escHtml(b.start)+'–'+escHtml(b.end)+'</span>'+
+          '</div>'+
+          topic+
+        '</div>'+
+      '</div>';
+    const style='background:var(--bg2);border:1px solid '+(active?color:'var(--border)')+';border-radius:12px;padding:11px 13px'+(past?';opacity:0.55':'');
+    if(b.firstAction){
+      return'<details class="tp-block" style="'+style+'"'+(active?' open':'')+'>'+
+        '<summary style="list-style:none;cursor:pointer;outline:none">'+head+'</summary>'+firstAction+
+      '</details>';
+    }
+    return'<div style="'+style+'">'+head+'</div>';
+  }).join('');
+  el.innerHTML=
+    '<div class="card" style="margin-top:10px;border:1px solid var(--od2);background:var(--ol)">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+        '<div style="display:flex;align-items:center;gap:8px">'+
+          '<span style="font-size:16px">🧭</span>'+
+          '<span style="font-size:15px;font-weight:800;letter-spacing:-0.3px;color:var(--text)">Today\'s Plan</span>'+
+          '<span style="font-size:10px;font-weight:700;letter-spacing:0.3px;color:var(--o);background:var(--bg2);border:1px solid var(--od2);border-radius:100px;padding:2px 8px">from your teacher</span>'+
+        '</div>'+
+        (genLabel?'<span style="font-size:11px;color:var(--text3)">'+genLabel+'</span>':'')+
+      '</div>'+
+      '<div style="display:flex;flex-direction:column;gap:8px">'+rows+'</div>'+
+    '</div>';
 }
 
 function weekRange(){
@@ -3801,6 +3864,7 @@ function updateSidebar(){
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 function renderDashboard(){
   renderNowNext();
+  renderTeacherPlan();
   const now=nowLocal();
   const hour=now.getHours();
   let greet='Good Morning';
@@ -4065,6 +4129,38 @@ function saveOverrides(o){
   localStorage.setItem('st_sched_overrides_updated_at',new Date().toISOString());
   sbPush('st_sched_overrides',o);
 }
+// ── TEACHER PLAN ────────────────────────────────────────────────────────────────
+// The digital teacher pushes each day's timetable into st_teacher_plan via the
+// set_teacher_plan RPC (see SUPABASE_WRITE_RPC.sql / WRITE_PATH_README.md). The app
+// is READ-ONLY here: st_teacher_plan is pulled in syncFromCloud but never sbPush-ed.
+// Shape: { "YYYY-MM-DD": { generatedAt: ISO, blocks: [
+//   { start:"09:00", end:"10:30", subjectId:"algebra1"|null, label, type, topic, firstAction } ] } }
+function loadTeacherPlan(){
+  try{return JSON.parse(localStorage.getItem('st_teacher_plan')||'{}')||{};}catch(e){return{};}
+}
+// Today's plan object ({generatedAt, blocks}) or null when there's no usable plan.
+function teacherPlanToday(){
+  const p=loadTeacherPlan();
+  const t=p&&p[todayStr()];
+  return(t&&Array.isArray(t.blocks)&&t.blocks.length)?t:null;
+}
+// Today's plan blocks, normalised into the same shape the schedule uses (adds a
+// stable id — several consumers dedup on b.id — and defaults). [] when no plan.
+function teacherPlanBlocksToday(){
+  const t=teacherPlanToday();
+  if(!t)return[];
+  const ds=todayStr();
+  return t.blocks.map((b,i)=>({
+    id:'tp-'+ds+'-'+i,
+    start:b.start,end:b.end,
+    subjectId:b.subjectId||null,
+    label:b.label||'',
+    type:b.type||'study',
+    topic:b.topic||'',
+    firstAction:b.firstAction||'',
+    _teacher:true
+  }));
+}
 // Returns 0 (Week A) or 1 (Week B) for any given date, using an epoch-anchored
 // biweekly counter. The old ISO-week%2 method double-flipped at 53-ISO-week year
 // boundaries (2026 has 53 ISO weeks -> two consecutive "Week B" at 2027-01-04).
@@ -4091,8 +4187,13 @@ function getBlocksForDate(date,schedule){
     return true;
   });
 }
-// Returns today's actual blocks — override if one exists, else weekly schedule
+// Returns today's actual blocks. Precedence: teacher plan (pushed by the digital
+// teacher for *today*) > one-off override > weekly schedule. The teacher plan is
+// the authoritative daily timetable, so it wins over anything built from st_sched
+// and keeps the app, notifications and timer from contradicting it.
 function getTodayActualBlocks(){
+  const tp=teacherPlanBlocksToday();
+  if(tp.length)return tp;
   const now=nowLocal();
   const overrides=loadOverrides();
   const ds=todayStr();
@@ -9078,7 +9179,7 @@ async function sbPull(key){
 async function syncFromCloud(){
   setSyncUI('syncing','Syncing…');
   try{
-    const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_templates','st_ai_history','st_theme','st_holiday','st_notif_prefs','st_notif_templates']; // st_hours is recomputed from sessions below, not pulled directly
+    const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_templates','st_ai_history','st_theme','st_holiday','st_notif_prefs','st_notif_templates','st_teacher_plan']; // st_hours is recomputed from sessions below, not pulled directly. st_teacher_plan is written externally by the teacher RPC and only ever pulled here (cloud-authoritative, falls through to the default setItem branch — the app never sbPushes it).
     // Pull st_deleted_sessions upfront so we can use it synchronously inside forEach
     let cloudDeletedRaw=null;
     try{cloudDeletedRaw=await sbPull('st_deleted_sessions');}catch(e){}
