@@ -1,0 +1,21 @@
+{
+  "generatedAt": "2026-07-20T04:43:00Z",
+  "blocks": [
+    {
+      "start": "09:00",
+      "end": "17:00",
+      "subjectId": null,
+      "label": "Work (Bungu)",
+      "type": "work"
+    },
+    {
+      "start": "17:30",
+      "end": "18:15",
+      "subjectId": "health",
+      "label": "Health Science",
+      "type": "study",
+      "topic": "Finish Ginger Shot & Internal Conflicts document",
+      "firstAction": "Open the doc, write the remaining internal-conflicts section using the turmeric/skin-barrier research already gathered. Open todo since 9 Jul — worth closing out this evening since Monday has no desk-study blocks scheduled."
+    }
+  ]
+}
