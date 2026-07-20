@@ -98,6 +98,10 @@ jobs:
               }
 
               try {
+                const reqBody = JSON.stringify({ p_date, p_plan: plan, token: WRITE_TOKEN });
+                console.log(`[RELAY] → POST ${SB_URL}/rest/v1/rpc/set_teacher_plan`);
+                console.log(`[RELAY]   request body: ${reqBody}`);
+
                 const r = await fetch(`${SB_URL}/rest/v1/rpc/set_teacher_plan`, {
                   method: 'POST',
                   headers: {
@@ -105,23 +109,31 @@ jobs:
                     'Authorization': 'Bearer ' + SB_SERVICE_KEY,
                     'Content-Type': 'application/json'
                   },
-                  body: JSON.stringify({ p_date, p_plan: plan, token: WRITE_TOKEN })
+                  body: reqBody
                 });
 
+                // Read the raw body ONCE (a Response body can only be consumed once),
+                // then log it verbatim regardless of success/failure, so we can see
+                // exactly what Supabase actually said instead of our interpretation
+                // of it.
+                const rawBody = await r.text();
+                const headerDump = [...r.headers.entries()].map(([k, v]) => `${k}: ${v}`).join('\n    ');
+                console.log(`[RELAY] ← HTTP ${r.status} ${r.statusText} for ${file}`);
+                console.log(`[RELAY]   response headers:\n    ${headerDump}`);
+                console.log(`[RELAY]   response body: ${rawBody}`);
+
                 if (!r.ok) {
-                  const body = await r.text();
-                  console.error(`[RELAY] ✗ ${file}: set_teacher_plan returned ${r.status} — ${body} — left in place for retry.`);
+                  console.error(`[RELAY] ✗ ${file}: set_teacher_plan returned ${r.status} — left in place for retry.`);
                   failures++;
                   continue;
                 }
 
-                await r.json(); // consume body; success shape is the merged st_teacher_plan object
-
                 const dest = path.join(PROCESSED_DIR, file);
                 fs.renameSync(fullPath, dest);
-                console.log(`[RELAY] ✓ ${file}: set_teacher_plan for ${p_date} succeeded, moved to ${dest}.`);
+                console.log(`[RELAY] ✓ ${file}: set_teacher_plan for ${p_date} returned HTTP ${r.status}, moved to ${dest}.`);
               } catch (e) {
                 console.error(`[RELAY] ✗ ${file}: request failed (${e.message}) — left in place for retry.`);
+                console.error(e.stack || e);
                 failures++;
               }
             }
