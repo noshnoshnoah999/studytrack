@@ -1,37 +1,37 @@
 {
-  "generatedAt": "2026-07-22T06:55:00Z",
+  "generatedAt": "2026-07-22T04:38:00Z",
   "blocks": [
     {
-      "start": "09:00",
-      "end": "10:30",
+      "start": "13:40",
+      "end": "13:55",
       "subjectId": "algebra1",
       "label": "Algebra 1",
       "type": "study",
-      "topic": "Quadratic equations",
-      "firstAction": "Open ch.4 and do Q1–5"
+      "topic": "Algebra foundations: Introduction to variables",
+      "firstAction": "Watch Khan Academy 'What is a variable?' (Algebra 1 > Algebra foundations > Introduction to variables), then do the first 3 practice questions. Short block on purpose — zero hours logged, just get it started before work."
     },
     {
-      "start": "10:30",
-      "end": "10:45",
+      "start": "13:55",
+      "end": "14:00",
       "subjectId": null,
-      "label": "Break",
+      "label": "Get ready for work",
       "type": "break"
     },
     {
-      "start": "10:45",
-      "end": "12:00",
-      "subjectId": "japanese",
-      "label": "Japanese",
-      "type": "study",
-      "topic": "Kanji review",
-      "firstAction": "Run today’s Anki deck"
+      "start": "14:00",
+      "end": "17:00",
+      "subjectId": null,
+      "label": "Work (Bungu)",
+      "type": "work"
     },
     {
-      "start": "12:00",
-      "end": "13:00",
-      "subjectId": null,
-      "label": "Lunch",
-      "type": "lunch"
+      "start": "17:30",
+      "end": "18:15",
+      "subjectId": "health",
+      "label": "Health Science",
+      "type": "study",
+      "topic": "Finish Ginger Shot & Internal Conflicts document",
+      "firstAction": "Open the doc, write the remaining internal-conflicts section using the turmeric/skin-barrier research already gathered. Open todo since 9 Jul — close it out today."
     }
   ]
 }
