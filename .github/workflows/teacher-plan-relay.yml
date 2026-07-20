@@ -1,0 +1,154 @@
+name: Teacher Plan Relay
+
+# The digital teacher's sandbox can only do GET requests / git commits, never
+# POST. So instead of calling set_teacher_plan itself, it commits a plain JSON
+# file to teacher-plan/pending/{YYYY-MM-DD}.json. This workflow is the other
+# half of that relay: it runs here (unrestricted network + Supabase auth
+# already set up for study-notify.yml) and does the actual POST.
+#
+# Independent of study-notify.yml — does not touch its notification logic.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'teacher-plan/pending/**'
+  schedule:
+    - cron: '*/30 * * * *'   # safety net in case a push event is ever missed
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  relay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Relay pending teacher plans
+        id: relay
+        env:
+          SB_URL: ${{ vars.SB_URL }}
+          SB_SERVICE_KEY: ${{ secrets.SB_SERVICE_KEY }}
+          SB_TEACHER_WRITE_TOKEN: ${{ secrets.SB_TEACHER_WRITE_TOKEN }}
+        run: |
+          node << 'SCRIPT'
+          const fs = require('fs');
+          const path = require('path');
+
+          const SB_URL = process.env.SB_URL;
+          const SB_SERVICE_KEY = process.env.SB_SERVICE_KEY;
+          const WRITE_TOKEN = process.env.SB_TEACHER_WRITE_TOKEN;
+
+          const PENDING_DIR = 'teacher-plan/pending';
+          const PROCESSED_DIR = 'teacher-plan/processed';
+          const DATE_RE = /^(\d{4}-\d{2}-\d{2})\.json$/;
+
+          (async () => {
+            if (!SB_URL || !SB_SERVICE_KEY) {
+              console.error('[RELAY] SB_URL / SB_SERVICE_KEY not set — cannot reach Supabase.');
+              process.exitCode = 1;
+              return;
+            }
+            if (!WRITE_TOKEN) {
+              console.error('[RELAY] SB_TEACHER_WRITE_TOKEN secret is not set. Add it in repo Settings → Secrets and variables → Actions.');
+              process.exitCode = 1;
+              return;
+            }
+
+            fs.mkdirSync(PROCESSED_DIR, { recursive: true });
+
+            const files = fs.existsSync(PENDING_DIR)
+              ? fs.readdirSync(PENDING_DIR).filter(f => f.endsWith('.json'))
+              : [];
+
+            if (!files.length) {
+              console.log('[RELAY] No pending teacher plans — nothing to do.');
+              return;
+            }
+
+            let failures = 0;
+
+            for (const file of files) {
+              const fullPath = path.join(PENDING_DIR, file);
+              console.log(`[RELAY] Processing ${file} …`);
+
+              const m = DATE_RE.exec(file);
+              if (!m) {
+                console.error(`[RELAY] ✗ ${file}: filename must be YYYY-MM-DD.json — skipping, left in place.`);
+                failures++;
+                continue;
+              }
+              const p_date = m[1];
+
+              let plan;
+              try {
+                plan = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
+              } catch (e) {
+                console.error(`[RELAY] ✗ ${file}: invalid JSON (${e.message}) — left in place.`);
+                failures++;
+                continue;
+              }
+
+              if (!plan || typeof plan !== 'object' || !Array.isArray(plan.blocks)) {
+                console.error(`[RELAY] ✗ ${file}: expected { generatedAt, blocks: [...] } — left in place.`);
+                failures++;
+                continue;
+              }
+
+              try {
+                const r = await fetch(`${SB_URL}/rest/v1/rpc/set_teacher_plan`, {
+                  method: 'POST',
+                  headers: {
+                    'apikey': SB_SERVICE_KEY,
+                    'Authorization': 'Bearer ' + SB_SERVICE_KEY,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({ p_date, p_plan: plan, token: WRITE_TOKEN })
+                });
+
+                if (!r.ok) {
+                  const body = await r.text();
+                  console.error(`[RELAY] ✗ ${file}: set_teacher_plan returned ${r.status} — ${body} — left in place for retry.`);
+                  failures++;
+                  continue;
+                }
+
+                await r.json(); // consume body; success shape is the merged st_teacher_plan object
+
+                const dest = path.join(PROCESSED_DIR, file);
+                fs.renameSync(fullPath, dest);
+                console.log(`[RELAY] ✓ ${file}: set_teacher_plan for ${p_date} succeeded, moved to ${dest}.`);
+              } catch (e) {
+                console.error(`[RELAY] ✗ ${file}: request failed (${e.message}) — left in place for retry.`);
+                failures++;
+              }
+            }
+
+            if (failures) {
+              console.error(`[RELAY] ${failures} file(s) failed this run — see errors above. They remain in ${PENDING_DIR} and will be retried next run.`);
+              const out = process.env.GITHUB_OUTPUT;
+              if (out) fs.appendFileSync(out, 'had_failures=true\n');
+            }
+          })();
+          SCRIPT
+
+      - name: Commit processed files
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add teacher-plan/
+          if git diff --cached --quiet; then
+            echo "[RELAY] No processed-file changes to commit."
+          else
+            git commit -m "Teacher plan relay: move processed file(s) to teacher-plan/processed/"
+            git push
+          fi
+
+      - name: Fail job if any plan failed to relay
+        if: steps.relay.outputs.had_failures == 'true'
+        run: |
+          echo "One or more teacher plan files failed to relay this run — see the 'Relay pending teacher plans' step above for details." >&2
+          exit 1
