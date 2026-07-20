@@ -9456,14 +9456,97 @@ function downloadFile(content,filename,mimeType){
 
 function exportJSON(){
   const today=todayStr();
+  const rawSubjs=JSON.parse(localStorage.getItem('st_subjs')||'[]');
+  const rawSessions=JSON.parse(localStorage.getItem('st_sessions')||'[]');
+  const rawGoals=JSON.parse(localStorage.getItem('st_goals')||'{}');
+
+  // ── Computed block — derived stats on top of the raw tables above, so a backup
+  // file also doubles as a data-rich snapshot without needing the app to read it.
+  const allStoredSubjs=loadSubjects();
+  const allSubjsForLookup=DEFAULT_SUBJECTS.concat(allStoredSubjs.filter(s=>!DEFAULT_SUBJECTS.find(d=>d.id===s.id)));
+  const hours=loadHours();
+  const sessions=loadSessions().slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const ecIds=_extraCreditIds();
+
+  // Per-subject computed stats (logged/required/pct/done + session-level stats)
+  const perSubjSessions={};
+  sessions.forEach(s=>{
+    if(!s.subjectId)return;
+    (perSubjSessions[s.subjectId]=perSubjSessions[s.subjectId]||[]).push(s);
+  });
+  const subjectStats=allSubjsForLookup.map(s=>{
+    const subjSessions=perSubjSessions[s.id]||[];
+    const logged=parseFloat(((s.base||0)+(hours[s.id]||0)).toFixed(2));
+    const pct=s.req?Math.min(100,parseFloat((logged/s.req*100).toFixed(1))):0;
+    return{
+      id:s.id,
+      name:s.name,
+      required:s.req,
+      logged,
+      remaining:parseFloat(Math.max(0,s.req-logged).toFixed(2)),
+      percentComplete:pct,
+      done:pct>=100,
+      extraCredit:!!s.extraCredit,
+      countsTowardGraduation:!s.extraCredit,
+      sessionCount:subjSessions.length,
+      firstSessionDate:subjSessions.length?subjSessions.reduce((a,b)=>a.date<b.date?a:b).date:null,
+      lastSessionDate:subjSessions.length?subjSessions.reduce((a,b)=>a.date>b.date?a:b).date:null,
+      hoursLoggedFromSessions:parseFloat(subjSessions.reduce((a,x)=>a+x.hours,0).toFixed(2))
+    };
+  });
+
+  // Overall progress stats (graduation-relevant subjects only, matching in-app totals)
+  const gradSubjs=allSubjsForLookup.filter(s=>!s.extraCredit);
+  const TOTAL_REQ=gradSubjs.reduce((a,s)=>a+s.req,0);
+  const totalLogged=getTotalLogged();
+  const remaining=Math.max(0,TOTAL_REQ-totalLogged);
+  const pctComplete=TOTAL_REQ?Math.min(100,parseFloat((totalLogged/TOTAL_REQ*100).toFixed(1))):0;
+
+  const now=nowLocal();
+  const cutoff=new Date(now);cutoff.setDate(now.getDate()-28);
+  const cutStr=cutoff.getFullYear()+'-'+String(cutoff.getMonth()+1).padStart(2,'0')+'-'+String(cutoff.getDate()).padStart(2,'0');
+  const recentHours=sessions.filter(s=>s.date>=cutStr&&!ecIds.has(s.subjectId)).reduce((a,s)=>a+s.hours,0);
+  const pace=recentHours>=3?parseFloat((recentHours/4).toFixed(2)):(rawGoals.weekly||0);
+  const estWeeks=pace>0?remaining/pace:null;
+  const estFinishDate=estWeeks!=null?new Date(now.getTime()+estWeeks*7*24*3600*1000).toISOString().slice(0,10):null;
+
+  // Session history stats (overall, not per-subject)
+  const totalSessionCount=sessions.length;
+  const totalHoursAllSubjects=parseFloat(sessions.reduce((a,s)=>a+s.hours,0).toFixed(2));
+  const sessionsByDate={};
+  sessions.forEach(s=>{sessionsByDate[s.date]=(sessionsByDate[s.date]||0)+s.hours;});
+  const daysWithSessions=Object.keys(sessionsByDate).length;
+  const dateKeys=Object.keys(sessionsByDate).sort();
+
   const data={
-    version:1,
+    version:2,
     exported:new Date().toISOString(),
-    subjects:JSON.parse(localStorage.getItem('st_subjs')||'[]'),
-    sessions:JSON.parse(localStorage.getItem('st_sessions')||'[]'),
-    goals:JSON.parse(localStorage.getItem('st_goals')||'{}'),
+    // Raw tables — unchanged shape from v1, for backward compatibility with re-import
+    subjects:rawSubjs,
+    sessions:rawSessions,
+    goals:rawGoals,
     schedule:JSON.parse(localStorage.getItem('st_sched')||'[]'),
-    todos:JSON.parse(localStorage.getItem('st_todos')||'[]')
+    todos:JSON.parse(localStorage.getItem('st_todos')||'[]'),
+    // Computed — derived stats, new in v2
+    computed:{
+      overall:{
+        totalRequiredHours:TOTAL_REQ,
+        totalLoggedHours:parseFloat(totalLogged.toFixed(2)),
+        remainingHours:parseFloat(remaining.toFixed(2)),
+        percentComplete:pctComplete,
+        currentWeeklyPaceHours:pace,
+        estimatedFinishDate:estFinishDate,
+        note:'Totals exclude extra-credit subjects (e.g. Electives 4), matching in-app graduation math.'
+      },
+      subjectStats,
+      sessionHistory:{
+        totalSessionCount,
+        totalHoursAllSubjects,
+        daysWithLoggedSessions:daysWithSessions,
+        earliestSessionDate:dateKeys.length?dateKeys[0]:null,
+        latestSessionDate:dateKeys.length?dateKeys[dateKeys.length-1]:null
+      }
+    }
   };
   downloadFile(JSON.stringify(data,null,2),'studytrack-backup-'+today+'.json','application/json');
   showToast('Backup downloaded');
@@ -9509,13 +9592,14 @@ function exportReport(){
   const logged={};
   sessions.forEach(s=>{if(s.subjectId)logged[s.subjectId]=(logged[s.subjectId]||0)+s.hours;});
 
-  const subjRows=subjs.map(s=>{
+  function subjRow(s,isExtraCredit){
     const log=parseFloat(((s.base||0)+(logged[s.id]||0)).toFixed(1));
     const pp=Math.min(100,log/s.req*100);
     const done=pp>=100;
     const bar='<div style="height:8px;background:#e5e7eb;border-radius:100px;overflow:hidden;margin-top:4px"><div style="height:100%;width:'+pp.toFixed(1)+'%;background:'+(done?'#22c55e':'#f97316')+';border-radius:100px"></div></div>';
+    const ecTag=isExtraCredit?' <span style="font-size:10px;background:#eef2ff;color:#6366f1;padding:2px 7px;border-radius:100px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px">Extra Credit</span>':'';
     return'<tr>'+
-      '<td style="padding:10px 12px;font-weight:600;color:#111;border-bottom:1px solid #f3f4f6">'+escHtml(s.name)+'</td>'+
+      '<td style="padding:10px 12px;font-weight:600;color:#111;border-bottom:1px solid #f3f4f6">'+escHtml(s.name)+ecTag+'</td>'+
       '<td style="padding:10px 12px;text-align:right;border-bottom:1px solid #f3f4f6;color:#374151">'+log.toFixed(1)+'h</td>'+
       '<td style="padding:10px 12px;text-align:right;border-bottom:1px solid #f3f4f6;color:#6b7280">'+s.req+'h</td>'+
       '<td style="padding:10px 16px;border-bottom:1px solid #f3f4f6"><div style="display:flex;align-items:center;gap:8px">'+
@@ -9523,7 +9607,18 @@ function exportReport(){
         '<span style="font-size:12px;font-weight:700;color:'+(done?'#22c55e':'#374151')+';min-width:36px;text-align:right">'+Math.round(pp)+'%</span>'+
         (done?'<span style="font-size:11px;background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:100px;font-weight:700">Done</span>':'')+'</div></td>'+
     '</tr>';
-  }).join('');
+  }
+
+  // Extra-credit subjects (e.g. El4) are excluded from graduation totals (TOTAL_REQ/
+  // totalLogged/pace above) but should still be visible in the report so logged hours
+  // aren't invisible — shown as separate tagged rows appended after the graduation subjects.
+  const ecIdsForRows=_extraCreditIds();
+  const extraCreditSubjs=DEFAULT_SUBJECTS.filter(s=>ecIdsForRows.has(s.id)).map(def=>{
+    const stored=allStoredSubjs.find(x=>x.id===def.id);
+    return stored?{...def,...stored,req:def.req,extraCredit:true}:def;
+  });
+
+  const subjRows=subjs.map(s=>subjRow(s,false)).join('')+extraCreditSubjs.map(s=>subjRow(s,true)).join('');
 
   // Recent sessions table (last 50)
   const recent50=sessions.slice(-50).reverse();
