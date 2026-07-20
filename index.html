@@ -2904,7 +2904,22 @@ function loadTodos(){
   try{const s=localStorage.getItem('st_todos');if(s)return JSON.parse(s);}catch(e){}
   return[];
 }
-function saveTodos(t){localStorage.setItem('st_todos',JSON.stringify(t));localStorage.setItem('st_todos_updated_at',new Date().toISOString());sbPush('st_todos',t);}
+function saveTodos(t){
+  localStorage.setItem('st_todos',JSON.stringify(t));
+  localStorage.setItem('st_todos_updated_at',new Date().toISOString());
+  // Mark push as pending BEFORE attempting it. If sbPush fails (offline, RLS
+  // error, timeout), this flag survives and the next syncFromCloud's st_todos
+  // merge (see above) will detect local!=cloud and retry the push automatically.
+  // Cleared on confirmed success so we don't retry forever once it lands.
+  localStorage.setItem('st_todos_push_pending','1');
+  sbPush('st_todos',t).then(ok=>{
+    if(ok){
+      localStorage.removeItem('st_todos_push_pending');
+    } else {
+      setSyncUI('error','Sync error — will retry');
+    }
+  });
+}
 
 // ── SESSION TEMPLATES ─────────────────────────────────────────────────────────
 function loadTemplates(){try{return JSON.parse(localStorage.getItem('st_templates')||'[]');}catch(e){return[];}}
@@ -3428,7 +3443,7 @@ function renderTodos(){
 function toggleTodo(id){
   const todos=loadTodos();
   const t=todos.find(x=>x.id===id);
-  if(t){t.done=!t.done;t.doneAt=t.done?new Date().toISOString():null;}
+  if(t){t.done=!t.done;t.doneAt=t.done?new Date().toISOString():null;t.updatedAt=new Date().toISOString();}
   saveTodos(todos);
   renderTodos();
   renderTasksPage();
@@ -3634,7 +3649,7 @@ function toggleTodoFull(id){
   const todos=loadTodos();
   const t=todos.find(x=>x.id===id);
   if(!t)return;
-  t.done=!t.done;t.doneAt=t.done?new Date().toISOString():null;
+  t.done=!t.done;t.doneAt=t.done?new Date().toISOString():null;t.updatedAt=new Date().toISOString();
   saveTodos(todos);
   // Animate the card out then re-render
   const card=document.getElementById('task-'+id);
@@ -3734,9 +3749,10 @@ function saveTodoModal(){
   const todos=loadTodos();
   if(editId){
     const t=todos.find(x=>x.id===editId);
-    if(t){t.text=text;t.date=date;t.time=time;t.subjectId=subjectId;t.pinHome=pinHome;}
+    if(t){t.text=text;t.date=date;t.time=time;t.subjectId=subjectId;t.pinHome=pinHome;t.updatedAt=new Date().toISOString();}
   }else{
-    todos.push({id:genId(),text,date,time,subjectId,pinHome,done:false,createdAt:new Date().toISOString()});
+    const nowIso=new Date().toISOString();
+    todos.push({id:genId(),text,date,time,subjectId,pinHome,done:false,createdAt:nowIso,updatedAt:nowIso});
   }
   saveTodos(todos);
   closeModal('todo-modal-overlay');
@@ -8578,13 +8594,13 @@ function _rescheduleOverdue(id){
   if(!d||!d.value){if(typeof showToast==='function')showToast('Pick a new date first','var(--err)');return;}
   const todos=loadTodos();
   const t=todos.find(x=>x.id===id);
-  if(t){t.date=d.value;t.time=(tm&&tm.value)||null;saveTodos(todos);}
+  if(t){t.date=d.value;t.time=(tm&&tm.value)||null;t.updatedAt=new Date().toISOString();saveTodos(todos);}
   _afterOverdueChange('Rescheduled to '+_fmtHolidayDate(d.value));
 }
 function _overdueMarkDone(id){
   const todos=loadTodos();
   const t=todos.find(x=>x.id===id);
-  if(t){t.done=true;saveTodos(todos);}
+  if(t){t.done=true;t.updatedAt=new Date().toISOString();saveTodos(todos);}
   _afterOverdueChange('Marked done ✓');
 }
 function _afterOverdueChange(msg){
@@ -8629,7 +8645,7 @@ function _dashTaskDone(id){_markTodoDoneById(id);renderDashTasksCard();}
 function _markTodoDoneById(id){
   const todos=loadTodos();
   const t=todos.find(x=>x.id===id);
-  if(t&&!t.done){t.done=true;saveTodos(todos);}
+  if(t&&!t.done){t.done=true;t.updatedAt=new Date().toISOString();saveTodos(todos);}
   renderHomePinned();
   renderDashTasksCard();
   _updateTasksBadge();
@@ -9265,7 +9281,33 @@ async function syncFromCloud(){
             document.documentElement.setAttribute('data-theme',cloudTheme);
             updateThemeSwatches();
           }
-        } else if(k==='st_subjs'||k==='st_goals'||k==='st_todos'||k==='st_sched_overrides'||k==='st_templates'||k==='st_holiday'||k==='st_notif_prefs'||k==='st_notif_templates'){
+        } else if(k==='st_todos'){
+          // ID-based merge, per-item updatedAt wins — prevents a stale whole-array
+          // push (e.g. from a second device/tab with an older local copy) from
+          // silently dropping items or reverting fields on items that were edited
+          // elsewhere in the meantime. Each todo carries its own updatedAt now;
+          // items missing it (pre-fix legacy data) are treated as oldest (epoch).
+          const local=JSON.parse(localStorage.getItem('st_todos')||'[]');
+          const cloud=Array.isArray(rows[i].value)?rows[i].value:[];
+          const byId=new Map();
+          const ts=x=>x&&x.updatedAt?x.updatedAt:'1970-01-01T00:00:00.000Z';
+          cloud.forEach(c=>byId.set(c.id,c));
+          local.forEach(l=>{
+            const existing=byId.get(l.id);
+            if(!existing||ts(l)>ts(existing))byId.set(l.id,l);
+          });
+          const merged=[...byId.values()];
+          const mergedJson=JSON.stringify(merged);
+          if(mergedJson!==JSON.stringify(local)){
+            localStorage.setItem('st_todos',mergedJson);
+          }
+          if(mergedJson!==JSON.stringify(cloud)){
+            sbPush('st_todos',merged,{silent:true}).then(ok=>{
+              if(ok)localStorage.removeItem('st_todos_push_pending');
+            });
+          }
+          localStorage.setItem('st_todos_updated_at',rows[i].updated_at||new Date().toISOString());
+        } else if(k==='st_subjs'||k==='st_goals'||k==='st_sched_overrides'||k==='st_templates'||k==='st_holiday'||k==='st_notif_prefs'||k==='st_notif_templates'){
           // Timestamped last-writer-wins: keep whichever version is newer.
           // Prevents a device with stale data from reverting a fresh edit.
           const cloudUpdatedAt=rows[i].updated_at||'';
