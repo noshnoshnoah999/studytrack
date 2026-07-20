@@ -1,0 +1,12 @@
+{
+  "generatedAt": "2026-07-20T14:47:00+09:00",
+  "blocks": [
+    {"start": "09:00", "end": "09:10", "subjectId": null, "label": "Settle in", "type": "admin"},
+    {"start": "09:10", "end": "10:30", "subjectId": "algebra1", "label": "Algebra 1", "type": "study", "topic": "Algebra foundations: Introduction to variables", "firstAction": "Watch Khan Academy video \"What is a variable?\", then do the first exercise set"},
+    {"start": "10:30", "end": "10:40", "subjectId": null, "label": "Break", "type": "break"},
+    {"start": "10:40", "end": "12:00", "subjectId": "english", "label": "English 10", "type": "study", "topic": "Call Me by Your Name, Part 1, from ~p.20", "firstAction": "Continue reading from p.20, write a short response as you go"},
+    {"start": "12:00", "end": "12:45", "subjectId": null, "label": "Lunch", "type": "lunch"},
+    {"start": "12:45", "end": "13:00", "subjectId": null, "label": "Wrap-up / log session", "type": "admin"},
+    {"start": "14:00", "end": "17:00", "subjectId": null, "label": "Work (Bungu)", "type": "work"}
+  ]
+}
