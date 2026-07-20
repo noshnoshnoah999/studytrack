@@ -1,0 +1,37 @@
+{
+  "generatedAt": "2026-07-21T06:55:00Z",
+  "blocks": [
+    {
+      "start": "09:00",
+      "end": "10:30",
+      "subjectId": "algebra1",
+      "label": "Algebra 1",
+      "type": "study",
+      "topic": "Quadratic equations",
+      "firstAction": "Open ch.4 and do Q1–5"
+    },
+    {
+      "start": "10:30",
+      "end": "10:45",
+      "subjectId": null,
+      "label": "Break",
+      "type": "break"
+    },
+    {
+      "start": "10:45",
+      "end": "12:00",
+      "subjectId": "japanese",
+      "label": "Japanese",
+      "type": "study",
+      "topic": "Kanji review",
+      "firstAction": "Run today’s Anki deck"
+    },
+    {
+      "start": "12:00",
+      "end": "13:00",
+      "subjectId": null,
+      "label": "Lunch",
+      "type": "lunch"
+    }
+  ]
+}
