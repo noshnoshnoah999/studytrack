@@ -1501,14 +1501,10 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
     <div class="page" id="page-tasks">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
         <h2 style="font-size:22px;font-weight:800;letter-spacing:-0.5px">Tasks</h2>
-        <button class="btn-add" onclick="openTodoModal()" style="display:flex;align-items:center;gap:6px">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          New Task
-        </button>
       </div>
-      <!-- Stats bar -->
-      <div id="tasks-stats-bar" style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap"></div>
-      <!-- Task list -->
+      <!-- Stats bar (kept for badge/data compatibility, unused in shortcut view) -->
+      <div id="tasks-stats-bar" style="display:none"></div>
+      <!-- Task list replaced with external shortcut hub -->
       <div id="tasks-page-list"></div>
     </div>
 
@@ -3477,148 +3473,37 @@ function toggleTasksDoneSection(){
   if(chev)chev.classList.toggle('open',_tasksDoneOpen);
 }
 
+// Tasks tab is now a shortcut hub — task tracking lives in Notion + Nudge (iOS)
+// instead of inside StudyTrack. Kept the old todo data/model + renderHomePinned/
+// renderTodos/_updateTasksBadge intact elsewhere; this page just links out.
+const TASKS_EXTERNAL_LINKS={
+  notion:'https://app.notion.com/p/bdd4e8c8b0804f77afdc1aebe339e888?v=0556f92e51f441f9914da1d557fdac1d&source=copy_link',
+  nudge:'nudgeapp://add',
+  reminders:'reminders://'
+};
+
+function openExternalTaskLink(kind){
+  const url=TASKS_EXTERNAL_LINKS[kind];
+  if(!url)return;
+  window.location.href=url;
+}
+
 function renderTasksPage(){
   const el=document.getElementById('tasks-page-list');
-  const statsEl=document.getElementById('tasks-stats-bar');
   if(!el)return;
 
-  const todos=loadTodos();
-  const subjs=loadSubjects();
-  const now=nowLocal();
-  const todayDate=todayStr();
-
-  // Partition
-  const overdue=[],today=[],tomorrow=[],thisWeek=[],later=[],someday=[],done=[];
-  const tomorrowDate=(()=>{const d=new Date(now);d.setDate(d.getDate()+1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
-  const weekEnd=(()=>{const d=new Date(now);d.setDate(d.getDate()+7);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
-
-  todos.forEach(t=>{
-    if(t.done){done.push(t);return;}
-    if(!t.date){someday.push(t);return;}
-    if(t.date<todayDate){overdue.push(t);return;}
-    if(t.date===todayDate){today.push(t);return;}
-    if(t.date===tomorrowDate){tomorrow.push(t);return;}
-    if(t.date<=weekEnd){thisWeek.push(t);return;}
-    later.push(t);
-  });
-
-  // Sort each group
-  [today,tomorrow,thisWeek,later].forEach(g=>g.sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99')));
-  overdue.sort((a,b)=>a.date.localeCompare(b.date));
-  done.sort((a,b)=>(b.doneAt||'').localeCompare(a.doneAt||''));
-
-  // Stats bar
-  if(statsEl){
-    const chips=[
-      overdue.length?{label:overdue.length+' overdue',bg:'var(--errl)',color:'var(--err)'}:null,
-      today.length?{label:today.length+' today',bg:'var(--okl)',color:'var(--ok)'}:null,
-      (tomorrow.length+thisWeek.length+later.length)?{label:(tomorrow.length+thisWeek.length+later.length)+' upcoming',bg:'var(--bg3)',color:'var(--text2)'}:null,
-      someday.length?{label:someday.length+' no date',bg:'var(--bg3)',color:'var(--text3)'}:null,
-      done.length?{label:done.length+' done',bg:'var(--bg3)',color:'var(--text3)'}:null,
-    ].filter(Boolean);
-    statsEl.innerHTML=chips.map(c=>'<div class="tasks-stat-chip" style="background:'+c.bg+';color:'+c.color+'">'+c.label+'</div>').join('');
-    statsEl.querySelectorAll('.tasks-stat-chip').forEach((c,i)=>{c.classList.add('spring-pop');c.style.animationDelay=(i*0.06)+'s';});
-  }
-
-  function fmtDate(d){
-    if(d===todayDate)return'Today';
-    if(d===tomorrowDate)return'Tomorrow';
-    const [y,m,day]=d.split('-');
-    const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return months[+m-1]+' '+parseInt(day);
-  }
-  function fmtTime(t){
-    if(!t)return'';
-    const [h,m]=t.split(':');const hr=+h;
-    return(hr%12||12)+':'+m+(hr<12?'am':'pm');
-  }
-  function isOverdueTime(t){
-    if(!t.date||!t.time)return false;
-    return new Date(t.date+'T'+t.time)<now;
-  }
-
-  function makeCard(t,sectionType){
-    const isOD=!t.done&&(t.date&&t.date<todayDate||isOverdueTime(t));
-    const isToday=!t.done&&t.date===todayDate;
-    const subj=t.subjectId?subjs.find(s=>s.id===t.subjectId):null;
-    const subjColor=t.subjectId?(TASK_SUBJ_COLORS[t.subjectId]||'var(--o)'):null;
-    const subjBg=subjColor&&subjColor.startsWith('#')?(subjColor+'22'):'rgba(249,115,22,0.12)';
-    let cardCls='task-card';
-    if(t.done)cardCls+=' done-card';
-    else if(isOD)cardCls+=' overdue-card';
-    else if(isToday)cardCls+=' today-card';
-    return'<div class="'+cardCls+'" id="task-'+t.id+'">'+
-      '<div class="task-check'+(t.done?' checked':'')+'" onclick="toggleTodoFull(\''+t.id+'\')"></div>'+
-      '<div class="task-body">'+
-        '<div class="task-text">'+escHtml(t.text)+'</div>'+
-        '<div class="task-meta">'+
-          (t.date?'<span class="task-badge '+(isOD?'overdue-badge':isToday?'today-badge':'date-badge')+'">'+(isOD&&!isToday?'⚠ ':isToday?'● ':'')+fmtDate(t.date)+'</span>':'')+
-          (t.time?'<span class="task-badge time-badge">'+fmtTime(t.time)+'</span>':'')+
-          (subj?'<span class="task-badge subj-badge" style="background:'+subjBg+';color:'+subjColor+'">'+escHtml(subj.name)+'</span>':'')+
-        '</div>'+
+  el.innerHTML=
+    '<div class="tasks-empty" style="padding-top:56px">'+
+      '<div class="tasks-empty-icon">🔗</div>'+
+      '<div class="tasks-empty-text">Tasks live outside StudyTrack now</div>'+
+      '<div class="tasks-empty-sub" style="margin-bottom:28px">Use Notion for your to‑do list, or Nudge on iOS. Pick one below.</div>'+
+      '<div style="display:flex;flex-direction:column;gap:10px;max-width:280px;margin:0 auto">'+
+        '<button class="btn-add" onclick="openExternalTaskLink(\'notion\')" style="width:100%;justify-content:center">Open Notion To‑Do List</button>'+
+        '<button class="btn-add" onclick="openExternalTaskLink(\'nudge\')" style="width:100%;justify-content:center;background:var(--bg3);color:var(--text)">Open Nudge</button>'+
+        '<button class="btn-add" onclick="openExternalTaskLink(\'reminders\')" style="width:100%;justify-content:center;background:var(--bg3);color:var(--text2)">Open Reminders</button>'+
       '</div>'+
-      '<div class="task-actions">'+
-        '<button class="task-btn" onclick="openTodoModal(\''+t.id+'\')" title="Edit">'+
-          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'+
-        '</button>'+
-        '<button class="task-btn del" onclick="deleteTodoFull(\''+t.id+'\')" title="Delete">'+
-          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>'+
-        '</button>'+
-      '</div>'+
+      '<div style="font-size:11px;color:var(--text3);margin-top:16px;max-width:280px;margin-left:auto;margin-right:auto">Reminders may not open automatically on iPhone — Apple restricts this from Safari.</div>'+
     '</div>';
-  }
-
-  function makeSection(label,items,color,id,defaultOpen){
-    if(!items.length)return'';
-    const bodyId=id||('tasks-sec-'+label.replace(/\s/g,'_'));
-    const chevSvg='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>';
-    return'<div class="tasks-group-header" onclick="toggleTasksSection(\''+bodyId+'\',this)">'+
-      '<div class="tasks-group-label" style="color:'+color+'">'+label+'</div>'+
-      '<div class="tasks-group-count">'+items.length+'</div>'+
-      '<div class="tasks-group-chevron'+(defaultOpen?' open':'')+'" id="'+bodyId+'-chev">'+chevSvg+'</div>'+
-    '</div>'+
-    '<div class="tasks-group-body'+(defaultOpen?' open':'')+'" id="'+bodyId+'">'+
-      items.map(t=>makeCard(t)).join('')+
-    '</div>';
-  }
-
-  if(!todos.length){
-    el.innerHTML='<div class="tasks-empty">'+
-      '<div class="tasks-empty-icon">✅</div>'+
-      '<div class="tasks-empty-text">No tasks yet</div>'+
-      '<div class="tasks-empty-sub">Tap <strong>New Task</strong> to add something</div>'+
-    '</div>';
-    if(statsEl)statsEl.innerHTML='';
-    return;
-  }
-
-  let html='';
-  if(overdue.length) html+=makeSection('⚠ Overdue',overdue,'var(--err)','tasks-overdue',true);
-  if(today.length)   html+=makeSection('● Today',today,'var(--ok)','tasks-today',true);
-  if(tomorrow.length)html+=makeSection('Tomorrow',tomorrow,'var(--text2)','tasks-tomorrow',true);
-  if(thisWeek.length)html+=makeSection('This Week',thisWeek,'var(--text2)','tasks-thisweek',true);
-  if(later.length)   html+=makeSection('Later',later,'var(--text3)','tasks-later',false);
-  if(someday.length) html+=makeSection('No Date',someday,'var(--text3)','tasks-someday',false);
-  if(done.length){
-    const chevSvg='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>';
-    html+='<div class="tasks-group-header" onclick="toggleTasksDoneSection()">'+
-      '<div class="tasks-group-label" style="color:var(--text3)">Completed</div>'+
-      '<div class="tasks-group-count">'+done.length+'</div>'+
-      '<div class="tasks-group-chevron'+(_tasksDoneOpen?' open':'')+'" id="tasks-done-chev">'+chevSvg+'</div>'+
-    '</div>'+
-    '<div class="tasks-group-body'+(_tasksDoneOpen?' open':'')+'" id="tasks-done-body">'+
-      done.slice(0,20).map(t=>makeCard(t)).join('')+
-      (done.length>20?'<div style="text-align:center;padding:8px;font-size:12px;color:var(--text3)">+'+(done.length-20)+' more</div>':'')+
-    '</div>';
-  }
-
-  el.innerHTML=html;
-
-  // Stagger all cards in
-  el.querySelectorAll('.task-card').forEach((c,i)=>{
-    c.classList.add('slide-up');
-    c.style.animationDelay=(i*0.04)+'s';
-  });
 }
 
 function toggleTasksSection(bodyId,headerEl){
