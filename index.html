@@ -2710,6 +2710,49 @@ function runMigrations(){
     }catch(e){console.warn('[Migration v11] Error:',e);}
     localStorage.setItem('st_migration_v11_el4_base_zero','1');
   }
+  // ── Migration v13: base double-counted stale May-2026 offset, ALL subjects (Jul 2026) ──
+  // Same root cause as v11 (el4), but it affected every actively-logged subject, not just el4.
+  // Migration v8 set each base from a MAY-2026 teacher snapshot and only ran once, while
+  // sessions kept accumulating INTO that same pre-May period — so base+sessions drifted
+  // above the real teacher total (double-count of the overlap). Verified 2026-07-23 against
+  // the official TIHS progress report (Time column) AND the per-subject Google Form journal
+  // PDFs (Cardio/PE, US History, Japanese, Civics, WA History, Health) — all journals match
+  // the teacher report to the minute; the app was the only inflated source.
+  // Heal by recomputing base = teacherTotal(CURRENT) - sessionHours, so base+sessions equals
+  // the teacher total exactly. Electives (el1-el4) are intentionally excluded to preserve
+  // their done/extra-credit state. Pushes to cloud so other synced devices get the fix.
+  if(!localStorage.getItem('st_migration_v13_base_recalib_jul2026')){
+    try{
+      const raw=localStorage.getItem('st_subjs');
+      if(raw){
+        const subjs=JSON.parse(raw);
+        const sessions=JSON.parse(localStorage.getItem('st_sessions')||'[]');
+        // Current teacher totals from the official TIHS progress report (2026-07-23),
+        // Time column converted to decimal hours. Non-elective subjects only.
+        const teacherTotals={
+          japanese:44.8, cwp:13.2, english:3.3,
+          wa_hist:15.1, us_hist:24.2, civics:1.7,
+          fine_art:43.5, pe:100.5, health:11.7,
+          science:0, lab_sci:0, algebra1:0
+        };
+        let changed=false;
+        subjs.forEach(s=>{
+          if(teacherTotals[s.id]!==undefined){
+            const sessionH=sessions.filter(x=>x.subjectId===s.id).reduce((a,x)=>a+(x.hours||0),0);
+            const newBase=Math.max(0,parseFloat((teacherTotals[s.id]-sessionH).toFixed(4)));
+            if(Math.abs((s.base||0)-newBase)>0.01){s.base=newBase;changed=true;}
+          }
+        });
+        if(changed){
+          localStorage.setItem('st_subjs',JSON.stringify(subjs));
+          localStorage.setItem('st_subjs_updated_at',new Date().toISOString());
+          sbPush('st_subjs',subjs,{silent:true});
+          console.log('[Migration v13] Base recalibrated to current teacher report (removed stale-May double-count)');
+        }
+      }
+    }catch(e){console.warn('[Migration v13] Error:',e);}
+    localStorage.setItem('st_migration_v13_base_recalib_jul2026','1');
+  }
   if(!localStorage.getItem('st_migration_v7')){
     try{
       const raw=localStorage.getItem('st_sched');
