@@ -9391,7 +9391,11 @@ function exportJSON(){
   // ── Computed block — derived stats on top of the raw tables above, so a backup
   // file also doubles as a data-rich snapshot without needing the app to read it.
   const allStoredSubjs=loadSubjects();
-  const allSubjsForLookup=DEFAULT_SUBJECTS.concat(allStoredSubjs.filter(s=>!DEFAULT_SUBJECTS.find(d=>d.id===s.id)));
+  // Live/migrated stored subjects take precedence; DEFAULT_SUBJECTS only fills in
+  // any subject id not present in storage. (Previously DEFAULT_SUBJECTS came first,
+  // so subjectStats read STALE seed base values and disagreed with the corrected
+  // `subjects`/`overall` totals in the same export — fixed 2026-07-23.)
+  const allSubjsForLookup=allStoredSubjs.concat(DEFAULT_SUBJECTS.filter(d=>!allStoredSubjs.find(s=>s.id===d.id)));
   const hours=loadHours();
   const sessions=loadSessions().slice().sort((a,b)=>a.date.localeCompare(b.date));
   const ecIds=_extraCreditIds();
