@@ -3528,7 +3528,15 @@ const TASKS_EXTERNAL_LINKS={
 function openExternalTaskLink(kind){
   const url=TASKS_EXTERNAL_LINKS[kind];
   if(!url)return;
-  window.location.href=url;
+  if(kind==='notion'){
+    // Real webpage — open in a new tab so StudyTrack stays open.
+    window.open(url,'_blank','noopener');
+  } else {
+    // Custom URL schemes (nudgeapp://, reminders://) hand off to a native
+    // app — same-tab redirect is correct here, a new tab would just flash
+    // blank before the OS takes over.
+    window.location.href=url;
+  }
 }
 
 function renderTasksPage(){
