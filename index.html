@@ -5615,9 +5615,28 @@ function openEditSession(id){
   document.getElementById('edit-session-overlay').classList.add('open');
 }
 
+// Read a split time field ("HH:MM"). Prefers the hidden input, but falls back
+// to reading the hh/mm boxes directly so a stale/unsynced hidden input can
+// never silently discard the user's typed time again.
+function _readSplitTime(prefix){
+  const hid=document.getElementById(prefix);
+  if(hid&&hid.value)return hid.value;
+  const hhEl=document.getElementById(prefix+'-hh');
+  const mmEl=document.getElementById(prefix+'-mm');
+  if(!hhEl||!mmEl)return '';
+  const hh=(hhEl.value||'').replace(/\D/g,'');
+  const mm=(mmEl.value||'').replace(/\D/g,'');
+  if(!hh.length||!mm.length)return '';
+  let h=parseInt(hh,10),m=parseInt(mm,10);
+  if(isNaN(h)||isNaN(m))return '';
+  if(h>23)h=23;
+  if(m>59)m=59;
+  return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+}
+
 function _esCalcDur(){
-  const start=document.getElementById('es-start').value;
-  const end=document.getElementById('es-end').value;
+  const start=_readSplitTime('es-start');
+  const end=_readSplitTime('es-end');
   const el=document.getElementById('es-duration');
   if(!start||!end){el.textContent='';return;}
   const [sh,sm]=start.split(':').map(Number);
@@ -5637,8 +5656,8 @@ function saveEditSession(){
 
   const newSubjectId=document.getElementById('es-subject').value;
   const newDate=document.getElementById('es-date').value;
-  const newStart=document.getElementById('es-start').value;
-  const newEnd=document.getElementById('es-end').value;
+  const newStart=_readSplitTime('es-start');
+  const newEnd=_readSplitTime('es-end');
   const newNotes=document.getElementById('es-notes').value.trim();
 
   if(!newDate){showToast('Date required','var(--err)');return;}
@@ -6497,16 +6516,27 @@ function timeSplitInput(hiddenId, thisId, nextId){
     // Auto-advance to next input
     if(nextId)document.getElementById(nextId).focus();
   }
-  // Sync to hidden input
-  const wrap=hiddenId==='log-start'?'log-start':'log-end';
-  const hh=document.getElementById(wrap+'-hh').value;
-  const mm=document.getElementById(wrap+'-mm').value;
-  if(hh.length===2&&mm.length===2){
-    document.getElementById(wrap).value=hh.padStart(2,'0')+':'+mm.padStart(2,'0');
-  } else {
-    document.getElementById(wrap).value='';
+  // Sync to hidden input.
+  // NOTE: must use the hiddenId that was actually passed in. This previously
+  // hardcoded log-start/log-end, so the Edit Session modal (es-start/es-end)
+  // silently wrote to the Log page's hidden fields and never updated its own —
+  // meaning time edits from History never saved.
+  const wrap=hiddenId;
+  const hhEl=document.getElementById(wrap+'-hh');
+  const mmEl=document.getElementById(wrap+'-mm');
+  const hidEl=document.getElementById(wrap);
+  if(hhEl&&mmEl&&hidEl){
+    const hh=hhEl.value;
+    const mm=mmEl.value;
+    if(hh.length===2&&mm.length===2){
+      hidEl.value=hh.padStart(2,'0')+':'+mm.padStart(2,'0');
+    } else {
+      hidEl.value='';
+    }
   }
-  updateLogDuration();
+  // Only the Log Session page has a log-duration readout; the Edit Session
+  // modal calls _esCalcDur() from its own oninput handlers.
+  if(wrap==='log-start'||wrap==='log-end')updateLogDuration();
 }
 
 function setLogTime(prefix, timeStr){
