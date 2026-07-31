@@ -2753,6 +2753,79 @@ function runMigrations(){
     }catch(e){console.warn('[Migration v13] Error:',e);}
     localStorage.setItem('st_migration_v13_base_recalib_jul2026','1');
   }
+  // ── Migration v14: sync base hours to the 2026-07-31 TIHS progress report ──────
+  // Same mechanism as v13, new snapshot. Deltas vs the 2026-07-23 report:
+  //   english   3.3 → 4.0   (+0.7)
+  //   fine_art 43.5 → 45.7  (+2.2)
+  //   pe      100.5 → 115.5 (+15.0)
+  //   health   11.7 → 13.3  (+1.6)
+  //   lab_sci    0  → 2.0   (+2.0)
+  // Unchanged: japanese 44.8, cwp 13.2, wa_hist 15.1, us_hist 24.2, civics 1.7,
+  //            science 0, algebra1 0.
+  // NOTE on `req`: the teacher's spreadsheet caps every contract at 150:00/75:00 because
+  // of a tool limitation on her end. The app's real requirements (PE 225, Japanese 450)
+  // are correct and are deliberately NOT changed here — only `base` hours are synced.
+  //
+  // IMPORTANT difference from v13: v13 subtracted ALL session hours, which would erase
+  // work logged AFTER the report date if the migration happened to run later. v14 only
+  // subtracts sessions dated on or before the report date, so anything logged after
+  // 2026-07-31 stays additive on top of the teacher total instead of being absorbed.
+  // Electives (el1-el4) are excluded, same as v13, to preserve done/extra-credit state.
+  if(!localStorage.getItem('st_migration_v14_base_recalib_jul31_2026')){
+    try{
+      const raw=localStorage.getItem('st_subjs');
+      if(raw){
+        const subjs=JSON.parse(raw);
+        const sessions=JSON.parse(localStorage.getItem('st_sessions')||'[]');
+        const REPORT_DATE='2026-07-31'; // ISO date of the teacher progress report
+        // Teacher report Time column converted to decimal hours. Non-elective subjects only.
+        const teacherTotals={
+          japanese:44.8,  // 44:48
+          cwp:13.2,       // 13:12
+          english:4.0,    // 4:00
+          wa_hist:15.1,   // 15:06
+          us_hist:24.2,   // 24:12
+          civics:1.7,     // 1:42
+          fine_art:45.7,  // 45:42
+          pe:115.5,       // 115:30
+          health:13.3,    // 13:18
+          science:0,      // 0:00
+          lab_sci:2.0,    // 2:00
+          algebra1:0      // 0:00
+        };
+        let changed=false;
+        subjs.forEach(s=>{
+          if(teacherTotals[s.id]!==undefined){
+            const sessionH=sessions
+              .filter(x=>x.subjectId===s.id&&(!x.date||x.date<=REPORT_DATE))
+              .reduce((a,x)=>a+(x.hours||0),0);
+            const rawBase=parseFloat((teacherTotals[s.id]-sessionH).toFixed(4));
+            // Clamp: base must never go negative. This happens when logged session hours
+            // EXCEED the teacher's figure — usually because she rounds down to the minute
+            // (e.g. civics: 1.72h logged vs 1:42 = 1.70h recorded). In that case the subject
+            // cannot be made to match exactly without altering a real session record, which
+            // we never do — sessions are the evidence behind submitted journal entries.
+            // Warn loudly instead of failing silently.
+            if(rawBase<0){
+              console.warn('[Migration v14] '+s.id+': sessions ('+sessionH.toFixed(2)+
+                'h) exceed teacher total ('+teacherTotals[s.id]+
+                'h) by '+Math.abs(rawBase).toFixed(2)+'h — base clamped to 0, subject will '+
+                'read slightly high. Sessions left untouched by design.');
+            }
+            const newBase=Math.max(0,rawBase);
+            if(Math.abs((s.base||0)-newBase)>0.01){s.base=newBase;changed=true;}
+          }
+        });
+        if(changed){
+          localStorage.setItem('st_subjs',JSON.stringify(subjs));
+          localStorage.setItem('st_subjs_updated_at',new Date().toISOString());
+          sbPush('st_subjs',subjs,{silent:true});
+          console.log('[Migration v14] Base synced to 2026-07-31 teacher report');
+        }
+      }
+    }catch(e){console.warn('[Migration v14] Error:',e);}
+    localStorage.setItem('st_migration_v14_base_recalib_jul31_2026','1');
+  }
   if(!localStorage.getItem('st_migration_v7')){
     try{
       const raw=localStorage.getItem('st_sched');
