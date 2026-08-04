@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1785835076633">
+<meta name="app-built" content="1785835660101">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -2023,6 +2023,7 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
       <div id="workout-step-feel" style="display:none">
         <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">How did it feel? <span style="font-weight:400;color:var(--text3)">optional</span></div>
         <div style="font-size:12px;color:var(--text3);margin-bottom:10px">A few words in your own words. Only you know this — the screenshot can't say it, and I won't make it up.</div>
+        <div id="workout-feel-hint" style="display:none;background:var(--ol);border:1.5px solid var(--o);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:12.5px;font-weight:700;color:var(--o);line-height:1.45"></div>
         <input type="text" class="form-input" id="workout-feel-input" placeholder="e.g. legs stiff at the start, hot but fine after" style="margin-bottom:10px"
                onkeydown="if(event.key==='Enter'){event.preventDefault();submitWorkoutFeel();}">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -3672,8 +3673,12 @@ async function analyseWorkoutImage(base64,mimeType){
     // The 15-minute rule — time only, distance ignored. Runs always get one.
     // Skipping the call outright also saves the tokens v2 wasted generating a
     // reflection that was then thrown away.
+    // A "how did it feel" note ALWAYS wins: the rule exists for sessions with
+    // nothing true to say, and writing a note is proof there is something.
+    // Discarding it because a station ride was under 15 minutes was a bug.
     parsed.reflection=null;
-    const needsReflection=(activity==='Run')||(parsed.durationMinutes>=15);
+    const _hasFeel=!!(parsed.feelNote&&String(parsed.feelNote).trim());
+    const needsReflection=(activity==='Run')||(parsed.durationMinutes>=15)||_hasFeel;
     if(needsReflection){
       parsed.reflection=await _generateReflection(parsed,key,usedModel);
     }
@@ -3801,6 +3806,18 @@ function _showFeelStep(){
   document.getElementById('workout-step-app').style.display='none';
   document.getElementById('workout-step-activity').style.display='none';
   document.getElementById('workout-step-feel').style.display='block';
+  // The duration isn't known yet — the screenshot hasn't been read at this point —
+  // so this is a prompt for Noah to judge it himself. Runs always get a reflection,
+  // so the hint is only shown for cycles and walks.
+  const hint=document.getElementById('workout-feel-hint');
+  if(hint){
+    if(_workoutActivity==='Cycle'||_workoutActivity==='Walk'){
+      hint.innerHTML='⚠️ If this '+_workoutActivity.toLowerCase()+' was under 15 minutes — a normal trip to the station — press <b>Skip</b>. A reflection isn\'t needed and just pads the journal.';
+      hint.style.display='block';
+    }else{
+      hint.style.display='none';
+    }
+  }
   const fi=document.getElementById('workout-feel-input');
   if(fi)setTimeout(()=>fi.focus(),80);
 }
@@ -3924,7 +3941,10 @@ function showWorkoutSummary(result){
       (bits.length?'<div class="workout-summary-row"><span class="workout-summary-icon">📊</span><span>'+escHtml(bits.join(' · '))+'</span></div>':'')+
       '<div class="workout-summary-row"><span class="workout-summary-icon">🔥</span><span>Effort: '+escHtml(result.effortLevel||'Low')+
         (result.avgHR?'':' <span style="color:var(--text3);font-size:11px">(no HR on screenshot — from speed)</span>')+'</span></div>'+
-      (result.reflection?'':'<div class="workout-summary-row"><span class="workout-summary-icon">📝</span><span style="color:var(--text3)">No reflection — under 15 min</span></div>');
+      (result.reflection
+        ? '<div class="workout-summary-row"><span class="workout-summary-icon">📝</span><span>Reflection written'+
+          (result.feelNote&&String(result.feelNote).trim()?' <span style="color:var(--text3);font-size:11px">(from your note)</span>':'')+'</span></div>'
+        : '<div class="workout-summary-row"><span class="workout-summary-icon">📝</span><span style="color:var(--text3)">No reflection — under 15 min and no note</span></div>');
   }
   // Location: editable, because Runna reports the wrong ward and walks vary.
   const locEl=document.getElementById('workout-location-input');

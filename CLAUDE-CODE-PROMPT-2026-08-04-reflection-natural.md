@@ -42,6 +42,11 @@ weather and speculation. The fix is to ask for the one thing only Noah knows.
   about — it now leads the paragraph instead of the temperature
 - The no-fabrication rule carves out exactly what Noah said and nothing beyond it
 - Length allowance rises to four sentences only when a note was given
+- A note now OVERRIDES the 15-minute rule. A 10-minute station ride with a note
+  written was silently discarding it and producing no reflection at all
+- Highlighted warning on the feel step for cycles and walks telling Noah to press
+  Skip if it was under 15 minutes, since the duration is not known until after
+  the screenshot is read. Hidden for runs, which always get a reflection.
 - Note stored on the session in journalMeta
 
 Also fixing what real output exposed:
@@ -92,6 +97,21 @@ If the API call fails, the flow returns to the feel step so the note isn't lost.
 - The no-fabrication rule reads "Unless I told you how it felt above…", so it no longer
   contradicts the note.
 - Length allowance only rises when a note exists.
+
+## Reflection decision matrix — 8/8 verified
+
+| Case | Reflection? |
+|---|---|
+| Cycle 10 min, note written | **yes** (note overrides the rule) |
+| Cycle 10 min, skipped | no |
+| Cycle 16 min, skipped | yes (over 15 min) |
+| Walk 10 min, note written | **yes** |
+| Walk 10 min, skipped | no |
+| Run, any length | yes |
+| Cycle 10 min, whitespace-only note | no (treated as skipped) |
+
+The preview card now says "Reflection written (from your note)" or "No reflection — under
+15 min and no note", so it is always clear which path was taken.
 
 ## Test after pushing
 
