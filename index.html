@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1785833145996">
+<meta name="app-built" content="1785833669216">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -3343,6 +3343,9 @@ function _prevWorkoutPromptLine(activity,date){
 // weaker result never happens silently.
 const WORKOUT_MODEL_PRIMARY='claude-sonnet-5';
 const WORKOUT_MODEL_FALLBACK='claude-haiku-4-5-20251001';
+// Kept for diagnosis: after a failed import, type _lastWorkoutRaw in the console
+// to see exactly what came back.
+let _lastWorkoutRaw=null;
 
 function _buildWorkoutPrompt(app,activity,wantsReflection,prevLine){
   const today=new Date().toISOString().slice(0,10);
@@ -3476,7 +3479,9 @@ async function _callWorkoutModel(model,key,base64,mimeType,promptText,signal){
     },
     body:JSON.stringify({
       model:model,
-      max_tokens:1000,
+      // Generous: a thinking block, if the model emits one, counts against this
+      // budget and would otherwise truncate the JSON mid-object.
+      max_tokens:2000,
       messages:[{role:'user',content:[
         {type:'image',source:{type:'base64',media_type:mimeType,data:base64}},
         {type:'text',text:promptText}
@@ -3496,13 +3501,16 @@ async function _generateReflection(r,key,model){
       method:'POST',signal:c.signal,
       headers:{'x-api-key':key,'anthropic-version':'2023-06-01',
                'anthropic-dangerous-direct-browser-access':'true','content-type':'application/json'},
-      body:JSON.stringify({model:model,max_tokens:600,
+      body:JSON.stringify({model:model,max_tokens:1500,
         messages:[{role:'user',content:_buildReflectionPrompt(r,_prevWorkoutPromptLine(r.activity,r.date))}]})
     });
     clearTimeout(t);
     if(!resp.ok){showToast('Reflection failed — journal written without it','var(--o)');return null;}
     const d=await resp.json();
-    let txt=(d.content&&d.content[0]&&d.content[0].text||'').trim();
+    // Same rule as the extraction call: find the text block, don't assume [0].
+    const tb=(d.content||[]).find(b=>b&&b.type==='text'&&typeof b.text==='string')
+             ||(d.content||[]).find(b=>b&&typeof b.text==='string');
+    let txt=(tb&&tb.text||'').trim();
     txt=txt.replace(/^["'“]|["'”]$/g,'').replace(/^Reflection:\s*/i,'').trim();
     return txt||null;
   }catch(e){
@@ -3538,11 +3546,32 @@ async function analyseWorkoutImage(base64,mimeType){
     const data=await resp.json();
     let parsed;
     try{
-      let text=data.content[0].text.trim();
+      // Do NOT assume content[0] is the text. A model can return a thinking
+      // block first, in which case content[0].text is not the JSON at all.
+      const textBlock=(data.content||[]).find(b=>b&&b.type==='text'&&typeof b.text==='string')
+                      ||(data.content||[]).find(b=>b&&typeof b.text==='string');
+      if(!textBlock)throw new Error('no text block in response');
+      let text=textBlock.text.trim();
       text=text.replace(/^```[a-z]*\n?/,'').replace(/\n?```$/,'').trim();
-      parsed=JSON.parse(text);
+      try{
+        parsed=JSON.parse(text);
+      }catch(inner){
+        // Fall back to the outermost {...} in case the model added a sentence
+        // before or after the JSON.
+        const a=text.indexOf('{'), b=text.lastIndexOf('}');
+        if(a<0||b<=a)throw inner;
+        parsed=JSON.parse(text.slice(a,b+1));
+      }
     }catch(e){
-      showToast('Could not read workout data — try a clearer screenshot','var(--err)');return null;
+      // Say what actually went wrong instead of blaming the screenshot.
+      _lastWorkoutRaw=data;
+      try{console.error('[workout import] parse failed',{stop_reason:data.stop_reason,usage:data.usage,content:data.content});}catch(e2){}
+      if(data&&data.stop_reason==='max_tokens'){
+        showToast('Reply was cut off before it finished — raise max_tokens','var(--err)');
+      }else{
+        showToast('Model did not return usable JSON ('+(e.message||'parse error')+') — see console','var(--err)');
+      }
+      return null;
     }
     parsed.app=app;
     parsed.activity=activity;
@@ -4004,17 +4033,17 @@ function buildStretchJournal(dateStr,startTime,stretchMins){
   L.push('timings are approximate; I move through the poses more slowly than that, so the two parts together');
   L.push('come to around '+mins+' minutes in practice.');
   L.push('');
-  L.push('POST-RUN COOL-DOWN');
-  L.push('Moved gently within each pose, breathing slowly, without forcing anything.');
-  L.push('1. Pigeon Pose, both sides — hips, glutes');
-  L.push('2. Toe and Arch Stretch — toes, arches, soles of the feet');
-  L.push('3. Deep Lunge, both sides — hips, groin');
-  L.push('4. Quad and Hip Flexor Stretch in the Lunge — quads, hip flexors');
-  L.push('5. Sphinx Pose / Upward-Facing Dog — abdominals, chest, hip flexors, lower back');
-  L.push('6. Seated Wide-Leg Stretch — inner thighs, groin, hips');
+  // Body-part targets and the source line were removed 4 Aug 2026 — both are
+  // already in the attached PDF, so repeating them here was duplication.
+  L.push('Post-run cool-down');
+  L.push('1. Pigeon Pose, both sides');
+  L.push('2. Toe and Arch Stretch');
+  L.push('3. Deep Lunge, both sides');
+  L.push('4. Quad and Hip Flexor Stretch in the Lunge');
+  L.push('5. Sphinx Pose / Upward-Facing Dog');
+  L.push('6. Seated Wide-Leg Stretch');
   L.push('');
-  L.push('Source: Run Better with Ash — "5 MIN Pre-Run Stretching Routine" and');
-  L.push('"10 MIN Post-Run Stretching Routine," YouTube.');
+  L.push('Source: video from YouTube by Run Better with Ash.');
   L.push('');
   L.push('Please check the attached Runner’s Stretch Guide PDF, which lists every stretch in this routine.');
   return L.join('\n');
