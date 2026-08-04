@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1785835660101">
+<meta name="app-built" content="1785836234167">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -3917,7 +3917,7 @@ function showWorkoutSummary(result){
   const workoutMins=Math.floor((result.durationSeconds||0)/60);
   const sessionEnd=result.startTime?_addMins(result.startTime,workoutMins+jm):'';
   let timeStr='Unknown times';
-  if(result.startTime)timeStr=result.startTime+' – '+sessionEnd+'  ('+workoutMins+' min + '+jm+' min journal)';
+  if(result.startTime)timeStr=result.startTime+' – '+sessionEnd+'  ('+_fmtHoursMins(workoutMins,false)+' + '+_fmtHoursMins(jm,false)+' journal)';
   const actIcon={Cycle:'🚴',Run:'🏃',Walk:'🚶'}[result.activity]||'🏋';
   const bits=[];
   if(result.distanceKm)bits.push(result.distanceKm+' km');
@@ -4033,10 +4033,18 @@ function _fmtDistance(km){
 }
 // Whole minutes only, floored. Seconds were dropped from the Total Time line so
 // the arithmetic reads cleanly (23 + 10 = 33, not "23 Minutes 2 Seconds + 10").
-// The two components read "Mins"; only the total is spelled out as "Minutes".
+// Anything from 60 minutes up rolls into hours — "323 Mins" is unreadable on a
+// long ride. The two components read "Mins"; only the total spells out "Minutes".
+function _fmtHoursMins(mins,longUnit){
+  const m0=Math.max(0,Math.floor(mins));
+  const h=Math.floor(m0/60), m=m0%60;
+  const mu=longUnit?(m===1?' Minute':' Minutes'):(m===1?' Min':' Mins');
+  if(h===0)return m+mu;
+  const hu=(h===1?' Hour':' Hours');
+  return m===0?(h+hu):(h+hu+' '+m+mu);
+}
 function _fmtDurationWords(secs){
-  const m=Math.floor(secs/60);
-  return m+(m===1?' Min':' Mins');
+  return _fmtHoursMins(Math.floor(secs/60),false);
 }
 
 // Assembles the full Journal Content text for a cycle / run / walk.
@@ -4063,7 +4071,7 @@ function buildWorkoutJournal(r,cycleNum,locationOverride){
   L.push('End Time: '+sessionEnd);
   L.push('Total Time: '+_fmtDurationWords(secs)+' of '+
     (act==='Run'?'running':act==='Cycle'?'cycling':'walking')+
-    ' + '+jm+' Mins of journal writing = '+totalMins+' Minutes');
+    ' + '+_fmtHoursMins(jm,false)+' of journal writing = '+_fmtHoursMins(totalMins,true));
   L.push('');
   L.push(loc);
   if(act==='Cycle')L.push('I parked at the JR Shin-Urayasu Bicycle Parking Lot Number 2');
@@ -4114,7 +4122,7 @@ function buildStretchJournal(dateStr,startTime,stretchMins){
   L.push(_weekdayName(dateStr)+' '+_ordinalDate(dateStr)+' '+_journalYear(dateStr));
   L.push('Start Time: '+startTime);
   L.push('End Time: '+_addMins(startTime,total));
-  L.push('Total Time: '+mins+' Mins of stretching + '+jm+' Mins of journal writing = '+total+' Minutes');
+  L.push('Total Time: '+_fmtHoursMins(mins,false)+' of stretching + '+_fmtHoursMins(jm,false)+' of journal writing = '+_fmtHoursMins(total,true));
   L.push('');
   L.push('Completed my post-run cool-down routine from my Runner’s Stretch Guide, which I have attached.');
   L.push('I also complete the guide’s pre-run dynamic warm-up before I set off running. The guide’s suggested');

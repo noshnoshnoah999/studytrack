@@ -48,6 +48,9 @@ weather and speculation. The fix is to ask for the one thing only Noah knows.
   Skip if it was under 15 minutes, since the duration is not known until after
   the screenshot is read. Hidden for runs, which always get a reflection.
 - Note stored on the session in journalMeta
+- Durations of 60 minutes or more now roll into hours. A 5h23m ride was printing
+  as "323 Mins of cycling", which is unreadable. Applies to the workout total,
+  the stretches total and the preview card.
 
 Also fixing what real output exposed:
 - Previous-session comparison is RUNS ONLY. Cycles and walks are commutes on a
@@ -97,6 +100,27 @@ If the API call fails, the flow returns to the feel step so the note isn't lost.
 - The no-fabrication rule reads "Unless I told you how it felt above…", so it no longer
   contradicts the note.
 - Length allowance only rises when a note exists.
+
+## Duration formatting — 10/10 verified
+
+| Minutes | Renders as |
+|---|---|
+| 9 | 9 Mins |
+| 59 | 59 Mins |
+| 60 | 1 Hour |
+| 61 | 1 Hour 1 Min |
+| 120 | 2 Hours |
+| 323 | 5 Hours 23 Mins |
+
+Noah's 1 August long ride now reads:
+
+```
+Start Time: 16:01
+End Time: 21:34
+Total Time: 5 Hours 23 Mins of cycling + 10 Mins of journal writing = 5 Hours 33 Minutes
+```
+
+Short sessions are unchanged: `10 Mins of cycling + 10 Mins of journal writing = 20 Minutes`.
 
 ## Reflection decision matrix — 8/8 verified
 
