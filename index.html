@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1785837116895">
+<meta name="app-built" content="1785844239445">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -2038,7 +2038,7 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
                onkeydown="if(event.key==='Enter'){event.preventDefault();submitWorkoutFeel();}">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <button onclick="submitWorkoutFeel()" style="background:var(--ol);border:1.5px solid var(--o);border-radius:12px;padding:14px 10px;font-size:14px;font-weight:700;color:var(--o);cursor:pointer;font-family:inherit">Continue →</button>
-          <button onclick="submitWorkoutFeel(true)" style="background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:14px 10px;font-size:14px;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit">Skip</button>
+          <button onclick="submitWorkoutFeel(true)" style="background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:14px 10px;font-size:14px;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit">No note →</button>
         </div>
       </div>
 
@@ -3835,7 +3835,7 @@ function _showFeelStep(){
   const hint=document.getElementById('workout-feel-hint');
   if(hint){
     if(isTrip){
-      hint.innerHTML='⚠️ If this '+_workoutActivity.toLowerCase()+' was under 15 minutes — a normal trip to the station — still fill in where you were going, but leave this box <b>empty</b>. A reflection isn\'t needed and just pads the journal.';
+      hint.innerHTML='⚠️ If this '+_workoutActivity.toLowerCase()+' was under 15 minutes — a normal trip to the station — leave this box <b>empty</b> and press <b>No note</b>. A reflection isn\'t needed and just pads the journal. Where you were going is still kept either way.';
       hint.style.display='block';
     }else{
       hint.style.display='none';
@@ -3846,11 +3846,14 @@ function _showFeelStep(){
   if(first)setTimeout(()=>first.focus(),80);
 }
 
+// `skip` means "no reflection note" — it must NOT discard the route. The route is
+// a plain fact about the trip and belongs in the journal either way. Wiping both
+// was throwing away a route Noah had just been told to fill in.
 function submitWorkoutFeel(skip){
   const fi=document.getElementById('workout-feel-input');
   const ji=document.getElementById('workout-journey-input');
   _workoutFeel=skip?'':((fi&&fi.value||'').trim());
-  _workoutJourney=skip?'':((ji&&ji.value||'').trim());
+  _workoutJourney=(ji&&ji.value||'').trim();
   document.getElementById('workout-source-area').style.display='none';
   runWorkoutAnalysis();
 }

@@ -67,6 +67,10 @@ weather and speculation. The fix is to ask for the one thing only Noah knows.
   line, so naming Haneda Airport or a friend comes through intact.
 - Parking detection handles "from the station", "leaving the station" and "back
   from the station", which have no " to " for a positional check to work with.
+- Skip no longer discards the route. It wiped both fields, while the on-screen
+  hint was telling Noah to fill the route in and leave the note empty — so a route
+  he had just typed was silently thrown away. The button is now "No note →" and
+  only clears the reflection note.
 
 Also fixing what real output exposed:
 - Previous-session comparison is RUNS ONLY. Cycles and walks are commutes on a
@@ -135,6 +139,17 @@ Weather at the time of the cycle: 37°C | Light Drizzle
 Omitted entirely when left blank. It does **not** trigger a reflection on its own —
 only the feel note and the 15-minute rule do that — so a short station ride can record
 its route without generating a paragraph nobody needs.
+
+## Continue vs "No note" — verified
+
+| Action | Route kept | Note kept |
+|---|---|---|
+| Continue, both filled | yes | yes |
+| **No note, both filled** | **yes** | no |
+| No note, route only | yes | — |
+| No note, nothing typed | — | — |
+
+The route survives either button. Only the reflection note is discarded by "No note".
 
 ## Bike parking + numbering — 11/11 verified
 
