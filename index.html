@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1785816436714">
+<meta name="app-built" content="1785832688187">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -3395,7 +3395,7 @@ function _buildReflectionPrompt(r,prevLine){
   const verb=act==='Run'?'run':act==='Cycle'?'cycle':'walk';
   const F=[];
   if(r.distanceKm)F.push('Distance: '+r.distanceKm+' km');
-  if(r.durationSeconds)F.push('Time: '+Math.floor(r.durationSeconds/60)+' min '+(r.durationSeconds%60)+' sec');
+  if(r.durationSeconds)F.push('Time: '+Math.floor(r.durationSeconds/60)+' min');
   if(r.avgPace)F.push('Average pace: '+r.avgPace+' per km');
   if(r.avgSpeedKmh&&!r.avgPace)F.push('Average speed: '+r.avgSpeedKmh+' km/h');
   if(r.elevationGainM!==null&&r.elevationGainM!==undefined)F.push('Elevation gain: '+r.elevationGainM+' m');
@@ -3917,21 +3917,18 @@ function _parseTitleNumber(title){
   return (n>=1&&n<=20)?n:null;
 }
 
-// Under 1 km reads "860 Meters (0.86 KM)" — "0 Kilometres and 860 Meters" is clumsy.
+// Plain "4.13 KM". The long-hand "4 Kilometres and 130 Meters" was dropped
+// 4 Aug 2026 — it padded every journal for no benefit.
 function _fmtDistance(km){
   if(km===null||km===undefined||isNaN(km))return null;
-  const metresTotal=Math.round(km*1000);
-  if(metresTotal<1000)return metresTotal+' Meters ('+km+' KM)';
-  const whole=Math.floor(metresTotal/1000), rem=metresTotal%1000;
-  const w=whole+(whole===1?' Kilometre':' Kilometres');
-  if(rem===0)return w+' ('+km+' KM)';   // "1 Kilometre and 0 Meters" reads badly
-  return w+' and '+rem+' Meters ('+km+' KM)';
+  return km+' KM';
 }
+// Whole minutes only, floored. Seconds were dropped from the Total Time line so
+// the arithmetic reads cleanly (23 + 10 = 33, not "23 Minutes 2 Seconds + 10").
+// The two components read "Mins"; only the total is spelled out as "Minutes".
 function _fmtDurationWords(secs){
-  const m=Math.floor(secs/60), s=secs%60;
-  let out=m+(m===1?' Minute':' Minutes');
-  if(s>0)out+=' '+s+(s===1?' Second':' Seconds');
-  return out;
+  const m=Math.floor(secs/60);
+  return m+(m===1?' Min':' Mins');
 }
 
 // Assembles the full Journal Content text for a cycle / run / walk.
@@ -3958,7 +3955,7 @@ function buildWorkoutJournal(r,cycleNum,locationOverride){
   L.push('End Time: '+sessionEnd);
   L.push('Total Time: '+_fmtDurationWords(secs)+' of '+
     (act==='Run'?'running':act==='Cycle'?'cycling':'walking')+
-    ' + '+jm+' Minutes of journal writing = '+totalMins+' Minutes');
+    ' + '+jm+' Mins of journal writing = '+totalMins+' Minutes');
   L.push('');
   L.push(loc);
   if(act==='Cycle')L.push('I parked at the JR Shin-Urayasu Bicycle Parking Lot Number 2');
@@ -4009,7 +4006,7 @@ function buildStretchJournal(dateStr,startTime,stretchMins){
   L.push(_weekdayName(dateStr)+' '+_ordinalDate(dateStr)+' '+_journalYear(dateStr));
   L.push('Start Time: '+startTime);
   L.push('End Time: '+_addMins(startTime,total));
-  L.push('Total Time: '+mins+' Minutes of stretching + '+jm+' Minutes of journal writing = '+total+' Minutes');
+  L.push('Total Time: '+mins+' Mins of stretching + '+jm+' Mins of journal writing = '+total+' Minutes');
   L.push('');
   L.push('Completed my post-run cool-down routine from my Runner’s Stretch Guide, which I have attached.');
   L.push('I also complete the guide’s pre-run dynamic warm-up before I set off running. The guide’s suggested');
