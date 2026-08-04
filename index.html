@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1785808457232">
+<meta name="app-built" content="1785809655095">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -3361,13 +3361,19 @@ function _buildWorkoutPrompt(app,activity,wantsReflection,prevLine){
        '- IGNORE the location Runna reports. It is frequently wrong and is not used.\n\n';
   }
   p+='Return ONLY valid JSON, no markdown fences:\n'+
-     '{"date":"YYYY-MM-DD","startTime":"HH:MM","durationSeconds":number,"distanceKm":number|null,'+
+     '{"activityTitle":string|null,"date":"YYYY-MM-DD","startTime":"HH:MM","durationSeconds":number,"distanceKm":number|null,'+
      '"elevationGainM":number|null,"steps":number|null,"avgPace":"M:SS"|null,"avgHR":number|null,'+
      '"cadence":number|null,"calories":number|null,"locationLabel":string|null,"reflection":string|null}\n\n'+
      'RULES:\n'+
+     '- activityTitle: the large activity title on the screen, copied out EXACTLY and in full,\n'+
+     '  e.g. "1st August - Afternoon Cycle 2". If there is no title, return null. Do not tidy it up,\n'+
+     '  do not translate it, do not drop a trailing number. This is important.\n'+
      '- durationSeconds: convert the displayed time exactly. "10m 29s" = 629. "27:10" = 1630. Never round up.\n'+
      '- avgPace: as displayed, e.g. "8:20".\n'+
-     '- locationLabel: only for Strava, copied from the screen. null for Runna.\n';
+     '- locationLabel: only for Strava, copied from the screen. null for Runna.\n'+
+     '- date: from the relative timestamp ("Yesterday at...") ONLY as a fallback. If the title contains\n'+
+     '  a date, that date is the truth — I write those titles myself and they are correct even when the\n'+
+     '  screenshot was taken days later.\n';
   if(wantsReflection){
     p+='- reflection: see the writing instructions below.\n\n'+
        'WRITE THE REFLECTION IN MY VOICE. This goes into a school journal, so it must read as though I wrote it, not an AI.\n'+
@@ -3450,6 +3456,18 @@ async function analyseWorkoutImage(base64,mimeType){
     parsed.app=app;
     parsed.activity=activity;
     parsed.model=usedModel;
+
+    // The title Noah wrote overrides the relative timestamp. This MUST happen
+    // before the weather lookup, or the weather is fetched for the wrong day.
+    const _titleDate=_parseTitleDate(parsed.activityTitle,todayStr());
+    if(_titleDate&&_titleDate!==parsed.date){
+      parsed.dateFromTimestamp=parsed.date;
+      parsed.date=_titleDate;
+      parsed.dateSource='title';
+    }else{
+      parsed.dateSource=_titleDate?'title':'timestamp';
+    }
+    parsed.titleNumber=_parseTitleNumber(parsed.activityTitle);
 
     // Derive end time from start + floored duration. Runna shows no end time
     // at all, and Strava's displayed seconds must never round up.
@@ -3700,7 +3718,11 @@ function showWorkoutSummary(result){
   const summaryEl=document.getElementById('workout-summary-card');
   if(summaryEl){
     summaryEl.innerHTML=
-      '<div class="workout-summary-row"><span class="workout-summary-icon">📅</span><span>'+escHtml(dateLabel)+'</span></div>'+
+      '<div class="workout-summary-row"><span class="workout-summary-icon">📅</span><span>'+escHtml(dateLabel)+
+        (result.dateSource==='title'
+          ? ' <span style="color:var(--text3);font-size:11px">(from your title'+(result.dateFromTimestamp?', not "'+escHtml(_ordinalDate(result.dateFromTimestamp))+'"':'')+')</span>'
+          : ' <span style="color:var(--o);font-size:11px">(no date in title — from the timestamp, check this)</span>')+
+        '</span></div>'+
       '<div class="workout-summary-row"><span class="workout-summary-icon">'+actIcon+'</span><span>'+escHtml(activityLabel)+'</span></div>'+
       '<div class="workout-summary-row"><span class="workout-summary-icon">⏱</span><span>'+escHtml(timeStr)+'</span></div>'+
       (bits.length?'<div class="workout-summary-row"><span class="workout-summary-icon">📊</span><span>'+escHtml(bits.join(' · '))+'</span></div>':'')+
@@ -3717,7 +3739,9 @@ function showWorkoutSummary(result){
   if(numRow&&numEl){
     if(result.activity==='Cycle'){
       numRow.style.display='block';
-      numEl.value=countWorkoutsOnDate('Cycle',result.date)+1;
+      // The number in Noah's own title wins. Counting logged sessions only
+      // works if every earlier ride was actually logged — it often wasn't.
+      numEl.value=result.titleNumber||(countWorkoutsOnDate('Cycle',result.date)+1);
     }else{
       numRow.style.display='none';
       numEl.value='';
@@ -3743,6 +3767,47 @@ function _weekdayName(ds){
   return WEEKDAYS[d.getDay()]||'';
 }
 function _journalYear(ds){const p=(ds||'').split('-');return p.length?p[0]:'';}
+
+// ── TITLE PARSING ───────────────────────────────────────────────────────────
+// Noah renames his Strava/Runna activities to "1st August - Afternoon Cycle 2".
+// That title is HIS OWN record and is authoritative. Strava's "Yesterday at
+// 15:32" is relative to when the SCREENSHOT was taken, which may be days after
+// the ride — trusting it dated a 1 August ride as 3 August, and then pulled the
+// wrong day's weather. Likewise the trailing number is his count of rides that
+// day, which the app cannot infer if a session was never logged.
+// So: if the title says it, the title wins.
+const _MONTHS_RE='january|february|march|april|may|june|july|august|september|october|november|december';
+
+function _parseTitleDate(title,todayISO){
+  if(!title)return null;
+  const m=String(title).match(new RegExp('\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+('+_MONTHS_RE+')\\b','i'));
+  if(!m)return null;
+  const day=parseInt(m[1],10);
+  const mon=_MONTHS_RE.split('|').indexOf(m[2].toLowerCase());
+  if(mon<0||day<1||day>31)return null;
+  // An explicit year in the title wins outright if present.
+  const ym=String(title).match(/\b(20\d{2})\b/);
+  const today=new Date(todayISO+'T00:00:00');
+  let year=ym?parseInt(ym[1],10):today.getFullYear();
+  if(!ym){
+    // No year given. Choose the one that doesn't put the date in the future —
+    // handles a late-December activity logged in early January.
+    const cand=new Date(year,mon,day);
+    if(cand.getTime()-today.getTime()>7*86400000)year-=1;
+  }
+  const d=new Date(year,mon,day);
+  if(d.getMonth()!==mon||d.getDate()!==day)return null;   // e.g. 31 February
+  return year+'-'+String(mon+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+}
+
+// "1st August - Afternoon Cycle 2" -> 2 ; "... Afternoon Cycle" -> null
+function _parseTitleNumber(title){
+  if(!title)return null;
+  const m=String(title).match(/\b(?:cycle|ride|run|walk)\s+(\d{1,2})\s*$/i);
+  if(!m)return null;
+  const n=parseInt(m[1],10);
+  return (n>=1&&n<=20)?n:null;
+}
 
 // Under 1 km reads "860 Meters (0.86 KM)" — "0 Kilometres and 860 Meters" is clumsy.
 function _fmtDistance(km){

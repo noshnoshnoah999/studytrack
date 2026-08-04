@@ -104,6 +104,53 @@ Noah's writing-voice reference: `JOURNAL_STYLE.md`
 
 ---
 
+---
+
+# v2.1 — FIX: trust the title, not the timestamp (same day, after device testing)
+
+Noah tested v2 with the 1 August cycle screenshot. Two bugs, one root cause: **the app trusted Strava's relative timestamp and its own session count instead of the title Noah wrote.**
+
+### Bug 1 — wrong date, therefore wrong weather
+The screenshot's feed header reads `Yesterday at 15:32`. That is relative to when the **screenshot was taken** (2 August), not when the ride happened (1 August). Today being 4 August, the model resolved "Yesterday" to 3 August.
+
+The title said `1st August - Afternoon Cycle 2` all along.
+
+Because the weather is looked up from the parsed date, it fetched 3 August (26.7°C, Mainly Clear) instead of 1 August (36.7°C, Light Drizzle). Wrong day, wrong weather, wrong journal.
+
+### Bug 2 — wrong cycle number
+The title said `Cycle 2`. The app ignored it and derived the number by counting logged PE sessions on that date. Noah had logged nothing for August yet — he was waiting for this feature — so it produced `1`.
+
+Counting logged sessions can only ever work if every earlier ride was logged. That assumption was wrong on the very first real use.
+
+### The fix
+- The model now returns `activityTitle` — the on-screen title, copied verbatim.
+- `_parseTitleDate()` and `_parseTitleNumber()` parse it **in JavaScript**, not in the model.
+- The title date overrides the timestamp date, and this happens **before** the weather lookup.
+- The title number overrides the session count; the session count is now only a fallback when the title has no number.
+- Both remain editable before generating.
+- The summary card now states where the date came from: `(from your title, not "3rd August")`, or an orange `(no date in title — from the timestamp, check this)` when it had to fall back.
+
+### Year inference
+Titles carry no year. The year is chosen so the date isn't in the future, which handles a late-December ride logged in early January. An explicit year in the title wins outright.
+
+### Tests — 10/10 pass
+| Title | Date | Number |
+|---|---|---|
+| `1st August - Afternoon Cycle 2` | 2026-08-01 | 2 |
+| `1st August - Afternoon Cycle` | 2026-08-01 | null |
+| `31st July - Evening Run` | 2026-07-31 | null |
+| `Afternoon Ride` (Strava default) | null → timestamp | null |
+| `Your First Walk Run Back` (Runna default) | null → timestamp | null |
+| `28th December - Morning Cycle 3` (today 4 Aug 2026) | 2025-12-28 | 3 |
+| `1 August - Afternoon Cycle 10` | 2026-08-01 | 10 |
+| `31st February - Morning Run` | null (rejected) | null |
+| `2nd August 2025 - Evening Run` | 2025-08-02 | null |
+
+### Still true
+A screenshot with **no** date in its title still falls back to the relative timestamp, which is only correct if imported promptly. The summary card now warns in orange when that happens.
+
+---
+
 ## Settings added
 
 - Heart Rate Zones — four boundary fields (Z2/Z3/Z4/Z5 start).
