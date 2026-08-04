@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1785836234167">
+<meta name="app-built" content="1785837116895">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -2021,6 +2021,16 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
            model, and without it the reflection has nothing true to say beyond
            the weather and the numbers. -->
       <div id="workout-step-feel" style="display:none">
+        <!-- Journey: cycles and walks only. Runs are loops with no destination.
+             This is the real reason the distance is what it is, which stops the
+             reflection reaching for the weather to explain it. -->
+        <div id="workout-journey-block" style="display:none;margin-bottom:14px">
+          <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Where were you going?</div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Short or long, whatever you want to say. "Home to Station" · "Station to Home" · "Home to the station, heading to Haneda Airport to meet Aoi and study together" — a full sentence is written into the journal exactly as you type it.</div>
+          <input type="text" class="form-input" id="workout-journey-input" placeholder="From Home to Station"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('workout-feel-input').focus();}">
+        </div>
+
         <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">How did it feel? <span style="font-weight:400;color:var(--text3)">optional</span></div>
         <div style="font-size:12px;color:var(--text3);margin-bottom:10px">A few words in your own words. Only you know this — the screenshot can't say it, and I won't make it up.</div>
         <div id="workout-feel-hint" style="display:none;background:var(--ol);border:1.5px solid var(--o);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:12.5px;font-weight:700;color:var(--o);line-height:1.45"></div>
@@ -3449,11 +3459,18 @@ function _buildReflectionPrompt(r,prevLine){
     w='\n\nNo weather data was available, so do not mention the weather at all.';
   }
 
-  const context=(act==='Cycle'||act==='Walk')
-    ? 'CONTEXT: my cycles and walks are usually just getting somewhere — most often between home and the station. '+
+  let context='';
+  if(act==='Cycle'||act==='Walk'){
+    context='CONTEXT: my cycles and walks are journeys — I am getting somewhere, not training. '+
       'The distance and the time are decided by the route, not by how hard I decided to go. Never treat them as a choice '+
-      'and never look for a reason why they are what they are.\n\n'
-    : '';
+      'and never look for a reason why they are what they are.\n';
+    if(r.journey&&String(r.journey).trim()){
+      context+='WHERE I WAS GOING: '+String(r.journey).trim()+'\n'+
+        'This is the real reason for the distance and the time. Mention it naturally, the way I would — name the '+
+        'places and any people, but do not invent anything about the trip beyond what I have said here.\n';
+    }
+    context+='\n';
+  }
   // Noah's own words about how it felt. This is the ONE piece of subjective
   // truth available, and it is the reason the reflection can talk about the
   // session rather than the thermometer.
@@ -3627,6 +3644,7 @@ async function analyseWorkoutImage(base64,mimeType){
     parsed.activity=activity;
     parsed.model=usedModel;
     parsed.feelNote=_workoutFeel||'';
+    parsed.journey=_workoutJourney||'';
 
     // The title Noah wrote overrides the relative timestamp. This MUST happen
     // before the weather lookup, or the weather is fetched for the wrong day.
@@ -3785,14 +3803,16 @@ function _handleWorkoutBlob(blob){
 // ── Source picker (runs BEFORE any API call) ────────────────────────────────
 // Strava tracks both cycles and walks, so it needs a follow-up question.
 // Runna is running-only, so it goes straight through.
-let _workoutApp=null, _workoutActivity=null, _workoutFeel='';
+let _workoutApp=null, _workoutActivity=null, _workoutFeel='', _workoutJourney='';
 
 function _showWorkoutSourcePicker(dataUrl){
-  _workoutApp=null; _workoutActivity=null; _workoutFeel='';
+  _workoutApp=null; _workoutActivity=null; _workoutFeel=''; _workoutJourney='';
   const p=document.getElementById('workout-source-preview');
   if(p&&dataUrl)p.src=dataUrl;
   const fi=document.getElementById('workout-feel-input');
   if(fi)fi.value='';
+  const ji=document.getElementById('workout-journey-input');
+  if(ji)ji.value='';
   document.getElementById('workout-upload-area').style.display='none';
   document.getElementById('workout-result-area').style.display='none';
   document.getElementById('workout-step-activity').style.display='none';
@@ -3809,22 +3829,28 @@ function _showFeelStep(){
   // The duration isn't known yet — the screenshot hasn't been read at this point —
   // so this is a prompt for Noah to judge it himself. Runs always get a reflection,
   // so the hint is only shown for cycles and walks.
+  const isTrip=(_workoutActivity==='Cycle'||_workoutActivity==='Walk');
+  const jb=document.getElementById('workout-journey-block');
+  if(jb)jb.style.display=isTrip?'block':'none';
   const hint=document.getElementById('workout-feel-hint');
   if(hint){
-    if(_workoutActivity==='Cycle'||_workoutActivity==='Walk'){
-      hint.innerHTML='⚠️ If this '+_workoutActivity.toLowerCase()+' was under 15 minutes — a normal trip to the station — press <b>Skip</b>. A reflection isn\'t needed and just pads the journal.';
+    if(isTrip){
+      hint.innerHTML='⚠️ If this '+_workoutActivity.toLowerCase()+' was under 15 minutes — a normal trip to the station — still fill in where you were going, but leave this box <b>empty</b>. A reflection isn\'t needed and just pads the journal.';
       hint.style.display='block';
     }else{
       hint.style.display='none';
     }
   }
-  const fi=document.getElementById('workout-feel-input');
-  if(fi)setTimeout(()=>fi.focus(),80);
+  // Focus whichever field comes first.
+  const first=document.getElementById(isTrip?'workout-journey-input':'workout-feel-input');
+  if(first)setTimeout(()=>first.focus(),80);
 }
 
 function submitWorkoutFeel(skip){
   const fi=document.getElementById('workout-feel-input');
+  const ji=document.getElementById('workout-journey-input');
   _workoutFeel=skip?'':((fi&&fi.value||'').trim());
+  _workoutJourney=skip?'':((ji&&ji.value||'').trim());
   document.getElementById('workout-source-area').style.display='none';
   runWorkoutAnalysis();
 }
@@ -3957,7 +3983,7 @@ function showWorkoutSummary(result){
       numRow.style.display='block';
       // The number in Noah's own title wins. Counting logged sessions only
       // works if every earlier ride was actually logged — it often wasn't.
-      numEl.value=result.titleNumber||(countWorkoutsOnDate('Cycle',result.date)+1);
+      numEl.value=result.titleNumber||(countWorkoutsOnDate('Cycle',result.date,_timeOfDay(result.startTime,null))+1);
     }else{
       numRow.style.display='none';
       numEl.value='';
@@ -4025,6 +4051,41 @@ function _parseTitleNumber(title){
   return (n>=1&&n<=20)?n:null;
 }
 
+// The bike parking line depends on which way the trip went. Riding TO the station
+// means parking there; riding home FROM the station means collecting the bike.
+// A trip that never touches the station (home to the skin clinic) has nothing to
+// say about the bike park at all, so the line is dropped.
+// With no route given we cannot tell, so the commute default is kept.
+const BIKE_PARK='the JR Shin-Urayasu Bicycle Parking Lot Number 2';
+function _bikeParkingLine(journey){
+  const j=String(journey||'').trim().toLowerCase();
+  if(!j)return 'I parked at '+BIKE_PARK;
+  if(!/station|駅/.test(j))return null;
+  // Explicit "coming away from the station" phrasings first — these are the ones
+  // a positional check gets wrong, because they often have no " to " at all.
+  if(/(from|leaving|left|back from|out of)\s+(the\s+)?(station|駅)/.test(j)
+     ||/(station|駅)\s*(back\s+)?(to\s+)?home/.test(j)){
+    return 'I picked my bike up from '+BIKE_PARK;
+  }
+  // Otherwise fall back to position: station named before the first "to" means
+  // the ride started there.
+  const iStation=j.search(/station|駅/);
+  const iTo=j.indexOf(' to ');
+  if(iTo>=0&&iStation<iTo)return 'I picked my bike up from '+BIKE_PARK;
+  return 'I parked at '+BIKE_PARK;
+}
+
+// A short fragment ("Home to Station") reads better with a label. A full sentence
+// does not — "Route: I was heading from home to the station to meet Aoi" is clumsy,
+// so anything sentence-length is printed as its own line, exactly as written.
+function _journeyLine(journey){
+  const t=String(journey||'').trim();
+  if(!t)return null;
+  const words=t.split(/\s+/).length;
+  if(words<=6&&!/[.!?]$/.test(t))return 'Route: '+t;
+  return t;
+}
+
 // Plain "4.13 KM". The long-hand "4 Kilometres and 130 Meters" was dropped
 // 4 Aug 2026 — it padded every journal for no benefit.
 function _fmtDistance(km){
@@ -4074,7 +4135,12 @@ function buildWorkoutJournal(r,cycleNum,locationOverride){
     ' + '+_fmtHoursMins(jm,false)+' of journal writing = '+_fmtHoursMins(totalMins,true));
   L.push('');
   L.push(loc);
-  if(act==='Cycle')L.push('I parked at the JR Shin-Urayasu Bicycle Parking Lot Number 2');
+  const _jl=_journeyLine(r.journey);
+  if(_jl)L.push(_jl);
+  if(act==='Cycle'){
+    const bp=_bikeParkingLine(r.journey);
+    if(bp)L.push(bp);
+  }
   if(r.weather&&r.weather.tempC!==null&&r.weather.tempC!==undefined){
     // Whole degrees — "29.1°C" in a diary is a machine tell.
     L.push('Weather at the time of the '+act.toLowerCase()+': '+Math.round(r.weather.tempC)+'°C'+(r.weather.text?' | '+r.weather.text:''));
@@ -4154,12 +4220,19 @@ function copyJournalContent(){
   );
 }
 
-// How many of this activity are already logged on this date? Used to suggest
-// the "Cycle 2" suffix. Editable, because a ride Noah never logged would
-// otherwise throw the count off.
-function countWorkoutsOnDate(activity,date){
+// How many of this activity are already logged in the SAME PART OF THE DAY?
+// The number in "Evening Cycle 2" means the second cycle that EVENING, not the
+// second of the day — counting the whole day labelled a first evening ride as
+// "Evening Cycle 2" just because there had been an afternoon one.
+// Still only a suggestion: a ride Noah never logged would throw the count off,
+// so the field stays editable and a number in his own title always wins.
+function countWorkoutsOnDate(activity,date,daypart){
   try{
-    return loadSessions().filter(s=>s.subjectId==='pe'&&s.date===date&&s.journalMeta&&s.journalMeta.activity===activity).length;
+    return loadSessions().filter(s=>
+      s.subjectId==='pe'&&s.date===date&&
+      s.journalMeta&&s.journalMeta.activity===activity&&
+      (!daypart||_timeOfDay(s.start,null)===daypart)
+    ).length;
   }catch(e){return 0;}
 }
 
@@ -4220,7 +4293,7 @@ async function useWorkoutResult(){
     avgHR:result.avgHR||null, cadence:result.cadence||null, calories:result.calories||null,
     elevationGainM:result.elevationGainM||null, steps:result.steps||null,
     avgPower:result.avgPower||null, achievements:result.achievements||null,
-    feelNote:result.feelNote||null,
+    feelNote:result.feelNote||null, journey:result.journey||null,
     effortLevel:result.effortLevel||null, avgSpeedKmh:result.avgSpeedKmh||null,
     location:locOverride||result.locationLabel||null,
     weather:result.weather||null, model:result.model||null

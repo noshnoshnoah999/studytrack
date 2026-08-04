@@ -51,6 +51,22 @@ weather and speculation. The fix is to ask for the one thing only Noah knows.
 - Durations of 60 minutes or more now roll into hours. A 5h23m ride was printing
   as "323 Mins of cycling", which is unreadable. Applies to the workout total,
   the stretches total and the preview card.
+- New "Where were you going?" field for cycles and walks, on the same step. Adds a
+  "Route: Home to Station" line to the journal and gives the reflection the actual
+  reason for the distance, so it stops reaching for the weather to explain it.
+  Hidden for runs, which have no destination.
+- The bike parking line now follows the direction of travel. Riding TO the station
+  parks the bike; riding home FROM the station collects it; a trip that never
+  touches the station drops the line entirely. It previously claimed Noah parked
+  at the station even when he was leaving it to ride home.
+- Cycle numbering counts within the SAME PART OF THE DAY. "Evening Cycle 2" means
+  the second cycle that evening — counting the whole day was labelling a first
+  evening ride as "Evening Cycle 2" because there had been an afternoon one.
+- The route accepts a full custom sentence. A short fragment keeps the "Route:"
+  label; anything sentence-length is written into the journal verbatim on its own
+  line, so naming Haneda Airport or a friend comes through intact.
+- Parking detection handles "from the station", "leaving the station" and "back
+  from the station", which have no " to " for a positional check to work with.
 
 Also fixing what real output exposed:
 - Previous-session comparison is RUNS ONLY. Cycles and walks are commutes on a
@@ -100,6 +116,58 @@ If the API call fails, the flow returns to the feel step so the note isn't lost.
 - The no-fabrication rule reads "Unless I told you how it felt above…", so it no longer
   contradicts the note.
 - Length allowance only rises when a note exists.
+
+## The journey field
+
+Shown for cycles and walks only, above the "how did it feel" box on the same step.
+Free text — "Home to Station", "Station to Home", "Home to the skin clinic",
+"Home to Station to go meet up with Aoi to study at a cafe".
+
+Produces a `Route:` line in the journal, sitting with the location block:
+
+```
+Urayasu Area
+Route: Home to Station to go meet up with Aoi to study at a cafe
+I parked at the JR Shin-Urayasu Bicycle Parking Lot Number 2
+Weather at the time of the cycle: 37°C | Light Drizzle
+```
+
+Omitted entirely when left blank. It does **not** trigger a reflection on its own —
+only the feel note and the 15-minute rule do that — so a short station ride can record
+its route without generating a paragraph nobody needs.
+
+## Bike parking + numbering — 11/11 verified
+
+| Route typed | Parking line |
+|---|---|
+| Home to Station | I parked at … |
+| Station to Home | **I picked my bike up from …** |
+| From the station back home | **I picked my bike up from …** |
+| Leaving the station to go home | **I picked my bike up from …** |
+| Back from the station after landing at Haneda | **I picked my bike up from …** |
+| Home to the station, heading to Haneda Airport to meet my friend Aoi… | I parked at … |
+| Home to the skin clinic | **(no line)** |
+| *(left blank)* | I parked at … (commute default) |
+
+A custom sentence is written verbatim on its own line, with no "Route:" label:
+
+```
+Urayasu Area
+Home to the station, heading to Haneda Airport to meet my friend Aoi to study at the airport together
+I parked at the JR Shin-Urayasu Bicycle Parking Lot Number 2
+Weather at the time of the cycle: 33°C | Mainly Clear
+```
+
+Numbering, given a morning and an afternoon ride already logged on 2 August:
+
+| New ride at | Title |
+|---|---|
+| 19:40 | **Evening Cycle 1** (was wrongly "Evening Cycle 2") |
+| 16:10 | Afternoon Cycle 2 |
+| 10:05 | Morning Cycle 2 |
+
+A number written in Noah's own activity title still overrides the count, and the field
+remains editable.
 
 ## Duration formatting — 10/10 verified
 
