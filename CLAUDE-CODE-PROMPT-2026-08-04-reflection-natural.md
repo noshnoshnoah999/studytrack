@@ -1,10 +1,10 @@
-# Claude Code prompt — commit & push the natural-reflection changes
+# Claude Code prompt — commit & push reflection changes + "how did it feel" box
 
 **Repo root: `/Users/noahflouty/Claude/StudyTrack/studytrack-deploy`** — not the parent.
 **Clear `.git/index.lock` first.**
 
-This bundles everything currently uncommitted: the import parse fix, the stretches
-tidy-up, the drag-drop bypass fix if not yet pushed, and these reflection changes.
+Bundles everything uncommitted: import parse fix, drag-drop bypass fix, stretches tidy-up,
+the natural-reflection changes, and the new "how did it feel" box.
 
 ---
 
@@ -22,42 +22,41 @@ File exists". Confirm no git process is genuinely running first.
 STEPS
 1. Run `git status` and show me the output.
 2. Expect modified: index.html, version.txt
-   Plus any untracked CLAUDE-CODE-PROMPT-2026-08-04-* files from today's work:
+   Plus untracked CLAUDE-CODE-PROMPT-2026-08-04-* files from today:
      -drag-drop-bypass-fix.md
      -parse-failure-fix.md
      -reflection-natural.md
    LEAVE the older untracked CLAUDE-CODE-PROMPT-* / HANDOFF-* backlog alone
-   (anything dated before 2026-08-04).
-   Stage nothing under archive/.
+   (anything dated before 2026-08-04). Stage nothing under archive/.
 3. Stage index.html, version.txt and those three prompt files.
 4. Commit with this message:
 
-Make the reflection sound like me, not like a report about me
+Add a "how did it feel" note and make the reflection sound like me
 
-Real output was speculating about why a commute was shorter than the last one and
-narrating the app's own effort rating back at itself.
+The reflection had nothing subjective it was allowed to say, so it padded with
+weather and speculation. The fix is to ask for the one thing only Noah knows.
 
-- Previous-session comparison is now RUNS ONLY. Cycles and walks are usually
-  commutes on a set route, so the distance is decided by geography — comparing
-  them only invited an invented explanation for a difference with no cause
-- Cycle and walk prompts now state that these are journeys between home and the
-  station, and that distance and time are not a choice
+- New optional "How did it feel?" step in the import flow, asked before the API
+  call because the reflection is written during analysis. Free text, skippable.
+- The note is passed to the reflection as Noah's own words, so it MAY be written
+  about — it now leads the paragraph instead of the temperature
+- The no-fabrication rule carves out exactly what Noah said and nothing beyond it
+- Length allowance rises to four sentences only when a note was given
+- Note stored on the session in journalMeta
+
+Also fixing what real output exposed:
+- Previous-session comparison is RUNS ONLY. Cycles and walks are commutes on a
+  set route, so comparing distances only invited an invented explanation
+- Cycle/walk prompts now state these are journeys between home and the station
+  and that distance and time are not a choice
 - Banned speculating about why any number is what it is
-- Banned restating the effort level in any form. "Effort level came out as low"
-  exposes that something calculated it rather than me judging it, which is
-  exactly the wrong impression for a school journal
-- Banned describing any part of the journal as produced, generated or calculated
-  for me; the Strava award is the one legitimate exception
-- Asked for a lighter touch: note the conditions and a couple of numbers, no
-  analysis and no lessons unless something genuinely warrants it
-
-Also in this commit:
+- Banned restating the effort level. "Effort level came out as low" exposes that
+  something calculated it rather than Noah judging it
+- Banned describing any part of the journal as generated or calculated for him
 - Import parse fix: no longer assumes content[0] is the text block, falls back to
-  extracting the outermost {...}, higher max_tokens, and error messages that name
-  the real cause instead of blaming the screenshot
+  the outermost {...}, higher max_tokens, errors that name the real cause
 - Drag-and-drop and Choose File no longer skip the Strava/Runna question
-- Stretches journal: sentence-case heading, body-part targets removed, source
-  simplified to "video from YouTube by Run Better with Ash"
+- Stretches: sentence-case heading, body-part targets removed, source simplified
 
 5. Push to origin main and show me the new commit SHA.
 6. Remove any git lock or stale lock files (.git/index.lock, .git/HEAD.lock,
@@ -68,34 +67,35 @@ DO NOT change any application code.
 
 ---
 
-## What changed and why
+## The new flow
 
-The 1 August cycle produced this:
+```
+paste / drag / choose file
+        ↓
+  Which app?  →  Strava → Cycle or Walk?
+        ↓                      ↓
+     (Runna)  ─────────────────┘
+        ↓
+  How did it feel?   ← NEW, optional, Skip available
+        ↓
+  API call → weather → reflection
+```
 
-> "Today's cycle was shorter than last time, only 3km compared to the 4.13km on the 31st,
-> **but it was 34°C and overcast which probably had something to do with that**. […]
-> **Effort level came out as low** so I don't think I pushed myself that hard."
-
-Two problems:
-
-1. **It invented a reason for the distance.** Noah cycled home to the station. The distance is
-   the route. Reaching for a weather explanation made him sound unaware of his own session —
-   and the previous-session comparison, which was added deliberately, is what prompted it.
-2. **"Effort level came out as low" exposes the automation.** It reveals that the level was
-   worked out by something rather than judged by Noah, which is the last impression a school
-   journal should give.
+The note is asked **before** analysis because the reflection is generated during it.
+If the API call fails, the flow returns to the feel step so the note isn't lost.
 
 ## Verified before commit
 
-- Cycle and walk prompts now carry the commute context; the run prompt does not.
-- Previous-session comparison appears only for runs.
-- Both new rule blocks render correctly in the prompt.
+- With a note, the prompt contains a `HOW IT ACTUALLY FELT, IN MY OWN WORDS` block telling
+  the model this came from Noah, may be used, and must not be embroidered.
+- Without a note, that block is absent entirely and the old rules apply unchanged.
+- The no-fabrication rule reads "Unless I told you how it felt above…", so it no longer
+  contradicts the note.
+- Length allowance only rises when a note exists.
 
 ## Test after pushing
 
-Re-import the 1 August cycle. The reflection should:
-
-- **Not** compare against the 31 July ride at all
-- **Not** explain why the distance was what it was
-- **Not** mention the effort level in any form
-- Note the heat and a couple of figures, then stop
+Import a run and type something plain like `legs stiff at the start, hot but fine after`.
+The reflection should build around that rather than the weather, and must not add any
+sensation you didn't mention. Then import one with **Skip** and check it still behaves —
+short, factual, no invented feelings.

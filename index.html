@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1785834810350">
+<meta name="app-built" content="1785835076633">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -2017,6 +2017,20 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
         </div>
       </div>
 
+      <!-- Only YOU know this. It is the one thing the screenshot cannot tell the
+           model, and without it the reflection has nothing true to say beyond
+           the weather and the numbers. -->
+      <div id="workout-step-feel" style="display:none">
+        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">How did it feel? <span style="font-weight:400;color:var(--text3)">optional</span></div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:10px">A few words in your own words. Only you know this — the screenshot can't say it, and I won't make it up.</div>
+        <input type="text" class="form-input" id="workout-feel-input" placeholder="e.g. legs stiff at the start, hot but fine after" style="margin-bottom:10px"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();submitWorkoutFeel();}">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <button onclick="submitWorkoutFeel()" style="background:var(--ol);border:1.5px solid var(--o);border-radius:12px;padding:14px 10px;font-size:14px;font-weight:700;color:var(--o);cursor:pointer;font-family:inherit">Continue →</button>
+          <button onclick="submitWorkoutFeel(true)" style="background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:14px 10px;font-size:14px;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit">Skip</button>
+        </div>
+      </div>
+
       <button class="btn-cancel" style="margin-top:12px;width:100%" onclick="backToWorkoutUpload()">← Choose a different image</button>
     </div>
 
@@ -3439,8 +3453,18 @@ function _buildReflectionPrompt(r,prevLine){
       'The distance and the time are decided by the route, not by how hard I decided to go. Never treat them as a choice '+
       'and never look for a reason why they are what they are.\n\n'
     : '';
+  // Noah's own words about how it felt. This is the ONE piece of subjective
+  // truth available, and it is the reason the reflection can talk about the
+  // session rather than the thermometer.
+  let feel='';
+  if(r.feelNote&&String(r.feelNote).trim()){
+    feel='\n\nHOW IT ACTUALLY FELT, IN MY OWN WORDS: "'+String(r.feelNote).trim()+'"\n'+
+      'This came from ME, so it is true and you MAY write about it — build the reflection around it and '+
+      'let it lead. Expand it into proper sentences in my voice, but do NOT add any feeling, sensation or '+
+      'detail I did not actually say. If I mentioned one thing, write about that one thing.';
+  }
   return 'Write the reflection paragraph for my PE journal for this '+verb+'. Output ONLY the paragraph — no JSON, no quotes, no label, no preamble.\n\n'+context+
-    'THE FIGURES:\n'+F.join('\n')+w+prevLine+'\n\n'+
+    'THE FIGURES:\n'+F.join('\n')+w+feel+prevLine+'\n\n'+
     'HOW I WRITE. This goes into a school journal and has to read as though I wrote it, not an AI.\n'+
     '- First person, chronological, plain everyday vocabulary. Do not reach for fancy synonyms. Repeating a word is normal for me.\n'+
     '- British spellings: kilometre, realised, colour.\n'+
@@ -3455,7 +3479,8 @@ function _buildReflectionPrompt(r,prevLine){
     '- Write about what the session was like, not what the numbers were.\n'+
     '- Never mention cadence and calories together as a pair of facts.\n\n'+
     'CRITICAL — DO NOT INVENT HOW MY BODY FELT.\n'+
-    'You were not there. You have numbers and a weather reading, nothing else. Never assert a physical\n'+
+    'You were not there. Unless I told you how it felt above, you have only numbers and a weather\n'+
+    'reading. Anything I said in my own words is fair game and should be used. Anything else — never assert a physical\n'+
     'sensation as fact. Do NOT write things like "I was sweating a lot", "the air felt thick and heavy",\n'+
     '"my legs were burning" or "I was out of breath" — you cannot know any of that and this goes to my school.\n'+
     '- You MAY reason from the figures, hedged: "I think the heat pushed my heart rate up more than the\n'+
@@ -3480,7 +3505,8 @@ function _buildReflectionPrompt(r,prevLine){
     '- Do NOT mention the screenshot or the attachment — a separate line already does that.\n'+
     '- Do NOT claim I named or titled the activity. The apps generate their own names.\n'+
     '- Only use "After that" when something genuinely happened next. Never as a filler transition.\n'+
-    '- TWO OR THREE SENTENCES. Not more. Short and true beats long and padded.\n'+
+    '- TWO OR THREE SENTENCES, or up to FOUR if I gave you a note about how it felt (that is real\n'+
+    '  material, so there is more worth saying). Short and true still beats long and padded.\n'+
     '- Make each sentence do a DIFFERENT job. Do not restate the same idea in new words, and never\n'+
     '  repeat a figure you have already given. If you only have two sentences worth of truth, write two.\n'+
     '- No headers, no emoji, no bullet points, no clock times.\n';
@@ -3599,6 +3625,7 @@ async function analyseWorkoutImage(base64,mimeType){
     parsed.app=app;
     parsed.activity=activity;
     parsed.model=usedModel;
+    parsed.feelNote=_workoutFeel||'';
 
     // The title Noah wrote overrides the relative timestamp. This MUST happen
     // before the weather lookup, or the weather is fetched for the wrong day.
@@ -3753,17 +3780,36 @@ function _handleWorkoutBlob(blob){
 // ── Source picker (runs BEFORE any API call) ────────────────────────────────
 // Strava tracks both cycles and walks, so it needs a follow-up question.
 // Runna is running-only, so it goes straight through.
-let _workoutApp=null, _workoutActivity=null;
+let _workoutApp=null, _workoutActivity=null, _workoutFeel='';
 
 function _showWorkoutSourcePicker(dataUrl){
-  _workoutApp=null; _workoutActivity=null;
+  _workoutApp=null; _workoutActivity=null; _workoutFeel='';
   const p=document.getElementById('workout-source-preview');
   if(p&&dataUrl)p.src=dataUrl;
+  const fi=document.getElementById('workout-feel-input');
+  if(fi)fi.value='';
   document.getElementById('workout-upload-area').style.display='none';
   document.getElementById('workout-result-area').style.display='none';
   document.getElementById('workout-step-activity').style.display='none';
+  document.getElementById('workout-step-feel').style.display='none';
   document.getElementById('workout-step-app').style.display='block';
   document.getElementById('workout-source-area').style.display='block';
+}
+
+// Asked BEFORE the API call, because the reflection is written during analysis.
+function _showFeelStep(){
+  document.getElementById('workout-step-app').style.display='none';
+  document.getElementById('workout-step-activity').style.display='none';
+  document.getElementById('workout-step-feel').style.display='block';
+  const fi=document.getElementById('workout-feel-input');
+  if(fi)setTimeout(()=>fi.focus(),80);
+}
+
+function submitWorkoutFeel(skip){
+  const fi=document.getElementById('workout-feel-input');
+  _workoutFeel=skip?'':((fi&&fi.value||'').trim());
+  document.getElementById('workout-source-area').style.display='none';
+  runWorkoutAnalysis();
 }
 
 function backToWorkoutUpload(){
@@ -3775,10 +3821,9 @@ function backToWorkoutUpload(){
 function pickWorkoutApp(app){
   _workoutApp=app;
   if(app==='Runna'){
-    // Runna is running only — nothing else to ask.
+    // Runna is running only — no activity question, straight to "how did it feel".
     _workoutActivity='Run';
-    document.getElementById('workout-source-area').style.display='none';
-    runWorkoutAnalysis();
+    _showFeelStep();
     return;
   }
   document.getElementById('workout-step-app').style.display='none';
@@ -3787,8 +3832,7 @@ function pickWorkoutApp(app){
 
 function pickWorkoutActivity(act){
   _workoutActivity=act;
-  document.getElementById('workout-source-area').style.display='none';
-  runWorkoutAnalysis();
+  _showFeelStep();
 }
 async function pasteWorkoutImage(){
   // Try Clipboard API first (works on Mac Chrome/Safari, iOS 16+)
@@ -3833,10 +3877,11 @@ async function runWorkoutAnalysis(){
   const result=await analyseWorkoutImage(_workoutImageBase64,_workoutImageMime||'image/jpeg');
   if(spinner)spinner.style.display='none';
   if(!result){
-    // Failed — put the picker back so the choice isn't lost.
+    // Failed — go back to the feel step so neither the choice nor the note is lost.
     document.getElementById('workout-source-area').style.display='block';
-    document.getElementById('workout-step-app').style.display='block';
+    document.getElementById('workout-step-app').style.display='none';
     document.getElementById('workout-step-activity').style.display='none';
+    document.getElementById('workout-step-feel').style.display='block';
     return;
   }
   _workoutResult=result;
@@ -4147,6 +4192,7 @@ async function useWorkoutResult(){
     avgHR:result.avgHR||null, cadence:result.cadence||null, calories:result.calories||null,
     elevationGainM:result.elevationGainM||null, steps:result.steps||null,
     avgPower:result.avgPower||null, achievements:result.achievements||null,
+    feelNote:result.feelNote||null,
     effortLevel:result.effortLevel||null, avgSpeedKmh:result.avgSpeedKmh||null,
     location:locOverride||result.locationLabel||null,
     weather:result.weather||null, model:result.model||null
