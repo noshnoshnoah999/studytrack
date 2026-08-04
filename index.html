@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1785812071517">
+<meta name="app-built" content="1785816436714">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -3363,7 +3363,8 @@ function _buildWorkoutPrompt(app,activity,wantsReflection,prevLine){
   p+='Return ONLY valid JSON, no markdown fences:\n'+
      '{"activityTitle":string|null,"date":"YYYY-MM-DD","timestampWasRelative":boolean,"startTime":"HH:MM","durationSeconds":number,"distanceKm":number|null,'+
      '"elevationGainM":number|null,"steps":number|null,"avgPace":"M:SS"|null,"avgHR":number|null,'+
-     '"cadence":number|null,"calories":number|null,"locationLabel":string|null,"reflection":string|null}\n\n'+
+     '"cadence":number|null,"calories":number|null,"avgPower":number|null,"achievements":string|null,'+
+     '"locationLabel":string|null,"reflection":string|null}\n\n'+
      'RULES:\n'+
      '- activityTitle: the large activity title on the screen, copied out EXACTLY and in full,\n'+
      '  e.g. "1st August - Afternoon Cycle 2". If there is no title, return null. Do not tidy it up,\n'+
@@ -3372,6 +3373,9 @@ function _buildWorkoutPrompt(app,activity,wantsReflection,prevLine){
      '  calendar date. false if an actual date was printed, e.g. "31 Jul 2026 at 20:49".\n'+
      '- durationSeconds: convert the displayed time exactly. "10m 29s" = 629. "27:10" = 1630. Never round up.\n'+
      '- avgPace: as displayed, e.g. "8:20".\n'+
+     '- avgPower: the Avg Power figure in watts if shown, e.g. 53. null if absent.\n'+
+     '- achievements: any award, badge, trophy or personal-record banner on the screen,\n'+
+     '  copied out as shown, e.g. "Your biggest climb ever!". null if there is none.\n'+
      '- locationLabel: only for Strava, copied from the screen. null for Runna.\n'+
      '- date: from the relative timestamp ("Yesterday at...") ONLY as a fallback. If the title contains\n'+
      '  a date, that date is the truth — I write those titles myself and they are correct even when the\n'+
@@ -3399,7 +3403,14 @@ function _buildReflectionPrompt(r,prevLine){
   if(r.cadence)F.push('Cadence: '+r.cadence+' spm');
   if(r.calories)F.push('Calories: '+r.calories+' kcal');
   if(r.steps)F.push('Steps: '+r.steps);
+  if(r.avgPower)F.push('Average power: '+r.avgPower+' W');
   F.push('Effort level (already worked out): '+(r.effortLevel||'Low'));
+  // A badge on the screen is a REAL fact, not an invention, and it is often the
+  // only genuinely interesting thing about an otherwise routine session.
+  if(r.achievements&&String(r.achievements).trim()){
+    F.push('The app gave me this award: "'+String(r.achievements).trim()+'" \u2014 this is real and worth a mention, '+
+           'but keep it in proportion. Do not oversell a small achievement.');
+  }
   // Deliberately NOT passing the activity title. Runna auto-names activities
   // ("Your First Walk Run Back" is a Runna milestone), and labelling it as
   // Noah's own wording made the model open with "I called this one X for a
@@ -3969,6 +3980,8 @@ function buildWorkoutJournal(r,cycleNum,locationOverride){
   if(r.avgHR)L.push('Average Heart Rate: '+r.avgHR+' bpm');
   if(r.cadence)L.push('Cadence: '+r.cadence+' steps per minute');
   if(r.calories)L.push('Calories Burned: '+r.calories+' kcal');
+  if(r.avgPower)L.push('Average Power: '+r.avgPower+' W');
+  if(r.achievements&&String(r.achievements).trim())L.push('Strava Achievement: '+String(r.achievements).trim());
   L.push('');
   L.push('Effort Level: '+(r.effortLevel||'Low'));
 
@@ -4093,6 +4106,7 @@ async function useWorkoutResult(){
     durationSeconds:result.durationSeconds||0, avgPace:result.avgPace||null,
     avgHR:result.avgHR||null, cadence:result.cadence||null, calories:result.calories||null,
     elevationGainM:result.elevationGainM||null, steps:result.steps||null,
+    avgPower:result.avgPower||null, achievements:result.achievements||null,
     effortLevel:result.effortLevel||null, avgSpeedKmh:result.avgSpeedKmh||null,
     location:locOverride||result.locationLabel||null,
     weather:result.weather||null, model:result.model||null
