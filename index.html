@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1785833669216">
+<meta name="app-built" content="1785834810350">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -3434,7 +3434,12 @@ function _buildReflectionPrompt(r,prevLine){
     w='\n\nNo weather data was available, so do not mention the weather at all.';
   }
 
-  return 'Write the reflection paragraph for my PE journal for this '+verb+'. Output ONLY the paragraph — no JSON, no quotes, no label, no preamble.\n\n'+
+  const context=(act==='Cycle'||act==='Walk')
+    ? 'CONTEXT: my cycles and walks are usually just getting somewhere — most often between home and the station. '+
+      'The distance and the time are decided by the route, not by how hard I decided to go. Never treat them as a choice '+
+      'and never look for a reason why they are what they are.\n\n'
+    : '';
+  return 'Write the reflection paragraph for my PE journal for this '+verb+'. Output ONLY the paragraph — no JSON, no quotes, no label, no preamble.\n\n'+context+
     'THE FIGURES:\n'+F.join('\n')+w+prevLine+'\n\n'+
     'HOW I WRITE. This goes into a school journal and has to read as though I wrote it, not an AI.\n'+
     '- First person, chronological, plain everyday vocabulary. Do not reach for fancy synonyms. Repeating a word is normal for me.\n'+
@@ -3457,6 +3462,20 @@ function _buildReflectionPrompt(r,prevLine){
     '  effort really called for" is fine, because the heart rate and the temperature are both real.\n'+
     '- Use "I think", "probably", "it likely" when drawing a conclusion rather than stating it flatly.\n'+
     '- If you have nothing true to say about how it felt, write about the conditions and the numbers instead.\n\n'+
+    'CRITICAL — DO NOT SPECULATE ABOUT WHY.\n'+
+    'Do not guess at reasons for the numbers. Do not explain why this session was shorter, longer, slower or\n'+
+    'faster than another one, and do not link the distance to the weather or to how I was feeling. If I went a\n'+
+    'certain distance, that is simply what I did. Writing "which probably had something to do with that" makes\n'+
+    'me sound like I do not know why I did my own session.\n'+
+    '- NEVER restate or refer to the effort level. Phrases like "effort level came out as low" or\n'+
+    '  "it was rated as medium" expose that something WORKED IT OUT for me rather than me judging it,\n'+
+    '  which is the last impression this journal should give. The effort level is already printed on the\n'+
+    '  line above. Do not mention it in any form.\n'+
+    '- More generally, never describe any part of this journal as something produced, generated, calculated,\n'+
+    '  recorded or reported FOR me. Write as me, about what I did. The one exception is the app award, which\n'+
+    '  genuinely does come from Strava.\n'+
+    '- Keep it light. Note the conditions and a couple of the numbers and leave it there. Do not analyse,\n'+
+    '  do not draw lessons, do not tell me what to do next time unless something genuinely warrants it.\n\n'+
     'ALSO:\n'+
     '- Do NOT mention the screenshot or the attachment — a separate line already does that.\n'+
     '- Do NOT claim I named or titled the activity. The apps generate their own names.\n'+
@@ -3501,8 +3520,12 @@ async function _generateReflection(r,key,model){
       method:'POST',signal:c.signal,
       headers:{'x-api-key':key,'anthropic-version':'2023-06-01',
                'anthropic-dangerous-direct-browser-access':'true','content-type':'application/json'},
+      // Previous-session comparison is for RUNS ONLY. Cycles and walks are
+      // usually commutes on a set route, so the distance is decided by geography,
+      // not by effort — comparing them just invites the model to invent a reason
+      // for a difference that has no reason.
       body:JSON.stringify({model:model,max_tokens:1500,
-        messages:[{role:'user',content:_buildReflectionPrompt(r,_prevWorkoutPromptLine(r.activity,r.date))}]})
+        messages:[{role:'user',content:_buildReflectionPrompt(r,r.activity==='Run'?_prevWorkoutPromptLine('Run',r.date):'')}]})
     });
     clearTimeout(t);
     if(!resp.ok){showToast('Reflection failed — journal written without it','var(--o)');return null;}
