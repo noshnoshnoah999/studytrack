@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1779172934755">
+<meta name="app-built" content="1785808457232">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -1346,9 +1346,16 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
           </div>
         </div>
         <div class="duration-display" id="log-duration" style="margin:10px 0 14px"></div>
-        <div class="form-group" style="margin-bottom:16px">
+        <div class="form-group" style="margin-bottom:12px">
           <label class="form-label">Notes (optional)</label>
           <input type="text" class="form-input" id="log-notes" placeholder="e.g. chapter 3 review">
+        </div>
+        <div class="form-group" style="margin-bottom:16px">
+          <label class="form-label" style="display:flex;align-items:center;justify-content:space-between">
+            <span>Journal Content <span style="font-weight:400;color:var(--text3)">(for the Google Form)</span></span>
+            <button type="button" id="log-journal-copy" onclick="copyJournalContent()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:3px 9px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit">Copy</button>
+          </label>
+          <textarea class="form-input" id="log-journal" rows="8" placeholder="Auto-filled when you import a workout screenshot" style="resize:vertical;min-height:110px;line-height:1.55"></textarea>
         </div>
         <div class="dup-warn" id="dup-warn">
           <div class="dup-warn-title">⚠ Possible duplicate</div>
@@ -1604,6 +1611,21 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
       <label class="form-label">Anthropic API Key <span style="font-weight:400;color:var(--text3)">(for workout import)</span></label>
       <input type="password" class="form-input" id="settings-anthropic-key" placeholder="sk-ant-...">
       <div style="font-size:11px;color:var(--text3);margin-top:4px">Stored locally on your device only. Get yours at console.anthropic.com</div>
+    </div>
+    <div class="form-group" style="margin-top:6px">
+      <label class="form-label">Heart Rate Zones <span style="font-weight:400;color:var(--text3)">(from Apple Watch)</span></label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">Zone 2 starts</div><input type="number" class="form-input" id="settings-hr-z2" placeholder="144"></div>
+        <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">Zone 3 starts</div><input type="number" class="form-input" id="settings-hr-z3" placeholder="157"></div>
+        <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">Zone 4 starts</div><input type="number" class="form-input" id="settings-hr-z4" placeholder="170"></div>
+        <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">Zone 5 starts</div><input type="number" class="form-input" id="settings-hr-z5" placeholder="183"></div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:5px">Used to work out the effort level. Never sent to the API — the calculation happens on this device. <b style="color:var(--text2)">Your watch recalculates these on the 1st of each month</b>, so check them now and then (Watch app → Heart Rate).</div>
+    </div>
+    <div class="form-group" style="margin-top:6px">
+      <label class="form-label">Default Run / Cycle Location</label>
+      <input type="text" class="form-input" id="settings-workout-location" placeholder="Urayasu Area">
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">Runna reports the wrong ward, so runs use this instead. Editable per import.</div>
     </div>
     <div class="modal-actions">
       <button class="btn-save" onclick="saveGoalSettings()">Save</button>
@@ -1938,7 +1960,7 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
   <div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
     <div class="modal-title">Import Screenshot</div>
-    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Strava · RunNok · Fitness App</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Strava (cycle / walk) · Runna (run)</div>
 
     <div id="workout-upload-area">
       <!-- Paste target — hidden contenteditable so native paste (Cmd+V / long-press) works -->
@@ -1965,15 +1987,53 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
       </div>
       <input type="file" id="workout-file-input" accept="image/*" style="display:none" onchange="handleWorkoutFile(event)">
       <img id="workout-img-preview" class="img-preview" style="display:none;margin-bottom:8px">
-      <div id="workout-spinner" style="display:none;text-align:center;padding:16px;font-size:13px;color:var(--text3)">Analysing… ⏳</div>
       <button id="workout-analyse-btn" onclick="runWorkoutAnalysis()" style="display:none">Analyse →</button>
+    </div>
+
+    <!-- Spinner sits outside the upload/source areas so it stays visible while
+         those are hidden during the API call. -->
+    <div id="workout-spinner" style="display:none;text-align:center;padding:26px 16px;font-size:13px;color:var(--text3)">
+      Reading the screenshot… ⏳<div style="font-size:11px;margin-top:6px">Fetching the weather too</div>
+    </div>
+
+    <!-- STEP 2: which app / which activity — asked BEFORE anything is sent to the API -->
+    <div id="workout-source-area" style="display:none">
+      <img id="workout-source-preview" class="img-preview" style="margin-bottom:14px;max-height:200px;object-fit:contain">
+
+      <div id="workout-step-app">
+        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Which app is this from?</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Nothing is sent until you choose.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <button onclick="pickWorkoutApp('Strava')" style="background:var(--ol);border:1.5px solid var(--o);border-radius:12px;padding:16px 10px;font-size:14px;font-weight:700;color:var(--o);cursor:pointer;font-family:inherit">🚴 Strava</button>
+          <button onclick="pickWorkoutApp('Runna')" style="background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:16px 10px;font-size:14px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit">🏃 Runna</button>
+        </div>
+      </div>
+
+      <div id="workout-step-activity" style="display:none">
+        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Cycle or walk?</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Strava tracks both, so I need to know which.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <button onclick="pickWorkoutActivity('Cycle')" style="background:var(--ol);border:1.5px solid var(--o);border-radius:12px;padding:16px 10px;font-size:14px;font-weight:700;color:var(--o);cursor:pointer;font-family:inherit">🚴 Cycle</button>
+          <button onclick="pickWorkoutActivity('Walk')" style="background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:16px 10px;font-size:14px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit">🚶 Walk</button>
+        </div>
+      </div>
+
+      <button class="btn-cancel" style="margin-top:12px;width:100%" onclick="backToWorkoutUpload()">← Choose a different image</button>
     </div>
 
     <div id="workout-result-area" style="display:none">
       <div class="workout-summary-card" id="workout-summary-card"></div>
-      <div class="modal-actions">
+      <div class="form-group" style="margin:12px 0 0">
+        <label class="form-label">Location</label>
+        <input type="text" class="form-input" id="workout-location-input" placeholder="Urayasu Area">
+      </div>
+      <div class="form-group" id="workout-cyclenum-row" style="margin:10px 0 0;display:none">
+        <label class="form-label">Number today <span style="font-weight:400;color:var(--text3)">(e.g. 2 for your second ride)</span></label>
+        <input type="number" min="1" class="form-input" id="workout-cyclenum-input" placeholder="1">
+      </div>
+      <div class="modal-actions" style="margin-top:14px">
         <button class="btn-save" onclick="useWorkoutResult()">Use this →</button>
-        <button class="btn-cancel" onclick="document.getElementById('workout-result-area').style.display='none';document.getElementById('workout-upload-area').style.display='block'">← Back</button>
+        <button class="btn-cancel" onclick="backToWorkoutUpload()">← Back</button>
       </div>
     </div>
   </div>
@@ -3156,32 +3216,222 @@ let _workoutImageBase64=null;
 let _workoutImageMime=null;
 let _workoutResult=null;
 
+// ── HEART RATE ZONES ────────────────────────────────────────────────────────
+// Noah's real Apple Watch zones (Automatic / heart-rate-reserve method).
+// Resting 67, Max 197 as of 4 Aug 2026. The watch RECALCULATES these on the
+// 1st of every month, so they are editable in Settings.
+// The effort level is worked out HERE, on the device — no heart-rate or age
+// data is ever sent to the Anthropic API.
+const HR_ZONE_DEFAULTS={z2:144,z3:157,z4:170,z5:183};
+function loadHrZones(){
+  try{const s=localStorage.getItem('st_hr_zones');if(s)return Object.assign({},HR_ZONE_DEFAULTS,JSON.parse(s));}catch(e){}
+  return Object.assign({},HR_ZONE_DEFAULTS);
+}
+function saveHrZonesFromSettings(){
+  const g=id=>{const el=document.getElementById(id);const v=el?parseInt(el.value,10):NaN;return isNaN(v)?null:v;};
+  const z={z2:g('settings-hr-z2')||HR_ZONE_DEFAULTS.z2,z3:g('settings-hr-z3')||HR_ZONE_DEFAULTS.z3,
+           z4:g('settings-hr-z4')||HR_ZONE_DEFAULTS.z4,z5:g('settings-hr-z5')||HR_ZONE_DEFAULTS.z5};
+  localStorage.setItem('st_hr_zones',JSON.stringify(z));
+  const locEl=document.getElementById('settings-workout-location');
+  if(locEl)localStorage.setItem('st_workout_location',(locEl.value||'').trim()||'Urayasu Area');
+}
+function loadHrZonesIntoSettings(){
+  const z=loadHrZones();
+  const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
+  s('settings-hr-z2',z.z2); s('settings-hr-z3',z.z3); s('settings-hr-z4',z.z4); s('settings-hr-z5',z.z5);
+  const locEl=document.getElementById('settings-workout-location');
+  if(locEl)locEl.value=localStorage.getItem('st_workout_location')||'Urayasu Area';
+}
+function defaultWorkoutLocation(){return localStorage.getItem('st_workout_location')||'Urayasu Area';}
+
+// Effort level. Heart rate is the honest signal — it already accounts for heat
+// and hills. Speed is only a fallback for screenshots with no HR (Strava feed).
+function computeEffortLevel(avgHR,activity,kmh,paceSecPerKm){
+  if(avgHR&&avgHR>0){
+    const z=loadHrZones();
+    if(avgHR>=z.z4)return 'Very High';   // zones 4 and 5 collapse together
+    if(avgHR>=z.z3)return 'High';
+    if(avgHR>=z.z2)return 'Medium';
+    return 'Low';
+  }
+  if(activity==='Run'&&paceSecPerKm>0){
+    if(paceSecPerKm<300)return 'Very High';
+    if(paceSecPerKm<360)return 'High';
+    if(paceSecPerKm<450)return 'Medium';
+    return 'Low';
+  }
+  if(activity==='Cycle'&&kmh>0){
+    if(kmh>28)return 'Very High';
+    if(kmh>=22)return 'High';
+    if(kmh>=15)return 'Medium';
+    return 'Low';
+  }
+  if(activity==='Walk'&&kmh>0){
+    if(kmh>6)return 'High';
+    if(kmh>=4.5)return 'Medium';
+    return 'Low';
+  }
+  return 'Low';
+}
+
+// ── WEATHER ─────────────────────────────────────────────────────────────────
+// Open-Meteo historical archive. Free, no API key, no account.
+// Verified 4 Aug 2026: CORS passes from the browser, and there is no
+// reanalysis lag — same-day and previous-day readings are available.
+const WEATHER_LAT=35.6528, WEATHER_LON=139.9022;   // Shin-Urayasu
+const WMO_TEXT={0:'Clear',1:'Mainly Clear',2:'Partly Cloudy',3:'Overcast',45:'Fog',48:'Fog',
+  51:'Light Drizzle',53:'Moderate Drizzle',55:'Heavy Drizzle',56:'Freezing Drizzle',57:'Freezing Drizzle',
+  61:'Light Rain',63:'Moderate Rain',65:'Heavy Rain',66:'Freezing Rain',67:'Freezing Rain',
+  71:'Light Snow',73:'Moderate Snow',75:'Heavy Snow',77:'Snow Grains',
+  80:'Rain Showers',81:'Rain Showers',82:'Heavy Rain Showers',85:'Snow Showers',86:'Snow Showers',
+  95:'Thunderstorm',96:'Thunderstorm with Hail',99:'Thunderstorm with Hail'};
+
+// Returns {tempC, text} or null. Never throws — if the weather is unavailable
+// the line is simply left out of the journal rather than guessed at.
+async function fetchWorkoutWeather(dateStr,startTime){
+  if(!dateStr)return null;
+  try{
+    const url='https://archive-api.open-meteo.com/v1/archive?latitude='+WEATHER_LAT+'&longitude='+WEATHER_LON+
+      '&start_date='+dateStr+'&end_date='+dateStr+'&hourly=temperature_2m,weather_code&timezone=Asia%2FTokyo';
+    const c=new AbortController();
+    const t=setTimeout(()=>c.abort(),8000);
+    const r=await fetch(url,{signal:c.signal});
+    clearTimeout(t);
+    if(!r.ok)return null;
+    const j=await r.json();
+    if(!j.hourly||!j.hourly.time)return null;
+    const hh=(startTime||'12:00').split(':')[0].padStart(2,'0');
+    let i=j.hourly.time.indexOf(dateStr+'T'+hh+':00');
+    if(i<0)i=0;
+    const temp=j.hourly.temperature_2m[i];
+    const code=j.hourly.weather_code[i];
+    if(temp===null||temp===undefined)return null;
+    return {tempC:temp,text:WMO_TEXT[code]||null};
+  }catch(e){return null;}
+}
+
+// ── PREVIOUS SESSION LOOKUP ─────────────────────────────────────────────────
+// Noah's signature writing habit is comparing against last time ("last time I
+// did X, so this time I changed it"). Claude cannot know that from a
+// screenshot, so we hand it the previous session of the same activity.
+function findPreviousWorkout(activity,excludeDate){
+  try{
+    const sessions=loadSessions().filter(s=>s.subjectId==='pe'&&s.journalMeta&&s.journalMeta.activity===activity);
+    sessions.sort((a,b)=>(b.date+b.start).localeCompare(a.date+a.start));
+    for(const s of sessions){
+      if(excludeDate&&s.date===excludeDate)continue;
+      return s;
+    }
+  }catch(e){}
+  return null;
+}
+function _prevWorkoutPromptLine(activity,date){
+  const p=findPreviousWorkout(activity,date);
+  if(!p||!p.journalMeta)return '';
+  const m=p.journalMeta;
+  const bits=[];
+  if(m.distanceKm)bits.push(m.distanceKm+' km');
+  if(m.durationSeconds)bits.push(Math.floor(m.durationSeconds/60)+' min');
+  if(m.avgPace)bits.push(m.avgPace+'/km');
+  if(m.avgHR)bits.push('avg HR '+m.avgHR);
+  if(!bits.length)return '';
+  return '\n\nMY PREVIOUS '+activity.toUpperCase()+' ('+p.date+'): '+bits.join(', ')+
+    '\nIf there is a meaningful comparison to draw, mention it the way I would ("last time I... so this time..."). If there is not, do not force one.';
+}
+
+// ── VISION CALL ─────────────────────────────────────────────────────────────
+// Sonnet 5 is the primary model. Haiku is only used if Sonnet errors, so a
+// weaker result never happens silently.
+const WORKOUT_MODEL_PRIMARY='claude-sonnet-5';
+const WORKOUT_MODEL_FALLBACK='claude-haiku-4-5-20251001';
+
+function _buildWorkoutPrompt(app,activity,wantsReflection,prevLine){
+  const today=new Date().toISOString().slice(0,10);
+  let p='This is a screenshot from '+app+'. The activity is a '+activity+'.\n\nToday\'s date is '+today+'.\n\n';
+  p+='Read every metric that is actually visible and return them. NEVER guess or estimate a value that is not shown — return null instead.\n\n';
+  if(app==='Strava'){
+    p+='STRAVA NOTES:\n'+
+       '- The timestamp ("Today at HH:MM", "Yesterday at HH:MM", or a date) is ALWAYS the START time, never the end.\n'+
+       '- "Yesterday" means subtract one day from today\'s date.\n'+
+       '- The feed view shows only three metrics; the activity page shows more. Return whatever is there.\n'+
+       '- Walks show Steps instead of Elevation Gain.\n\n';
+  }else{
+    p+='RUNNA NOTES:\n'+
+       '- The header reads like "31 Jul 2026 at 20:49". That single timestamp is the START time. There is no end time shown — do not invent one.\n'+
+       '- IGNORE the location Runna reports. It is frequently wrong and is not used.\n\n';
+  }
+  p+='Return ONLY valid JSON, no markdown fences:\n'+
+     '{"date":"YYYY-MM-DD","startTime":"HH:MM","durationSeconds":number,"distanceKm":number|null,'+
+     '"elevationGainM":number|null,"steps":number|null,"avgPace":"M:SS"|null,"avgHR":number|null,'+
+     '"cadence":number|null,"calories":number|null,"locationLabel":string|null,"reflection":string|null}\n\n'+
+     'RULES:\n'+
+     '- durationSeconds: convert the displayed time exactly. "10m 29s" = 629. "27:10" = 1630. Never round up.\n'+
+     '- avgPace: as displayed, e.g. "8:20".\n'+
+     '- locationLabel: only for Strava, copied from the screen. null for Runna.\n';
+  if(wantsReflection){
+    p+='- reflection: see the writing instructions below.\n\n'+
+       'WRITE THE REFLECTION IN MY VOICE. This goes into a school journal, so it must read as though I wrote it, not an AI.\n'+
+       '- First person, chronological, plain everyday vocabulary. Do not reach for fancy synonyms. Repeating a word is fine and normal for me.\n'+
+       '- British spellings: kilometre, realised, colour.\n'+
+       '- Connectors I actually use: "After that" (my most common one), "Additionally", "This time", "Then", "Carrying on".\n'+
+       '- NEVER use: "delve", "furthermore", "moreover", "overall this was a valuable experience", "valuable insights".\n'+
+       '- Do NOT write polished prose. My sentences are simple and sometimes run long. Do not smooth everything into perfect grammar. Do not add deliberate mistakes either.\n'+
+       '- Be honest, never a flawless session. Say how it actually felt, including if it was hard, hot, or I was tired.\n'+
+       '- Mention the weather and HOW IT AFFECTED the session — that matters more than just stating the temperature.\n'+
+       '- Do NOT mention the screenshot or the attachment. A separate line already does that, and saying it twice reads badly.\n'+
+       '- 3 to 6 sentences. No headers, no emoji, no bullet points, no clock times.\n'+
+       '- Quote the real numbers from the screenshot.'+prevLine+'\n';
+  }else{
+    p+='- reflection: return null. This session is too short to need one.\n';
+  }
+  return p;
+}
+
+async function _callWorkoutModel(model,key,base64,mimeType,promptText,signal){
+  const resp=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    signal:signal,
+    headers:{
+      'x-api-key':key,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true',
+      'content-type':'application/json'
+    },
+    body:JSON.stringify({
+      model:model,
+      max_tokens:1000,
+      messages:[{role:'user',content:[
+        {type:'image',source:{type:'base64',media_type:mimeType,data:base64}},
+        {type:'text',text:promptText}
+      ]}]
+    })
+  });
+  return resp;
+}
+
 async function analyseWorkoutImage(base64,mimeType){
   const key=localStorage.getItem('st_anthropic_key');
   if(!key){showToast('Add Anthropic API key in ⚙ Settings','var(--err)');return null;}
-  // Use corsproxy.io to bypass browser CORS restriction on api.anthropic.com
-  const endpoint='https://api.anthropic.com/v1/messages';
+  const app=_workoutApp||'Strava';
+  const activity=_workoutActivity||'Run';
   const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),30000); // 30s timeout
+  const timer=setTimeout(()=>controller.abort(),45000);
   try{
-    const resp=await fetch(endpoint,{
-      method:'POST',
-      signal:controller.signal,
-      headers:{
-        'x-api-key':key,
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true',
-        'content-type':'application/json'
-      },
-      body:JSON.stringify({
-        model:'claude-haiku-4-5-20251001',
-        max_tokens:120,
-        messages:[{role:'user',content:[
-          {type:'image',source:{type:'base64',media_type:mimeType,data:base64}},
-{type:'text',text:'This screenshot is from a fitness app (Strava/Runna) OR a work time-tracking app (King of Time / KOT).\n\nToday\'s date is '+new Date().toISOString().slice(0,10)+'.\n\nDetect which app it is and extract accordingly:\n\n— KING OF TIME (shows "KING OF TIME" logo, "Work details", date like "2026/05/10(Sun)", table with Clock-in / Clock-out columns):\n  • date: parse YYYY/MM/DD from the header\n  • startTime: Clock-in value\n  • endTime: Clock-out value\n  • Ignore Start break / End break columns entirely\n  • activity: "Work"\n\n— Strava (shows "Today at HH:MM" or "Yesterday at HH:MM" near the top, Time field like "33m 39s"):\n  • The timestamp ("Today/Yesterday at HH:MM") is ALWAYS the START time of the activity, never the end\n  • endTime = startTime + FLOORED minutes (33m 39s → 33 min added to startTime; never round up)\n  • "Yesterday" means subtract 1 day from today\'s date for the date field\n  • activity: Cycle / Run / Walk\n\n— Runna (shows "DD Mon YYYY at HH:MM - HH:MM"):\n  • startTime and endTime directly from the range\n  • activity: Run\n\nActivity normalisation: "Walk Run"/"Easy Run"/"Interval Run" → Run. "Ride"/"Virtual Ride"/"Cycling" → Cycle.\n\nReturn ONLY valid JSON, no markdown:\n{"date":"YYYY-MM-DD","startTime":"HH:MM","endTime":"HH:MM","durationMinutes":number,"activity":"Cycle|Run|Walk|Work","timeLabel":"Morning|Afternoon|Evening|Night"}\n\nRules:\n- date: YYYY-MM-DD\n- startTime/endTime: 24h HH:MM\n- durationMinutes: integer, floor seconds (never round up)\n- timeLabel: Morning <12:00, Afternoon 12-17, Evening 17-21, Night >21\n- null only if truly not visible'}
-        ]}]
-      })
-    });
+    // Reflection is decided by duration, but we don't know the duration until
+    // after the call. Runs always get one; cycles and walks are asked for it
+    // and the 15-minute rule is applied afterwards, so a short ride simply
+    // drops the text it generated.
+    const wantsReflection=true;
+    const promptText=_buildWorkoutPrompt(app,activity,wantsReflection,_prevWorkoutPromptLine(activity,null));
+
+    let resp=await _callWorkoutModel(WORKOUT_MODEL_PRIMARY,key,base64,mimeType,promptText,controller.signal);
+    let usedModel=WORKOUT_MODEL_PRIMARY;
+    if(!resp.ok&&(resp.status===404||resp.status===400)){
+      // Primary model unavailable — fall back, but say so rather than silently degrade.
+      showToast('Sonnet 5 unavailable — using Haiku','var(--o)');
+      resp=await _callWorkoutModel(WORKOUT_MODEL_FALLBACK,key,base64,mimeType,promptText,controller.signal);
+      usedModel=WORKOUT_MODEL_FALLBACK;
+    }
     clearTimeout(timer);
     if(!resp.ok){
       let msg='API error '+resp.status;
@@ -3189,31 +3439,45 @@ async function analyseWorkoutImage(base64,mimeType){
       showToast(msg,'var(--err)');return null;
     }
     const data=await resp.json();
+    let parsed;
     try{
       let text=data.content[0].text.trim();
-      // Strip markdown code fences if model wraps in ```json ... ```
       text=text.replace(/^```[a-z]*\n?/,'').replace(/\n?```$/,'').trim();
-      const parsed=JSON.parse(text);
-      // Normalise activity: Walk-Run, Walk Run, Easy Run → Run
-      if(parsed.activity){
-        const a=parsed.activity.toLowerCase();
-        if(a.includes('run')||a.includes('jog'))parsed.activity='Run';
-        else if(a.includes('walk')&&!a.includes('run'))parsed.activity='Walk';
-        else if(a.includes('ride')||a.includes('cycle')||a.includes('bike')||a.includes('cycling'))parsed.activity='Cycle';
-      }
-      // Enforce floored end time: recalculate endTime from startTime + floor(durationMinutes)
-      // This prevents rounding-up seconds from inflating the end time
-      if(parsed.startTime&&parsed.durationMinutes){
-        const flooredMins=Math.floor(parsed.durationMinutes);
-        const base=toMins(parsed.startTime);
-        const endTotal=base+flooredMins;
-        const eh=String(Math.floor(endTotal/60)%24).padStart(2,'0');
-        const em=String(endTotal%60).padStart(2,'0');
-        parsed.endTime=eh+':'+em;
-        parsed.durationMinutes=flooredMins;
-      }
-      return parsed;
-    }catch(e){showToast('Could not read workout data — try a clearer screenshot','var(--err)');return null;}
+      parsed=JSON.parse(text);
+    }catch(e){
+      showToast('Could not read workout data — try a clearer screenshot','var(--err)');return null;
+    }
+    parsed.app=app;
+    parsed.activity=activity;
+    parsed.model=usedModel;
+
+    // Derive end time from start + floored duration. Runna shows no end time
+    // at all, and Strava's displayed seconds must never round up.
+    const secs=Math.max(0,parseInt(parsed.durationSeconds||0,10));
+    parsed.durationSeconds=secs;
+    parsed.durationMinutes=Math.floor(secs/60);
+    if(parsed.startTime){
+      const total=toMins(parsed.startTime)+parsed.durationMinutes;
+      parsed.workoutEndTime=String(Math.floor(total/60)%24).padStart(2,'0')+':'+String(total%60).padStart(2,'0');
+    }
+    // Location: Runna's is unreliable, so it is discarded entirely.
+    if(app==='Runna'||activity==='Cycle')parsed.locationLabel=defaultWorkoutLocation();
+    else if(!parsed.locationLabel)parsed.locationLabel=defaultWorkoutLocation();
+
+    // Effort level is computed here, on device, never by the model.
+    const kmh=(parsed.distanceKm&&secs>0)?(parsed.distanceKm/(secs/3600)):0;
+    let paceSec=0;
+    if(parsed.avgPace&&/^\d+:\d\d$/.test(parsed.avgPace)){
+      const pp=parsed.avgPace.split(':');paceSec=(+pp[0])*60+(+pp[1]);
+    }else if(parsed.distanceKm>0&&secs>0){paceSec=secs/parsed.distanceKm;}
+    parsed.avgSpeedKmh=kmh>0?Math.round(kmh*10)/10:null;
+    parsed.effortLevel=computeEffortLevel(parsed.avgHR,activity,kmh,paceSec);
+
+    // The 15-minute rule — time only, distance ignored. Runs always keep it.
+    if(activity!=='Run'&&parsed.durationMinutes<15)parsed.reflection=null;
+
+    parsed.weather=await fetchWorkoutWeather(parsed.date,parsed.startTime);
+    return parsed;
   }catch(err){
     clearTimeout(timer);
     if(err.name==='AbortError'){showToast('Timed out — check your API key and connection','var(--err)');}
@@ -3289,7 +3553,9 @@ function openWorkoutImport(){
   if(dz)dz.classList.remove('has-image');
   const analyseBtn=document.getElementById('workout-analyse-btn');
   if(analyseBtn)analyseBtn.style.display='none';
+  _workoutApp=null; _workoutActivity=null;
   document.getElementById('workout-upload-area').style.display='block';
+  document.getElementById('workout-source-area').style.display='none';
   document.getElementById('workout-result-area').style.display='none';
   document.getElementById('workout-spinner').style.display='none';
   document.getElementById('workout-import-overlay').classList.add('open');
@@ -3314,8 +3580,50 @@ function _handleWorkoutBlob(blob){
     _workoutImageBase64=dataUrl.split(',')[1];
     const preview=document.getElementById('workout-img-preview');
     if(preview){preview.src=dataUrl;preview.style.display='block';}
-    runWorkoutAnalysis();
+    // Do NOT call the API yet — ask which app / activity first.
+    _showWorkoutSourcePicker(dataUrl);
   });
+}
+
+// ── Source picker (runs BEFORE any API call) ────────────────────────────────
+// Strava tracks both cycles and walks, so it needs a follow-up question.
+// Runna is running-only, so it goes straight through.
+let _workoutApp=null, _workoutActivity=null;
+
+function _showWorkoutSourcePicker(dataUrl){
+  _workoutApp=null; _workoutActivity=null;
+  const p=document.getElementById('workout-source-preview');
+  if(p&&dataUrl)p.src=dataUrl;
+  document.getElementById('workout-upload-area').style.display='none';
+  document.getElementById('workout-result-area').style.display='none';
+  document.getElementById('workout-step-activity').style.display='none';
+  document.getElementById('workout-step-app').style.display='block';
+  document.getElementById('workout-source-area').style.display='block';
+}
+
+function backToWorkoutUpload(){
+  document.getElementById('workout-source-area').style.display='none';
+  document.getElementById('workout-result-area').style.display='none';
+  document.getElementById('workout-upload-area').style.display='block';
+}
+
+function pickWorkoutApp(app){
+  _workoutApp=app;
+  if(app==='Runna'){
+    // Runna is running only — nothing else to ask.
+    _workoutActivity='Run';
+    document.getElementById('workout-source-area').style.display='none';
+    runWorkoutAnalysis();
+    return;
+  }
+  document.getElementById('workout-step-app').style.display='none';
+  document.getElementById('workout-step-activity').style.display='block';
+}
+
+function pickWorkoutActivity(act){
+  _workoutActivity=act;
+  document.getElementById('workout-source-area').style.display='none';
+  runWorkoutAnalysis();
 }
 async function pasteWorkoutImage(){
   // Try Clipboard API first (works on Mac Chrome/Safari, iOS 16+)
@@ -3360,6 +3668,10 @@ async function runWorkoutAnalysis(){
   const result=await analyseWorkoutImage(_workoutImageBase64,_workoutImageMime||'image/jpeg');
   if(spinner)spinner.style.display='none';
   if(!result){
+    // Failed — put the picker back so the choice isn't lost.
+    document.getElementById('workout-source-area').style.display='block';
+    document.getElementById('workout-step-app').style.display='block';
+    document.getElementById('workout-step-activity').style.display='none';
     return;
   }
   _workoutResult=result;
@@ -3368,36 +3680,206 @@ async function runWorkoutAnalysis(){
 
 function showWorkoutSummary(result){
   if(!result)return;
-  const fullMonths2=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  function ordinal2(n){const s=['th','st','nd','rd'];const v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
   let dateLabel='Unknown date';
-  if(result.date){
-    try{
-      const parts=result.date.split('-');
-      const d=new Date(+parts[0],+parts[1]-1,+parts[2]);
-      dateLabel=ordinal2(+parts[2])+' '+fullMonths2[d.getMonth()]+' '+parts[0];
-    }catch(e){}
-  }
-  const activityLabel=result.timeLabel&&result.activity?(result.timeLabel+' '+result.activity):(result.activity||'Workout');
+  if(result.date)dateLabel=_ordinalDate(result.date)+' '+_journalYear(result.date);
+  const daypart=_timeOfDay(result.startTime,null);
+  const activityLabel=daypart+' '+(result.activity||'Workout');
+  const jm=JOURNAL_MINUTES[result.activity]||10;
+  const workoutMins=Math.floor((result.durationSeconds||0)/60);
+  const sessionEnd=result.startTime?_addMins(result.startTime,workoutMins+jm):'';
   let timeStr='Unknown times';
-  if(result.startTime&&result.endTime)timeStr=result.startTime+' – '+result.endTime;
-  else if(result.startTime&&result.durationMinutes)timeStr=result.startTime+' ('+result.durationMinutes+'min)';
-  else if(result.durationMinutes)timeStr=result.durationMinutes+' min';
+  if(result.startTime)timeStr=result.startTime+' – '+sessionEnd+'  ('+workoutMins+' min + '+jm+' min journal)';
   const actIcon={Cycle:'🚴',Run:'🏃',Walk:'🚶'}[result.activity]||'🏋';
+  const bits=[];
+  if(result.distanceKm)bits.push(result.distanceKm+' km');
+  if(result.avgPace)bits.push(result.avgPace+'/km');
+  if(result.avgHR)bits.push(result.avgHR+' bpm');
+  if(result.weather&&result.weather.tempC!==null&&result.weather.tempC!==undefined){
+    bits.push(result.weather.tempC+'°C'+(result.weather.text?' '+result.weather.text:''));
+  }
   const summaryEl=document.getElementById('workout-summary-card');
   if(summaryEl){
     summaryEl.innerHTML=
       '<div class="workout-summary-row"><span class="workout-summary-icon">📅</span><span>'+escHtml(dateLabel)+'</span></div>'+
       '<div class="workout-summary-row"><span class="workout-summary-icon">'+actIcon+'</span><span>'+escHtml(activityLabel)+'</span></div>'+
-      '<div class="workout-summary-row"><span class="workout-summary-icon">⏱</span><span>'+escHtml(timeStr)+'</span></div>';
+      '<div class="workout-summary-row"><span class="workout-summary-icon">⏱</span><span>'+escHtml(timeStr)+'</span></div>'+
+      (bits.length?'<div class="workout-summary-row"><span class="workout-summary-icon">📊</span><span>'+escHtml(bits.join(' · '))+'</span></div>':'')+
+      '<div class="workout-summary-row"><span class="workout-summary-icon">🔥</span><span>Effort: '+escHtml(result.effortLevel||'Low')+
+        (result.avgHR?'':' <span style="color:var(--text3);font-size:11px">(no HR on screenshot — from speed)</span>')+'</span></div>'+
+      (result.reflection?'':'<div class="workout-summary-row"><span class="workout-summary-icon">📝</span><span style="color:var(--text3)">No reflection — under 15 min</span></div>');
+  }
+  // Location: editable, because Runna reports the wrong ward and walks vary.
+  const locEl=document.getElementById('workout-location-input');
+  if(locEl)locEl.value=result.locationLabel||defaultWorkoutLocation();
+  // Cycle number: suggested from existing sessions, but editable.
+  const numRow=document.getElementById('workout-cyclenum-row');
+  const numEl=document.getElementById('workout-cyclenum-input');
+  if(numRow&&numEl){
+    if(result.activity==='Cycle'){
+      numRow.style.display='block';
+      numEl.value=countWorkoutsOnDate('Cycle',result.date)+1;
+    }else{
+      numRow.style.display='none';
+      numEl.value='';
+    }
   }
   document.getElementById('workout-upload-area').style.display='none';
+  document.getElementById('workout-source-area').style.display='none';
   document.getElementById('workout-result-area').style.display='block';
 }
 
+// ── JOURNAL CONTENT BUILDERS ────────────────────────────────────────────────
+// The journal text is assembled HERE, in JavaScript, not written by the model.
+// That keeps the format byte-identical between imports and makes the template
+// a code edit rather than a prompt rewrite. Claude only supplies the metric
+// values it read off the screenshot plus the reflection paragraph.
+const JOURNAL_MINUTES={Run:10,Cycle:10,Walk:10,Stretch:5};
+const WEEKDAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+function _weekdayName(ds){
+  const p=(ds||'').split('-');
+  if(p.length<3)return '';
+  const d=new Date(+p[0],+p[1]-1,+p[2]);
+  return WEEKDAYS[d.getDay()]||'';
+}
+function _journalYear(ds){const p=(ds||'').split('-');return p.length?p[0]:'';}
+
+// Under 1 km reads "860 Meters (0.86 KM)" — "0 Kilometres and 860 Meters" is clumsy.
+function _fmtDistance(km){
+  if(km===null||km===undefined||isNaN(km))return null;
+  const metresTotal=Math.round(km*1000);
+  if(metresTotal<1000)return metresTotal+' Meters ('+km+' KM)';
+  const whole=Math.floor(metresTotal/1000), rem=metresTotal%1000;
+  const w=whole+(whole===1?' Kilometre':' Kilometres');
+  if(rem===0)return w+' ('+km+' KM)';   // "1 Kilometre and 0 Meters" reads badly
+  return w+' and '+rem+' Meters ('+km+' KM)';
+}
+function _fmtDurationWords(secs){
+  const m=Math.floor(secs/60), s=secs%60;
+  let out=m+(m===1?' Minute':' Minutes');
+  if(s>0)out+=' '+s+(s===1?' Second':' Seconds');
+  return out;
+}
+
+// Assembles the full Journal Content text for a cycle / run / walk.
+function buildWorkoutJournal(r,cycleNum,locationOverride){
+  const act=r.activity;
+  const jm=JOURNAL_MINUTES[act]||10;
+  const daypart=_timeOfDay(r.startTime,null);
+  const secs=r.durationSeconds||0;
+  const workoutMins=Math.floor(secs/60);
+  const totalMins=workoutMins+jm;
+  const sessionEnd=r.startTime?_addMins(r.startTime,totalMins):'';
+  const loc=(locationOverride||r.locationLabel||defaultWorkoutLocation());
+  const appName=r.app==='Runna'?'Runna':'Strava';
+
+  let title=_ordinalDate(r.date)+' - '+daypart+' '+act;
+  if(act==='Cycle'&&cycleNum&&cycleNum>1)title+=' '+cycleNum;
+
+  const L=[];
+  L.push(title);
+  L.push('Journal Writing Time (Included as Study Time): '+jm+' Minutes');
+  L.push('');
+  L.push(_weekdayName(r.date)+' '+_ordinalDate(r.date)+' '+_journalYear(r.date));
+  L.push('Start Time: '+(r.startTime||''));
+  L.push('End Time: '+sessionEnd);
+  L.push('Total Time: '+_fmtDurationWords(secs)+' of '+
+    (act==='Run'?'running':act==='Cycle'?'cycling':'walking')+
+    ' + '+jm+' Minutes of journal writing = '+totalMins+' Minutes');
+  L.push('');
+  L.push(loc);
+  if(act==='Cycle')L.push('I parked at the JR Shin-Urayasu Bicycle Parking Lot Number 2');
+  if(r.weather&&r.weather.tempC!==null&&r.weather.tempC!==undefined){
+    L.push('Weather at the time of the '+act.toLowerCase()+': '+r.weather.tempC+'°C'+(r.weather.text?' | '+r.weather.text:''));
+  }
+  L.push(act==='Run'
+    ? 'Used the Runna App for Tracking the Route, recorded on my Apple Watch'
+    : 'Used Strava App for Tracking the Route');
+  L.push('');
+
+  const dist=_fmtDistance(r.distanceKm);
+  if(dist)L.push('Distance: '+dist);
+  if(r.avgPace)L.push('Average Pace: '+r.avgPace+' per kilometre');
+  if(r.steps!==null&&r.steps!==undefined)L.push('Steps: '+Number(r.steps).toLocaleString());
+  if(r.elevationGainM!==null&&r.elevationGainM!==undefined)L.push('Elevation Gain: '+r.elevationGainM+' Meters');
+  if(!r.avgPace&&r.avgSpeedKmh)L.push('Average Speed: '+r.avgSpeedKmh+' km/h');
+  if(r.avgHR)L.push('Average Heart Rate: '+r.avgHR+' bpm');
+  if(r.cadence)L.push('Cadence: '+r.cadence+' steps per minute');
+  if(r.calories)L.push('Calories Burned: '+r.calories+' kcal');
+  L.push('');
+  L.push('Effort Level: '+(r.effortLevel||'Low'));
+
+  if(r.reflection&&String(r.reflection).trim()){
+    L.push('');
+    L.push('Reflection: '+String(r.reflection).trim());
+  }
+  L.push('');
+  L.push('I included the screenshot from '+appName+' which tracked my route, so you can check all the numbers above match.');
+  L.push((appName==='Strava'?'Strava’s GPS':'The GPS')+' is sometimes a bit off, but the map in the screenshot should give a rough idea of where I '+
+    (act==='Run'?'ran':act==='Cycle'?'cycled':'walked')+'.');
+  return L.join('\n');
+}
+
+// Post-run stretches. Fixed content from the Runner's Stretch Guide PDF, so no
+// model call is needed at all. No reflection, no effort level.
+function buildStretchJournal(dateStr,startTime,stretchMins){
+  const jm=JOURNAL_MINUTES.Stretch;
+  const mins=stretchMins||20;
+  const total=mins+jm;
+  const L=[];
+  L.push(_ordinalDate(dateStr)+' - After Run Stretches');
+  L.push('Journal Writing Time (Included as Study Time): '+jm+' Minutes');
+  L.push('');
+  L.push(_weekdayName(dateStr)+' '+_ordinalDate(dateStr)+' '+_journalYear(dateStr));
+  L.push('Start Time: '+startTime);
+  L.push('End Time: '+_addMins(startTime,total));
+  L.push('Total Time: '+mins+' Minutes of stretching + '+jm+' Minutes of journal writing = '+total+' Minutes');
+  L.push('');
+  L.push('Completed my post-run cool-down routine from my Runner’s Stretch Guide, which I have attached.');
+  L.push('I also complete the guide’s pre-run dynamic warm-up before I set off running. The guide’s suggested');
+  L.push('timings are approximate; I move through the poses more slowly than that, so the two parts together');
+  L.push('come to around '+mins+' minutes in practice.');
+  L.push('');
+  L.push('POST-RUN COOL-DOWN');
+  L.push('Moved gently within each pose, breathing slowly, without forcing anything.');
+  L.push('1. Pigeon Pose, both sides — hips, glutes');
+  L.push('2. Toe and Arch Stretch — toes, arches, soles of the feet');
+  L.push('3. Deep Lunge, both sides — hips, groin');
+  L.push('4. Quad and Hip Flexor Stretch in the Lunge — quads, hip flexors');
+  L.push('5. Sphinx Pose / Upward-Facing Dog — abdominals, chest, hip flexors, lower back');
+  L.push('6. Seated Wide-Leg Stretch — inner thighs, groin, hips');
+  L.push('');
+  L.push('Source: Run Better with Ash — "5 MIN Pre-Run Stretching Routine" and');
+  L.push('"10 MIN Post-Run Stretching Routine," YouTube.');
+  L.push('');
+  L.push('Please check the attached Runner’s Stretch Guide PDF, which lists every stretch in this routine.');
+  return L.join('\n');
+}
+
+function copyJournalContent(){
+  const el=document.getElementById('log-journal');
+  if(!el||!el.value.trim()){showToast('Nothing to copy yet');return;}
+  navigator.clipboard.writeText(el.value).then(
+    ()=>showToast('Journal content copied ✓','var(--ok)'),
+    ()=>showToast('Could not copy — select and copy manually','var(--err)')
+  );
+}
+
+// How many of this activity are already logged on this date? Used to suggest
+// the "Cycle 2" suffix. Editable, because a ride Noah never logged would
+// otherwise throw the count off.
+function countWorkoutsOnDate(activity,date){
+  try{
+    return loadSessions().filter(s=>s.subjectId==='pe'&&s.date===date&&s.journalMeta&&s.journalMeta.activity===activity).length;
+  }catch(e){return 0;}
+}
+
 function openManualWorkoutEntry(){
-  // Pre-fill a blank result so user can confirm
-  _workoutResult={date:todayStr(),startTime:null,endTime:null,activity:'Run',timeLabel:'Morning'};
+  _workoutApp=_workoutApp||'Strava';
+  _workoutActivity=_workoutActivity||'Run';
+  _workoutResult={date:todayStr(),startTime:null,durationSeconds:0,durationMinutes:0,
+    activity:_workoutActivity,app:_workoutApp,effortLevel:'Low',reflection:null,
+    locationLabel:defaultWorkoutLocation(),weather:null};
   showWorkoutSummary(_workoutResult);
 }
 
@@ -3405,61 +3887,58 @@ async function useWorkoutResult(){
   if(!_workoutResult)return;
   const result=_workoutResult;
   const subjs=loadSubjects();
-  const isKOT=result.activity==='Work';
-  // Select subject: Electives 4 for KOT, PE for workouts
+  // Every import is now a PE workout — King of Time / work-shift handling was
+  // removed once Electives 4 was finished. The el4 subject itself is untouched.
   const sel=document.getElementById('log-subject');
   if(sel){
-    if(isKOT){
-      const el4Subj=subjs.find(s=>s.id==='el4')||subjs.find(s=>s.name&&s.name.toLowerCase().includes('elective')&&s.extraCredit);
-      if(el4Subj)sel.value=el4Subj.id;
-    }else{
-      const peSubj=subjs.find(s=>s.id==='pe')||subjs.find(s=>s.name&&s.name.toLowerCase().includes('pe'));
-      const peId=peSubj?peSubj.id:(subjs[0]?subjs[0].id:'');
-      if(peId)sel.value=peId;
-    }
+    const peSubj=subjs.find(s=>s.id==='pe')||subjs.find(s=>s.name&&s.name.toLowerCase().includes('pe'));
+    const peId=peSubj?peSubj.id:(subjs[0]?subjs[0].id:'');
+    if(peId)sel.value=peId;
   }
+  const locEl=document.getElementById('workout-location-input');
+  const locOverride=locEl?(locEl.value||'').trim():'';
+  const numEl=document.getElementById('workout-cyclenum-input');
+  const cycleNum=numEl&&numEl.value?parseInt(numEl.value,10):1;
+
   const ld=document.getElementById('log-date');
   if(ld&&result.date)ld.value=result.date;
-  if(result.startTime)setLogTime('log-start',result.startTime);
-  if(result.endTime)setLogTime('log-end',result.endTime);
+
+  // The journal writing time is added to the END of the session. The start time
+  // always matches the screenshot, so it can still be checked against the proof.
+  const jm=JOURNAL_MINUTES[result.activity]||10;
+  const workoutMins=Math.floor((result.durationSeconds||0)/60);
+  if(result.startTime){
+    setLogTime('log-start',result.startTime);
+    setLogTime('log-end',_addMins(result.startTime,workoutMins+jm));
+  }
   updateLogDuration();
   updateLogFormColour();
-  // Notes: blank for KOT, descriptive title for workouts
+
+  let title=_ordinalDate(result.date)+' - '+_timeOfDay(result.startTime,null)+' '+result.activity;
+  if(result.activity==='Cycle'&&cycleNum>1)title+=' '+cycleNum;
+
   const notesEl=document.getElementById('log-notes');
-  if(isKOT){
-    if(notesEl)notesEl.value='';
-    showToast('KOT shift imported — check times and submit');
-  }else{
-    // Normalise any run-type activity (jog, 5k, easy 10km, "Lunch Run"…) to the
-    // standard "<Daypart> Run" wording, regardless of how the screenshot phrased it.
-    let activityLabel;
-    if(_looksLikeRun((result.activity||'')+' '+(result.timeLabel||''))){
-      activityLabel=_timeOfDay(result.startTime,result.timeLabel)+' Run';
-    } else {
-      activityLabel=result.timeLabel&&result.activity?(result.timeLabel+' '+result.activity):(result.activity||'Workout');
-    }
-    const fullMonths=['January','February','March','April','May','June','July','August','September','October','November','December'];
-    function ordinal(n){const s=['th','st','nd','rd'];const v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
-    let dayLabel='';
-    if(result.date){
-      try{
-        const parts=result.date.split('-');
-        const d=new Date(+parts[0],+parts[1]-1,+parts[2]);
-        dayLabel=ordinal(+parts[2])+' '+fullMonths[d.getMonth()];
-      }catch(e){}
-    }
-    const title=dayLabel?(dayLabel+' - '+activityLabel):activityLabel;
-    if(notesEl)notesEl.value=title;
-    try{
-      await navigator.clipboard.writeText(title);
-      showToast('✓ Copied "'+title+'" — just press Submit');
-    }catch(e){
-      showToast('Ready — '+title);
-    }
-  }
+  if(notesEl)notesEl.value=title;
+
+  const journalEl=document.getElementById('log-journal');
+  if(journalEl)journalEl.value=buildWorkoutJournal(result,cycleNum,locOverride);
+
+  // Kept so the next import can compare against this one, and so the effort
+  // level and metrics survive in the session record.
+  _pendingJournalMeta={
+    activity:result.activity, app:result.app, distanceKm:result.distanceKm||null,
+    durationSeconds:result.durationSeconds||0, avgPace:result.avgPace||null,
+    avgHR:result.avgHR||null, cadence:result.cadence||null, calories:result.calories||null,
+    elevationGainM:result.elevationGainM||null, steps:result.steps||null,
+    effortLevel:result.effortLevel||null, avgSpeedKmh:result.avgSpeedKmh||null,
+    location:locOverride||result.locationLabel||null,
+    weather:result.weather||null, model:result.model||null
+  };
+
   closeModal('workout-import-overlay');
   const card=document.getElementById('log-form-card');
   if(card)card.scrollIntoView({behavior:'smooth',block:'start'});
+  showToast('Imported — review the journal, then Log Session','var(--ok)');
 }
 
 function renderTodos(){
@@ -4834,6 +5313,9 @@ function clearLogForm(){
   document.getElementById('log-start').value='';
   document.getElementById('log-end').value='';
   document.getElementById('log-notes').value='';
+  const jEl=document.getElementById('log-journal');
+  if(jEl)jEl.value='';
+  _pendingJournalMeta=null;
   const dur=document.getElementById('log-duration');
   if(dur)dur.textContent='';
   dismissDupWarn();
@@ -6700,19 +7182,28 @@ function _doLogSession(){
   const start=document.getElementById('log-start').value;
   const end=document.getElementById('log-end').value;
   const notes=document.getElementById('log-notes').value.trim();
+  const journalEl=document.getElementById('log-journal');
+  const journal=journalEl?journalEl.value.trim():'';
   const mins=toMins(end)-toMins(start);
   if(mins<=0)return;
   const hours=mins/60;
   const sessions=loadSessions();
   const hoursStore=loadHours();
   const _newId=genId();
-  sessions.push({id:_newId,subjectId,date,start,end,hours,notes,loggedAt:new Date().toISOString()});
+  const _rec={id:_newId,subjectId,date,start,end,hours,notes,loggedAt:new Date().toISOString()};
+  // Journal Content is stored on the session but is deliberately NOT shown in
+  // History, the journal PDF, or the JSON exports — those keep showing `notes`.
+  if(journal)_rec.journal=journal;
+  if(_pendingJournalMeta)_rec.journalMeta=_pendingJournalMeta;
+  _pendingJournalMeta=null;
+  sessions.push(_rec);
   hoursStore[subjectId]=(hoursStore[subjectId]||0)+hours;
   saveSessions(sessions);
   saveHours(hoursStore);
   setLogTime('log-start','');
   setLogTime('log-end','');
   document.getElementById('log-notes').value='';
+  if(journalEl)journalEl.value='';
   document.getElementById('log-duration').textContent='';
   dismissDupWarn();
   renderLogEntries();
@@ -6722,8 +7213,10 @@ function _doLogSession(){
   if(currentPage==='progress')renderProgress();
   if(currentPage==='subjects')renderSubjectsPage();
   if(currentPage==='graduation')renderGraduationPage();
-  // Auto-open cardio Google Form after logging a PE session
-  if(_SUBJECT_FORMS[subjectId]) _openSubjectForm(subjectId,date,start,end,notes,_newId);
+  // Auto-open cardio Google Form after logging a PE session.
+  // The form's Contents box gets the JOURNAL, not the one-line note — that box
+  // is the actual school submission, so it has to carry the real content.
+  if(_SUBJECT_FORMS[subjectId]) _openSubjectForm(subjectId,date,start,end,(journal||notes),_newId);
   // After a PE *run*, offer to pre-fill the post-run stretches (shows behind the
   // form card above, so it's revealed once that's dismissed — i.e. after the form)
   _maybeOfferStretches(subjectId,date,start,end,notes);
@@ -6734,6 +7227,9 @@ function _doLogSession(){
 // PE/Cardio, starts 5 min after the run ends, lasts 20 min, note
 // "{15th June} - After Run Stretches" (matches Noah's existing log entries).
 let _pendingStretch=null;
+// Metrics from the last import, attached to the session when it is logged so
+// the NEXT import can compare against it.
+let _pendingJournalMeta=null;
 function _addMins(t,n){let x=(toMins(t)+n)%1440;if(x<0)x+=1440;return String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0');}
 function _ordinalDate(ds){
   const p=(ds||'').split('-');if(p.length<3)return ds;
@@ -6768,17 +7264,23 @@ function _maybeOfferStretches(subjectId,date,start,end,notes){
   _showStretchPrompt(date,end);
 }
 function _showStretchPrompt(date,end){
-  const sStart=_addMins(end,5),sEnd=_addMins(sStart,20);
+  const jm=JOURNAL_MINUTES.Stretch;
+  const sStart=_addMins(end,5),sEnd=_addMins(sStart,20+jm);
   const note=_ordinalDate(date)+' - After Run Stretches';
   const el=document.getElementById('stretch-preview');
-  if(el)el.innerHTML='<b style="color:var(--text)">PE / Cardio</b> · 20 min<br>'+sStart+' – '+sEnd+'<br><span style="color:var(--text2)">'+escHtml(note)+'</span>';
+  if(el)el.innerHTML='<b style="color:var(--text)">PE / Cardio</b> · 20 min + '+jm+' min journal<br>'+sStart+' – '+sEnd+'<br><span style="color:var(--text2)">'+escHtml(note)+'</span>';
   const ov=document.getElementById('stretch-modal-overlay');
   if(ov)ov.classList.add('open');
 }
 function fillStretchLog(){
   if(!_pendingStretch){closeModal('stretch-modal-overlay');return;}
   const {date,end}=_pendingStretch;
-  const sStart=_addMins(end,5),sEnd=_addMins(sStart,20);
+  // Starts 5 min after the run session ends — INCLUDING that session's journal
+  // writing time. Basing it on the raw workout end instead would overlap the
+  // run session and double-count the hours.
+  const sStart=_addMins(end,5);
+  const stretchMins=20, journalMins=JOURNAL_MINUTES.Stretch;
+  const sEnd=_addMins(sStart,stretchMins+journalMins);
   showPage('log');
   const sub=document.getElementById('log-subject'); if(sub)sub.value='pe';
   if(typeof updateLogFormColour==='function')updateLogFormColour();
@@ -6786,6 +7288,10 @@ function fillStretchLog(){
   setLogTime('log-start',sStart);
   setLogTime('log-end',sEnd);
   const nEl=document.getElementById('log-notes'); if(nEl)nEl.value=_ordinalDate(date)+' - After Run Stretches';
+  // Fixed content from the stretch guide — no model call needed.
+  const jEl=document.getElementById('log-journal');
+  if(jEl)jEl.value=buildStretchJournal(date,sStart,stretchMins);
+  _pendingJournalMeta={activity:'Stretch',app:null,durationSeconds:stretchMins*60};
   updateLogDuration();
   _pendingStretch=null;
   closeModal('stretch-modal-overlay');
@@ -8346,6 +8852,8 @@ function saveGoalSettings(){
   // Save Anthropic API key
   const keyEl=document.getElementById('settings-anthropic-key');
   if(keyEl)localStorage.setItem('st_anthropic_key',keyEl.value.trim());
+  // Save heart-rate zone boundaries + default workout location
+  saveHrZonesFromSettings();
   // Dismiss the recommendation — user has reviewed and saved a goal
   localStorage.setItem('st_rec_dismissed',_latestRecDaily.toFixed(2));
   closeModal('goal-modal-overlay');
@@ -8405,6 +8913,8 @@ function openGoalSettings(){
   // Load existing Anthropic key
   const keyEl=document.getElementById('settings-anthropic-key');
   if(keyEl)keyEl.value=localStorage.getItem('st_anthropic_key')||'';
+  // Load heart-rate zones + default workout location
+  loadHrZonesIntoSettings();
   renderNavReorder();
   updateThemeSwatches();
 
@@ -9496,6 +10006,11 @@ function downloadFile(content,filename,mimeType){
 function exportJSON(){
   const today=todayStr();
   const rawSubjs=JSON.parse(localStorage.getItem('st_subjs')||'[]');
+  // NOTE: rawSessions deliberately keeps `journal` / `journalMeta`. This file is
+  // a RESTORE point — stripping fields from it would silently lose every journal
+  // on a restore. Teacher-facing output (History, the PDF report, the coach
+  // report) all read `s.notes` only, which is what the "show notes only" rule
+  // was about. Flagged to Noah 4 Aug 2026.
   const rawSessions=JSON.parse(localStorage.getItem('st_sessions')||'[]');
   const rawGoals=JSON.parse(localStorage.getItem('st_goals')||'{}');
 
