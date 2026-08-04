@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1785809655095">
+<meta name="app-built" content="1785810989256">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -3361,36 +3361,73 @@ function _buildWorkoutPrompt(app,activity,wantsReflection,prevLine){
        '- IGNORE the location Runna reports. It is frequently wrong and is not used.\n\n';
   }
   p+='Return ONLY valid JSON, no markdown fences:\n'+
-     '{"activityTitle":string|null,"date":"YYYY-MM-DD","startTime":"HH:MM","durationSeconds":number,"distanceKm":number|null,'+
+     '{"activityTitle":string|null,"date":"YYYY-MM-DD","timestampWasRelative":boolean,"startTime":"HH:MM","durationSeconds":number,"distanceKm":number|null,'+
      '"elevationGainM":number|null,"steps":number|null,"avgPace":"M:SS"|null,"avgHR":number|null,'+
      '"cadence":number|null,"calories":number|null,"locationLabel":string|null,"reflection":string|null}\n\n'+
      'RULES:\n'+
      '- activityTitle: the large activity title on the screen, copied out EXACTLY and in full,\n'+
      '  e.g. "1st August - Afternoon Cycle 2". If there is no title, return null. Do not tidy it up,\n'+
      '  do not translate it, do not drop a trailing number. This is important.\n'+
+     '- timestampWasRelative: true if the screen said "Today at" / "Yesterday at" with no explicit\n'+
+     '  calendar date. false if an actual date was printed, e.g. "31 Jul 2026 at 20:49".\n'+
      '- durationSeconds: convert the displayed time exactly. "10m 29s" = 629. "27:10" = 1630. Never round up.\n'+
      '- avgPace: as displayed, e.g. "8:20".\n'+
      '- locationLabel: only for Strava, copied from the screen. null for Runna.\n'+
      '- date: from the relative timestamp ("Yesterday at...") ONLY as a fallback. If the title contains\n'+
      '  a date, that date is the truth — I write those titles myself and they are correct even when the\n'+
      '  screenshot was taken days later.\n';
-  if(wantsReflection){
-    p+='- reflection: see the writing instructions below.\n\n'+
-       'WRITE THE REFLECTION IN MY VOICE. This goes into a school journal, so it must read as though I wrote it, not an AI.\n'+
-       '- First person, chronological, plain everyday vocabulary. Do not reach for fancy synonyms. Repeating a word is fine and normal for me.\n'+
-       '- British spellings: kilometre, realised, colour.\n'+
-       '- Connectors I actually use: "After that" (my most common one), "Additionally", "This time", "Then", "Carrying on".\n'+
-       '- NEVER use: "delve", "furthermore", "moreover", "overall this was a valuable experience", "valuable insights".\n'+
-       '- Do NOT write polished prose. My sentences are simple and sometimes run long. Do not smooth everything into perfect grammar. Do not add deliberate mistakes either.\n'+
-       '- Be honest, never a flawless session. Say how it actually felt, including if it was hard, hot, or I was tired.\n'+
-       '- Mention the weather and HOW IT AFFECTED the session — that matters more than just stating the temperature.\n'+
-       '- Do NOT mention the screenshot or the attachment. A separate line already does that, and saying it twice reads badly.\n'+
-       '- 3 to 6 sentences. No headers, no emoji, no bullet points, no clock times.\n'+
-       '- Quote the real numbers from the screenshot.'+prevLine+'\n';
-  }else{
-    p+='- reflection: return null. This session is too short to need one.\n';
-  }
+  p+='- reflection: always return null. The reflection is written in a separate step.\n';
   return p;
+}
+
+// ── REFLECTION (second call, text only) ─────────────────────────────────────
+// This MUST be a separate call. The weather is not on the screenshot and is
+// looked up afterwards, so the vision call has no weather to write about — it
+// was told to mention the weather and (correctly) refused to invent one.
+// This call runs after the weather is known, carries no image, and is skipped
+// entirely for short cycles and walks.
+function _buildReflectionPrompt(r,prevLine){
+  const act=r.activity;
+  const verb=act==='Run'?'run':act==='Cycle'?'cycle':'walk';
+  const F=[];
+  if(r.distanceKm)F.push('Distance: '+r.distanceKm+' km');
+  if(r.durationSeconds)F.push('Time: '+Math.floor(r.durationSeconds/60)+' min '+(r.durationSeconds%60)+' sec');
+  if(r.avgPace)F.push('Average pace: '+r.avgPace+' per km');
+  if(r.avgSpeedKmh&&!r.avgPace)F.push('Average speed: '+r.avgSpeedKmh+' km/h');
+  if(r.elevationGainM!==null&&r.elevationGainM!==undefined)F.push('Elevation gain: '+r.elevationGainM+' m');
+  if(r.avgHR)F.push('Average heart rate: '+r.avgHR+' bpm (my zone 1 tops out at 143, zone 2 is 144-156)');
+  if(r.cadence)F.push('Cadence: '+r.cadence+' spm');
+  if(r.calories)F.push('Calories: '+r.calories+' kcal');
+  if(r.steps)F.push('Steps: '+r.steps);
+  F.push('Effort level (already worked out): '+(r.effortLevel||'Low'));
+  if(r.activityTitle)F.push('What I called this activity: '+r.activityTitle);
+
+  let w='';
+  if(r.weather&&r.weather.tempC!==null&&r.weather.tempC!==undefined){
+    w='\n\nTHE WEATHER AT THE TIME: '+r.weather.tempC+'\u00B0C'+(r.weather.text?', '+r.weather.text:'')+
+      '.\nYou MUST write about this and how it affected the '+verb+'. Do not just state the temperature — say what it felt like. '+
+      'Nearly 30 degrees is hot even in the evening; single figures is cold; rain or drizzle changes the surface and how it felt.';
+  }else{
+    w='\n\nNo weather data was available, so do not mention the weather at all.';
+  }
+
+  return 'Write the reflection paragraph for my PE journal for this '+verb+'. Output ONLY the paragraph — no JSON, no quotes, no label, no preamble.\n\n'+
+    'THE FIGURES:\n'+F.join('\n')+w+prevLine+'\n\n'+
+    'HOW I WRITE. This goes into a school journal and has to read as though I wrote it, not an AI.\n'+
+    '- First person, chronological, plain everyday vocabulary. Do not reach for fancy synonyms. Repeating a word is normal for me.\n'+
+    '- British spellings: kilometre, realised, colour.\n'+
+    '- Connectors I use: "After that" (my most common), "Additionally", "This time", "Then", "Carrying on". Use "After that" as a genuine time connector, not as filler.\n'+
+    '- NEVER use: "delve", "furthermore", "moreover", "overall this was a valuable experience", "valuable insights".\n'+
+    '- Do NOT write polished prose. My sentences are simple and sometimes run long. Do not smooth everything into perfect grammar. Do not add deliberate mistakes either.\n'+
+    '- Be honest, never a flawless session. Say how it actually felt, including if it was hard, hot, or I was tired.\n\n'+
+    'CRITICAL — DO NOT RECITE THE STATISTICS.\n'+
+    'Every figure above is ALREADY printed directly above this paragraph in the journal. Listing them again in order (distance, then time, then pace, then heart rate, then cadence, then calories) reads like a robot reading a table and is exactly what I do not want.\n'+
+    '- Pick at most TWO OR THREE numbers that actually mattered and weave them into the story.\n'+
+    '- Write about what the session was like, not what the numbers were.\n'+
+    '- Never mention cadence and calories together as a pair of facts.\n\n'+
+    'ALSO:\n'+
+    '- Do NOT mention the screenshot or the attachment — a separate line already does that.\n'+
+    '- 3 to 6 sentences. No headers, no emoji, no bullet points, no clock times.\n';
 }
 
 async function _callWorkoutModel(model,key,base64,mimeType,promptText,signal){
@@ -3415,6 +3452,31 @@ async function _callWorkoutModel(model,key,base64,mimeType,promptText,signal){
   return resp;
 }
 
+// Text-only follow-up call. No image, so it is cheap and quick. Runs only when
+// a reflection is actually needed, and only once the weather is known.
+async function _generateReflection(r,key,model){
+  try{
+    const c=new AbortController();
+    const t=setTimeout(()=>c.abort(),30000);
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',signal:c.signal,
+      headers:{'x-api-key':key,'anthropic-version':'2023-06-01',
+               'anthropic-dangerous-direct-browser-access':'true','content-type':'application/json'},
+      body:JSON.stringify({model:model,max_tokens:600,
+        messages:[{role:'user',content:_buildReflectionPrompt(r,_prevWorkoutPromptLine(r.activity,r.date))}]})
+    });
+    clearTimeout(t);
+    if(!resp.ok){showToast('Reflection failed — journal written without it','var(--o)');return null;}
+    const d=await resp.json();
+    let txt=(d.content&&d.content[0]&&d.content[0].text||'').trim();
+    txt=txt.replace(/^["'“]|["'”]$/g,'').replace(/^Reflection:\s*/i,'').trim();
+    return txt||null;
+  }catch(e){
+    showToast('Reflection failed — journal written without it','var(--o)');
+    return null;
+  }
+}
+
 async function analyseWorkoutImage(base64,mimeType){
   const key=localStorage.getItem('st_anthropic_key');
   if(!key){showToast('Add Anthropic API key in ⚙ Settings','var(--err)');return null;}
@@ -3423,12 +3485,7 @@ async function analyseWorkoutImage(base64,mimeType){
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),45000);
   try{
-    // Reflection is decided by duration, but we don't know the duration until
-    // after the call. Runs always get one; cycles and walks are asked for it
-    // and the 15-minute rule is applied afterwards, so a short ride simply
-    // drops the text it generated.
-    const wantsReflection=true;
-    const promptText=_buildWorkoutPrompt(app,activity,wantsReflection,_prevWorkoutPromptLine(activity,null));
+    const promptText=_buildWorkoutPrompt(app,activity,false,'');
 
     let resp=await _callWorkoutModel(WORKOUT_MODEL_PRIMARY,key,base64,mimeType,promptText,controller.signal);
     let usedModel=WORKOUT_MODEL_PRIMARY;
@@ -3464,8 +3521,13 @@ async function analyseWorkoutImage(base64,mimeType){
       parsed.dateFromTimestamp=parsed.date;
       parsed.date=_titleDate;
       parsed.dateSource='title';
+    }else if(_titleDate){
+      parsed.dateSource='title';
     }else{
-      parsed.dateSource=_titleDate?'title':'timestamp';
+      // Only flag this as risky when the screen showed a RELATIVE timestamp
+      // ("Yesterday at..."). Runna prints an absolute date, so there is nothing
+      // to check and warning every time would just train Noah to ignore it.
+      parsed.dateSource=parsed.timestampWasRelative?'relative':'absolute';
     }
     parsed.titleNumber=_parseTitleNumber(parsed.activityTitle);
 
@@ -3491,10 +3553,17 @@ async function analyseWorkoutImage(base64,mimeType){
     parsed.avgSpeedKmh=kmh>0?Math.round(kmh*10)/10:null;
     parsed.effortLevel=computeEffortLevel(parsed.avgHR,activity,kmh,paceSec);
 
-    // The 15-minute rule — time only, distance ignored. Runs always keep it.
-    if(activity!=='Run'&&parsed.durationMinutes<15)parsed.reflection=null;
-
+    // Weather BEFORE the reflection, so the reflection can actually write about it.
     parsed.weather=await fetchWorkoutWeather(parsed.date,parsed.startTime);
+
+    // The 15-minute rule — time only, distance ignored. Runs always get one.
+    // Skipping the call outright also saves the tokens v2 wasted generating a
+    // reflection that was then thrown away.
+    parsed.reflection=null;
+    const needsReflection=(activity==='Run')||(parsed.durationMinutes>=15);
+    if(needsReflection){
+      parsed.reflection=await _generateReflection(parsed,key,usedModel);
+    }
     return parsed;
   }catch(err){
     clearTimeout(timer);
@@ -3723,7 +3792,9 @@ function showWorkoutSummary(result){
       '<div class="workout-summary-row"><span class="workout-summary-icon">📅</span><span>'+escHtml(dateLabel)+
         (result.dateSource==='title'
           ? ' <span style="color:var(--text3);font-size:11px">(from your title'+(result.dateFromTimestamp?', not "'+escHtml(_ordinalDate(result.dateFromTimestamp))+'"':'')+')</span>'
-          : ' <span style="color:var(--o);font-size:11px">(no date in title — from the timestamp, check this)</span>')+
+          : result.dateSource==='relative'
+            ? ' <span style="color:var(--o);font-size:11px">(screenshot only said &ldquo;yesterday&rdquo; — check this)</span>'
+            : ' <span style="color:var(--text3);font-size:11px">(dated on the screenshot)</span>')+
         '</span></div>'+
       '<div class="workout-summary-row"><span class="workout-summary-icon">'+actIcon+'</span><span>'+escHtml(activityLabel)+'</span></div>'+
       '<div class="workout-summary-row"><span class="workout-summary-icon">⏱</span><span>'+escHtml(timeStr)+'</span></div>'+
