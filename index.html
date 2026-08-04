@@ -3701,7 +3701,9 @@ function showWorkoutSummary(result){
   let dateLabel='Unknown date';
   if(result.date)dateLabel=_ordinalDate(result.date)+' '+_journalYear(result.date);
   const daypart=_timeOfDay(result.startTime,null);
-  const activityLabel=daypart+' '+(result.activity||'Workout');
+  // Include the number so the preview matches the title that actually gets written.
+  const _n=result.titleNumber||null;
+  const activityLabel=daypart+' '+(result.activity||'Workout')+((result.activity==='Cycle'&&_n&&_n>1)?' '+_n:'');
   const jm=JOURNAL_MINUTES[result.activity]||10;
   const workoutMins=Math.floor((result.durationSeconds||0)/60);
   const sessionEnd=result.startTime?_addMins(result.startTime,workoutMins+jm):'';
