@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1785832688187">
+<meta name="app-built" content="1785833145996">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -1987,7 +1987,6 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
       </div>
       <input type="file" id="workout-file-input" accept="image/*" style="display:none" onchange="handleWorkoutFile(event)">
       <img id="workout-img-preview" class="img-preview" style="display:none;margin-bottom:8px">
-      <button id="workout-analyse-btn" onclick="runWorkoutAnalysis()" style="display:none">Analyse →</button>
     </div>
 
     <!-- Spinner sits outside the upload/source areas so it stays visible while
@@ -3652,14 +3651,7 @@ function _wDrop(e){
   if(dz){dz.style.borderColor='';dz.style.background='';}
   const file=[...(e.dataTransfer.files||[])].find(f=>f.type.startsWith('image/'));
   if(!file){showToast('Please drop an image file','var(--err)');return;}
-  _workoutImageMime='image/jpeg';
-  compressWorkoutImage(file,function(dataUrl){
-    _workoutImageBase64=dataUrl.split(',')[1];
-    const preview=document.getElementById('workout-img-preview');
-    if(preview){preview.src=dataUrl;preview.style.display='block';}
-    document.getElementById('workout-drop-zone')?.classList.add('has-image');
-    runWorkoutAnalysis();
-  });
+  _handleWorkoutBlob(file);
 }
 
 function openWorkoutImport(){
@@ -3673,8 +3665,6 @@ function openWorkoutImport(){
   if(preview){preview.style.display='none';preview.src='';}
   const dz=document.getElementById('workout-drop-zone');
   if(dz)dz.classList.remove('has-image');
-  const analyseBtn=document.getElementById('workout-analyse-btn');
-  if(analyseBtn)analyseBtn.style.display='none';
   _workoutApp=null; _workoutActivity=null;
   document.getElementById('workout-upload-area').style.display='block';
   document.getElementById('workout-source-area').style.display='none';
@@ -3683,25 +3673,26 @@ function openWorkoutImport(){
   document.getElementById('workout-import-overlay').classList.add('open');
 }
 
+// Choose File / photo library. Goes through the single shared path below.
 function handleWorkoutFile(event){
   const file=event.target.files[0];
   if(!file)return;
-  _workoutImageMime='image/jpeg';
-  compressWorkoutImage(file,function(dataUrl){
-    _workoutImageBase64=dataUrl.split(',')[1];
-    const preview=document.getElementById('workout-img-preview');
-    if(preview){preview.src=dataUrl;preview.style.display='block';}
-    document.getElementById('workout-drop-zone')?.classList.add('has-image');
-    runWorkoutAnalysis();
-  });
+  _handleWorkoutBlob(file);
 }
 
+// THE ONLY WAY AN IMAGE ENTERS THE IMPORT FLOW.
+// Paste, drag-and-drop and Choose File all funnel through here. They used to
+// each have their own copy of this logic and call runWorkoutAnalysis() directly,
+// which meant adding the Strava/Runna question only fixed the paste path — drag
+// and Choose File still fired at the API without asking. One entry point now, so
+// they cannot drift apart again.
 function _handleWorkoutBlob(blob){
   _workoutImageMime='image/jpeg';
   compressWorkoutImage(blob,function(dataUrl){
     _workoutImageBase64=dataUrl.split(',')[1];
     const preview=document.getElementById('workout-img-preview');
     if(preview){preview.src=dataUrl;preview.style.display='block';}
+    document.getElementById('workout-drop-zone')?.classList.add('has-image');
     // Do NOT call the API yet — ask which app / activity first.
     _showWorkoutSourcePicker(dataUrl);
   });
