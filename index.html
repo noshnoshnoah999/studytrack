@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1785810989256">
+<meta name="app-built" content="1785811565512">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -3400,13 +3400,17 @@ function _buildReflectionPrompt(r,prevLine){
   if(r.calories)F.push('Calories: '+r.calories+' kcal');
   if(r.steps)F.push('Steps: '+r.steps);
   F.push('Effort level (already worked out): '+(r.effortLevel||'Low'));
-  if(r.activityTitle)F.push('What I called this activity: '+r.activityTitle);
+  // Deliberately NOT passing the activity title. Runna auto-names activities
+  // ("Your First Walk Run Back" is a Runna milestone), and labelling it as
+  // Noah's own wording made the model open with "I called this one X for a
+  // reason" — a claim about him that simply was not true.
 
   let w='';
   if(r.weather&&r.weather.tempC!==null&&r.weather.tempC!==undefined){
-    w='\n\nTHE WEATHER AT THE TIME: '+r.weather.tempC+'\u00B0C'+(r.weather.text?', '+r.weather.text:'')+
-      '.\nYou MUST write about this and how it affected the '+verb+'. Do not just state the temperature — say what it felt like. '+
-      'Nearly 30 degrees is hot even in the evening; single figures is cold; rain or drizzle changes the surface and how it felt.';
+    w='\n\nTHE WEATHER AT THE TIME: '+Math.round(r.weather.tempC)+'\u00B0C'+(r.weather.text?', '+r.weather.text:'')+
+      '.\nYou MUST write about this and what it plausibly meant for the '+verb+'. '+
+      'Around 30 degrees is hot even in the evening; single figures is cold; rain or drizzle changes the surface. '+
+      'Use whole degrees, the way a person writes it.';
   }else{
     w='\n\nNo weather data was available, so do not mention the weather at all.';
   }
@@ -3425,8 +3429,18 @@ function _buildReflectionPrompt(r,prevLine){
     '- Pick at most TWO OR THREE numbers that actually mattered and weave them into the story.\n'+
     '- Write about what the session was like, not what the numbers were.\n'+
     '- Never mention cadence and calories together as a pair of facts.\n\n'+
+    'CRITICAL — DO NOT INVENT HOW MY BODY FELT.\n'+
+    'You were not there. You have numbers and a weather reading, nothing else. Never assert a physical\n'+
+    'sensation as fact. Do NOT write things like "I was sweating a lot", "the air felt thick and heavy",\n'+
+    '"my legs were burning" or "I was out of breath" — you cannot know any of that and this goes to my school.\n'+
+    '- You MAY reason from the figures, hedged: "I think the heat pushed my heart rate up more than the\n'+
+    '  effort really called for" is fine, because the heart rate and the temperature are both real.\n'+
+    '- Use "I think", "probably", "it likely" when drawing a conclusion rather than stating it flatly.\n'+
+    '- If you have nothing true to say about how it felt, write about the conditions and the numbers instead.\n\n'+
     'ALSO:\n'+
     '- Do NOT mention the screenshot or the attachment — a separate line already does that.\n'+
+    '- Do NOT claim I named or titled the activity. The apps generate their own names.\n'+
+    '- Only use "After that" when something genuinely happened next. Never as a filler transition.\n'+
     '- 3 to 6 sentences. No headers, no emoji, no bullet points, no clock times.\n';
 }
 
@@ -3784,7 +3798,7 @@ function showWorkoutSummary(result){
   if(result.avgPace)bits.push(result.avgPace+'/km');
   if(result.avgHR)bits.push(result.avgHR+' bpm');
   if(result.weather&&result.weather.tempC!==null&&result.weather.tempC!==undefined){
-    bits.push(result.weather.tempC+'°C'+(result.weather.text?' '+result.weather.text:''));
+    bits.push(Math.round(result.weather.tempC)+'°C'+(result.weather.text?' '+result.weather.text:''));
   }
   const summaryEl=document.getElementById('workout-summary-card');
   if(summaryEl){
@@ -3928,7 +3942,8 @@ function buildWorkoutJournal(r,cycleNum,locationOverride){
   L.push(loc);
   if(act==='Cycle')L.push('I parked at the JR Shin-Urayasu Bicycle Parking Lot Number 2');
   if(r.weather&&r.weather.tempC!==null&&r.weather.tempC!==undefined){
-    L.push('Weather at the time of the '+act.toLowerCase()+': '+r.weather.tempC+'°C'+(r.weather.text?' | '+r.weather.text:''));
+    // Whole degrees — "29.1°C" in a diary is a machine tell.
+    L.push('Weather at the time of the '+act.toLowerCase()+': '+Math.round(r.weather.tempC)+'°C'+(r.weather.text?' | '+r.weather.text:''));
   }
   L.push(act==='Run'
     ? 'Used the Runna App for Tracking the Route, recorded on my Apple Watch'
