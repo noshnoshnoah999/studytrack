@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>window.onerror=function(msg,src,line,col,err){setTimeout(function(){var m=document.getElementById('main');if(m)m.innerHTML='<div style="padding:20px;color:#ff6b6b;font-family:monospace;font-size:12px;white-space:pre-wrap">JS ERROR (send screenshot to developer):\n'+msg+'\nLine '+line+':'+col+'\n'+(err?err.stack:'')+'</div>';},0);return false;};</script>
 <title>StudyTrack</title>
-<meta name="app-built" content="1785811565512">
+<meta name="app-built" content="1785812071517">
 <!-- PWA / iOS Home Screen -->
 <link rel="manifest" href="/studytrack/manifest.json">
 <link rel="apple-touch-icon" href="/studytrack/icon.png">
@@ -3405,12 +3405,18 @@ function _buildReflectionPrompt(r,prevLine){
   // Noah's own wording made the model open with "I called this one X for a
   // reason" — a claim about him that simply was not true.
 
+  // Only push the weather when there is genuinely something to say about it.
+  // Requiring a weather sentence on every import made a mild day produce five
+  // restatements of the temperature, because there was nothing else true left.
   let w='';
   if(r.weather&&r.weather.tempC!==null&&r.weather.tempC!==undefined){
-    w='\n\nTHE WEATHER AT THE TIME: '+Math.round(r.weather.tempC)+'\u00B0C'+(r.weather.text?', '+r.weather.text:'')+
-      '.\nYou MUST write about this and what it plausibly meant for the '+verb+'. '+
-      'Around 30 degrees is hot even in the evening; single figures is cold; rain or drizzle changes the surface. '+
-      'Use whole degrees, the way a person writes it.';
+    const t=Math.round(r.weather.tempC);
+    const wet=/rain|drizzle|snow|thunder|shower|fog/i.test(r.weather.text||'');
+    const notable=(t>=28)||(t<=8)||wet;
+    w='\n\nTHE WEATHER AT THE TIME: '+t+'\u00B0C'+(r.weather.text?', '+r.weather.text:'')+'.\n'+
+      (notable
+        ? 'This is worth ONE mention because it plausibly affected the '+verb+'. Say it once, in whole degrees, and move on. Do NOT keep returning to it.'
+        : 'This was unremarkable. Do NOT mention the weather at all — there is nothing to say about it.');
   }else{
     w='\n\nNo weather data was available, so do not mention the weather at all.';
   }
@@ -3420,7 +3426,8 @@ function _buildReflectionPrompt(r,prevLine){
     'HOW I WRITE. This goes into a school journal and has to read as though I wrote it, not an AI.\n'+
     '- First person, chronological, plain everyday vocabulary. Do not reach for fancy synonyms. Repeating a word is normal for me.\n'+
     '- British spellings: kilometre, realised, colour.\n'+
-    '- Connectors I use: "After that" (my most common), "Additionally", "This time", "Then", "Carrying on". Use "After that" as a genuine time connector, not as filler.\n'+
+    '- I do use "After that", "Additionally", "This time", "Then" and "Carrying on" — but do NOT force one in.\n'+
+    '  In two or three sentences you almost certainly do not need a connector at all. Bolting one on is worse than none.\n'+
     '- NEVER use: "delve", "furthermore", "moreover", "overall this was a valuable experience", "valuable insights".\n'+
     '- Do NOT write polished prose. My sentences are simple and sometimes run long. Do not smooth everything into perfect grammar. Do not add deliberate mistakes either.\n'+
     '- Be honest, never a flawless session. Say how it actually felt, including if it was hard, hot, or I was tired.\n\n'+
@@ -3441,7 +3448,10 @@ function _buildReflectionPrompt(r,prevLine){
     '- Do NOT mention the screenshot or the attachment — a separate line already does that.\n'+
     '- Do NOT claim I named or titled the activity. The apps generate their own names.\n'+
     '- Only use "After that" when something genuinely happened next. Never as a filler transition.\n'+
-    '- 3 to 6 sentences. No headers, no emoji, no bullet points, no clock times.\n';
+    '- TWO OR THREE SENTENCES. Not more. Short and true beats long and padded.\n'+
+    '- Make each sentence do a DIFFERENT job. Do not restate the same idea in new words, and never\n'+
+    '  repeat a figure you have already given. If you only have two sentences worth of truth, write two.\n'+
+    '- No headers, no emoji, no bullet points, no clock times.\n';
 }
 
 async function _callWorkoutModel(model,key,base64,mimeType,promptText,signal){
