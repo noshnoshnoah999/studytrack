@@ -1570,8 +1570,9 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
     <div class="modal-handle"></div>
     <div class="modal-title">Goals & Settings</div>
     <div class="form-group" style="margin-bottom:14px">
-      <label class="form-label">Teacher's target <span style="font-weight:400;color:var(--text3)">(h/day recommended by your teacher)</span></label>
-      <input type="number" class="form-input" id="goal-teacher-target" placeholder="6.3" min="0.5" max="16" step="0.1">
+      <label class="form-label">Teacher's target <span style="font-weight:400;color:var(--text3)">(computed &mdash; not editable)</span></label>
+      <input type="text" class="form-input" id="goal-teacher-target" readonly style="background:var(--bg3);color:var(--text2);cursor:not-allowed">
+      <div style="font-size:11px;color:var(--text3);margin-top:5px;line-height:1.45">Remaining hours &divide; study days left until the 3rd Graduation Guidance (20 Sep 2027), at 5 days/week. Recalculates on every render so it cannot go stale. Teacher quoted 7h12m off the 31 Jul 2026 report.</div>
     </div>
     <!-- Recommended goal card -->
     <div id="goal-rec-card" style="background:var(--bg3);border-radius:10px;padding:12px 14px;margin-bottom:14px;border:1.5px solid var(--o);display:none">
@@ -4785,7 +4786,7 @@ function renderDashboard(){
   }
 
   // Pace strip — minimum / teacher target / my goal
-  const deadline=new Date(GRAD_DEADLINE);
+  const deadline=new Date(WORK_DEADLINE);
   const daysLeft=Math.max(1,(deadline-now)/(1000*60*60*24));
   const studyDaysLeft=Math.max(1,daysLeft/7*(goals.daysPerWeek||5));
   const minRequired=Math.max(0,remaining/studyDaysLeft);
@@ -7959,7 +7960,7 @@ function _gradSharedVars(){
     estDate=new Date(now);estDate.setDate(now.getDate()+Math.round(weeksLeft*7));
     estDateStr=MONTHS[estDate.getMonth()]+' '+estDate.getFullYear();
   }
-  const targetDate=new Date(GRAD_DEADLINE);
+  const targetDate=new Date(WORK_DEADLINE);
   const diffDays=estDate?Math.round((targetDate-estDate)/(1000*60*60*24)):null;
   const ahead=diffDays!==null&&diffDays>0;
   // Pace actually required to clear the remaining hours by the deadline (dynamic).
@@ -8040,7 +8041,7 @@ function _renderGradEstCard(){
   const futureNames=futureSubjs.map(s=>s.name).join(', ');
   const weeksToGrad=Math.round(Math.max(0,(targetDate-now)/(1000*60*60*24*7)));
   const onTrack=ahead;
-  const targetWeeksLeft=TEACHER_WEEKLY>0?remaining/TEACHER_WEEKLY:null;
+  const targetWeeksLeft=teacherWeekly()>0?remaining/teacherWeekly():null;
   let targetEstDate=null,targetEstStr='—';
   if(targetWeeksLeft!==null){
     targetEstDate=new Date(now);targetEstDate.setDate(now.getDate()+Math.round(targetWeeksLeft*7));
@@ -8061,17 +8062,18 @@ function _renderGradEstCard(){
       '</div>'+
       '<div style="background:var(--bg3);border-radius:var(--radius);padding:24px;border:1.5px solid '+(targetOnTime?'var(--ok)':'var(--od2)')+';display:flex;flex-direction:column;justify-content:center">'+
         '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Teacher\'s target</div>'+
-        '<div style="font-size:40px;font-weight:900;color:'+(targetOnTime?'var(--ok)':'var(--text)')+';letter-spacing:-1px;line-height:1.1">Oct 31, 2027</div>'+
+        '<div style="font-size:40px;font-weight:900;color:'+(targetOnTime?'var(--ok)':'var(--text)')+';letter-spacing:-1px;line-height:1.1">Sep 20, 2027</div>'+
         '<div style="font-size:13px;font-weight:700;color:'+(targetOnTime?'var(--ok)':'var(--text2)')+';margin-top:12px">'+
           (targetOnTime?'On time':'Meets standard')+
         '</div>'+
-        '<div style="font-size:12px;color:var(--text3);margin-top:6px">'+fmtH(TEACHER_WEEKLY)+'/wk &middot; '+fmtH(TEACHER_DAILY)+'/day</div>'+
+        '<div style="font-size:12px;color:var(--text3);margin-top:6px">'+fmtH(teacherWeekly())+'/wk &middot; '+fmtH(teacherDaily())+'/day</div>'+
       '</div>'+
     '</div>'+
     '<div style="background:var(--bg3);border-radius:var(--radius);padding:16px 20px;display:flex;align-items:center;justify-content:space-between">'+
       '<div>'+
-        '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Official deadline</div>'+
-        '<div style="font-size:22px;font-weight:800;color:var(--text);letter-spacing:-0.5px">Oct 31, 2027</div>'+
+        '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Work deadline</div>'+
+        '<div style="font-size:22px;font-weight:800;color:var(--text);letter-spacing:-0.5px">Sep 20, 2027</div>'+
+        '<div style="font-size:11px;color:var(--text3);margin-top:3px">3rd Graduation Guidance &middot; ceremony Oct 31, 2027</div>'+
       '</div>'+
       '<div style="text-align:right">'+
         '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Weeks left</div>'+
@@ -8080,11 +8082,11 @@ function _renderGradEstCard(){
     '</div>'+
     (!onTrack?
     '<div style="background:rgba(239,68,68,0.08);border:1.5px solid rgba(239,68,68,0.18);border-radius:var(--radius);padding:14px 18px;font-size:13px;color:var(--err);line-height:1.5">'+
-      'To graduate by Oct 2027 you need <strong>'+fmtH(neededPace)+'/week</strong> — you\'re at <strong>'+fmtH(pace)+'/week</strong>. '+
+      'To finish by Sep 20, 2027 you need <strong>'+fmtH(neededPace)+'/week</strong> — you\'re at <strong>'+fmtH(pace)+'/week</strong>. '+
       'That\'s <strong>'+fmtH(Math.max(0,neededPace-pace))+'/week more</strong> (about '+fmtH(Math.max(0,neededPace-pace)/TEACHER_DAYS)+'/day extra).'+
     '</div>':
     '<div style="background:rgba(34,197,94,0.08);border:1.5px solid rgba(34,197,94,0.18);border-radius:var(--radius);padding:14px 18px;font-size:13px;color:var(--ok);line-height:1.5">'+
-      'You\'re on track to graduate before Oct 2027 at your current pace of '+fmtH(pace)+'/week.'+
+      'You\'re on track to finish before Sep 20, 2027 at your current pace of '+fmtH(pace)+'/week.'+
     '</div>'
     )+
     (futureH>0?
@@ -8410,7 +8412,7 @@ function renderTimeline(){
   // ── Summary numbers ───────────────────────────────────────────────────────────
   const futureDates=Object.values(completedAt).filter(d=>d>now);
   const finishDate=futureDates.length?new Date(Math.max(...futureDates.map(d=>d.getTime()))):new Date(now);
-  const deadline=new Date(GRAD_DEADLINE);
+  const deadline=new Date(WORK_DEADLINE);
   const bufferDays=Math.round((deadline-finishDate)/86400000);
   const bufferMonths=Math.abs(Math.round(bufferDays/30.4));
   const monthsToFinish=Math.round((finishDate-now)/86400000/30.4);
@@ -8520,7 +8522,7 @@ function renderPlan(){
   const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
   const totalLogged=getTotalLogged();
   const remaining=Math.max(0,TOTAL_REQ-totalLogged);
-  const targetDate=new Date(GRAD_DEADLINE);
+  const targetDate=new Date(WORK_DEADLINE);
   const daysLeft=Math.max(1,(targetDate-now)/(1000*60*60*24));
   const personalTarget=goals.daily;       // what YOU want to do per day
   const daysPerWeek=goals.daysPerWeek||5; // days per week you plan to study
@@ -8534,7 +8536,7 @@ function renderPlan(){
 
   // Estimated finish dates for comparison
   const weeklyPersonal=personalTarget*daysPerWeek;
-  const weeklyTeacher=TEACHER_DAILY*TEACHER_DAYS;
+  const weeklyTeacher=teacherWeekly();
   function estFinish(weeklyH){
     if(weeklyH<=0)return null;
     const weeksNeeded=remaining/weeklyH;
@@ -8552,7 +8554,7 @@ function renderPlan(){
   const finishAtActual=actualWeeklyPace?estFinish(actualWeeklyPace):null;
   const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   function fmtDate(d){return d?MONTHS[d.getMonth()]+' '+d.getFullYear():'—';}
-  const targetDate2=new Date(GRAD_DEADLINE);
+  const targetDate2=new Date(WORK_DEADLINE);
   const personalOnTime=finishAtPersonal&&finishAtPersonal<=targetDate2;
   const teacherOnTime=finishAtTeacher&&finishAtTeacher<=targetDate2;
   const actualOnTime=finishAtActual&&finishAtActual<=targetDate2;
@@ -8684,7 +8686,7 @@ function renderPlan(){
         '<div class="plan-smart-num">'+fmtH(personalTarget)+'</div>'+
         '<div style="padding-bottom:8px;font-size:13px;color:var(--text2);font-weight:600">your daily goal</div>'+
       '</div>'+
-      '<div class="plan-teacher-ref">'+daysPerWeek+' days/week = <strong style="color:var(--text2)">'+fmtH(weeklyPersonal)+'/week</strong> · <span style="color:var(--text3)">Teacher\'s standard: '+fmtH(TEACHER_DAILY)+'/day</span></div>'+
+      '<div class="plan-teacher-ref">'+daysPerWeek+' days/week = <strong style="color:var(--text2)">'+fmtH(weeklyPersonal)+'/week</strong> · <span style="color:var(--text3)">Teacher\'s standard: '+fmtH(teacherDaily())+'/day</span></div>'+
       // Today progress bar
       '<div style="margin:14px 0">'+
         '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:5px">'+
@@ -8718,7 +8720,7 @@ function renderPlan(){
             '<div style="font-size:11px;color:var(--text3)">Est. finish</div>'+
             '<div style="font-size:16px;font-weight:800;color:'+(finishAtActual?(actualOnTime?'var(--ok)':'var(--err)'):'var(--text3)')+'">'+fmtDate(finishAtActual)+'</div>'+
             (finishAtActual?'<div style="font-size:11px;font-weight:600;color:'+(actualOnTime?'var(--ok)':'var(--err)')+'">'+
-              (actualOnTime?'✓ On time':'⚠ Misses Oct 2027')+'</div>':'<div style="font-size:11px;color:var(--text3)">Keep logging to see</div>')+
+              (actualOnTime?'✓ On time':'⚠ Misses Sep 2027')+'</div>':'<div style="font-size:11px;color:var(--text3)">Keep logging to see</div>')+
           '</div>'+
         '</div>'+
       '</div>'+
@@ -8739,8 +8741,8 @@ function renderPlan(){
         // Teacher's standard column
         '<div style="background:var(--bg3);border-radius:10px;padding:14px;border:1.5px solid '+(teacherOnTime?'var(--ok)':'var(--err)')+'">'+
           '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Teacher\'s standard</div>'+
-          '<div style="font-size:15px;font-weight:900;color:var(--text)">'+fmtH(TEACHER_DAILY)+'/day</div>'+
-          '<div style="font-size:11px;color:var(--text3);margin-top:1px">'+TEACHER_DAYS+'d · '+fmtH(TEACHER_WEEKLY)+'/wk</div>'+
+          '<div style="font-size:15px;font-weight:900;color:var(--text)">'+fmtH(teacherDaily())+'/day</div>'+
+          '<div style="font-size:11px;color:var(--text3);margin-top:1px">'+TEACHER_DAYS+'d · '+fmtH(teacherWeekly())+'/wk</div>'+
           '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">'+
             '<div style="font-size:11px;color:var(--text3)">Est. finish</div>'+
             '<div style="font-size:13px;font-weight:800;color:'+(teacherOnTime?'var(--ok)':'var(--err)')+'">'+fmtDate(finishAtTeacher)+'</div>'+
@@ -8783,7 +8785,7 @@ function _renderStudyCalendar(targetElId){
   const remaining=Math.max(0,TOTAL_REQ-totalLogged);
   const personalTarget=goals.daily;
   const daysPerWeek=goals.daysPerWeek||5;
-  const targetDate=new Date(GRAD_DEADLINE);
+  const targetDate=new Date(WORK_DEADLINE);
   const daysLeft=Math.max(1,(targetDate-now)/(1000*60*60*24));
   const weeksLeft=daysLeft/7;
   const studyDaysLeft=weeksLeft*daysPerWeek;
@@ -8892,10 +8894,10 @@ function _renderPaceDropCard(){
 
   // Guide rate — preserve typed value across re-renders
   const guideEl=document.getElementById('pace-drop-guide-input');
-  const guideRate=guideEl&&parseFloat(guideEl.value)>0?parseFloat(guideEl.value):(goals.teacherTarget||goals.daily);
+  const guideRate=guideEl&&parseFloat(guideEl.value)>0?parseFloat(guideEl.value):teacherDaily();
 
   const now=nowLocal();
-  const deadline=new Date(GRAD_DEADLINE);
+  const deadline=new Date(WORK_DEADLINE);
   const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
   const studyDaysPerMonth=daysPerWeek*4.33;
@@ -9184,22 +9186,57 @@ function applySidebarState(){
 }
 
 // ── GOAL SETTINGS ─────────────────────────────────────────────────────────────
-const TEACHER_DAILY=6.3; // teacher's fixed standard — never changes
-const TEACHER_DAYS=5;
-const TEACHER_WEEKLY=TEACHER_DAILY*TEACHER_DAYS; // 31.5
+// Teacher's standard is NO LONGER a fixed number. It is derived live from the
+// hours still outstanding and the study days left until WORK_DEADLINE (below),
+// so it cannot go stale the way the hard-coded 6.3 did. See teacherDaily().
+const TEACHER_DAYS=5;           // teacher's plan is 5 study days per week
+const TEACHER_STATED_DAILY=7.2; // 7h12m — what the teacher quoted off the
+                                // 2026-07-31 TIHS report. Fallback only.
 
 // Official graduation totals (from TIHS requirements spreadsheet)
 // Total: 24.0 credits. Transferred from old school: 4.5 credits.
 // That leaves 19.5 to earn at TIHS, of which EL1+EL2+EL3=3cr are now complete → 16.5 left.
 const GRAD_TOTAL_CREDITS=24.0;
 const GRAD_TRANSFER_CREDITS=4.5; // English9(1) + Lab Sci(1) + Soc.Studies.Elect.(0.5) + CTE(1) + Electives(1)
-// Graduation deadline — single source of truth. Used by all pace/estimate math.
-// NOTE: keep in sync with the copy in .github/workflows/study-notify.yml (Date.UTC(2027, 9, 31)).
+// ── TWO DATES. DO NOT CONFLATE THEM. ─────────────────────────────────────────
+// WORK_DEADLINE (2027-09-20) — the 3rd Graduation Guidance. ALL coursework must be
+//   finished by this date. Miss it and graduation is deferred and tuition extends.
+//   EVERY pace, minimum, projection and on-track calculation uses this date.
+// GRAD_DEADLINE (2027-10-31) — the ceremony date. DISPLAY ONLY. Never pace math.
+//
+// Why 2027-09-20: confirmed with Noah 2026-08-05. The teacher's quoted 7h12m/day
+// reverse-solves to this date at 5 days/week (2143h29m remaining / 293 weekdays =
+// 7h19m). No other Graduation Guidance date fits at 5 days/week — the next closest,
+// 2027-08-20, needs 7h53m. The old code used 2027-10-31 for pace, which understated
+// the required daily minimum by 41 minutes (showed 6h39m, truth is 7h19m).
+// NOTE: keep WORK_DEADLINE in sync with .github/workflows/study-notify.yml
+//       (Date.UTC(2027, 8, 20)).
+const WORK_DEADLINE='2027-09-20';
 const GRAD_DEADLINE='2027-10-31';
 
+// Graduation hours still outstanding (extra-credit subjects excluded).
+function _remainingGradH(){
+  const subjs=_canonicalSubjs().filter(s=>!s.extraCredit);
+  return Math.max(0,subjs.reduce((a,s)=>a+s.req,0)-getTotalLogged());
+}
+// Weekday-equivalent study days between now and WORK_DEADLINE.
+function _studyDaysToWorkDeadline(dpw){
+  const daysLeft=Math.max(1,(new Date(WORK_DEADLINE)-nowLocal())/86400000);
+  return Math.max(1,daysLeft/7*(dpw||TEACHER_DAYS));
+}
+// Teacher's target, computed live. Logging hours moves it down; slipping moves it
+// up. Falls back to the quoted 7h12m only if the computation is unavailable.
+function teacherDaily(){
+  try{
+    const v=_remainingGradH()/_studyDaysToWorkDeadline(TEACHER_DAYS);
+    return(isFinite(v)&&v>0)?v:TEACHER_STATED_DAILY;
+  }catch(e){return TEACHER_STATED_DAILY;}
+}
+function teacherWeekly(){return teacherDaily()*TEACHER_DAYS;}
+
 function loadGoals(){
-  try{const g=localStorage.getItem('st_goals');if(g){const p=JSON.parse(g);if(!p.daysPerWeek)p.daysPerWeek=5;if(!p.teacherTarget)p.teacherTarget=6.3;return p;}}catch(e){}
-  return{daily:6.3,daysPerWeek:5,weekly:31.5,teacherTarget:6.3};
+  try{const g=localStorage.getItem('st_goals');if(g){const p=JSON.parse(g);if(!p.daysPerWeek)p.daysPerWeek=5;if(!p.teacherTarget)p.teacherTarget=TEACHER_STATED_DAILY;return p;}}catch(e){}
+  return{daily:7.5,daysPerWeek:5,weekly:37.5,teacherTarget:TEACHER_STATED_DAILY};
 }
 function updateGoalWeekly(){
   const daily=parseFloat(document.getElementById('goal-daily').value)||6.3;
@@ -9210,8 +9247,9 @@ function saveGoalSettings(){
   const daily=parseFloat(document.getElementById('goal-daily').value)||6.3;
   const daysPerWeek=parseInt(document.getElementById('goal-days-per-week').value)||5;
   const weekly=daily*daysPerWeek;
-  const ttEl=document.getElementById('goal-teacher-target');
-  const teacherTarget=ttEl&&parseFloat(ttEl.value)>0?parseFloat(ttEl.value):6.3;
+  // Teacher's target is computed, not typed. Persist the live value so any
+  // downstream reader of st_goals still sees a sane, current number.
+  const teacherTarget=parseFloat(teacherDaily().toFixed(2));
   const g={daily,daysPerWeek,weekly,teacherTarget};
   localStorage.setItem('st_goals',JSON.stringify(g));
   localStorage.setItem('st_goals_updated_at',new Date().toISOString());
@@ -9232,7 +9270,7 @@ function saveGoalSettings(){
   if(currentPage==='graduation')renderGraduationPage();
 }
 // Latest computed recommendation (updated on load and after sync)
-let _latestRecDaily=TEACHER_DAILY;
+let _latestRecDaily=TEACHER_STATED_DAILY;
 
 function computeGoalRec(){
   try{
@@ -9243,16 +9281,16 @@ function computeGoalRec(){
     const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
     const totalLogged=getTotalLogged();
     const remaining=Math.max(0,TOTAL_REQ-totalLogged);
-    const daysLeft=Math.max(1,(new Date(GRAD_DEADLINE)-Date.now())/(1000*60*60*24));
+    const daysLeft=Math.max(1,(new Date(WORK_DEADLINE)-Date.now())/(1000*60*60*24));
     const bareMin=remaining/Math.max(1,(daysLeft/7)*daysPerWeek);
     const cutoffStr=new Date(Date.now()-28*24*3600000).toISOString().slice(0,10);
     const _ec=_extraCreditIds();
     const recent28=sessions.filter(s=>s.date>=cutoffStr&&!_ec.has(s.subjectId)).reduce((a,s)=>a+s.hours,0);
     const actualDaily=recent28>0?(recent28/4)/daysPerWeek:null;
-    let rec=Math.max(bareMin,TEACHER_DAILY);
+    let rec=Math.max(bareMin,teacherDaily());
     if(actualDaily&&actualDaily>rec)rec=actualDaily;
     _latestRecDaily=Math.min(10,Math.ceil(rec*2)/2);
-  }catch(e){_latestRecDaily=TEACHER_DAILY;}
+  }catch(e){_latestRecDaily=TEACHER_STATED_DAILY;}
 }
 
 function updateRecPrompt(){
@@ -9274,7 +9312,7 @@ function openGoalSettings(){
   document.getElementById('goal-days-per-week').value=g.daysPerWeek||5;
   document.getElementById('goal-weekly').value=g.weekly;
   const ttEl=document.getElementById('goal-teacher-target');
-  if(ttEl)ttEl.value=g.teacherTarget||6.3;
+  if(ttEl)ttEl.value=fmtH(teacherDaily())+'/day';
   const lbl=document.getElementById('goal-daily-current');
   if(lbl)lbl.textContent='Currently '+fmtH(g.daily)+'/day · '+fmtH(g.weekly)+'/week';
   // Load existing Anthropic key
@@ -9293,7 +9331,7 @@ function openGoalSettings(){
     const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
     const totalLogged=getTotalLogged();
     const remaining=Math.max(0,TOTAL_REQ-totalLogged);
-    const targetDate=new Date(GRAD_DEADLINE);
+    const targetDate=new Date(WORK_DEADLINE);
     const nowMs=Date.now();
     const daysLeft=Math.max(1,(targetDate-nowMs)/(1000*60*60*24));
     const weeksLeft=daysLeft/7;
@@ -9310,7 +9348,7 @@ function openGoalSettings(){
     const actualDaily=actualWeekly?actualWeekly/daysPerWeek:null;
 
     // Recommend: never below teacher's standard (6h18m); also match actual pace if higher
-    let recDaily=Math.max(bareMin, TEACHER_DAILY);
+    let recDaily=Math.max(bareMin, teacherDaily());
     if(actualDaily&&actualDaily>recDaily)recDaily=actualDaily;
     recDaily=Math.ceil(recDaily*2)/2; // round up to nearest 0.5h
     recDaily=Math.min(10,recDaily);
@@ -9319,9 +9357,9 @@ function openGoalSettings(){
     let why='';
     if(!hasData){
       why='No recent sessions recorded — using teacher\'s standard as baseline.';
-    } else if(actualDaily<TEACHER_DAILY){
-      why='Your recent pace ('+fmtH(actualDaily)+'/day) is below teacher\'s standard. Recommending at least '+fmtH(TEACHER_DAILY)+'/day.';
-    } else if(actualDaily>=TEACHER_DAILY){
+    } else if(actualDaily<teacherDaily()){
+      why='Your recent pace ('+fmtH(actualDaily)+'/day) is below teacher\'s standard. Recommending at least '+fmtH(teacherDaily())+'/day.';
+    } else if(actualDaily>=teacherDaily()){
       why='Your recent pace is '+fmtH(actualDaily)+'/day — above teacher\'s standard. Recommending you keep this up!';
     }
 
@@ -10594,7 +10632,7 @@ function exportReport(){
   <div class="stat"><div class="stat-val orange">${totalLogged.toFixed(1)}h</div><div class="stat-lbl">Hours Logged</div></div>
   <div class="stat"><div class="stat-val">${remaining.toFixed(1)}h</div><div class="stat-lbl">Hours Remaining</div></div>
   <div class="stat"><div class="stat-val orange">${Math.round(pct)}%</div><div class="stat-lbl">Complete</div></div>
-  <div class="stat"><div class="stat-val ${estDate&&estDate<=new Date(GRAD_DEADLINE)?'green':'orange'}">${estDateStr}</div><div class="stat-lbl">Est. Finish</div></div>
+  <div class="stat"><div class="stat-val ${estDate&&estDate<=new Date(WORK_DEADLINE)?'green':'orange'}">${estDateStr}</div><div class="stat-lbl">Est. Finish</div></div>
 </div>
 <div class="big-bar-wrap"><div class="big-bar-fill" style="width:${pct.toFixed(1)}%"></div></div>
 <div class="bar-labels"><span>${totalLogged.toFixed(1)}h logged</span><span>${TOTAL_REQ}h required</span></div>
@@ -10613,7 +10651,7 @@ function exportReport(){
 
 <div class="footer">
   <span>StudyTrack · noshnoshnoah999.github.io/studytrack</span>
-  <span>Target: Oct 31, 2027 · ${pace.toFixed(1)}h/wk current pace</span>
+  <span>Work deadline: Sep 20, 2027 · ${pace.toFixed(1)}h/wk current pace</span>
 </div>
 </body></html>`;
 
@@ -11130,7 +11168,7 @@ function _aiSystemPrompt(ctx){
     remaining,pace,estDateStr,neededPace,onTrack,sessionCount
   }=ctx;
   const hm=_fmtDecimalToHm;
-  return `You are the Schedule Coach inside Noah's StudyTrack app. Noah is a TIHS student in Tokyo (JST) on a self-paced US-diploma track, working toward graduation by ${GRAD_DEADLINE}.
+  return `You are the Schedule Coach inside Noah's StudyTrack app. Noah is a TIHS student in Tokyo (JST) on a self-paced US-diploma track, working toward a HARD COURSEWORK DEADLINE of ${WORK_DEADLINE} — the 3rd Graduation Guidance. All work must be finished by then or graduation is deferred and tuition extends. The ceremony is ${GRAD_DEADLINE}; never use the ceremony date when giving pace advice.
 
 === PRECOMPUTED FIGURES (authoritative — REPORT these, never recalculate) ===
 The app has already done all the math. When Noah asks about progress, pace, hours, or timing, quote these numbers directly. Do NOT add up sessions yourself or estimate — you will get it wrong; trust these.
@@ -11144,9 +11182,9 @@ THIS CALENDAR WEEK (Mon–Sun): ${weekH.toFixed(1)}h (${hm(weekH)})
 LAST 7 DAYS (rolling): ${rolling7H.toFixed(1)}h
 THIS MONTH SO FAR: ${monthH.toFixed(1)}h
 PROJECTED PACE: ${pace.toFixed(1)}h/week → estimated finish ${estDateStr}
-PACE NEEDED to hit ${GRAD_DEADLINE}: ${neededPace.toFixed(1)}h/week
+PACE NEEDED to hit ${WORK_DEADLINE}: ${neededPace.toFixed(1)}h/week
 ON TRACK FOR DEADLINE: ${onTrack?'yes, ahead of/at the required pace':'no, currently behind the required pace'}
-TEACHER'S TARGET: ${(goals.teacherTarget||6.3)}h/day (${hm(goals.teacherTarget||6.3)})
+TEACHER'S TARGET (computed live to ${WORK_DEADLINE}, 5 days/wk): ${teacherDaily().toFixed(2)}h/day (${hm(teacherDaily())})
 NOAH'S GOAL: ${goals.daily}h/day, ${goals.weekly||((goals.daily||0)*(goals.daysPerWeek||5))}h/week over ${goals.daysPerWeek||5} days
 
 SUBJECTS (name (id): logged / required = % — remaining):

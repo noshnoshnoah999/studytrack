@@ -512,7 +512,10 @@ jobs:
                 const cut28Str = cut28.getUTCFullYear()+'-'+String(cut28.getUTCMonth()+1).padStart(2,'0')+'-'+String(cut28.getUTCDate()).padStart(2,'0');
                 const recentH = sessions.filter(s => s.date >= cut28Str && !ecIds.has(s.subjectId)).reduce((a, s) => a + s.hours, 0);
                 const pace = recentH >= 3 ? recentH / 4 : weeklyGoal;
-                const deadline = new Date(Date.UTC(2027, 9, 31)); // keep in sync with GRAD_DEADLINE in index.html
+                // WORK deadline = 3rd Graduation Guidance, 2027-09-20. All coursework must be
+                // finished by then. NOT the 2027-10-31 ceremony date, which must never be
+                // used for pace math. Keep in sync with WORK_DEADLINE in index.html.
+                const deadline = new Date(Date.UTC(2027, 8, 20));
                 const weeksToDeadline = Math.max(0, (deadline - nowDate) / (1000*60*60*24*7));
                 const neededPace = weeksToDeadline > 0.1 ? remaining / weeksToDeadline : remaining;
                 const weeksLeft = pace > 0 ? remaining / pace : 999;
@@ -577,7 +580,7 @@ jobs:
                   let inner = `<div style="font-size:16px;color:${C.text};margin-bottom:18px;font-weight:500">Here's how your week went</div>`;
                   inner += `<table style="width:100%;border-collapse:separate;border-spacing:0;margin-bottom:14px"><tr>${stat('This week', fmtH(weekH), C.o)}${stat('Goal', fmtH(weeklyGoal), C.text)}${stat('Days hit', daysHit + '/7', daysHit>=5?C.ok:C.text)}</tr></table>`;
                   inner += `<div style="font-size:12px;color:${C.text2};margin-bottom:6px">Weekly goal progress</div>${bar(weekH/weeklyGoal*100, weekH>=weeklyGoal?C.ok:C.o)}`;
-                  inner += `<div style="margin-top:18px;padding:16px;background:${C.card};border:1px solid ${C.border};border-radius:12px;font-size:14px;color:${C.text};line-height:1.55"><strong>Graduation:</strong> at your recent pace (${fmtH(pace)}/wk) you'll finish around <strong style="color:${onTrack?C.ok:C.err}">${estStr}</strong> — ${onTrack ? 'before' : 'after'} the Oct 2027 deadline.</div>`;
+                  inner += `<div style="margin-top:18px;padding:16px;background:${C.card};border:1px solid ${C.border};border-radius:12px;font-size:14px;color:${C.text};line-height:1.55"><strong>Graduation:</strong> at your recent pace (${fmtH(pace)}/wk) you'll finish around <strong style="color:${onTrack?C.ok:C.err}">${estStr}</strong> — ${onTrack ? 'before' : 'after'} the 20 Sep 2027 work deadline.</div>`;
                   if (stats.length) {
                     inner += heading('Most behind');
                     inner += stats.slice(0,3).map(s => `<div style="margin-bottom:10px"><table style="width:100%;border-collapse:separate;border-spacing:0;margin-bottom:4px"><tr><td style="font-size:13px;color:${C.text};font-weight:600">${s.name}</td><td style="font-size:13px;color:${C.text2};text-align:right;white-space:nowrap">${Math.round(s.pct)}% &middot; ${fmtH(s.left)} left</td></tr></table>${bar(s.pct)}</div>`).join('');
@@ -604,7 +607,7 @@ jobs:
                   const behind = stats.filter(s => s.pct < avgPct - 15).slice(0, 5);
                   if (behind.length) {
                     let inner = `<div style="font-size:16px;color:${C.text};margin-bottom:8px;font-weight:500">A few subjects need attention</div>`;
-                    inner += `<div style="font-size:13px;color:${C.text2};margin-bottom:16px;line-height:1.5">These are falling behind your average pace. A little extra time this week keeps your Oct 2027 goal on track.</div>`;
+                    inner += `<div style="font-size:13px;color:${C.text2};margin-bottom:16px;line-height:1.5">These are falling behind your average pace. A little extra time this week keeps your 20 Sep 2027 deadline on track.</div>`;
                     inner += behind.map(s => `<div style="margin-bottom:12px;padding:12px;background:${C.card};border-radius:10px"><table style="width:100%;border-collapse:separate;border-spacing:0;margin-bottom:6px"><tr><td style="font-size:14px;color:${C.text};font-weight:700">${s.name}</td><td style="font-size:14px;color:${C.err};font-weight:600;text-align:right;white-space:nowrap">${Math.round(s.pct)}%</td></tr></table>${bar(s.pct, C.err)}<div style="font-size:12px;color:${C.text2};margin-top:6px">${fmtH(s.left)} left</div></div>`).join('');
                     await emailOnce('email-behind', `⚠️ ${behind.length} subject${behind.length!==1?'s':''} falling behind`, wrap('Behind-schedule alert', null, inner));
                   }
