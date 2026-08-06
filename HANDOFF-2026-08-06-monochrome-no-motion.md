@@ -145,9 +145,19 @@ and colours. It is a document for print and for your teacher, not app chrome.
   Verification was parser-level plus a CSS injection over the live site.
   **Click through all ten pages after deploying** — Dashboard, Log Hours, Progress,
   Subjects, Graduation, Timer, History, Tasks, AI Coach, Schedule.
-- **The five new SVG icons have never been rendered.** They are hand-written paths.
-  Check the sidebar footer and dashboard header actually show a gear, a bell and a
-  sun rather than blank squares.
+- **SVG icons: rendered, then fixed once already.** Noah checked the first build and
+  reported two faults, both now corrected:
+  1. **Icons were too dark.** `.btn-dark`, `.btn-notif` and `#btn-holiday` set no
+     `color`, so `stroke="currentColor"` inherited a dim ancestor value. Emoji
+     carried their own colour, so this never mattered before. All three now set
+     `color:var(--text)`, and `renderHolidayBtn()` flips the icon to `var(--bg)`
+     when the ON state paints the near-white `--o` background behind it.
+  2. **The gear looked like a sun.** It was a circle with 8 radiating spokes —
+     visually identical to the holiday sun icon sitting near it. Replaced with a
+     sliders icon. Icons also went 15px/2.0 stroke → 16px/2.2 for legibility.
+
+  **Still worth a glance:** the holiday button's ON state (dark icon on the light
+  pill) has not been seen.
 - **Stale `st_theme` / `st_greyscale` values remain** in Supabase and localStorage.
   Dead data; nothing reads either.
 - **Shadows and border radii untouched.** Neither colour nor motion nor emoji.
