@@ -1041,7 +1041,7 @@ button:active{transform:scale(0.96)}
   <!-- MAIN -->
   <main id="main">
     <!-- PAGE: DASHBOARD -->
-    <div class="page active" id="page-dashboard">
+    <div class="page" id="page-dashboard">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
         <div>
           <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.5px;color:var(--text)" id="greeting"></h1>
@@ -1084,7 +1084,7 @@ button:active{transform:scale(0.96)}
     </div>
 
     <!-- PAGE: LOG -->
-    <div class="page" id="page-log">
+    <div class="page active" id="page-log">
       <div id="class-log-prompts"></div>
       <!-- QUICK TEMPLATES -->
       <div class="template-section" id="template-section"></div>
@@ -4392,23 +4392,13 @@ function getTotalLogged(){
 }
 
 // ── NAVIGATION ────────────────────────────────────────────────────────────────
-let currentPage='dashboard';
+let currentPage='log';
 
-const NAV_ORDER=['dashboard','schedule','log','progress','graduation','timer','history'];
 function showPage(id){
-  const prevPage=currentPage;
   currentPage=id;
   document.querySelectorAll('.page').forEach(p=>{
     p.classList.toggle('active',p.id==='page-'+id);
   });
-  // Directional page transition
-  const activePage=document.getElementById('page-'+id);
-  if(activePage&&prevPage&&prevPage!==id){
-    const prevIdx=NAV_ORDER.indexOf(prevPage);
-    const nextIdx=NAV_ORDER.indexOf(id);
-    if(nextIdx>prevIdx){
-    }
-  }
   buildNav();
   // Scroll to top on page change
   window.scrollTo(0,0);
@@ -9792,7 +9782,7 @@ async function syncFromCloud(){
   // Deep link support: open specific page via URL hash e.g. #log
   const hash=window.location.hash.replace('#','');
   const validPages=['dashboard','schedule','log','progress','subjects','graduation','timer','history','tasks','ai'];
-  showPage(validPages.includes(hash)?hash:'dashboard');
+  showPage(validPages.includes(hash)?hash:'log');
   _updateTasksBadge();
   // Run the overdue-task check once the cloud sync settles (so it reflects tasks
   // completed/rescheduled on other devices), falling back to local data if it fails.
