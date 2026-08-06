@@ -2672,6 +2672,78 @@ function runMigrations(){
     }catch(e){console.warn('[Migration v14] Error:',e)}
     localStorage.setItem('st_migration_v14_base_recalib_jul31_2026','1');
   }
+  // ── Migration v15: sync base hours to the 2026-08-06 TIHS progress report ──────
+  // Same mechanism as v14 (including the REPORT_DATE guard), new snapshot.
+  // Deltas vs the 2026-07-31 report (v14):
+  //   japanese  44.8 → 52.5  (+7.7)
+  //   cwp       13.2 → 14.5  (+1.3)
+  //   english    4.0 → 4.6   (+0.6)
+  //   wa_hist   15.1 → 16.6  (+1.5)
+  //   us_hist   24.2 → 24.5  (+0.3)
+  //   civics     1.7 → 2.1   (+0.4)
+  //   fine_art  45.7 → 51.0  (+5.3)
+  //   pe       115.5 → 130.7 (+15.2)
+  //   health    13.3 → 16.3  (+3.0)
+  //   lab_sci    2.0 → 2.3   (+0.3)
+  // Unchanged: science 0, algebra1 0.
+  // NOTE on `req`: unchanged, as always. The teacher's spreadsheet caps every contract at
+  // 150:00/75:00 due to a tool limitation on her end. The app's real requirements
+  // (PE 225, Japanese 450) are correct. Only `base` is ever synced from a teacher report.
+  // Electives (el1-el4) remain excluded — el4 in particular must stay base 0 and be driven
+  // entirely by sessions (see migration v11).
+  if(!localStorage.getItem('st_migration_v15_base_recalib_aug06_2026')){
+    try{
+      const raw=localStorage.getItem('st_subjs');
+      if(raw){
+        const subjs=JSON.parse(raw);
+        const sessions=JSON.parse(localStorage.getItem('st_sessions')||'[]');
+        const REPORT_DATE='2026-08-06'; // ISO date of the teacher progress report
+        // Teacher report Time column converted to decimal hours. Non-elective subjects only.
+        const teacherTotals={
+          japanese:52.5,  // 52:30
+          cwp:14.5,       // 14:30
+          english:4.6,    // 4:36
+          wa_hist:16.6,   // 16:36
+          us_hist:24.5,   // 24:30
+          civics:2.1,     // 2:06
+          fine_art:51.0,  // 51:00
+          pe:130.7,       // 130:42
+          health:16.3,    // 16:18
+          science:0,      // 0:00
+          lab_sci:2.3,    // 2:18
+          algebra1:0      // 0:00
+        };
+        let changed=false;
+        subjs.forEach(s=>{
+          if(teacherTotals[s.id]!==undefined){
+            const sessionH=sessions
+              .filter(x=>x.subjectId===s.id&&(!x.date||x.date<=REPORT_DATE))
+              .reduce((a,x)=>a+(x.hours||0),0);
+            const rawBase=parseFloat((teacherTotals[s.id]-sessionH).toFixed(4));
+            // Clamp: base must never go negative. Happens when logged session hours EXCEED
+            // the teacher's figure, usually because she rounds down to the minute. We never
+            // alter a real session record to force a match — sessions are the evidence
+            // behind submitted journal entries. Warn loudly instead of failing silently.
+            if(rawBase<0){
+              console.warn('[Migration v15] '+s.id+': sessions ('+sessionH.toFixed(2)+
+                'h) exceed teacher total ('+teacherTotals[s.id]+
+                'h) by '+Math.abs(rawBase).toFixed(2)+'h — base clamped to 0, subject will '+
+                'read slightly high. Sessions left untouched by design.');
+            }
+            const newBase=Math.max(0,rawBase);
+            if(Math.abs((s.base||0)-newBase)>0.01){s.base=newBase;changed=true}
+          }
+        });
+        if(changed){
+          localStorage.setItem('st_subjs',JSON.stringify(subjs));
+          localStorage.setItem('st_subjs_updated_at',new Date().toISOString());
+          sbPush('st_subjs',subjs,{silent:true});
+          console.log('[Migration v15] Base synced to 2026-08-06 teacher report');
+        }
+      }
+    }catch(e){console.warn('[Migration v15] Error:',e)}
+    localStorage.setItem('st_migration_v15_base_recalib_aug06_2026','1');
+  }
   if(!localStorage.getItem('st_migration_v7')){
     try{
       const raw=localStorage.getItem('st_sched');
