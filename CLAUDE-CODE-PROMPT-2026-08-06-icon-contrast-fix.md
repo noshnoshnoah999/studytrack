@@ -1,6 +1,6 @@
-# Claude Code prompt — icon contrast + settings icon fix (2026-08-06)
+# Claude Code prompt — icon contrast + kill the remaining JS animations (2026-08-06)
 
-Small follow-up to `71ebfc0`. Paste everything below the line into Claude Code.
+Follow-up to `71ebfc0`. Paste everything below the line into Claude Code.
 
 ---
 
@@ -18,15 +18,22 @@ Swift app). **Do not confuse the two.** Remote:
 
 ## Context
 
-`71ebfc0` replaced the app's emoji with inline SVG. Two faults showed up on device:
+Two rounds of fixes on top of `71ebfc0`, committed together.
 
-1. The icons rendered too dark. `.btn-dark`, `.btn-notif` and `#btn-holiday` set no
-   `color`, so `stroke="currentColor"` inherited a dim ancestor value. Emoji carried
-   their own colour, so this never mattered until they became SVG.
-2. The settings "gear" was a circle with 8 radiating spokes — visually a sun, and
-   indistinguishable from the holiday-mode sun icon next to it.
+**1. Icons.** `71ebfc0` swapped emoji for inline SVG. They rendered too dark, because
+`.btn-dark`, `.btn-notif` and `#btn-holiday` set no `color`, so `stroke="currentColor"`
+inherited a dim ancestor value — emoji carried their own colour, so nothing had ever
+needed to declare it. The settings "gear" was also a circle with 8 radiating spokes,
+which reads as a sun and sat right next to the actual holiday sun.
 
-This is a **small** commit: `index.html` +13/−13, plus a handoff doc update.
+**2. Animation that survived the strip.** `71ebfc0` removed CSS `transition:`,
+`animation:` and `@keyframes`. It missed motion applied through **JS property
+assignment** (`el.style.transition = 'width 1s …'`), which the CSS-text strip never
+matched. That left the graduation bar, subject bars, history 7-day bars and the
+schedule day-swipe still animating. Also removed: a 600ms `setInterval` count-up on
+numbers, 17 dead `animationDelay` assignments, and two `setTimeout` delays (300ms,
+450ms) that existed only to let exit animations finish and now just made the tasks
+page feel laggy.
 
 ## Step 0 — clear stale locks FIRST
 
@@ -45,25 +52,34 @@ git diff --stat
 
 Expected:
 - HEAD is `71ebfc0` ("Strip the app back to one grey palette, no animation, no emoji")
-- `index.html` **+13 / −13**
-- `HANDOFF-2026-08-06-monochrome-no-motion.md` modified (about +16 / −3)
+- `index.html` around **+25 / −157** (mostly deletions — that is the point)
+- `HANDOFF-2026-08-06-monochrome-no-motion.md` modified
 - One new untracked file: this prompt
 
-**If `index.html` shows more than ~13 changed lines, stop and report back.** This
-commit should touch nothing but icon colour, icon size and the settings icon path.
+If `index.html` shows large *additions*, stop and report back.
 
 ## Step 2 — sanity checks
 
-The three icon buttons must now each declare a colour — all three must print `1`:
+**No motion mechanism of any kind may remain.** All six must print `0`:
+
+```bash
+grep -c 'transition:'   index.html
+grep -c 'animation:'    index.html
+grep -c '@keyframes'    index.html
+grep -c "style\.\(transition\|animation\|animationDelay\)\s*=" index.html
+grep -c 'const timer=setInterval' index.html
+grep -c "behavior:'smooth'" index.html
+```
+
+**Icon buttons must each declare a colour** — all three print `1`:
 
 ```bash
 grep -o "\.btn-dark{[^}]*}"  index.html | grep -c "color:var(--text)"
 grep -o "\.btn-notif{[^}]*}" index.html | grep -c "color:var(--text)"
-grep -c "flex-shrink:0;color:var(--text)\">" index.html
+grep -c 'flex-shrink:0;color:var(--text)">' index.html
 ```
 
-No old 15px icons should remain, and the sun-like gear must be gone (first prints
-`0`, second `0`, third `14`):
+**Old icons gone, new ones present** — `0`, `0`, then `14`:
 
 ```bash
 grep -c '<svg width="15"' index.html
@@ -93,23 +109,26 @@ git add index.html \
         HANDOFF-2026-08-06-monochrome-no-motion.md \
         CLAUDE-CODE-PROMPT-2026-08-06-icon-contrast-fix.md
 
-git commit -m "Make the new icons readable and stop settings looking like a sun
+git commit -m "Stop the bars sliding around and make the icons readable
 
-The SVG icons I swapped the emoji for came out too dark on my phone. The
-buttons holding them never set a colour, so currentColor was inheriting
-something dim from further up. The emoji brought their own colour with
-them, so nothing had ever needed to say what colour those buttons were.
+Every time I opened the progress page the graduation bar grew from zero,
+same on subjects, same for the seven-day bars on history, and the
+schedule slid sideways whenever I picked a different day. I thought I'd
+already deleted all of that. I'd only deleted the CSS — these were set
+from JavaScript as el.style.transition, which the strip never matched.
 
-The settings icon was also a circle with eight spokes coming off it,
-which is a sun, not a gear — and it sat right next to the actual sun for
-holiday mode. Swapped it for sliders so I can tell them apart.
+Bars now render at their real width straight away. They still move when
+the number actually changes, which is the only time a bar should move.
 
-Holiday mode ON fills the button with the near-white accent, so the icon
-flips to the dark background colour there, same inversion the primary
-buttons use, otherwise it would disappear into its own pill.
+Also went: the six-hundred millisecond count-up on the numbers, and two
+timeouts on the tasks page that existed purely to let an exit animation
+play, so ticking a task off now happens the moment I tap it instead of
+waiting almost half a second.
 
-Icons went from 15px at 2.0 stroke to 16px at 2.2 so they hold up at
-this size."
+The SVG icons came out too dark because the buttons holding them never
+set a colour — the emoji had brought their own, so nothing needed to.
+And the settings icon was a circle with eight spokes coming off it,
+which is a sun, sitting next to the actual sun for holiday mode."
 ```
 
 ## Step 4 — push
@@ -132,11 +151,13 @@ Confirm no `.lock` files remain and report the final state.
 
 ---
 
-## After the push
+## After the push — check these four, they are the ones that were wrong
 
-Check the toolbar icons on device. Left to right in the schedule header: holiday
-(sun), notifications (bell / bell-with-slash). In the sidebar: notification settings
-(bell), settings (sliders).
+1. **Progress page** — graduation bar sits still on load and on re-click.
+2. **Subjects page** — no bars growing in.
+3. **History** — "Last 7 days" bars do not rise.
+4. **Schedule** — clicking a different day swaps instantly, no slide.
 
-**The one state never seen rendered:** holiday mode switched **on** — the button
-fills near-white and the icon should go dark. If the icon vanishes there, say so.
+Then the two states never seen rendered: **holiday mode switched on** (button fills
+near-white, icon should flip dark), and **deleting a task** (should vanish instantly
+now, not after a pause).

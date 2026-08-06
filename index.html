@@ -4257,37 +4257,16 @@ function toggleTodoFull(id){
   t.done=!t.done;t.doneAt=t.done?new Date().toISOString():null;
   saveTodos(todos);
   // Animate the card out then re-render
-  const card=document.getElementById('task-'+id);
-  if(card){
-    card.style.transition='all 0.3s cubic-bezier(0.4,0,0.2,1)';
-    card.style.transform='translateX(12px)';
-    card.style.opacity='0';
-    setTimeout(()=>{renderTasksPage();_updateTasksBadge()},300);
-  } else {
-    renderTasksPage();_updateTasksBadge();
-  }
+  renderTasksPage();_updateTasksBadge();
   renderTodos();
   if(document.getElementById('page-schedule').classList.contains('active'))renderSchedule();
 }
 
 function deleteTodoFull(id){
-  const card=document.getElementById('task-'+id);
-  if(card){
-    card.style.transition='all 0.25s ease';
-    card.style.transform='translateX(20px)';
-    card.style.opacity='0';
-    card.style.maxHeight=card.offsetHeight+'px';
-    setTimeout(()=>{card.style.maxHeight='0';card.style.marginBottom='0';card.style.padding='0'},250);
-    setTimeout(()=>{
-      const todos=loadTodos().filter(x=>x.id!==id);
-      saveTodos(todos);
-      renderTasksPage();renderTodos();_updateTasksBadge();
-    },450);
-  } else {
-    const todos=loadTodos().filter(x=>x.id!==id);
-    saveTodos(todos);
-    renderTasksPage();renderTodos();_updateTasksBadge();
-  }
+  // Was a 450ms wait for the exit animation. Deletes immediately now.
+  const todos=loadTodos().filter(x=>x.id!==id);
+  saveTodos(todos);
+  renderTasksPage();renderTodos();_updateTasksBadge();
 }
 
 function openTodoModal(editId){
@@ -4440,10 +4419,6 @@ function showPage(id){
     const prevIdx=NAV_ORDER.indexOf(prevPage);
     const nextIdx=NAV_ORDER.indexOf(id);
     if(nextIdx>prevIdx){
-      activePage.style.animation='none';
-      requestAnimationFrame(()=>{
-        activePage.style.animation='slideInRight 0.22s cubic-bezier(0.25,0.46,0.45,0.94) both';
-      });
     }
   }
   buildNav();
@@ -4540,14 +4515,6 @@ function renderDashboard(){
   animateCount(document.getElementById('dash-hero-pct-el'),Math.round(todayPct),0,'%');
   // Animate hero bar
   const heroBar=document.querySelector('.dash-hero-bar-fill');
-  if(heroBar){
-    const tw=heroBar.style.width;
-    heroBar.style.width='0%';
-    requestAnimationFrame(()=>{
-      heroBar.style.transition='width 0.8s cubic-bezier(0.25,0.46,0.45,0.94)';
-      heroBar.style.width=tw;
-    });
-  }
 
   // Pace strip — minimum / teacher target / my goal
   const deadline=new Date(WORK_DEADLINE);
@@ -4585,9 +4552,7 @@ function renderDashboard(){
   // Spring-pop stat cards with staggered roll-in numbers
   document.querySelectorAll('#stats-strip .stat-card').forEach((c,i)=>{
     c.classList.add('spring-pop');
-    c.style.animationDelay=(i*0.07)+'s';
     const valEl=c.querySelector('.stat-val');
-    if(valEl){valEl.classList.add('num-roll');valEl.style.animationDelay=(i*0.07+0.05)+'s'}
   });
   markCardsDone();
 
@@ -5009,7 +4974,6 @@ function renderSchedule(){
     _scrollActiveTabIntoView();
     content.querySelectorAll('.block-card').forEach((c,i)=>{
       c.classList.add('slide-up');
-      c.style.animationDelay=(i*0.05)+'s';
     });
   } else {
     // View mode: show selected day only
@@ -5204,11 +5168,9 @@ function renderSchedule(){
     // Stagger timeline items and block cards
     content.querySelectorAll('.block-card').forEach((c,i)=>{
       c.classList.add('slide-up');
-      c.style.animationDelay=(i*0.05)+'s';
     });
     content.querySelectorAll('.tl-item').forEach((c,i)=>{
       c.classList.add('slide-up');
-      c.style.animationDelay=(i*0.04)+'s';
     });
   }
 }
@@ -5413,11 +5375,9 @@ const LOG_SUBJ_COLORS={};
 function showToast(msg,color){
   const t=document.createElement('div');
   t.style.cssText='position:fixed;bottom:calc(80px + env(safe-area-inset-bottom, 0px));left:20px;right:20px;background:'+(color||'var(--ok)')+';color:#fff;padding:10px 20px;border-radius:20px;font-weight:700;font-size:14px;z-index:9999;white-space:normal;word-break:break-word;pointer-events:none;text-align:center;box-sizing:border-box';
-  t.style.animation='toastIn 0.2s ease both';
   t.textContent=msg;
   document.body.appendChild(t);
   setTimeout(()=>{
-    t.style.animation='toastOut 0.2s ease forwards';
     setTimeout(()=>t.remove(),200);
   },2300);
 }
@@ -5425,14 +5385,8 @@ function showToast(msg,color){
 // ── ANIMATE COUNT ─────────────────────────────────────────────────────────────
 function animateCount(el,target,decimals,suffix){
   if(!el)return;
-  const dur=600,steps=30,interval=dur/steps;
-  let step=0;
-  const timer=setInterval(()=>{
-    step++;
-    const val=target*(step/steps);
-    el.textContent=val.toFixed(decimals)+(suffix||'');
-    if(step>=steps){el.textContent=target.toFixed(decimals)+(suffix||'');clearInterval(timer)}
-  },interval);
+  // Was a 600ms count-up. Set the final value straight away.
+  el.textContent=target.toFixed(decimals)+(suffix||'');
 }
 
 // ── LOG ───────────────────────────────────────────────────────────────────────
@@ -5504,7 +5458,6 @@ function renderLog(){
       // Spring pop each chip with stagger
       promptsEl.querySelectorAll('.log-suggest-chip').forEach((c,i)=>{
         c.classList.add('spring-pop');
-        c.style.animationDelay=(i*0.08)+'s';
       });
     }
   }
@@ -5624,7 +5577,6 @@ function renderLogEntries(){
   // Stagger entry rows
   el.querySelectorAll('.entry-row').forEach((r,i)=>{
     r.classList.add('slide-up');
-    r.style.animationDelay=(i*0.06)+'s';
   });
 }
 
@@ -5768,28 +5720,13 @@ function _renderStudyLineChart(elId,offset,animDir){
   if(animDir){
     const oldPane=document.getElementById('slc-pane-'+elId);
     if(!oldPane){return}
-    // Lock viewport height during animation
-    vp.style.height=oldPane.offsetHeight+'px';
-    // New pane starts off-screen
+    // Instant swap — no slide. Motion was removed 2026-08-06.
+    oldPane.remove();
     const newPane=document.createElement('div');
-    // back (older) = new slides in from LEFT, forward (newer) = new slides in from RIGHT
-    newPane.style.cssText='position:absolute;top:0;left:0;width:100%;transform:translateX('+(animDir==='back'?'-100%':'100%')+')';
+    newPane.style.cssText='width:100%';
+    newPane.id='slc-pane-'+elId;
     newPane.innerHTML=paneHtml;
     vp.appendChild(newPane);
-    // Double rAF to ensure paint before transition
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      const ease='transform 0.38s cubic-bezier(0.4,0,0.2,1)';
-      newPane.style.transition=ease;
-      oldPane.style.transition=ease;
-      newPane.style.transform='translateX(0)';
-      oldPane.style.transform='translateX('+(animDir==='back'?'100%':'-100%')+')';
-      setTimeout(()=>{
-        oldPane.remove();
-        newPane.id='slc-pane-'+elId;
-        newPane.style.cssText='width:100%';
-        vp.style.height='';
-      },420);
-    }));
   }else{
     const pane=document.getElementById('slc-pane-'+elId);
     if(pane)pane.innerHTML=paneHtml;
@@ -5880,13 +5817,6 @@ function _renderHistWeekChart(){
       '<div style="font-size:13px;font-weight:700;color:var(--o)">'+fmtH(weekTotal)+' total</div>'+
     '</div>'+
     '<div class="week-sum-grid">'+bars+'</div>';
-  setTimeout(()=>{
-    el.querySelectorAll('.hist-wsd-bar').forEach((b,i)=>{
-      const h=b.style.height;
-      b.style.height='0%';
-      setTimeout(()=>{b.style.transition='height 0.6s cubic-bezier(0.25,0.46,0.45,0.94)';b.style.height=h},i*50);
-    });
-  },60);
 }
 
 function switchHistTab(tab){
@@ -6026,7 +5956,6 @@ function renderHistory(){
       '<div class="hist-stat"><div class="hist-stat-val">'+fmtH(avgPerDay)+'</div><div class="hist-stat-lbl">Avg per day</div></div>';
     summaryEl.querySelectorAll('.hist-stat').forEach((s,i)=>{
       s.classList.add('spring-pop');
-      s.style.animationDelay=(i*0.07)+'s';
     });
   }
 
@@ -6145,7 +6074,6 @@ function renderHistory(){
   // Stagger history entries
   document.querySelectorAll('.hist-card,.hist-month-group').forEach((r,i)=>{
     r.classList.add('slide-up');
-    r.style.animationDelay=(i*0.03)+'s';
   });
 }
 
@@ -6716,8 +6644,6 @@ function _updateTimerBubble(){
     if(!el)return;
     if(el.style.display==='none'||!el.style.display){
       el.style.display='flex';
-      el.style.animation='none';el.offsetWidth;
-      el.style.animation='bubble-pop 0.25s ease both';
     }
   }
   // Sidebar chip
@@ -6897,7 +6823,6 @@ function renderTimerPage(){
     c.classList.remove('spring-pop');
     void c.offsetWidth;
     c.classList.add('spring-pop');
-    c.style.animationDelay=(i*0.08)+'s';
   });
   // Log button bounce-in when stopped
   const logBtn=document.querySelector('.btn-primary[onclick="timerPageLog()"]');
@@ -7501,7 +7426,6 @@ function _renderProgGradCard(){
     '</div>';
   // Animate bar
   const bar=el.querySelector('#prog-grad-bar');
-  if(bar){const w=bar.style.width;bar.style.width='0%';requestAnimationFrame(()=>{bar.style.transition='width 1s cubic-bezier(0.25,0.46,0.45,0.94)';bar.style.width=w})}
 }
 
 function _progStreak(){
@@ -7660,15 +7584,6 @@ function renderSubjectsPage(){
   el.innerHTML=rows+hiddenFooter;
   el.querySelectorAll('.subj-row').forEach((r,i)=>{
     r.classList.add('slide-up');
-    r.style.animationDelay=(i*0.04)+'s';
-  });
-  el.querySelectorAll('.subj-bar-fill').forEach(bar=>{
-    const w=bar.style.width;
-    bar.style.width='0%';
-    requestAnimationFrame(()=>{
-      bar.style.transition='width 0.7s cubic-bezier(0.25,0.46,0.45,0.94)';
-      bar.style.width=w;
-    });
   });
   markCardsDone();
 }
@@ -7764,18 +7679,9 @@ function _renderGradSection(){
   // Spring-pop grad stats
   _gradCard.querySelectorAll('.grad-stat').forEach((s,i)=>{
     s.classList.add('spring-pop');
-    s.style.animationDelay=(i*0.08)+'s';
   });
   // Animate grad bar
   const gradBarFill=_gradCard.querySelector('.grad-bar-fill');
-  if(gradBarFill){
-    const tw=gradBarFill.style.width;
-    gradBarFill.style.width='0%';
-    requestAnimationFrame(()=>{
-      gradBarFill.style.transition='width 1.1s cubic-bezier(0.25,0.46,0.45,0.94)';
-      gradBarFill.style.width=tw;
-    });
-  }
 }
 
 function _renderGradEstCard(){
@@ -7850,7 +7756,6 @@ function _renderGradEstCard(){
   if(estCard){
     estCard.querySelectorAll('[style*="border-radius:12px"]').forEach((b,i)=>{
       b.classList.add('card-pop');
-      b.style.animationDelay=(i*0.1)+'s';
     });
   }
 }
@@ -8252,14 +8157,8 @@ function renderTimeline(){
   const rows=el.querySelectorAll('[data-tl-row]');
   rows.forEach((r,i)=>{
     r.classList.add('slide-up');
-    r.style.animationDelay=(i*0.05)+'s';
   });
   // Animate graduation progress bars
-  el.querySelectorAll('.grad-bar-fill').forEach((b,i)=>{
-    const w=b.style.width;
-    b.style.width='0%';
-    setTimeout(()=>{b.style.transition='width 0.8s cubic-bezier(0.25,0.46,0.45,0.94)';b.style.width=w},i*60+100);
-  });
 }
 
 function renderPlan(){
@@ -8511,7 +8410,6 @@ function renderPlan(){
   const paceBoxes=document.querySelectorAll('#plan-inner [style*="border-radius:10px"]');
   paceBoxes.forEach((b,i)=>{
     b.classList.add('fade-scale');
-    b.style.animationDelay=(i*0.07)+'s';
   });
 }
 
@@ -8598,16 +8496,6 @@ function _renderStudyCalendar(targetElId){
     legendHtml+calHtml+
   '</div>';
   // Stagger calendar cells with fade-in
-  el.querySelectorAll('.plan-cal-cell:not(.empty)').forEach((c,i)=>{
-    c.style.opacity='0';
-    c.style.transform='scale(0.85)';
-    c.style.transition='none';
-    setTimeout(()=>{
-      c.style.transition='opacity 0.25s ease, transform 0.25s cubic-bezier(0.34,1.56,0.64,1)';
-      c.style.opacity='1';
-      c.style.transform='scale(1)';
-    },i*8);
-  });
 }
 
 function _fmtDecimalToHm(h){
@@ -8757,19 +8645,9 @@ function _renderPaceDropCard(){
     milestonesHtml;
 
   // Stagger pace-drop rows
-  el.querySelectorAll('div[style*="grid-template-columns:72px"]').forEach((r,i)=>{
-    r.style.opacity='0';
-    r.style.transform='translateX(-12px)';
-    setTimeout(()=>{
-      r.style.transition='opacity 0.28s ease, transform 0.28s cubic-bezier(0.25,0.46,0.45,0.94)';
-      r.style.opacity='1';
-      r.style.transform='translateX(0)';
-    },i*40+100);
-  });
   // Bounce-in milestone chips
   el.querySelectorAll('div[style*="flex-direction:column;align-items:center"]').forEach((chip,i)=>{
     chip.classList.add('spring-pop');
-    chip.style.animationDelay=(i*0.07)+'s';
   });
 }
 
@@ -9092,7 +8970,6 @@ function renderFocusCard(){
   // Stagger focus rows
   el.querySelectorAll('.focus-row').forEach((r,i)=>{
     r.classList.add('slide-in-left');
-    r.style.animationDelay=(i*0.07)+'s';
   });
 }
 
@@ -9264,13 +9141,6 @@ function renderWeeklySummary(){
     '';
   renderWeekCombined();
   // Animate vertical bars from 0 with stagger
-  setTimeout(()=>{
-    document.querySelectorAll('.wsd-bar-fill').forEach((b,i)=>{
-      const h=b.style.height;
-      b.style.height='0%';
-      setTimeout(()=>{b.style.transition='height 0.65s cubic-bezier(0.25,0.46,0.45,0.94)';b.style.height=h},i*50);
-    });
-  },80);
 }
 
 function renderWeekCombined(){
@@ -10476,7 +10346,6 @@ function showInAppBanner(title,body){
   if(!el)return;
   document.getElementById('inapp-banner-title').textContent=title;
   document.getElementById('inapp-banner-body').textContent=body;
-  el.style.animation='';
   el.classList.add('show');
   clearTimeout(_bannerTimer);
   _bannerTimer=setTimeout(()=>dismissBanner(),5000);
@@ -10484,8 +10353,7 @@ function showInAppBanner(title,body){
 function dismissBanner(){
   const el=document.getElementById('inapp-banner');
   if(!el)return;
-  el.style.animation='bannerOut 0.25s ease forwards';
-  setTimeout(()=>{el.classList.remove('show');el.style.animation=''},250);
+  el.classList.remove('show');
   clearTimeout(_bannerTimer);
 }
 

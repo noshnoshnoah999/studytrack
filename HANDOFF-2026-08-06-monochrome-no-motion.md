@@ -145,6 +145,18 @@ and colours. It is a document for print and for your teacher, not app chrome.
   Verification was parser-level plus a CSS injection over the live site.
   **Click through all ten pages after deploying** — Dashboard, Log Hours, Progress,
   Subjects, Graduation, Timer, History, Tasks, AI Coach, Schedule.
+- **A second animation layer was missed on the first pass and is now also gone.**
+  The strip removed CSS `transition:` / `animation:` / `@keyframes`, but **not motion
+  applied by JS property assignment** — `el.style.transition='width 1s …'` is not the
+  CSS `transition:` token, so no text search for it matched. That left four visible
+  animations Noah reported from device: the graduation bar, the subject bars, the
+  history 7-day bars and the schedule day-swipe pane slide. Also removed in that pass:
+  a 600ms `setInterval` count-up in `animateCount()`, 17 dead `animationDelay`
+  assignments, the calendar-cell and pace-row entrance staggers, and two `setTimeout`
+  delays (300ms / 450ms) on the tasks page that existed only to let exit animations
+  finish. **If you ever audit motion in this file again, grep for `style.transition`
+  and `style.animation` as well as the CSS tokens — they are separate surfaces.**
+
 - **SVG icons: rendered, then fixed once already.** Noah checked the first build and
   reported two faults, both now corrected:
   1. **Icons were too dark.** `.btn-dark`, `.btn-notif` and `#btn-holiday` set no
