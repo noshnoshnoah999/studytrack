@@ -157,6 +157,22 @@ and colours. It is a document for print and for your teacher, not app chrome.
   finish. **If you ever audit motion in this file again, grep for `style.transition`
   and `style.animation` as well as the CSS tokens — they are separate surfaces.**
 
+- **In-app notifications removed entirely (2026-08-06, later pass).** The bell,
+  `.notif-badge`, the notification centre modal, the `#inapp-banner` slide-down and
+  all eleven `*InAppNotif*` functions are gone, along with `checkInAppNotifs` and its
+  60s `setInterval`. **Push is untouched** — it is scheduled separately and never
+  went through `checkInAppNotifs`. The Notification Settings modal lost its "In-app"
+  column (grid `1fr 60px 60px` → `1fr 60px`). `NOTIF_TYPES` went 12 → 10: `target_hit`
+  and `streak_warn` were `inAppOnly:true` and had no push path, so with in-app gone
+  they had no delivery mechanism at all. `st_inapp_notifs` in localStorage is now
+  dead data.
+
+- **Every orange value is gone (2026-08-06, later pass).** A "Button hover lift" CSS
+  block still carried `box-shadow:0 6px 20px rgba(249,115,22,0.45)` — the original
+  orange — which is the glow Noah saw around Save. Removed with 8 `translateY` hover
+  lifts, a `scale(1.01)` grow on `.form-input:focus`, timer-bubble glows, and all
+  remaining `rgba(249,115,22,…)` tints. `grep -c 'rgba(249,115,22'` is now **0**.
+
 - **SVG icons: rendered, then fixed once already.** Noah checked the first build and
   reported two faults, both now corrected:
   1. **Icons were too dark.** `.btn-dark`, `.btn-notif` and `#btn-holiday` set no

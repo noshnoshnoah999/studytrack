@@ -179,13 +179,13 @@ a{color:inherit;text-decoration:none}
 .tl-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .tl-card-name{font-size:14px;font-weight:700;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tl-card-dur{font-size:11px;font-weight:700;color:var(--text3);background:var(--bg3);padding:2px 8px;border-radius:100px;flex-shrink:0;white-space:nowrap}
-.tl-active .tl-card-dur{background:rgba(249,115,22,0.2);color:var(--o)}
+.tl-active .tl-card-dur{background:rgba(255,255,255,0.2);color:var(--o)}
 .tl-card-sub{font-size:12px;color:var(--text2);margin-top:3px;font-weight:500}
 .tl-badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:100px;letter-spacing:0.3px;flex-shrink:0;text-transform:uppercase}
 .tl-badge.now{background:var(--o);color:var(--bg)}
 .tl-badge.break{background:var(--bg3);color:var(--text3)}
 .tl-badge.class{background:var(--ol);color:var(--text2)}
-.tl-prog{height:3px;border-radius:2px;background:rgba(249,115,22,0.12);margin-top:8px;overflow:hidden}
+.tl-prog{height:3px;border-radius:2px;background:rgba(255,255,255,0.12);margin-top:8px;overflow:hidden}
 .tl-prog-fill{height:100%;background:var(--o);border-radius:2px}
 .tl-now-row{display:flex;align-items:center;gap:8px;margin:2px 0 2px 60px;padding-left:10px}
 .tl-now-dot{width:7px;height:7px;border-radius:50%;background:var(--o);flex-shrink:0}
@@ -342,7 +342,7 @@ a{color:inherit;text-decoration:none}
 .form-input[type=date],.form-input[type=time]{-webkit-appearance:none;appearance:none;max-width:100%}
 .time-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .time-split-input{display:flex;align-items:center;background:var(--bg3);border-radius:10px;padding:11px 14px;gap:2px}
-.time-split-input:focus-within{box-shadow:0 0 0 3px rgba(249,115,22,0.2)}
+.time-split-input:focus-within{box-shadow:0 0 0 3px rgba(255,255,255,0.18)}
 .tsplit-hh,.tsplit-mm{background:none;border:none;outline:none;font-family:inherit;font-size:14px;font-weight:600;color:var(--text);width:2.2ch;text-align:center;padding:0;caret-color:var(--o)}
 .tsplit-hh::placeholder,.tsplit-mm::placeholder{color:var(--text3)}
 .tsplit-sep{font-size:14px;font-weight:700;color:var(--text2);flex-shrink:0;line-height:1;margin:0 1px}
@@ -424,7 +424,7 @@ a{color:inherit;text-decoration:none}
 .plan-cal-cell.future{background:var(--bg3)}
 .plan-cal-cell.today-cell{background:var(--o);border-radius:10px}
 .plan-cal-cell.hit{background:rgba(0,200,150,0.18)}
-.plan-cal-cell.partial{background:rgba(249,115,22,0.15)}
+.plan-cal-cell.partial{background:rgba(255,255,255,0.15)}
 .plan-cal-cell.miss{background:rgba(255,77,106,0.12)}
 .plan-cal-cell.miss-zero{background:rgba(180,180,180,0.13)}
 .plan-cal-cell.zero{background:var(--bg3);opacity:0.5}
@@ -683,7 +683,7 @@ a{color:inherit;text-decoration:none}
 .tasks-group-body{overflow:hidden;max-height:0}
 .tasks-group-body.open{max-height:4000px}
 .task-card{display:flex;align-items:flex-start;gap:12px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px 14px;margin-bottom:8px;position:relative;overflow:hidden}
-.task-card:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,0.15)}
+.task-card:hover{box-shadow:0 4px 16px rgba(0,0,0,0.15)}
 .task-card.done-card{opacity:0.42}
 .task-card.overdue-card{border-left:3px solid var(--err)}
 .task-card.today-card{border-left:3px solid var(--ok)}
@@ -735,7 +735,7 @@ a{color:inherit;text-decoration:none}
 .ai-action-icon{font-size:15px;flex-shrink:0;margin-top:1px}
 .ai-actions-btns{display:flex;gap:8px;margin-top:12px}
 .ai-apply-btn{flex:1;background:var(--o);color:var(--bg);font-size:13px;font-weight:700;padding:10px;border-radius:100px;border:none;cursor:pointer}
-.ai-apply-btn:hover{background:var(--od);transform:translateY(-1px)}
+.ai-apply-btn:hover{background:var(--od)}
 .ai-dismiss-btn{background:var(--bg4);color:var(--text2);font-size:13px;font-weight:600;padding:10px 16px;border-radius:100px;border:none;cursor:pointer}
 .ai-thinking{display:flex;align-items:center;gap:6px;color:var(--text3);font-size:13px;padding:12px 16px;background:var(--bg2);border-radius:18px;border-bottom-left-radius:5px;border:1px solid var(--border)}
 .ai-dot{width:7px;height:7px;border-radius:50%;background:var(--text3)}
@@ -758,13 +758,13 @@ a{color:inherit;text-decoration:none}
 .ai-drag-hint{display:none;position:absolute;inset:0;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--o);pointer-events:none;background:var(--ol);border-radius:0;z-index:10}
 .ai-input-wrap.drag-over .ai-drag-hint{display:flex}
 .ai-input{flex:1;border:1.5px solid var(--border);border-radius:14px;padding:10px 14px;font-size:14px;background:var(--bg2);color:var(--text);font-family:inherit;resize:none;min-height:42px;max-height:120px;line-height:1.4}
-.ai-input:focus{outline:none;border-color:var(--o);box-shadow:0 0 0 3px rgba(249,115,22,0.15)}
+.ai-input:focus{outline:none;border-color:var(--o);box-shadow:0 0 0 3px rgba(255,255,255,0.15)}
 .ai-send-btn{width:42px;height:42px;min-width:42px;border-radius:50%;background:var(--o);color:var(--bg);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .ai-send-btn:hover{background:var(--od);transform:scale(1.08)}
 .ai-send-btn:active{transform:scale(0.9)}
 .ai-send-btn:disabled{background:var(--bg3);color:var(--text3);cursor:default;transform:none}
 .ai-suggestion-chip{padding:8px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:100px;font-size:13px;color:var(--text2);cursor:pointer;white-space:nowrap;flex-shrink:0}
-.ai-suggestion-chip:hover{background:var(--bg3);border-color:var(--o);color:var(--o);transform:translateY(-1px)}
+.ai-suggestion-chip:hover{background:var(--bg3);border-color:var(--o);color:var(--o)}
 .ai-key-setup{background:var(--bg2);border:1.5px dashed var(--border);border-radius:16px;padding:28px 20px;text-align:center;margin-bottom:20px}
 .ai-model-tag{font-size:10px;font-weight:700;background:var(--ol);color:var(--o);border-radius:100px;padding:2px 8px;display:inline-flex;align-items:center;gap:4px}
 .ai-context-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
@@ -815,7 +815,7 @@ input:checked+.notif-slider:before{transform:translateX(18px);background:#fff}
 
 /* ── ANIMATIONS ──────────────────────────────────────────────────────────── */
 
-.card.anim-done:hover{box-shadow:0 8px 32px rgba(0,0,0,0.25);transform:translateY(-1px)}
+.card.anim-done:hover{box-shadow:0 8px 32px rgba(0,0,0,0.25)}
 button:active{transform:scale(0.96)}
 
 /* ── Stagger utility ─────────────────────────────────────────────── */
@@ -871,7 +871,7 @@ button:active{transform:scale(0.96)}
 
 /* ── Stat card special hover ─────────────────────────────────────── */
 .stat-card{cursor:default}
-.stat-card:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 6px 20px rgba(0,0,0,0.2)}
+.stat-card:hover{box-shadow:0 6px 20px rgba(0,0,0,0.2)}
 
 /* ── Quick log FAB spin on hover ─────────────────────────────────── */
 
@@ -885,7 +885,7 @@ button:active{transform:scale(0.96)}
 
 /* ── Timeline card hover ─────────────────────────────────────────── */
 
-.tl-card:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,0.2)}
+.tl-card:hover{box-shadow:0 4px 16px rgba(0,0,0,0.2)}
 
 /* ── Day tab transition ──────────────────────────────────────────── */
 
@@ -899,7 +899,7 @@ button:active{transform:scale(0.96)}
 /* ── Floating timer bubble (mobile: full-width bar above bottom nav) ─ */
 
 /* Mobile: full-width mini-player bar above bottom nav */
-#timer-bubble{position:fixed;bottom:62px;left:0;right:0;z-index:9998;display:none;align-items:center;gap:10px;background:var(--o);color:var(--bg);padding:10px 18px;cursor:pointer;font-family:inherit;font-weight:700;font-size:14px;line-height:1;user-select:none;-webkit-user-select:none;box-shadow:0 -2px 12px rgba(249,115,22,0.25)}
+#timer-bubble{position:fixed;bottom:62px;left:0;right:0;z-index:9998;display:none;align-items:center;gap:10px;background:var(--o);color:var(--bg);padding:10px 18px;cursor:pointer;font-family:inherit;font-weight:700;font-size:14px;line-height:1;user-select:none;-webkit-user-select:none;box-shadow:0 -2px 12px rgba(255,255,255,0.25)}
 #timer-bubble .tb-dot{width:8px;height:8px;border-radius:50%;background:#fff;opacity:0.9;flex-shrink:0}
 #timer-bubble .tb-clock{font-size:15px;font-variant-numeric:tabular-nums;letter-spacing:0.5px}
 #timer-bubble .tb-sep{opacity:0.55;font-weight:400}
@@ -938,14 +938,14 @@ button:active{transform:scale(0.96)}
 /* ── Card entrance with slight overshoot ────────────────────────── */
 
 /* ── Form input focus glow ───────────────────────────────────────── */
-.form-input:focus{outline:none;border-color:var(--o)!important;box-shadow:0 0 0 3px rgba(249,115,22,0.18);transform:scale(1.01)}
+.form-input:focus{outline:none;border-color:var(--o)!important;box-shadow:0 0 0 3px rgba(255,255,255,0.18)}
 
 /* ── Button hover lift ───────────────────────────────────────────── */
-.btn-primary:hover{box-shadow:0 6px 20px rgba(249,115,22,0.45);transform:translateY(-1px)}
-.btn-save:hover{box-shadow:0 6px 20px rgba(249,115,22,0.45);transform:translateY(-1px)}
-.btn-add:hover{box-shadow:0 4px 14px rgba(249,115,22,0.35);transform:translateY(-1px)}
-.jump-pill:hover{background:var(--bg4);color:var(--text);border-color:var(--o);transform:translateY(-1px)}
-.log-suggest-chip:hover{background:var(--bg3);transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.2)}
+.btn-primary:hover{background:var(--od)}
+.btn-save:hover{background:var(--od)}
+.btn-add:hover{background:var(--od)}
+.jump-pill:hover{background:var(--bg4);color:var(--text);border-color:var(--o)}
+.log-suggest-chip:hover{background:var(--bg3);box-shadow:0 4px 12px rgba(0,0,0,0.2)}
 
 /* ── Stat card interaction ───────────────────────────────────────── */
 .stat-card:active{transform:scale(0.96)!important}
@@ -978,10 +978,6 @@ button:active{transform:scale(0.96)}
 
 /* ── IN-APP BANNER ───────────────────────────────────────────────────────── */
 
-#inapp-banner{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:500;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:12px 18px;max-width:340px;width:calc(100% - 32px);box-shadow:0 8px 32px rgba(0,0,0,0.4);display:none;flex-direction:column;gap:4px}
-#inapp-banner.show{display:flex}
-#inapp-banner-title{font-size:13px;font-weight:700;color:var(--text)}
-#inapp-banner-body{font-size:12px;color:var(--text2)}
 
 </style>
 <!-- NoSleep.js: prevents screen dim/sleep during timer on Safari/older browsers -->
@@ -1022,11 +1018,7 @@ button:active{transform:scale(0.96)}
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
         <div class="sidebar-footer-label" style="margin-bottom:0">Today's Progress</div>
         <div style="display:flex;gap:2px">
-          <button id="notif-bell-sb" onclick="openNotifCenter()" style="position:relative;background:none;border:1px solid var(--border);border-radius:9px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2)" title="Notifications">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-            <span class="notif-badge" style="position:absolute;top:-4px;right:-4px;background:var(--err);color:#fff;font-size:9px;font-weight:800;border-radius:100px;padding:1px 4px;display:none;min-width:14px;text-align:center"></span>
-          </button>
-          <button class="btn-dark" onclick="openNotifSettings()" title="Notification settings"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></button>
+                    <button class="btn-dark" onclick="openNotifSettings()" title="Notification settings"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></button>
 
           <button class="btn-dark" onclick="openGoalSettings()" title="Settings"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1 14h6M9 8h6M17 16h6"/></svg></button>
         </div>
@@ -1058,11 +1050,7 @@ button:active{transform:scale(0.96)}
           <div id="holiday-dash-pill" style="display:none;margin-top:6px;font-size:12px;color:var(--text2);font-weight:600;line-height:1.4"></div>
         </div>
         <div style="display:flex;gap:4px;align-items:center" id="mobile-top-bar">
-          <button id="notif-bell-mb" onclick="openNotifCenter()" style="position:relative;background:none;border:1px solid var(--border);border-radius:9px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2)" title="Notifications">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-            <span class="notif-badge" style="position:absolute;top:-4px;right:-4px;background:var(--err);color:#fff;font-size:9px;font-weight:800;border-radius:100px;padding:1px 4px;display:none;min-width:14px;text-align:center"></span>
-          </button>
-
+          
           <button class="btn-dark" onclick="openGoalSettings()" title="Settings"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1 14h6M9 8h6M17 16h6"/></svg></button>
           <button onclick="openLayoutEditor('dashboard')" title="Customise layout" style="background:none;border:1px solid var(--border);border-radius:9px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);font-size:15px">⊞</button>
         </div>
@@ -5019,7 +5007,7 @@ function renderSchedule(){
           const heroColor=activeBlock.type==='work'?'var(--text2)':activeBlock.type==='class'?'var(--text2)':activeBlock.type==='break'?'var(--text3)':(SUBJ_COLORS[activeBlock.subjectId]||'var(--o)');
           const heroSubj=activeBlock.subjectId?subjs.find(s=>s.id===activeBlock.subjectId):null;
           const heroSubLine=(heroSubj&&heroSubj.name!==activeBlock.label?heroSubj.name+' · ':'')+fmtAmPm(activeBlock.start)+' – '+fmtAmPm(activeBlock.end);
-          html+='<div class="sched-now-hero" style="background:'+heroColor+';box-shadow:0 8px 24px '+heroColor+'44">'+
+          html+='<div class="sched-now-hero" style="background:'+heroColor+'">'+
             '<div class="sched-now-hero-eyebrow"><div class="sched-now-hero-dot"></div>Now</div>'+
             '<div class="sched-now-hero-name">'+escHtml(activeBlock.label)+'</div>'+
             '<div class="sched-now-hero-sub">'+heroSubLine+'</div>'+
@@ -5116,8 +5104,8 @@ function renderSchedule(){
         else if(bl.type==='class') color='var(--text2)';
         else color=SUBJ_COLORS[bl.subjectId]||'var(--o)';
         const isHex=color.startsWith('#');
-        const bgTint=isHex?(isPast?color+'08':color+'14'):'rgba(249,115,22,0.08)';
-        const activeBg=isHex?color+'22':'rgba(249,115,22,0.14)';
+        const bgTint='var(--ol)';
+        const activeBg='var(--ol)';
         const dotColor=isBreak?'var(--bg3)':color;
 
         // Badge
@@ -6664,10 +6652,10 @@ function _updateTimerBubble(){
       // On desktop without sidebar: position as small corner bubble instead of full-width bar
       if(isDesktop){
         bubble.style.left='auto';bubble.style.right='24px';bubble.style.bottom='24px';
-        bubble.style.borderRadius='100px';bubble.style.boxShadow='0 4px 18px rgba(249,115,22,0.38)';
+        bubble.style.borderRadius='100px';bubble.style.boxShadow='none';
       }else{
         bubble.style.left='0';bubble.style.right='0';bubble.style.bottom='62px';
-        bubble.style.borderRadius='0';bubble.style.boxShadow='0 -2px 12px rgba(249,115,22,0.25)';
+        bubble.style.borderRadius='0';bubble.style.boxShadow='none';
       }
       _show(bubble);
     }else{bubble.style.display='none'}
@@ -8006,7 +7994,7 @@ function _applyCoachAIResults(subjects){
     const inp=document.querySelector('#coach-report-list input[data-subj-id="'+id+'"]');
     if(inp&&typeof hours==='number'&&hours>0){
       inp.value=hours.toFixed(1);
-      inp.style.background='rgba(249,115,22,0.12)';
+      inp.style.background='rgba(255,255,255,0.12)';
       inp.style.borderColor='var(--o)';
       filled++;
     }
@@ -8312,7 +8300,7 @@ function renderPlan(){
   // ── Legend ────────────────────────────────────────────────────────────────
   const legendHtml='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">'+
     '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:3px;background:rgba(0,200,150,0.18);display:inline-block"></span>Hit target</span>'+
-    '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:3px;background:rgba(249,115,22,0.15);display:inline-block"></span>Partial</span>'+
+    '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:3px;background:rgba(255,255,255,0.15);display:inline-block"></span>Partial</span>'+
     '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:3px;background:rgba(255,77,106,0.12);display:inline-block"></span>Missed</span>'+
     '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:3px;background:var(--bg3);display:inline-block"></span>Recommended (projected)</span>'+
   '</div>';
@@ -8485,7 +8473,7 @@ function _renderStudyCalendar(targetElId){
   const calHtml=buildCal(prevY,prevM)+buildCal(curYear,curMonth)+buildCal(nextY,nextM);
   const legendHtml='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">'+
     '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:3px;background:rgba(0,200,150,0.18);display:inline-block"></span>Both goals met</span>'+
-    '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:3px;background:rgba(249,115,22,0.15);display:inline-block"></span>Graduation pace only</span>'+
+    '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:3px;background:rgba(255,255,255,0.15);display:inline-block"></span>Graduation pace only</span>'+
     '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:3px;background:rgba(255,77,106,0.12);display:inline-block"></span>Below pace</span>'+
     '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:3px;background:rgba(180,180,180,0.13);display:inline-block"></span>No study</span>'+
     '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)"><span style="width:10px;height:10px;border-radius:3px;background:var(--bg3);display:inline-block"></span>Projected</span>'+
@@ -9876,9 +9864,6 @@ async function syncFromCloud(){
   // Check todo due times every minute (in-app notification)
   setInterval(checkTodoNotifs, 60000);
   // Check schedule-based in-app notifications every minute
-  setInterval(checkInAppNotifs, 60000);
-  checkInAppNotifs(); // run once on load
-  updateNotifBell(); // initialise badge count on load
 })();
 
 
@@ -10171,8 +10156,6 @@ const NOTIF_TYPES=[
   {id:'weekly_recap',  label:'Weekly recap',           desc:'Sunday evening progress summary'},
   {id:'subj_complete', label:'Subject complete',       desc:'First time you finish a subject'},
   {id:'falling_behind',label:'Falling behind alert',   desc:'When subjects need urgent attention'},
-  {id:'target_hit',    label:'Daily target hit ',    desc:'Celebrate when you hit your daily goal',    inAppOnly:true},
-  {id:'streak_warn',   label:'Streak at risk ',      desc:'Evening reminder if daily target not yet met', inAppOnly:true},
 ];
 
 // ── NOTIFICATION TEMPLATES ────────────────────────────────────────────────────
@@ -10268,30 +10251,24 @@ function loadNotifPrefs(){
 }
 // NOTE: push toggles are enforced server-side (the GitHub Actions workflow reads
 // st_notif_prefs and skips disabled types) — the client can't suppress a push it
-// doesn't send. In-app toggles are enforced here via isInAppEnabled().
 
 function openNotifSettings(){
   const prefs=loadNotifPrefs();
   const list=document.getElementById('notif-prefs-list');
   if(list){
-    const header='<div style="display:grid;grid-template-columns:1fr 60px 60px;gap:8px;margin-bottom:8px;padding:0 2px">'+
+    const header='<div style="display:grid;grid-template-columns:1fr 60px;gap:8px;margin-bottom:8px;padding:0 2px">'+
       '<div></div>'+
       '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;text-align:center">Push</div>'+
-      '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;text-align:center">In-app</div>'+
     '</div>';
     const rows=NOTIF_TYPES.map(t=>{
       const pushChecked=prefs[t.id]!==false?'checked':'';
-      const inappChecked=prefs['inapp_'+t.id]!==false?'checked':'';
-      const pushToggle=t.inAppOnly
-        ?'<div style="display:flex;justify-content:center"><label class="notif-toggle" style="opacity:0.3;pointer-events:none"><input type="checkbox" disabled><span class="notif-slider"></span></label></div>':'<div style="display:flex;justify-content:center"><label class="notif-toggle"><input type="checkbox" id="notif-chk-'+t.id+'" '+pushChecked+' onchange="onNotifToggle(\''+t.id+'\',this.checked)"><span class="notif-slider"></span></label></div>';
-      const inappToggle='<div style="display:flex;justify-content:center"><label class="notif-toggle"><input type="checkbox" id="notif-chk-inapp-'+t.id+'" '+inappChecked+' onchange="onNotifToggle(\'inapp_'+t.id+'\',this.checked)"><span class="notif-slider"></span></label></div>';
-      return'<div style="display:grid;grid-template-columns:1fr 60px 60px;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">'+
+      const pushToggle='<div style="display:flex;justify-content:center"><label class="notif-toggle"><input type="checkbox" id="notif-chk-'+t.id+'" '+pushChecked+' onchange="onNotifToggle(\''+t.id+'\',this.checked)"><span class="notif-slider"></span></label></div>';
+      return'<div style="display:grid;grid-template-columns:1fr 60px;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">'+
         '<div>'+
           '<div style="font-size:13px;font-weight:600;color:var(--text)">'+escHtml(t.label)+'</div>'+
           '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+escHtml(t.desc)+'</div>'+
         '</div>'+
         pushToggle+
-        inappToggle+
       '</div>';
     }).join('');
     list.innerHTML=header+rows;
@@ -10318,133 +10295,6 @@ function saveNotifPrefs(){
 
 // (Removed dead Quick Log FAB code — openQuickLog()/submitQuickLog() had no caller;
 //  the #quick-log-modal-overlay markup was also removed. 2026-07-05 cleanup.)
-
-// ── IN-APP NOTIFICATIONS ──────────────────────────────────────────────────────
-function loadInAppNotifs(){
-  try{return JSON.parse(localStorage.getItem('st_inapp_notifs')||'[]')}catch(e){return[]}
-}
-function saveInAppNotifs(arr){
-  localStorage.setItem('st_inapp_notifs',JSON.stringify(arr.slice(-30)));
-}
-function addInAppNotif(title,body,type){
-  if(!isInAppEnabled(type))return;
-  const arr=loadInAppNotifs();
-  arr.push({id:genId(),title,body,time:Date.now(),read:false,type});
-  saveInAppNotifs(arr);
-  updateNotifBell();
-  showInAppBanner(title,body);
-}
-function isInAppEnabled(type){
-  const p=loadNotifPrefs();
-  return p['inapp_'+type]!==false;
-}
-
-// In-app banner
-let _bannerTimer=null;
-function showInAppBanner(title,body){
-  const el=document.getElementById('inapp-banner');
-  if(!el)return;
-  document.getElementById('inapp-banner-title').textContent=title;
-  document.getElementById('inapp-banner-body').textContent=body;
-  el.classList.add('show');
-  clearTimeout(_bannerTimer);
-  _bannerTimer=setTimeout(()=>dismissBanner(),5000);
-}
-function dismissBanner(){
-  const el=document.getElementById('inapp-banner');
-  if(!el)return;
-  el.classList.remove('show');
-  clearTimeout(_bannerTimer);
-}
-
-// Notification bell badge
-function updateNotifBell(){
-  const unread=loadInAppNotifs().filter(n=>!n.read).length;
-  document.querySelectorAll('.notif-badge').forEach(el=>{
-    el.style.display=unread>0?'block':'none';
-    el.textContent=unread>9?'9+':String(unread);
-  });
-}
-
-// Notification center
-function openNotifCenter(){
-  const notifs=loadInAppNotifs().slice().reverse();
-  const arr=loadInAppNotifs().map(n=>({...n,read:true}));
-  saveInAppNotifs(arr);
-  updateNotifBell();
-  const el=document.getElementById('notif-center-list');
-  if(!notifs.length){
-    el.innerHTML='<div style="text-align:center;padding:32px;color:var(--text3);font-size:13px">No notifications yet</div>';
-  }else{
-    el.innerHTML=notifs.map(n=>{
-      const ago=_timeAgo(n.time);
-      return'<div style="background:var(--bg3);border-radius:10px;padding:12px 14px'+(n.read?'':';border-left:3px solid var(--o)')+'">'+
-        '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px">'+escHtml(n.title)+'</div>'+
-        '<div style="font-size:12px;color:var(--text2);margin-bottom:4px">'+escHtml(n.body)+'</div>'+
-        '<div style="font-size:11px;color:var(--text3)">'+ago+'</div>'+
-      '</div>';
-    }).join('');
-  }
-  document.getElementById('notif-center-overlay').classList.add('open');
-}
-function clearAllNotifs(){
-  saveInAppNotifs([]);
-  updateNotifBell();
-  openNotifCenter();
-}
-function _timeAgo(ms){
-  const diff=Date.now()-ms;
-  const m=Math.floor(diff/60000);
-  if(m<1)return'Just now';
-  if(m<60)return m+'m ago';
-  const h=Math.floor(m/60);
-  if(h<24)return h+'h ago';
-  return Math.floor(h/24)+'d ago';
-}
-
-// Schedule-based in-app notification checks
-function checkInAppNotifs(){
-  const now=nowLocal();
-  const dayBlocks=getTodayActualBlocks();
-  const nowMin=now.getHours()*60+now.getMinutes();
-
-  // Block starting soon (8-12 min away)
-  dayBlocks.filter(b=>b.type==='study').forEach(b=>{
-    const [bh,bm]=b.start.split(':').map(Number);
-    const startMin=bh*60+bm;
-    const diff=startMin-nowMin;
-    if(diff>=8&&diff<=12){
-      const key='block_soon_'+b.id+'_'+now.toDateString();
-      if(!sessionStorage.getItem(key)){
-        sessionStorage.setItem(key,'1');
-        const subjs=loadSubjects();
-        const subj=subjs.find(s=>s.id===b.subjectId);
-        const name=subj?subj.name:(b.label||'Study block');
-        addInAppNotif(' Starting soon',name+' starts in ~'+diff+' minutes','block_soon');
-      }
-    }
-  });
-
-  // Target hit for today
-  const goals=loadGoals();
-  const todayH=getTodayH();
-  const key2='target_hit_'+now.toDateString();
-  if(todayH>=goals.daily&&!sessionStorage.getItem(key2)){
-    sessionStorage.setItem(key2,'1');
-    launchConfetti();
-    addInAppNotif(' Daily target hit!','You\'ve logged '+fmtH(todayH)+' today. Great work!','target_hit');
-  }
-
-  // Streak reminder at 8pm if target not hit
-  if(now.getHours()===20&&now.getMinutes()<5){
-    const key3='streak_warn_'+now.toDateString();
-    if(todayH<goals.daily&&!sessionStorage.getItem(key3)){
-      sessionStorage.setItem(key3,'1');
-      const needed=goals.daily-todayH;
-      addInAppNotif(' Streak at risk','You still need '+fmtH(needed)+' today to keep your streak','streak_warn');
-    }
-  }
-}
 
 // ── CONFETTI ── removed 2026-08-06. Was 60 animated DOM nodes per target hit.
 // The ' Daily target hit!' notification below still fires; the confetti does not.
@@ -11094,15 +10944,6 @@ function renderAIPage(){
 }
 
 </script>
-<div id="inapp-banner">
-  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
-    <div>
-      <div id="inapp-banner-title"></div>
-      <div id="inapp-banner-body"></div>
-    </div>
-    <button onclick="dismissBanner()" style="background:none;border:none;color:var(--text3);font-size:18px;line-height:1;cursor:pointer;flex-shrink:0">×</button>
-  </div>
-</div>
 
 <!-- NOTIFICATION SETTINGS MODAL -->
 <div class="modal-overlay" id="notif-settings-modal-overlay" onclick="handleOverlayClick(event,'notif-settings-modal-overlay')">
@@ -11132,19 +10973,6 @@ function renderAIPage(){
       <button class="btn-save" onclick="saveNotifMessages()">Save</button>
       <button class="btn-cancel" onclick="closeModal('notif-messages-modal-overlay')">Cancel</button>
     </div>
-  </div>
-</div>
-
-<!-- NOTIFICATION CENTER MODAL -->
-<div class="modal-overlay" id="notif-center-overlay" onclick="handleOverlayClick(event,'notif-center-overlay')">
-  <div class="modal-sheet" style="max-height:75vh;display:flex;flex-direction:column" onclick="event.stopPropagation()">
-    <div class="modal-handle"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div class="modal-title" style="margin-bottom:0">Notifications</div>
-      <button onclick="clearAllNotifs()" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;padding:4px 8px">Clear all</button>
-    </div>
-    <div id="notif-center-list" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px"></div>
-    <button class="btn-cancel" onclick="closeModal('notif-center-overlay')" style="margin-top:16px">Close</button>
   </div>
 </div>
 
