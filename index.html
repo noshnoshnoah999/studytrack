@@ -711,6 +711,22 @@ a{color:inherit;text-decoration:none}
 }
 [data-theme="crimson"] .modal-sheet,[data-theme="crimson"] #bottom-nav{background:var(--bg2)}
 
+/* ── GREYSCALE MODE ────────────────────────────────────────────────────────────
+   Orthogonal to theme: stacks on top of whichever palette is selected, so the
+   theme's LIGHTNESS survives (Slate+grey = dark mono, Mint+grey = light mono).
+   Implemented as a root filter rather than a grey palette because the app has
+   ~550 hardcoded hex colours — SUBJ_COLORS alone is duplicated across 10 function
+   scopes — and a CSS-variable palette would leave every subject chip, chart slice
+   and schedule block still in full colour.
+   CAVEAT: filter on an element makes it a containing block for position:fixed
+   descendants. Safe here only because #app is height:100vh;overflow:hidden and
+   #main is the scroller, so <html> is always exactly viewport-sized and never
+   scrolls — fixed elements resolve against the viewport either way. If the app
+   is ever switched to body-level scrolling, this rule must be re-tested. */
+html[data-greyscale="1"]{filter:grayscale(1)}
+/* Keep the toggle itself readable while it's on */
+html[data-greyscale="1"] .toggle-switch input:checked+.toggle-slider{background:var(--text2)}
+
 /* THEME BUTTON */
 .btn-dark{background:none;border:none;cursor:pointer;font-size:17px;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0}
 .btn-dark:hover{background:var(--bg3)}
@@ -1200,6 +1216,10 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
       var migrate={linen:'mocha',blush:'rose',honey:'slate',ember:'slate',pumpkin:'slate',cosmic:'ocean'};
       if(migrate[t])t=migrate[t];
       document.documentElement.setAttribute('data-theme',t);
+      // Greyscale is a separate axis from theme. Applied here too so the app
+      // never flashes in colour before applyGreyscale() runs on load.
+      if(localStorage.getItem('st_greyscale')==='1')
+        document.documentElement.setAttribute('data-greyscale','1');
     }catch(e){}
   })();
 </script>
@@ -1603,6 +1623,16 @@ button:active{transform:scale(0.96);transition:transform 0.08s}
         <button class="carousel-arrow" onclick="_tcScroll(1)" title="Next">&#8250;</button>
       </div>
       <div class="tc-preview" id="tc-preview"></div>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Greyscale</div>
+          <div class="toggle-sub">Strips all colour, including subject chips and charts. Keeps the theme's light/dark.</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="settings-greyscale" onchange="setGreyscale(this.checked)">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
     </div>
     <div class="form-group" style="margin-top:6px">
       <label class="form-label">Menu Order</label>
@@ -9166,6 +9196,30 @@ function updateThemeSwatches(){
   _tcPreview(name);
 }
 
+// ── GREYSCALE MODE ────────────────────────────────────────────────────────────
+// Separate axis from theme: a boolean on <html> that a root grayscale() filter
+// keys off. See the CSS block for why this is a filter and not a grey palette.
+function isGreyscale(){return localStorage.getItem('st_greyscale')==='1';}
+
+function applyGreyscale(){
+  // Mirrors the inline pre-paint script in <body>. Keep both in sync.
+  if(isGreyscale())document.documentElement.setAttribute('data-greyscale','1');
+  else document.documentElement.removeAttribute('data-greyscale');
+}
+
+function setGreyscale(on){
+  const v=on?'1':'0';
+  localStorage.setItem('st_greyscale',v);
+  applyGreyscale();
+  // Sync so the setting follows to phone/desktop, same path as st_theme.
+  sbPush('st_greyscale',v,{silent:true});
+}
+
+function updateGreyscaleToggle(){
+  const el=document.getElementById('settings-greyscale');
+  if(el)el.checked=isGreyscale();
+}
+
 function toggleSidebar(){
   const sb=document.getElementById('sidebar');
   const main=document.getElementById('main');
@@ -9322,6 +9376,7 @@ function openGoalSettings(){
   loadHrZonesIntoSettings();
   renderNavReorder();
   updateThemeSwatches();
+  updateGreyscaleToggle();
 
   // ── Calculate recommended goal ──────────────────────────────────────────────
   try{
@@ -10133,7 +10188,7 @@ async function sbPull(key){
 async function syncFromCloud(){
   setSyncUI('syncing','Syncing…');
   try{
-    const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_templates','st_ai_history','st_theme','st_holiday','st_notif_prefs','st_notif_templates','st_teacher_plan']; // st_hours is recomputed from sessions below, not pulled directly. st_teacher_plan is written externally by the teacher RPC and only ever pulled here (cloud-authoritative, falls through to the default setItem branch — the app never sbPushes it).
+    const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_templates','st_ai_history','st_theme','st_greyscale','st_holiday','st_notif_prefs','st_notif_templates','st_teacher_plan']; // st_hours is recomputed from sessions below, not pulled directly. st_teacher_plan is written externally by the teacher RPC and only ever pulled here (cloud-authoritative, falls through to the default setItem branch — the app never sbPushes it).
     // Pull st_deleted_sessions upfront so we can use it synchronously inside forEach
     let cloudDeletedRaw=null;
     try{cloudDeletedRaw=await sbPull('st_deleted_sessions');}catch(e){}
@@ -10219,6 +10274,15 @@ async function syncFromCloud(){
             document.documentElement.setAttribute('data-theme',cloudTheme);
             updateThemeSwatches();
           }
+        } else if(k==='st_greyscale'){
+          // Same shape as st_theme: a plain string, cloud wins if it differs.
+          const cv=rows[i].value;
+          const cloudGrey=(cv===true||cv==='1')?'1':(cv===false||cv==='0')?'0':null;
+          if(cloudGrey&&cloudGrey!==localStorage.getItem('st_greyscale')){
+            localStorage.setItem('st_greyscale',cloudGrey);
+            applyGreyscale();
+            updateGreyscaleToggle();
+          }
         } else if(k==='st_subjs'||k==='st_goals'||k==='st_todos'||k==='st_sched_overrides'||k==='st_templates'||k==='st_holiday'||k==='st_notif_prefs'||k==='st_notif_templates'){
           // Timestamped last-writer-wins: keep whichever version is newer.
           // Prevents a device with stale data from reverting a fresh edit.
@@ -10300,6 +10364,7 @@ async function syncFromCloud(){
   if(!localStorage.getItem('st_hours'))localStorage.setItem('st_hours',JSON.stringify({}));
 
   applyTheme();
+  applyGreyscale();
   applySidebarState();
   // Attach scroll listener to #main (the actual scroll container in this SPA layout)
   // Deep link support: open specific page via URL hash e.g. #log
