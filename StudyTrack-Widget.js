@@ -45,19 +45,13 @@ async function getAccessToken() {
   }
 }
 
-// ── Theme palette (matches app THEMES_LIST exactly) ──────────────────────────
-const THEMES = {
-  slate:    { bg:"#0e0e0e", bg2:"#1c1c1c", bg3:"#272727", text:"#f0f0f0", text2:"#909090", text3:"#606060", o:"#f97316", ok:"#00c896" },
-  ocean:    { bg:"#09141e", bg2:"#0f2030", bg3:"#162840", text:"#d8eeff", text2:"#6898bc", text3:"#3a6080", o:"#00b8d9", ok:"#00c896" },
-  crimson:  { bg:"#1a0808", bg2:"#260e0e", bg3:"#321414", text:"#fdf0f0", text2:"#c07070", text3:"#884848", o:"#dc2626", ok:"#00c896" },
-  rose:     { bg:"#f5c0d4", bg2:"#fdd0e2", bg3:"#e8a0bc", text:"#280810", text2:"#8a3050", text3:"#b06080", o:"#c02868", ok:"#2a7a4a" },
-  sage:     { bg:"#c8ddc4", bg2:"#d8ead4", bg3:"#b4ccb0", text:"#0e1e0c", text2:"#3a5e36", text3:"#608a5c", o:"#3a6a48", ok:"#1a5a30" },
-  lavender: { bg:"#d0c0e8", bg2:"#ddd0f4", bg3:"#bca8d8", text:"#160e28", text2:"#583878", text3:"#8060a8", o:"#6830b0", ok:"#2a6a3a" },
-  peach:    { bg:"#f8c0a0", bg2:"#ffd0b0", bg3:"#e8a888", text:"#2a1008", text2:"#904030", text3:"#b87050", o:"#d05828", ok:"#2a6a3a" },
-  mint:     { bg:"#a8e4c8", bg2:"#c0f0d8", bg3:"#88d0b0", text:"#042010", text2:"#186040", text3:"#408060", o:"#158050", ok:"#0a5030" },
-  denim:    { bg:"#b0c4e0", bg2:"#c4d4ec", bg3:"#98aed0", text:"#081830", text2:"#284878", text3:"#506898", o:"#1840a0", ok:"#1a6040" },
-  mocha:    { bg:"#c8a882", bg2:"#d8b890", bg3:"#b8946c", text:"#1a0c00", text2:"#6b3a18", text3:"#9a6840", o:"#7a3a10", ok:"#2a5a1a" },
-  coral:    { bg:"#1a0a06", bg2:"#2a1208", bg3:"#3a1a0e", text:"#fdf0eb", text2:"#d08060", text3:"#a05838", o:"#e0502a", ok:"#00c896" },
+// ── Palette (matches the app's single :root palette exactly) ─────────────────
+// MONOCHROME. The app has no theme system as of 2026-08-06 — this widget must
+// not reintroduce one. Status colours (ok/err) are the only surviving colour.
+const T = {
+  bg:"#0e0e0e", bg2:"#181818", bg3:"#232323",
+  text:"#f2f2f2", text2:"#9a9a9a", text3:"#686868",
+  o:"#e8e8e8", ok:"#4e9c6b", err:"#c05f5f"
 };
 
 // ── Fetch from Supabase ──────────────────────────────────────────────────────
@@ -128,26 +122,26 @@ if (!bearerToken) {
   // No valid session — Keychain empty, or the token exchange itself was
   // rejected/failed. Show which one so a real fix (vs. a guess) is possible.
   const w = new ListWidget();
-  w.backgroundColor = new Color("#1c1c1c");
+  w.backgroundColor = new Color("#181818");
   w.setPadding(14, 14, 14, 14);
-  const t1 = w.addText("⚠️ Setup needed");
+  const t1 = w.addText("Setup needed");
   t1.font = Font.boldSystemFont(13);
-  t1.textColor = new Color("#f97316");
+  t1.textColor = new Color("#c05f5f");
   w.addSpacer(4);
   const t2 = w.addText(
     authError === "no_token" ? "Run the Keychain setup script once on this device." :
     "Auth failed: " + authError + " — re-run Keychain setup."
   );
   t2.font = Font.systemFont(10);
-  t2.textColor = new Color("#909090");
+  t2.textColor = new Color("#9a9a9a");
   Script.setWidget(w);
   Script.complete();
   return;
 }
 
-const [sessions, goals, schedule, subjs, themeRaw, overridesRaw] = await Promise.all([
+const [sessions, goals, schedule, subjs, overridesRaw] = await Promise.all([
   sbGet("st_sessions", bearerToken), sbGet("st_goals", bearerToken), sbGet("st_sched", bearerToken),
-  sbGet("st_subjs", bearerToken), sbGet("st_theme", bearerToken), sbGet("st_sched_overrides", bearerToken)
+  sbGet("st_subjs", bearerToken), sbGet("st_sched_overrides", bearerToken)
 ]);
 
 // If any read actually failed (RLS denial, expired access token, network
@@ -156,23 +150,19 @@ const [sessions, goals, schedule, subjs, themeRaw, overridesRaw] = await Promise
 // happened before this fix: goal/hours silently fell back to defaults.
 if (sbGetErrors.length) {
   const w = new ListWidget();
-  w.backgroundColor = new Color("#1c1c1c");
+  w.backgroundColor = new Color("#181818");
   w.setPadding(14, 14, 14, 14);
-  const t1 = w.addText("⚠️ Sync error");
+  const t1 = w.addText("Sync error");
   t1.font = Font.boldSystemFont(13);
-  t1.textColor = new Color("#f97316");
+  t1.textColor = new Color("#c05f5f");
   w.addSpacer(4);
   const t2 = w.addText(sbGetErrors[0]);
   t2.font = Font.systemFont(9);
-  t2.textColor = new Color("#909090");
+  t2.textColor = new Color("#9a9a9a");
   Script.setWidget(w);
   Script.complete();
   return;
 }
-
-// Pick theme — fall back to slate
-const themeName = (typeof themeRaw === "string" && THEMES[themeRaw]) ? themeRaw : "slate";
-const T = THEMES[themeName];
 
 const today = todayStr();
 const nowTokyo = new Date(Date.now() + 9 * 3600000);
@@ -263,7 +253,7 @@ if (size === "small") {
   hoursText.textColor = todayH >= dailyGoal ? c(T.ok) : c(T.text);
   hoursText.minimumScaleFactor = 0.6;
 
-  const goalText = w.addText(todayH >= dailyGoal ? "Goal reached! 🎉" : `of ${fmtH(dailyGoal)} goal`);
+  const goalText = w.addText(todayH >= dailyGoal ? "Goal reached" : `of ${fmtH(dailyGoal)} goal`);
   goalText.font = Font.systemFont(11);
   goalText.textColor = todayH >= dailyGoal ? c(T.ok) : c(T.text2);
   goalText.minimumScaleFactor = 0.7;
