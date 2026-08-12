@@ -135,7 +135,7 @@ jobs:
             }
 
             // Fetch everything in parallel
-            const [schedule, subjectsRaw, sessionsRaw, hoursRaw, subsRaw, notifDone, todosRaw, overridesRaw, goalsRaw, templatesRaw, holidayRaw, prefsRaw, teacherPlanRaw] = await Promise.all([
+            const [schedule, subjectsRaw, sessionsRaw, hoursRaw, subsRaw, notifDone, todosRaw, overridesRaw, goalsRaw, templatesRaw, holidayRaw, prefsRaw, teacherPlanRaw, pe150SentRaw] = await Promise.all([
               sbGet('st_sched'),
               sbGet('st_subjs'),
               sbGet('st_sessions'),
@@ -149,6 +149,7 @@ jobs:
               sbGet('st_holiday'),
               sbGet('st_notif_prefs'),
               sbGet('st_teacher_plan'),   // teacher-pushed daily timetable; wins over st_sched when present
+              sbGet('pe_150_email_sent'), // one-time-ever flag: PE crossed 150h contract-split email
             ]);
 
             if (!subsRaw) { console.log('No push subscriptions found'); return; }
@@ -540,6 +541,24 @@ jobs:
                   return `<div style="background:${C.border};border-radius:100px;height:6px;overflow:hidden"><div style="background:${color||C.o};height:6px;width:${w}%;border-radius:100px"></div></div>`;
                 }
                 const heading = (t) => `<div style="font-size:10px;font-weight:700;color:${C.text2};text-transform:uppercase;letter-spacing:1.5px;margin:24px 0 12px">${t}</div>`;
+
+                // ── ONE-TIME: PE crossed 150h — new 0.5-credit (75h) contract needed ──
+                // Fires exactly once, ever, the first run after PE's total (base + logged
+                // sessions, same getLogged() formula as everywhere else) reaches 150h.
+                // Not gated on onHoliday — Noah wants to know the moment it crosses, even
+                // if paused. Flag is a plain '1' in Supabase key pe_150_email_sent; there
+                // is deliberately no in-app way to reset it (fire-once-forever, matches
+                // the notif_done_subjs pattern for subject-complete).
+                if (!pe150SentRaw) {
+                  const pe = subjects.find(s => s.id === 'pe');
+                  if (pe && getLogged('pe') >= 150) {
+                    const peLogged = getLogged('pe');
+                    let inner = `<div style="font-size:15px;color:${C.text};margin-bottom:16px;line-height:1.5">You've crossed 150 hours of PE. Time to set up your next contract — <strong>0.5 credit (75h)</strong>, not a full credit.</div>`;
+                    inner += `<table style="width:100%;border-collapse:separate;border-spacing:0"><tr>${stat('Logged', fmtH(peLogged), C.o)}${stat('Contract', '150h', C.text)}${stat('Status', 'Complete', C.ok)}</tr></table>`;
+                    const sent = await sendEmail('🏃 PE: 150 hours reached', wrap('PE contract', null, inner));
+                    if (sent) await sbSet('pe_150_email_sent', '1');
+                  }
+                }
 
                 // ── TEST EMAIL — fired on demand via workflow_dispatch ──
                 if (process.env.TEST_EMAIL === 'true') {
