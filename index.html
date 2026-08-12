@@ -2744,6 +2744,42 @@ function runMigrations(){
     }catch(e){console.warn('[Migration v15] Error:',e)}
     localStorage.setItem('st_migration_v15_base_recalib_aug06_2026','1');
   }
+  // ── Migration v16: PE total corrected to 139.15h (Noah-confirmed submitted total, Aug 12 2026) ──
+  // PE's total (base + all logged PE sessions, no date cutoff) must read exactly 139.15h as of today.
+  // Same self-correcting pattern as v15: base = confirmedTotal − currently logged session hours,
+  // so the figure stays accurate as new PE sessions are logged going forward.
+  if(!localStorage.getItem('st_migration_v16_pe_total_aug12_2026')){
+    try{
+      const raw=localStorage.getItem('st_subjs');
+      if(raw){
+        const subjs=JSON.parse(raw);
+        const sessions=JSON.parse(localStorage.getItem('st_sessions')||'[]');
+        const PE_CONFIRMED_TOTAL=139.15; // Noah-confirmed submitted PE total as of 2026-08-12
+        const pe=subjs.find(s=>s.id==='pe');
+        if(pe){
+          const sessionH=sessions
+            .filter(x=>x.subjectId==='pe')
+            .reduce((a,x)=>a+(x.hours||0),0);
+          const rawBase=parseFloat((PE_CONFIRMED_TOTAL-sessionH).toFixed(4));
+          if(rawBase<0){
+            console.warn('[Migration v16] pe: sessions ('+sessionH.toFixed(2)+
+              'h) exceed confirmed total ('+PE_CONFIRMED_TOTAL+
+              'h) by '+Math.abs(rawBase).toFixed(2)+'h — base clamped to 0, PE will '+
+              'read slightly high. Sessions left untouched by design.');
+          }
+          const newBase=Math.max(0,rawBase);
+          if(Math.abs((pe.base||0)-newBase)>0.01){
+            pe.base=newBase;
+            localStorage.setItem('st_subjs',JSON.stringify(subjs));
+            localStorage.setItem('st_subjs_updated_at',new Date().toISOString());
+            sbPush('st_subjs',subjs,{silent:true});
+            console.log('[Migration v16] PE base set to '+newBase+'h so total = 139.15h');
+          }
+        }
+      }
+    }catch(e){console.warn('[Migration v16] Error:',e)}
+    localStorage.setItem('st_migration_v16_pe_total_aug12_2026','1');
+  }
   if(!localStorage.getItem('st_migration_v7')){
     try{
       const raw=localStorage.getItem('st_sched');
