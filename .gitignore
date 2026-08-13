@@ -1,1 +1,6 @@
 .DS_Store
+
+# Dev notes, handoffs and specs must NOT live in this repo — it is PUBLIC and
+# served by GitHub Pages, so every .md here is fetchable by anyone.
+# They live in ../docs-private (local only, no remote).
+*.md
