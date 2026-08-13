@@ -550,17 +550,13 @@ jobs:
                 // is deliberately no in-app way to reset it (fire-once-forever, matches
                 // the notif_done_subjs pattern for subject-complete).
                 //
-                // ONE-TIME RE-ARM (2026-08-13): a fresh-device migration race (fixed in
-                // index.html the same day — see Migration v17) corrupted PE's total to
-                // ~163h, which wrongly fired and consumed this email before Noah's real
-                // hours had actually reached 150. This one-time reset clears the flag so
-                // it can fire again for real once the corrected total legitimately
-                // crosses 150h. Remove this reset block after it has run once — it's a
-                // one-off correction, not a permanent feature.
-                if (pe150SentRaw) {
-                  await sbSet('pe_150_email_sent', null);
-                  console.log('[PE150] One-time reset: cleared pe_150_email_sent after 2026-08-13 data-corruption false-fire');
-                }
+                // NOTE: on 2026-08-13 this flag was force-cleared once via a temporary
+                // reset block, because a fresh-device migration race (index.html
+                // Migration v17/v18) had corrupted PE's total to ~163h, which wrongly
+                // fired and consumed this email before Noah's real hours had actually
+                // reached 150. That reset ran successfully (confirmed in the Actions
+                // log) and has been removed — this block is back to its permanent,
+                // fire-once-forever form.
                 if (!pe150SentRaw) {
                   const pe = subjects.find(s => s.id === 'pe');
                   if (pe && getLogged('pe') >= 150) {
