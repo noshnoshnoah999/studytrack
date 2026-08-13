@@ -2824,6 +2824,55 @@ function runMigrations(){
     }catch(e){console.warn('[Migration v17] Error:',e)}
     localStorage.setItem('st_migration_v17_pe_corruption_fix_aug13_2026','1');
   }
+
+  // ── Migration v18: fix v17's missing date cutoff (2026-08-13) ──────────────
+  // BUG IN v17: it subtracted ALL PE sessions ever logged (no date filter) from
+  // the fixed constant 139.15, the same no-cutoff pattern v16 used. That was
+  // safe for v16 (ran same-day, nothing logged "after" yet) but wrong for v17,
+  // which ran a day later and silently absorbed the 3 sessions Noah logged the
+  // morning of 2026-08-13 (22m+25m+48m = 1h35m) into that same fixed total
+  // instead of adding them on top — so PE read 139h9m instead of the correct
+  // ~140h44m. This is the exact same mistake documented in migration v14's
+  // comment ("v13 subtracted ALL session hours, which would erase work logged
+  // AFTER the report date") — v17 should have used a REPORT_DATE cutoff like
+  // v14/v15 do, not v16's no-cutoff style.
+  // FIX: 139.15h is confirmed as the correct total as of END OF 2026-08-12
+  // (Noah-confirmed). Only sessions dated on or before 2026-08-12 are
+  // subtracted from it; anything logged on 2026-08-13 or later stays
+  // additive on top, same as v14/v15's REPORT_DATE guard.
+  if(!localStorage.getItem('st_migration_v18_pe_date_cutoff_fix_aug13_2026')){
+    try{
+      const raw=localStorage.getItem('st_subjs');
+      if(raw){
+        const subjs=JSON.parse(raw);
+        const sessions=JSON.parse(localStorage.getItem('st_sessions')||'[]');
+        const PE_CONFIRMED_TOTAL=139.15; // Noah-confirmed total as of END OF 2026-08-12
+        const REPORT_DATE='2026-08-12'; // only sessions on/before this date count toward the 139.15 baseline
+        const pe=subjs.find(s=>s.id==='pe');
+        if(pe){
+          const sessionH=sessions
+            .filter(x=>x.subjectId==='pe'&&(!x.date||x.date<=REPORT_DATE))
+            .reduce((a,x)=>a+(x.hours||0),0);
+          const rawBase=parseFloat((PE_CONFIRMED_TOTAL-sessionH).toFixed(4));
+          if(rawBase<0){
+            console.warn('[Migration v18] pe: sessions on/before '+REPORT_DATE+' ('+sessionH.toFixed(2)+
+              'h) exceed confirmed total ('+PE_CONFIRMED_TOTAL+
+              'h) by '+Math.abs(rawBase).toFixed(2)+'h — base clamped to 0, PE will '+
+              'read slightly high. Sessions left untouched by design.');
+          }
+          const newBase=Math.max(0,rawBase);
+          if(Math.abs((pe.base||0)-newBase)>0.01){
+            pe.base=newBase;
+            localStorage.setItem('st_subjs',JSON.stringify(subjs));
+            localStorage.setItem('st_subjs_updated_at',new Date().toISOString());
+            sbPush('st_subjs',subjs,{silent:true});
+            console.log('[Migration v18] PE base corrected to '+newBase+'h so total = 139.15h as of 2026-08-12 + sessions logged 2026-08-13 onward');
+          }
+        }
+      }
+    }catch(e){console.warn('[Migration v18] Error:',e)}
+    localStorage.setItem('st_migration_v18_pe_date_cutoff_fix_aug13_2026','1');
+  }
   if(!localStorage.getItem('st_migration_v7')){
     try{
       const raw=localStorage.getItem('st_sched');
