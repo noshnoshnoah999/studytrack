@@ -1100,7 +1100,7 @@ button:active{transform:scale(0.96)}
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
           <div class="form-group" style="margin-bottom:0">
             <label class="form-label">Subject</label>
-            <select class="form-input" id="log-subject" onchange="updateLogFormColour();dismissDupWarn()"></select>
+            <select class="form-input" id="log-subject" onchange="updateLogFormColour();dismissDupWarn();updateJournalLenWarn()"></select>
           </div>
           <div class="form-group" style="margin-bottom:0">
             <label class="form-label">Date</label>
@@ -1135,7 +1135,8 @@ button:active{transform:scale(0.96)}
             <span>Journal Content <span style="font-weight:400;color:var(--text3)">(for the Google Form)</span></span>
             <button type="button" id="log-journal-copy" onclick="copyJournalContent()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:3px 9px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit">Copy</button>
           </label>
-          <textarea class="form-input" id="log-journal" rows="8" placeholder="Auto-filled when you import a workout screenshot" style="resize:vertical;min-height:110px;line-height:1.55"></textarea>
+          <textarea class="form-input" id="log-journal" rows="8" placeholder="Auto-filled when you import a workout screenshot" style="resize:vertical;min-height:110px;line-height:1.55" oninput="updateJournalLenWarn()"></textarea>
+          <div id="log-journal-len" style="display:none;font-size:11px;line-height:1.45;margin-top:6px"></div>
         </div>
         <div class="dup-warn" id="dup-warn">
           <div class="dup-warn-title"> Possible duplicate</div>
@@ -1924,15 +1925,69 @@ function openFormsPending(){
   document.getElementById('forms-pending-modal-overlay').classList.add('open');
 }
 
-function _openSubjectForm(subjectId,date,start,end,notes,sessionId){
+// Prefill URLs are capped by the browser/server, so the Contents box can be
+// silently truncated on submit. _JOURNAL_URL_WARN/_MAX are measured against the
+// FULL ENCODED URL, not the raw character count — Japanese text expands ~9x once
+// percent-encoded (1 char -> 3 UTF-8 bytes -> "%XX%XX%XX"), so a raw count would
+// badly under-report the real risk on the Japanese form.
+const _JOURNAL_URL_WARN=6000, _JOURNAL_URL_MAX=8000;
+
+// Single source of truth for the prefill URL. The length warning and the actual
+// "Open form" link MUST build the URL the same way or the warning drifts.
+function _buildSubjectFormUrl(subjectId,date,start,end,notes){
   const cfg=_SUBJECT_FORMS[subjectId];
-  if(!cfg)return; // no form for this subject
+  if(!cfg)return null;
   let url=cfg.url+'?usp=pp_url';
   if(date) url+='&entry.911550456='+encodeURIComponent(date);
   if(start){const p=start.split(':');url+='&entry.2130026531_hour='+p[0]+'&entry.2130026531_minute='+(p[1]||'00')}
   if(end){const p=end.split(':');url+='&entry.1426010469_hour='+p[0]+'&entry.1426010469_minute='+(p[1]||'00')}
   if(notes) url+='&entry.706383331='+encodeURIComponent(notes);
   if(cfg.confirmId) url+='&entry.'+cfg.confirmId+'='+encodeURIComponent('確認しました / Confirmed');
+  return url;
+}
+
+// Live length readout under the Journal Content box on the Log page.
+// Warn only — never blocks logging. A half-submitted journal is worse than a
+// long one, so this tells Noah to paste manually rather than silently truncating.
+function updateJournalLenWarn(){
+  const el=document.getElementById('log-journal-len');
+  const jEl=document.getElementById('log-journal');
+  if(!el||!jEl)return;
+  const journal=jEl.value.trim();
+  const subjEl=document.getElementById('log-subject');
+  const subjectId=subjEl?subjEl.value:'';
+  if(!journal||!_SUBJECT_FORMS[subjectId]){el.style.display='none';return}
+  const url=_buildSubjectFormUrl(
+    subjectId,
+    (document.getElementById('log-date')||{}).value||'',
+    (document.getElementById('log-start')||{}).value||'',
+    (document.getElementById('log-end')||{}).value||'',
+    journal
+  );
+  if(!url){el.style.display='none';return}
+  const len=url.length;
+  el.style.display='block';
+  if(len>=_JOURNAL_URL_MAX){
+    el.style.color='var(--err)';
+    el.innerHTML='<strong>Too long for the prefill link ('+len.toLocaleString()+' chars).</strong> '+
+      'The Contents box will likely be cut off. Use the Copy button and paste it into the form by hand.';
+  }else if(len>=_JOURNAL_URL_WARN){
+    el.style.color='var(--warn,#b8860b)';
+    el.innerHTML='Getting long for the prefill link ('+len.toLocaleString()+' chars). '+
+      'Check the Contents box is complete before you submit.';
+  }else{
+    el.style.color='var(--text3)';
+    el.innerHTML=len.toLocaleString()+' / '+_JOURNAL_URL_MAX.toLocaleString()+' chars in the prefill link';
+  }
+}
+
+function _openSubjectForm(subjectId,date,start,end,notes,sessionId){
+  const cfg=_SUBJECT_FORMS[subjectId];
+  if(!cfg)return; // no form for this subject
+  const url=_buildSubjectFormUrl(subjectId,date,start,end,notes);
+  if(url&&url.length>=_JOURNAL_URL_MAX){
+    showToast('Journal may be truncated in the form — check it before submitting.','var(--err)');
+  }
   // Get subject name for the modal
   const subjs=loadSubjects();
   const subj=subjs.find(s=>s.id===subjectId);
@@ -4241,6 +4296,7 @@ async function useWorkoutResult(){
 
   const journalEl=document.getElementById('log-journal');
   if(journalEl)journalEl.value=buildWorkoutJournal(result,cycleNum,locOverride);
+  updateJournalLenWarn();
 
   // Kept so the next import can compare against this one, and so the effort
   // level and metrics survive in the session record.
@@ -5580,6 +5636,7 @@ function clearLogForm(){
   document.getElementById('log-notes').value='';
   const jEl=document.getElementById('log-journal');
   if(jEl)jEl.value='';
+  updateJournalLenWarn();
   _pendingJournalMeta=null;
   const dur=document.getElementById('log-duration');
   if(dur)dur.textContent='';
@@ -7435,6 +7492,7 @@ function _doLogSession(){
   setLogTime('log-end','');
   document.getElementById('log-notes').value='';
   if(journalEl)journalEl.value='';
+  updateJournalLenWarn();
   document.getElementById('log-duration').textContent='';
   dismissDupWarn();
   renderLogEntries();
@@ -7522,6 +7580,7 @@ function fillStretchLog(){
   // Fixed content from the stretch guide — no model call needed.
   const jEl=document.getElementById('log-journal');
   if(jEl)jEl.value=buildStretchJournal(date,sStart,stretchMins);
+  updateJournalLenWarn();
   _pendingJournalMeta={activity:'Stretch',app:null,durationSeconds:stretchMins*60};
   updateLogDuration();
   _pendingStretch=null;
