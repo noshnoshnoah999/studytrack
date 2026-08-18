@@ -1381,16 +1381,6 @@ button:active{transform:scale(0.96)}
       <input type="password" class="form-input" id="settings-anthropic-key" placeholder="sk-ant-...">
       <div style="font-size:11px;color:var(--text3);margin-top:4px">Stored locally on your device only. Get yours at console.anthropic.com</div>
     </div>
-    <div class="form-group" style="margin-top:6px">
-      <label class="form-label">Heart Rate Zones <span style="font-weight:400;color:var(--text3)">(from Apple Watch)</span></label>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">Zone 2 starts</div><input type="number" class="form-input" id="settings-hr-z2" placeholder="144"></div>
-        <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">Zone 3 starts</div><input type="number" class="form-input" id="settings-hr-z3" placeholder="157"></div>
-        <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">Zone 4 starts</div><input type="number" class="form-input" id="settings-hr-z4" placeholder="170"></div>
-        <div><div style="font-size:11px;color:var(--text3);margin-bottom:3px">Zone 5 starts</div><input type="number" class="form-input" id="settings-hr-z5" placeholder="183"></div>
-      </div>
-      <div style="font-size:11px;color:var(--text3);margin-top:5px">Used to work out the effort level. Never sent to the API — the calculation happens on this device. <b style="color:var(--text2)">Your watch recalculates these on the 1st of each month</b>, so check them now and then (Watch app → Heart Rate).</div>
-    </div>
     <div class="modal-actions">
       <button class="btn-save" onclick="saveGoalSettings()">Save</button>
       <button class="btn-cancel" onclick="closeModal('goal-modal-overlay')">Cancel</button>
@@ -3250,30 +3240,6 @@ function deleteTemplateFromModal(){
 let _workoutImageBase64=null;
 let _workoutImageMime=null;
 let _workoutResult=null;
-
-// ── HEART RATE ZONES ────────────────────────────────────────────────────────
-// Noah's real Apple Watch zones (Automatic / heart-rate-reserve method).
-// Resting 67, Max 197 as of 4 Aug 2026. The watch RECALCULATES these on the
-// 1st of every month, so they are editable in Settings.
-// The effort level is worked out HERE, on the device — no heart-rate or age
-// data is ever sent to the Anthropic API.
-const HR_ZONE_DEFAULTS={z2:144,z3:157,z4:170,z5:183};
-function loadHrZones(){
-  try{const s=localStorage.getItem('st_hr_zones');if(s)return Object.assign({},HR_ZONE_DEFAULTS,JSON.parse(s))}catch(e){}
-  return Object.assign({},HR_ZONE_DEFAULTS);
-}
-function saveHrZonesFromSettings(){
-  const g=id=>{const el=document.getElementById(id);const v=el?parseInt(el.value,10):NaN;return isNaN(v)?null:v};
-  const z={z2:g('settings-hr-z2')||HR_ZONE_DEFAULTS.z2,z3:g('settings-hr-z3')||HR_ZONE_DEFAULTS.z3,
-           z4:g('settings-hr-z4')||HR_ZONE_DEFAULTS.z4,z5:g('settings-hr-z5')||HR_ZONE_DEFAULTS.z5};
-  localStorage.setItem('st_hr_zones',JSON.stringify(z));
-}
-function loadHrZonesIntoSettings(){
-  const z=loadHrZones();
-  const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v};
-  s('settings-hr-z2',z.z2); s('settings-hr-z3',z.z3); s('settings-hr-z4',z.z4); s('settings-hr-z5',z.z5);
-}
-
 
 // ── VISION CALL ─────────────────────────────────────────────────────────────
 // Haiku only. Extraction is now just title / date / start time / duration,
@@ -8671,8 +8637,6 @@ function saveGoalSettings(){
   // Save Anthropic API key
   const keyEl=document.getElementById('settings-anthropic-key');
   if(keyEl)localStorage.setItem('st_anthropic_key',keyEl.value.trim());
-  // Save heart-rate zone boundaries + default workout location
-  saveHrZonesFromSettings();
   // Dismiss the recommendation — user has reviewed and saved a goal
   localStorage.setItem('st_rec_dismissed',_latestRecDaily.toFixed(2));
   closeModal('goal-modal-overlay');
@@ -8732,8 +8696,6 @@ function openGoalSettings(){
   // Load existing Anthropic key
   const keyEl=document.getElementById('settings-anthropic-key');
   if(keyEl)keyEl.value=localStorage.getItem('st_anthropic_key')||'';
-  // Load heart-rate zones + default workout location
-  loadHrZonesIntoSettings();
   renderNavReorder();
 
   // ── Calculate recommended goal ──────────────────────────────────────────────
