@@ -1755,7 +1755,7 @@ button:active{transform:scale(0.96)}
 
     <!-- Spinner sits outside the upload/source areas so it stays visible while
          those are hidden during the API call. -->
-    <div id="workout-spinner" style="display:none;text-align:center;padding:26px 16px;font-size:13px;color:var(--text3)"> Reading the screenshot…<div style="font-size:11px;margin-top:6px">Fetching the weather too</div>
+    <div id="workout-spinner" style="display:none;text-align:center;padding:26px 16px;font-size:13px;color:var(--text3)"> Reading the screenshot…<div style="font-size:11px;margin-top:6px">Date, time and duration only</div>
     </div>
 
     <!-- STEP 2: which app / which activity — asked BEFORE anything is sent to the API -->
@@ -1780,40 +1780,11 @@ button:active{transform:scale(0.96)}
         </div>
       </div>
 
-      <!-- Only YOU know this. It is the one thing the screenshot cannot tell the
-           model, and without it the reflection has nothing true to say beyond
-           the weather and the numbers. -->
-      <div id="workout-step-feel" style="display:none">
-        <!-- Journey: cycles and walks only. Runs are loops with no destination.
-             This is the real reason the distance is what it is, which stops the
-             reflection reaching for the weather to explain it. -->
-        <div id="workout-journey-block" style="display:none;margin-bottom:14px">
-          <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Where were you going?</div>
-          <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Short or long, whatever you want to say. "Home to Station" · "Station to Home" · "Home to the station, heading to Haneda Airport to meet Aoi and study together" — a full sentence is written into the journal exactly as you type it.</div>
-          <input type="text" class="form-input" id="workout-journey-input" placeholder="From Home to Station"
-                 onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('workout-feel-input').focus()}">
-        </div>
-
-        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">How did it feel? <span style="font-weight:400;color:var(--text3)">optional</span></div>
-        <div style="font-size:12px;color:var(--text3);margin-bottom:10px">A few words in your own words. Only you know this — the screenshot can't say it, and I won't make it up.</div>
-        <div id="workout-feel-hint" style="display:none;background:var(--ol);border:1.5px solid var(--o);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:12.5px;font-weight:700;color:var(--o);line-height:1.45"></div>
-        <input type="text" class="form-input" id="workout-feel-input" placeholder="e.g. legs stiff at the start, hot but fine after" style="margin-bottom:10px"
-               onkeydown="if(event.key==='Enter'){event.preventDefault();submitWorkoutFeel()}">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <button onclick="submitWorkoutFeel()" style="background:var(--ol);border:1.5px solid var(--o);border-radius:12px;padding:14px 10px;font-size:14px;font-weight:700;color:var(--o);cursor:pointer;font-family:inherit">Continue →</button>
-          <button onclick="submitWorkoutFeel(true)" style="background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:14px 10px;font-size:14px;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit">No note →</button>
-        </div>
-      </div>
-
       <button class="btn-cancel" style="margin-top:12px;width:100%" onclick="backToWorkoutUpload()">← Choose a different image</button>
     </div>
 
     <div id="workout-result-area" style="display:none">
       <div class="workout-summary-card" id="workout-summary-card"></div>
-      <div class="form-group" style="margin:12px 0 0">
-        <label class="form-label">Location</label>
-        <input type="text" class="form-input" id="workout-location-input" placeholder="Urayasu Area">
-      </div>
       <div class="form-group" id="workout-cyclenum-row" style="margin:10px 0 0;display:none">
         <label class="form-label">Number today <span style="font-weight:400;color:var(--text3)">(e.g. 2 for your second ride)</span></label>
         <input type="number" min="1" class="form-input" id="workout-cyclenum-input" placeholder="1">
@@ -3286,130 +3257,30 @@ function loadHrZonesIntoSettings(){
 }
 function defaultWorkoutLocation(){return localStorage.getItem('st_workout_location')||'Urayasu Area'}
 
-// Effort level. Heart rate is the honest signal — it already accounts for heat
-// and hills. Speed is only a fallback for screenshots with no HR (Strava feed).
-function computeEffortLevel(avgHR,activity,kmh,paceSecPerKm){
-  if(avgHR&&avgHR>0){
-    const z=loadHrZones();
-    if(avgHR>=z.z4)return 'Very High';   // zones 4 and 5 collapse together
-    if(avgHR>=z.z3)return 'High';
-    if(avgHR>=z.z2)return 'Medium';
-    return 'Low';
-  }
-  if(activity==='Run'&&paceSecPerKm>0){
-    if(paceSecPerKm<300)return 'Very High';
-    if(paceSecPerKm<360)return 'High';
-    if(paceSecPerKm<450)return 'Medium';
-    return 'Low';
-  }
-  if(activity==='Cycle'&&kmh>0){
-    if(kmh>28)return 'Very High';
-    if(kmh>=22)return 'High';
-    if(kmh>=15)return 'Medium';
-    return 'Low';
-  }
-  if(activity==='Walk'&&kmh>0){
-    if(kmh>6)return 'High';
-    if(kmh>=4.5)return 'Medium';
-    return 'Low';
-  }
-  return 'Low';
-}
-
-// ── WEATHER ─────────────────────────────────────────────────────────────────
-// Open-Meteo historical archive. Free, no API key, no account.
-// Verified 4 Aug 2026: CORS passes from the browser, and there is no
-// reanalysis lag — same-day and previous-day readings are available.
-const WEATHER_LAT=35.6528, WEATHER_LON=139.9022;   // Shin-Urayasu
-const WMO_TEXT={0:'Clear',1:'Mainly Clear',2:'Partly Cloudy',3:'Overcast',45:'Fog',48:'Fog',
-  51:'Light Drizzle',53:'Moderate Drizzle',55:'Heavy Drizzle',56:'Freezing Drizzle',57:'Freezing Drizzle',
-  61:'Light Rain',63:'Moderate Rain',65:'Heavy Rain',66:'Freezing Rain',67:'Freezing Rain',
-  71:'Light Snow',73:'Moderate Snow',75:'Heavy Snow',77:'Snow Grains',
-  80:'Rain Showers',81:'Rain Showers',82:'Heavy Rain Showers',85:'Snow Showers',86:'Snow Showers',
-  95:'Thunderstorm',96:'Thunderstorm with Hail',99:'Thunderstorm with Hail'};
-
-// Returns {tempC, text} or null. Never throws — if the weather is unavailable
-// the line is simply left out of the journal rather than guessed at.
-async function fetchWorkoutWeather(dateStr,startTime){
-  if(!dateStr)return null;
-  try{
-    const url='https://archive-api.open-meteo.com/v1/archive?latitude='+WEATHER_LAT+'&longitude='+WEATHER_LON+
-      '&start_date='+dateStr+'&end_date='+dateStr+'&hourly=temperature_2m,weather_code&timezone=Asia%2FTokyo';
-    const c=new AbortController();
-    const t=setTimeout(()=>c.abort(),8000);
-    const r=await fetch(url,{signal:c.signal});
-    clearTimeout(t);
-    if(!r.ok)return null;
-    const j=await r.json();
-    if(!j.hourly||!j.hourly.time)return null;
-    const hh=(startTime||'12:00').split(':')[0].padStart(2,'0');
-    let i=j.hourly.time.indexOf(dateStr+'T'+hh+':00');
-    if(i<0)i=0;
-    const temp=j.hourly.temperature_2m[i];
-    const code=j.hourly.weather_code[i];
-    if(temp===null||temp===undefined)return null;
-    return {tempC:temp,text:WMO_TEXT[code]||null};
-  }catch(e){return null}
-}
-
-// ── PREVIOUS SESSION LOOKUP ─────────────────────────────────────────────────
-// Noah's signature writing habit is comparing against last time ("last time I
-// did X, so this time I changed it"). Claude cannot know that from a
-// screenshot, so we hand it the previous session of the same activity.
-function findPreviousWorkout(activity,excludeDate){
-  try{
-    const sessions=loadSessions().filter(s=>s.subjectId==='pe'&&s.journalMeta&&s.journalMeta.activity===activity);
-    sessions.sort((a,b)=>(b.date+b.start).localeCompare(a.date+a.start));
-    for(const s of sessions){
-      if(excludeDate&&s.date===excludeDate)continue;
-      return s;
-    }
-  }catch(e){}
-  return null;
-}
-function _prevWorkoutPromptLine(activity,date){
-  const p=findPreviousWorkout(activity,date);
-  if(!p||!p.journalMeta)return '';
-  const m=p.journalMeta;
-  const bits=[];
-  if(m.distanceKm)bits.push(m.distanceKm+' km');
-  if(m.durationSeconds)bits.push(Math.floor(m.durationSeconds/60)+' min');
-  if(m.avgPace)bits.push(m.avgPace+'/km');
-  if(m.avgHR)bits.push('avg HR '+m.avgHR);
-  if(!bits.length)return '';
-  return '\n\nMY PREVIOUS '+activity.toUpperCase()+' ('+p.date+'): '+bits.join(', ')+
-    '\nIf there is a meaningful comparison to draw, mention it the way I would ("last time I... so this time..."). If there is not, do not force one.';
-}
 
 // ── VISION CALL ─────────────────────────────────────────────────────────────
-// Sonnet 5 is the primary model. Haiku is only used if Sonnet errors, so a
-// weaker result never happens silently.
-const WORKOUT_MODEL_PRIMARY='claude-sonnet-5';
-const WORKOUT_MODEL_FALLBACK='claude-haiku-4-5-20251001';
+// Haiku only. Extraction is now just title / date / start time / duration,
+// which does not need a larger model, and one fixed model removes the silent
+// downgrade path the old Sonnet-primary/Haiku-fallback arrangement had.
+const WORKOUT_MODEL='claude-haiku-4-5-20251001';
 // Kept for diagnosis: after a failed import, type _lastWorkoutRaw in the console
 // to see exactly what came back.
 let _lastWorkoutRaw=null;
 
-function _buildWorkoutPrompt(app,activity,wantsReflection,prevLine){
+function _buildWorkoutPrompt(app,activity){
   const today=new Date().toISOString().slice(0,10);
   let p='This is a screenshot from '+app+'. The activity is a '+activity+'.\n\nToday\'s date is '+today+'.\n\n';
-  p+='Read every metric that is actually visible and return them. NEVER guess or estimate a value that is not shown — return null instead.\n\n';
+  p+='Read ONLY the fields listed below. NEVER guess or estimate a value that is not shown — return null instead.\n\n';
   if(app==='Strava'){
     p+='STRAVA NOTES:\n'+
        '- The timestamp ("Today at HH:MM", "Yesterday at HH:MM", or a date) is ALWAYS the START time, never the end.\n'+
-       '- "Yesterday" means subtract one day from today\'s date.\n'+
-       '- The feed view shows only three metrics; the activity page shows more. Return whatever is there.\n'+
-       '- Walks show Steps instead of Elevation Gain.\n\n';
+       '- "Yesterday" means subtract one day from today\'s date.\n\n';
   }else{
     p+='RUNNA NOTES:\n'+
-       '- The header reads like "31 Jul 2026 at 20:49". That single timestamp is the START time. There is no end time shown — do not invent one.\n'+
-       '- IGNORE the location Runna reports. It is frequently wrong and is not used.\n\n';
+       '- The header reads like "31 Jul 2026 at 20:49". That single timestamp is the START time. There is no end time shown — do not invent one.\n\n';
   }
   p+='Return ONLY valid JSON, no markdown fences:\n'+
-     '{"activityTitle":string|null,"date":"YYYY-MM-DD","timestampWasRelative":boolean,"startTime":"HH:MM","durationSeconds":number,"distanceKm":number|null,'+
-     '"elevationGainM":number|null,"steps":number|null,"avgPace":"M:SS"|null,"avgHR":number|null,'+
-     '"cadence":number|null,"calories":number|null,"avgPower":number|null,"achievements":string|null,'+
-     '"locationLabel":string|null,"reflection":string|null}\n\n'+
+     '{"activityTitle":string|null,"date":"YYYY-MM-DD","timestampWasRelative":boolean,"startTime":"HH:MM","durationSeconds":number}\n\n'+
      'RULES:\n'+
      '- activityTitle: the large activity title on the screen, copied out EXACTLY and in full,\n'+
      ' e.g. "1st August - Afternoon Cycle 2". If there is no title, return null. Do not tidy it up,\n'+
@@ -3417,134 +3288,12 @@ function _buildWorkoutPrompt(app,activity,wantsReflection,prevLine){
      '- timestampWasRelative: true if the screen said "Today at" / "Yesterday at" with no explicit\n'+
      ' calendar date. false if an actual date was printed, e.g. "31 Jul 2026 at 20:49".\n'+
      '- durationSeconds: convert the displayed time exactly. "10m 29s" = 629. "27:10" = 1630. Never round up.\n'+
-     '- avgPace: as displayed, e.g. "8:20".\n'+
-     '- avgPower: the Avg Power figure in watts if shown, e.g. 53. null if absent.\n'+
-     '- achievements: any award, badge, trophy or personal-record banner on the screen,\n'+
-     ' copied out as shown, e.g. "Your biggest climb ever!". null if there is none.\n'+
-     '- locationLabel: only for Strava, copied from the screen. null for Runna.\n'+
      '- date: from the relative timestamp ("Yesterday at...") ONLY as a fallback. If the title contains\n'+
      ' a date, that date is the truth — I write those titles myself and they are correct even when the\n'+
-     ' screenshot was taken days later.\n';
-  p+='- reflection: always return null. The reflection is written in a separate step.\n';
+     ' screenshot was taken days later.\n'+
+     '- Return NO other field. Distance, pace, heart rate, cadence, calories, power, elevation, steps,\n'+
+     ' achievements and location are deliberately not wanted.\n';
   return p;
-}
-
-// ── REFLECTION (second call, text only) ─────────────────────────────────────
-// This MUST be a separate call. The weather is not on the screenshot and is
-// looked up afterwards, so the vision call has no weather to write about — it
-// was told to mention the weather and (correctly) refused to invent one.
-// This call runs after the weather is known, carries no image, and is skipped
-// entirely for short cycles and walks.
-function _buildReflectionPrompt(r,prevLine){
-  const act=r.activity;
-  const verb=act==='Run'?'run':act==='Cycle'?'cycle':'walk';
-  const F=[];
-  if(r.distanceKm)F.push('Distance: '+r.distanceKm+' km');
-  if(r.durationSeconds)F.push('Time: '+Math.floor(r.durationSeconds/60)+' min');
-  if(r.avgPace)F.push('Average pace: '+r.avgPace+' per km');
-  if(r.avgSpeedKmh&&!r.avgPace)F.push('Average speed: '+r.avgSpeedKmh+' km/h');
-  if(r.elevationGainM!==null&&r.elevationGainM!==undefined)F.push('Elevation gain: '+r.elevationGainM+' m');
-  if(r.avgHR)F.push('Average heart rate: '+r.avgHR+' bpm (my zone 1 tops out at 143, zone 2 is 144-156)');
-  if(r.cadence)F.push('Cadence: '+r.cadence+' spm');
-  if(r.calories)F.push('Calories: '+r.calories+' kcal');
-  if(r.steps)F.push('Steps: '+r.steps);
-  if(r.avgPower)F.push('Average power: '+r.avgPower+' W');
-  F.push('Effort level (already worked out): '+(r.effortLevel||'Low'));
-  // A badge on the screen is a REAL fact, not an invention, and it is often the
-  // only genuinely interesting thing about an otherwise routine session.
-  if(r.achievements&&String(r.achievements).trim()){
-    F.push('The app gave me this award: "'+String(r.achievements).trim()+'" \u2014 this is real and worth a mention, '+
-           'but keep it in proportion. Do not oversell a small achievement.');
-  }
-  // Deliberately NOT passing the activity title. Runna auto-names activities
-  // ("Your First Walk Run Back" is a Runna milestone), and labelling it as
-  // Noah's own wording made the model open with "I called this one X for a
-  // reason" — a claim about him that simply was not true.
-
-  // Only push the weather when there is genuinely something to say about it.
-  // Requiring a weather sentence on every import made a mild day produce five
-  // restatements of the temperature, because there was nothing else true left.
-  let w='';
-  if(r.weather&&r.weather.tempC!==null&&r.weather.tempC!==undefined){
-    const t=Math.round(r.weather.tempC);
-    const wet=/rain|drizzle|snow|thunder|shower|fog/i.test(r.weather.text||'');
-    const notable=(t>=28)||(t<=8)||wet;
-    w='\n\nTHE WEATHER AT THE TIME: '+t+'\u00B0C'+(r.weather.text?', '+r.weather.text:'')+'.\n'+
-      (notable
-        ? 'This is worth ONE mention because it plausibly affected the '+verb+'. Say it once, in whole degrees, and move on. Do NOT keep returning to it.': 'This was unremarkable. Do NOT mention the weather at all — there is nothing to say about it.');
-  }else{
-    w='\n\nNo weather data was available, so do not mention the weather at all.';
-  }
-
-  let context='';
-  if(act==='Cycle'||act==='Walk'){
-    context='CONTEXT: my cycles and walks are journeys — I am getting somewhere, not training. '+
-      'The distance and the time are decided by the route, not by how hard I decided to go. Never treat them as a choice '+
-      'and never look for a reason why they are what they are.\n';
-    if(r.journey&&String(r.journey).trim()){
-      context+='WHERE I WAS GOING: '+String(r.journey).trim()+'\n'+
-        'This is the real reason for the distance and the time. Mention it naturally, the way I would — name the '+
-        'places and any people, but do not invent anything about the trip beyond what I have said here.\n';
-    }
-    context+='\n';
-  }
-  // Noah's own words about how it felt. This is the ONE piece of subjective
-  // truth available, and it is the reason the reflection can talk about the
-  // session rather than the thermometer.
-  let feel='';
-  if(r.feelNote&&String(r.feelNote).trim()){
-    feel='\n\nHOW IT ACTUALLY FELT, IN MY OWN WORDS: "'+String(r.feelNote).trim()+'"\n'+
-      'This came from ME, so it is true and you MAY write about it — build the reflection around it and '+
-      'let it lead. Expand it into proper sentences in my voice, but do NOT add any feeling, sensation or '+
-      'detail I did not actually say. If I mentioned one thing, write about that one thing.';
-  }
-  return 'Write the reflection paragraph for my PE journal for this '+verb+'. Output ONLY the paragraph — no JSON, no quotes, no label, no preamble.\n\n'+context+
-    'THE FIGURES:\n'+F.join('\n')+w+feel+prevLine+'\n\n'+
-    'HOW I WRITE. This goes into a school journal and has to read as though I wrote it, not an AI.\n'+
-    '- First person, chronological, plain everyday vocabulary. Do not reach for fancy synonyms. Repeating a word is normal for me.\n'+
-    '- British spellings: kilometre, realised, colour.\n'+
-    '- I do use "After that", "Additionally", "This time", "Then" and "Carrying on" — but do NOT force one in.\n'+
-    ' In two or three sentences you almost certainly do not need a connector at all. Bolting one on is worse than none.\n'+
-    '- NEVER use: "delve", "furthermore", "moreover", "overall this was a valuable experience", "valuable insights".\n'+
-    '- Do NOT write polished prose. My sentences are simple and sometimes run long. Do not smooth everything into perfect grammar. Do not add deliberate mistakes either.\n'+
-    '- Be honest, never a flawless session. Say how it actually felt, including if it was hard, hot, or I was tired.\n\n'+
-    'CRITICAL — DO NOT RECITE THE STATISTICS.\n'+
-    'Every figure above is ALREADY printed directly above this paragraph in the journal. Listing them again in order (distance, then time, then pace, then heart rate, then cadence, then calories) reads like a robot reading a table and is exactly what I do not want.\n'+
-    '- Pick at most TWO OR THREE numbers that actually mattered and weave them into the story.\n'+
-    '- Write about what the session was like, not what the numbers were.\n'+
-    '- Never mention cadence and calories together as a pair of facts.\n\n'+
-    'CRITICAL — DO NOT INVENT HOW MY BODY FELT.\n'+
-    'You were not there. Unless I told you how it felt above, you have only numbers and a weather\n'+
-    'reading. Anything I said in my own words is fair game and should be used. Anything else — never assert a physical\n'+
-    'sensation as fact. Do NOT write things like "I was sweating a lot", "the air felt thick and heavy",\n'+
-    '"my legs were burning" or "I was out of breath" — you cannot know any of that and this goes to my school.\n'+
-    '- You MAY reason from the figures, hedged: "I think the heat pushed my heart rate up more than the\n'+
-    ' effort really called for" is fine, because the heart rate and the temperature are both real.\n'+
-    '- Use "I think", "probably", "it likely" when drawing a conclusion rather than stating it flatly.\n'+
-    '- If you have nothing true to say about how it felt, write about the conditions and the numbers instead.\n\n'+
-    'CRITICAL — DO NOT SPECULATE ABOUT WHY.\n'+
-    'Do not guess at reasons for the numbers. Do not explain why this session was shorter, longer, slower or\n'+
-    'faster than another one, and do not link the distance to the weather or to how I was feeling. If I went a\n'+
-    'certain distance, that is simply what I did. Writing "which probably had something to do with that" makes\n'+
-    'me sound like I do not know why I did my own session.\n'+
-    '- NEVER restate or refer to the effort level. Phrases like "effort level came out as low" or\n'+
-    '  "it was rated as medium" expose that something WORKED IT OUT for me rather than me judging it,\n'+
-    ' which is the last impression this journal should give. The effort level is already printed on the\n'+
-    ' line above. Do not mention it in any form.\n'+
-    '- More generally, never describe any part of this journal as something produced, generated, calculated,\n'+
-    ' recorded or reported FOR me. Write as me, about what I did. The one exception is the app award, which\n'+
-    ' genuinely does come from Strava.\n'+
-    '- Keep it light. Note the conditions and a couple of the numbers and leave it there. Do not analyse,\n'+
-    ' do not draw lessons, do not tell me what to do next time unless something genuinely warrants it.\n\n'+
-    'ALSO:\n'+
-    '- Do NOT mention the screenshot or the attachment — a separate line already does that.\n'+
-    '- Do NOT claim I named or titled the activity. The apps generate their own names.\n'+
-    '- Only use "After that" when something genuinely happened next. Never as a filler transition.\n'+
-    '- TWO OR THREE SENTENCES, or up to FOUR if I gave you a note about how it felt (that is real\n'+
-    ' material, so there is more worth saying). Short and true still beats long and padded.\n'+
-    '- Make each sentence do a DIFFERENT job. Do not restate the same idea in new words, and never\n'+
-    ' repeat a figure you have already given. If you only have two sentences worth of truth, write two.\n'+
-    '- No headers, no emoji, no bullet points, no clock times.\n';
 }
 
 async function _callWorkoutModel(model,key,base64,mimeType,promptText,signal){
@@ -3571,38 +3320,6 @@ async function _callWorkoutModel(model,key,base64,mimeType,promptText,signal){
   return resp;
 }
 
-// Text-only follow-up call. No image, so it is cheap and quick. Runs only when
-// a reflection is actually needed, and only once the weather is known.
-async function _generateReflection(r,key,model){
-  try{
-    const c=new AbortController();
-    const t=setTimeout(()=>c.abort(),30000);
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',signal:c.signal,
-      headers:{'x-api-key':key,'anthropic-version':'2023-06-01',
-               'anthropic-dangerous-direct-browser-access':'true','content-type':'application/json'},
-      // Previous-session comparison is for RUNS ONLY. Cycles and walks are
-      // usually commutes on a set route, so the distance is decided by geography,
-      // not by effort — comparing them just invites the model to invent a reason
-      // for a difference that has no reason.
-      body:JSON.stringify({model:model,max_tokens:1500,
-        messages:[{role:'user',content:_buildReflectionPrompt(r,r.activity==='Run'?_prevWorkoutPromptLine('Run',r.date):'')}]})
-    });
-    clearTimeout(t);
-    if(!resp.ok){showToast('Reflection failed — journal written without it','var(--o)');return null}
-    const d=await resp.json();
-    // Same rule as the extraction call: find the text block, don't assume [0].
-    const tb=(d.content||[]).find(b=>b&&b.type==='text'&&typeof b.text==='string')
-             ||(d.content||[]).find(b=>b&&typeof b.text==='string');
-    let txt=(tb&&tb.text||'').trim();
-    txt=txt.replace(/^["'“]|["'”]$/g,'').replace(/^Reflection:\s*/i,'').trim();
-    return txt||null;
-  }catch(e){
-    showToast('Reflection failed — journal written without it','var(--o)');
-    return null;
-  }
-}
-
 async function analyseWorkoutImage(base64,mimeType){
   const key=localStorage.getItem('st_anthropic_key');
   if(!key){showToast('Add Anthropic API key in  Settings','var(--err)');return null}
@@ -3611,16 +3328,10 @@ async function analyseWorkoutImage(base64,mimeType){
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),45000);
   try{
-    const promptText=_buildWorkoutPrompt(app,activity,false,'');
+    const promptText=_buildWorkoutPrompt(app,activity);
 
-    let resp=await _callWorkoutModel(WORKOUT_MODEL_PRIMARY,key,base64,mimeType,promptText,controller.signal);
-    let usedModel=WORKOUT_MODEL_PRIMARY;
-    if(!resp.ok&&(resp.status===404||resp.status===400)){
-      // Primary model unavailable — fall back, but say so rather than silently degrade.
-      showToast('Sonnet 5 unavailable — using Haiku','var(--o)');
-      resp=await _callWorkoutModel(WORKOUT_MODEL_FALLBACK,key,base64,mimeType,promptText,controller.signal);
-      usedModel=WORKOUT_MODEL_FALLBACK;
-    }
+    const resp=await _callWorkoutModel(WORKOUT_MODEL,key,base64,mimeType,promptText,controller.signal);
+    const usedModel=WORKOUT_MODEL;
     clearTimeout(timer);
     if(!resp.ok){
       let msg='API error '+resp.status;
@@ -3660,11 +3371,8 @@ async function analyseWorkoutImage(base64,mimeType){
     parsed.app=app;
     parsed.activity=activity;
     parsed.model=usedModel;
-    parsed.feelNote=_workoutFeel||'';
-    parsed.journey=_workoutJourney||'';
 
-    // The title Noah wrote overrides the relative timestamp. This MUST happen
-    // before the weather lookup, or the weather is fetched for the wrong day.
+    // The title Noah wrote overrides the relative timestamp.
     const _titleDate=_parseTitleDate(parsed.activityTitle,todayStr());
     if(_titleDate&&_titleDate!==parsed.date){
       parsed.dateFromTimestamp=parsed.date;
@@ -3688,34 +3396,6 @@ async function analyseWorkoutImage(base64,mimeType){
     if(parsed.startTime){
       const total=toMins(parsed.startTime)+parsed.durationMinutes;
       parsed.workoutEndTime=String(Math.floor(total/60)%24).padStart(2,'0')+':'+String(total%60).padStart(2,'0');
-    }
-    // Location: Runna's is unreliable, so it is discarded entirely.
-    if(app==='Runna'||activity==='Cycle')parsed.locationLabel=defaultWorkoutLocation();
-    else if(!parsed.locationLabel)parsed.locationLabel=defaultWorkoutLocation();
-
-    // Effort level is computed here, on device, never by the model.
-    const kmh=(parsed.distanceKm&&secs>0)?(parsed.distanceKm/(secs/3600)):0;
-    let paceSec=0;
-    if(parsed.avgPace&&/^\d+:\d\d$/.test(parsed.avgPace)){
-      const pp=parsed.avgPace.split(':');paceSec=(+pp[0])*60+(+pp[1]);
-    }else if(parsed.distanceKm>0&&secs>0){paceSec=secs/parsed.distanceKm}
-    parsed.avgSpeedKmh=kmh>0?Math.round(kmh*10)/10:null;
-    parsed.effortLevel=computeEffortLevel(parsed.avgHR,activity,kmh,paceSec);
-
-    // Weather BEFORE the reflection, so the reflection can actually write about it.
-    parsed.weather=await fetchWorkoutWeather(parsed.date,parsed.startTime);
-
-    // The 15-minute rule — time only, distance ignored. Runs always get one.
-    // Skipping the call outright also saves the tokens v2 wasted generating a
-    // reflection that was then thrown away.
-    // A "how did it feel" note ALWAYS wins: the rule exists for sessions with
-    // nothing true to say, and writing a note is proof there is something.
-    // Discarding it because a station ride was under 15 minutes was a bug.
-    parsed.reflection=null;
-    const _hasFeel=!!(parsed.feelNote&&String(parsed.feelNote).trim());
-    const needsReflection=(activity==='Run')||(parsed.durationMinutes>=15)||_hasFeel;
-    if(needsReflection){
-      parsed.reflection=await _generateReflection(parsed,key,usedModel);
     }
     return parsed;
   }catch(err){
@@ -3820,59 +3500,17 @@ function _handleWorkoutBlob(blob){
 // ── Source picker (runs BEFORE any API call) ────────────────────────────────
 // Strava tracks both cycles and walks, so it needs a follow-up question.
 // Runna is running-only, so it goes straight through.
-let _workoutApp=null, _workoutActivity=null, _workoutFeel='', _workoutJourney='';
+let _workoutApp=null, _workoutActivity=null;
 
 function _showWorkoutSourcePicker(dataUrl){
-  _workoutApp=null; _workoutActivity=null; _workoutFeel=''; _workoutJourney='';
+  _workoutApp=null; _workoutActivity=null;
   const p=document.getElementById('workout-source-preview');
   if(p&&dataUrl)p.src=dataUrl;
-  const fi=document.getElementById('workout-feel-input');
-  if(fi)fi.value='';
-  const ji=document.getElementById('workout-journey-input');
-  if(ji)ji.value='';
   document.getElementById('workout-upload-area').style.display='none';
   document.getElementById('workout-result-area').style.display='none';
   document.getElementById('workout-step-activity').style.display='none';
-  document.getElementById('workout-step-feel').style.display='none';
   document.getElementById('workout-step-app').style.display='block';
   document.getElementById('workout-source-area').style.display='block';
-}
-
-// Asked BEFORE the API call, because the reflection is written during analysis.
-function _showFeelStep(){
-  document.getElementById('workout-step-app').style.display='none';
-  document.getElementById('workout-step-activity').style.display='none';
-  document.getElementById('workout-step-feel').style.display='block';
-  // The duration isn't known yet — the screenshot hasn't been read at this point —
-  // so this is a prompt for Noah to judge it himself. Runs always get a reflection,
-  // so the hint is only shown for cycles and walks.
-  const isTrip=(_workoutActivity==='Cycle'||_workoutActivity==='Walk');
-  const jb=document.getElementById('workout-journey-block');
-  if(jb)jb.style.display=isTrip?'block':'none';
-  const hint=document.getElementById('workout-feel-hint');
-  if(hint){
-    if(isTrip){
-      hint.innerHTML=' If this '+_workoutActivity.toLowerCase()+' was under 15 minutes — a normal trip to the station — leave this box <b>empty</b> and press <b>No note</b>. A reflection isn\'t needed and just pads the journal. Where you were going is still kept either way.';
-      hint.style.display='block';
-    }else{
-      hint.style.display='none';
-    }
-  }
-  // Focus whichever field comes first.
-  const first=document.getElementById(isTrip?'workout-journey-input':'workout-feel-input');
-  if(first)setTimeout(()=>first.focus(),80);
-}
-
-// `skip` means "no reflection note" — it must NOT discard the route. The route is
-// a plain fact about the trip and belongs in the journal either way. Wiping both
-// was throwing away a route Noah had just been told to fill in.
-function submitWorkoutFeel(skip){
-  const fi=document.getElementById('workout-feel-input');
-  const ji=document.getElementById('workout-journey-input');
-  _workoutFeel=skip?'':((fi&&fi.value||'').trim());
-  _workoutJourney=(ji&&ji.value||'').trim();
-  document.getElementById('workout-source-area').style.display='none';
-  runWorkoutAnalysis();
 }
 
 function backToWorkoutUpload(){
@@ -3884,9 +3522,10 @@ function backToWorkoutUpload(){
 function pickWorkoutApp(app){
   _workoutApp=app;
   if(app==='Runna'){
-    // Runna is running only — no activity question, straight to "how did it feel".
+    // Runna is running only — no activity question, straight to analysis.
     _workoutActivity='Run';
-    _showFeelStep();
+    document.getElementById('workout-source-area').style.display='none';
+    runWorkoutAnalysis();
     return;
   }
   document.getElementById('workout-step-app').style.display='none';
@@ -3895,7 +3534,8 @@ function pickWorkoutApp(app){
 
 function pickWorkoutActivity(act){
   _workoutActivity=act;
-  _showFeelStep();
+  document.getElementById('workout-source-area').style.display='none';
+  runWorkoutAnalysis();
 }
 async function pasteWorkoutImage(){
   // Try Clipboard API first (works on Mac Chrome/Safari, iOS 16+)
@@ -3940,11 +3580,10 @@ async function runWorkoutAnalysis(){
   const result=await analyseWorkoutImage(_workoutImageBase64,_workoutImageMime||'image/jpeg');
   if(spinner)spinner.style.display='none';
   if(!result){
-    // Failed — go back to the feel step so neither the choice nor the note is lost.
+    // Failed — go back to the source picker so the choice is not lost.
     document.getElementById('workout-source-area').style.display='block';
-    document.getElementById('workout-step-app').style.display='none';
     document.getElementById('workout-step-activity').style.display='none';
-    document.getElementById('workout-step-feel').style.display='block';
+    document.getElementById('workout-step-app').style.display='block';
     return;
   }
   _workoutResult=result;
@@ -3959,19 +3598,11 @@ function showWorkoutSummary(result){
   // Include the number so the preview matches the title that actually gets written.
   const _n=result.titleNumber||null;
   const activityLabel=daypart+' '+(result.activity||'Workout')+((result.activity==='Cycle'&&_n&&_n>1)?' '+_n:'');
-  const jm=JOURNAL_MINUTES[result.activity]||10;
   const workoutMins=Math.floor((result.durationSeconds||0)/60);
-  const sessionEnd=result.startTime?_addMins(result.startTime,workoutMins+jm):'';
+  // End Time is start + the activity duration. Nothing is added on top.
+  const sessionEnd=result.startTime?_addMins(result.startTime,workoutMins):'';
   let timeStr='Unknown times';
-  if(result.startTime)timeStr=result.startTime+' – '+sessionEnd+'  ('+_fmtHoursMins(workoutMins,false)+' + '+_fmtHoursMins(jm,false)+' journal)';
-  const actIcon={Cycle:'',Run:'',Walk:''}[result.activity]||'';
-  const bits=[];
-  if(result.distanceKm)bits.push(result.distanceKm+' km');
-  if(result.avgPace)bits.push(result.avgPace+'/km');
-  if(result.avgHR)bits.push(result.avgHR+' bpm');
-  if(result.weather&&result.weather.tempC!==null&&result.weather.tempC!==undefined){
-    bits.push(Math.round(result.weather.tempC)+'°C'+(result.weather.text?' '+result.weather.text:''));
-  }
+  if(result.startTime)timeStr=result.startTime+' – '+sessionEnd+'  ('+_fmtHoursMins(workoutMins,false)+')';
   const summaryEl=document.getElementById('workout-summary-card');
   if(summaryEl){
     summaryEl.innerHTML=
@@ -3979,17 +3610,8 @@ function showWorkoutSummary(result){
         (result.dateSource==='title'? ' <span style="color:var(--text3);font-size:11px">(from your title'+(result.dateFromTimestamp?', not "'+escHtml(_ordinalDate(result.dateFromTimestamp))+'"':'')+')</span>': result.dateSource==='relative'? ' <span style="color:var(--o);font-size:11px">(screenshot only said &ldquo;yesterday&rdquo; — check this)</span>': ' <span style="color:var(--text3);font-size:11px">(dated on the screenshot)</span>')+
         '</span></div>'+
       '<div class="workout-summary-row"><span>'+escHtml(activityLabel)+'</span></div>'+
-      '<div class="workout-summary-row"><span>'+escHtml(timeStr)+'</span></div>'+
-      (bits.length?'<div class="workout-summary-row"><span>'+escHtml(bits.join(' · '))+'</span></div>':'')+
-      '<div class="workout-summary-row"><span>Effort: '+escHtml(result.effortLevel||'Low')+
-        (result.avgHR?'':' <span style="color:var(--text3);font-size:11px">(no HR on screenshot — from speed)</span>')+'</span></div>'+
-      (result.reflection
-        ? '<div class="workout-summary-row"><span>Reflection written'+
-          (result.feelNote&&String(result.feelNote).trim()?' <span style="color:var(--text3);font-size:11px">(from your note)</span>':'')+'</span></div>': '<div class="workout-summary-row"><span style="color:var(--text3)">No reflection — under 15 min and no note</span></div>');
+      '<div class="workout-summary-row"><span>'+escHtml(timeStr)+'</span></div>';
   }
-  // Location: editable, because Runna reports the wrong ward and walks vary.
-  const locEl=document.getElementById('workout-location-input');
-  if(locEl)locEl.value=result.locationLabel||defaultWorkoutLocation();
   // Cycle number: suggested from existing sessions, but editable.
   const numRow=document.getElementById('workout-cyclenum-row');
   const numEl=document.getElementById('workout-cyclenum-input');
@@ -4010,11 +3632,11 @@ function showWorkoutSummary(result){
 }
 
 // ── JOURNAL CONTENT BUILDERS ────────────────────────────────────────────────
-// The journal text is assembled HERE, in JavaScript, not written by the model.
-// That keeps the format byte-identical between imports and makes the template
-// a code edit rather than a prompt rewrite. Claude only supplies the metric
-// values it read off the screenshot plus the reflection paragraph.
-const JOURNAL_MINUTES={Run:10,Cycle:10,Walk:10,Stretch:5};
+// The journal text is assembled HERE, in JavaScript, and is never written by a
+// model. Since 18 Aug 2026 it is a factual header only — title, date, start,
+// end, total. Noah writes anything beyond that himself, in his own words.
+// The old "Journal Writing Time" allowance was removed at the same time: End
+// Time is now start + the activity duration, with no minutes added on top.
 const WEEKDAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
 function _weekdayName(ds){
@@ -4066,47 +3688,6 @@ function _parseTitleNumber(title){
   return (n>=1&&n<=20)?n:null;
 }
 
-// The bike parking line depends on which way the trip went. Riding TO the station
-// means parking there; riding home FROM the station means collecting the bike.
-// A trip that never touches the station (home to the skin clinic) has nothing to
-// say about the bike park at all, so the line is dropped.
-// With no route given we cannot tell, so the commute default is kept.
-const BIKE_PARK='the JR Shin-Urayasu Bicycle Parking Lot Number 2';
-function _bikeParkingLine(journey){
-  const j=String(journey||'').trim().toLowerCase();
-  if(!j)return 'I parked at '+BIKE_PARK;
-  if(!/station|駅/.test(j))return null;
-  // Explicit "coming away from the station" phrasings first — these are the ones
-  // a positional check gets wrong, because they often have no " to " at all.
-  if(/(from|leaving|left|back from|out of)\s+(the\s+)?(station|駅)/.test(j)
-     ||/(station|駅)\s*(back\s+)?(to\s+)?home/.test(j)){
-    return 'I picked my bike up from '+BIKE_PARK;
-  }
-  // Otherwise fall back to position: station named before the first "to" means
-  // the ride started there.
-  const iStation=j.search(/station|駅/);
-  const iTo=j.indexOf(' to ');
-  if(iTo>=0&&iStation<iTo)return 'I picked my bike up from '+BIKE_PARK;
-  return 'I parked at '+BIKE_PARK;
-}
-
-// A short fragment ("Home to Station") reads better with a label. A full sentence
-// does not — "Route: I was heading from home to the station to meet Aoi" is clumsy,
-// so anything sentence-length is printed as its own line, exactly as written.
-function _journeyLine(journey){
-  const t=String(journey||'').trim();
-  if(!t)return null;
-  const words=t.split(/\s+/).length;
-  if(words<=6&&!/[.!?]$/.test(t))return 'Route: '+t;
-  return t;
-}
-
-// Plain "4.13 KM". The long-hand "4 Kilometres and 130 Meters" was dropped
-// 4 Aug 2026 — it padded every journal for no benefit.
-function _fmtDistance(km){
-  if(km===null||km===undefined||isNaN(km))return null;
-  return km+' KM';
-}
 // Whole minutes only, floored. Seconds were dropped from the Total Time line so
 // the arithmetic reads cleanly (23 + 10 = 33, not "23 Minutes 2 Seconds + 10").
 // Anything from 60 minutes up rolls into hours — "323 Mins" is unreadable on a
@@ -4119,108 +3700,40 @@ function _fmtHoursMins(mins,longUnit){
   const hu=(h===1?' Hour':' Hours');
   return m===0?(h+hu):(h+hu+' '+m+mu);
 }
-function _fmtDurationWords(secs){
-  return _fmtHoursMins(Math.floor(secs/60),false);
-}
-
-// Assembles the full Journal Content text for a cycle / run / walk.
-function buildWorkoutJournal(r,cycleNum,locationOverride){
+// Assembles the Journal Content text for a cycle / run / walk.
+// Factual header only — no metrics, no weather, no route, no reflection.
+function buildWorkoutJournal(r,cycleNum){
   const act=r.activity;
-  const jm=JOURNAL_MINUTES[act]||10;
   const daypart=_timeOfDay(r.startTime,null);
   const secs=r.durationSeconds||0;
   const workoutMins=Math.floor(secs/60);
-  const totalMins=workoutMins+jm;
-  const sessionEnd=r.startTime?_addMins(r.startTime,totalMins):'';
-  const loc=(locationOverride||r.locationLabel||defaultWorkoutLocation());
-  const appName=r.app==='Runna'?'Runna':'Strava';
+  const sessionEnd=r.startTime?_addMins(r.startTime,workoutMins):'';
 
   let title=_ordinalDate(r.date)+' - '+daypart+' '+act;
   if(act==='Cycle'&&cycleNum&&cycleNum>1)title+=' '+cycleNum;
 
   const L=[];
   L.push(title);
-  L.push('Journal Writing Time (Included as Study Time): '+jm+' Minutes');
   L.push('');
   L.push(_weekdayName(r.date)+' '+_ordinalDate(r.date)+' '+_journalYear(r.date));
   L.push('Start Time: '+(r.startTime||''));
   L.push('End Time: '+sessionEnd);
-  L.push('Total Time: '+_fmtDurationWords(secs)+' of '+
-    (act==='Run'?'running':act==='Cycle'?'cycling':'walking')+
-    ' + '+_fmtHoursMins(jm,false)+' of journal writing = '+_fmtHoursMins(totalMins,true));
-  L.push('');
-  L.push(loc);
-  const _jl=_journeyLine(r.journey);
-  if(_jl)L.push(_jl);
-  if(act==='Cycle'){
-    const bp=_bikeParkingLine(r.journey);
-    if(bp)L.push(bp);
-  }
-  if(r.weather&&r.weather.tempC!==null&&r.weather.tempC!==undefined){
-    // Whole degrees — "29.1°C" in a diary is a machine tell.
-    L.push('Weather at the time of the '+act.toLowerCase()+': '+Math.round(r.weather.tempC)+'°C'+(r.weather.text?' | '+r.weather.text:''));
-  }
-  L.push(act==='Run'? 'Used the Runna App for Tracking the Route, recorded on my Apple Watch': 'Used Strava App for Tracking the Route');
-  L.push('');
-
-  const dist=_fmtDistance(r.distanceKm);
-  if(dist)L.push('Distance: '+dist);
-  if(r.avgPace)L.push('Average Pace: '+r.avgPace+' per kilometre');
-  if(r.steps!==null&&r.steps!==undefined)L.push('Steps: '+Number(r.steps).toLocaleString());
-  if(r.elevationGainM!==null&&r.elevationGainM!==undefined)L.push('Elevation Gain: '+r.elevationGainM+' Meters');
-  if(!r.avgPace&&r.avgSpeedKmh)L.push('Average Speed: '+r.avgSpeedKmh+' km/h');
-  if(r.avgHR)L.push('Average Heart Rate: '+r.avgHR+' bpm');
-  if(r.cadence)L.push('Cadence: '+r.cadence+' steps per minute');
-  if(r.calories)L.push('Calories Burned: '+r.calories+' kcal');
-  if(r.avgPower)L.push('Average Power: '+r.avgPower+' W');
-  if(r.achievements&&String(r.achievements).trim())L.push('Strava Achievement: '+String(r.achievements).trim());
-  L.push('');
-  L.push('Effort Level: '+(r.effortLevel||'Low'));
-
-  if(r.reflection&&String(r.reflection).trim()){
-    L.push('');
-    L.push('Reflection: '+String(r.reflection).trim());
-  }
-  L.push('');
-  L.push('I included the screenshot from '+appName+' which tracked my route, so you can check all the numbers above match.');
-  L.push((appName==='Strava'?'Strava’s GPS':'The GPS')+' is sometimes a bit off, but the map in the screenshot should give a rough idea of where I '+
-    (act==='Run'?'ran':act==='Cycle'?'cycled':'walked')+'.');
+  L.push('Total Time: '+_fmtHoursMins(workoutMins,true));
   return L.join('\n');
 }
 
-// Post-run stretches. Fixed content from the Runner's Stretch Guide PDF, so no
-// model call is needed at all. No reflection, no effort level.
+// Post-run stretches. Factual header only. The routine itself is in the
+// attached Runner's Stretch Guide PDF — repeating it verbatim in every entry
+// read as a copy-pasted template, so it was removed 18 Aug 2026.
 function buildStretchJournal(dateStr,startTime,stretchMins){
-  const jm=JOURNAL_MINUTES.Stretch;
   const mins=stretchMins||20;
-  const total=mins+jm;
   const L=[];
   L.push(_ordinalDate(dateStr)+' - After Run Stretches');
-  L.push('Journal Writing Time (Included as Study Time): '+jm+' Minutes');
   L.push('');
   L.push(_weekdayName(dateStr)+' '+_ordinalDate(dateStr)+' '+_journalYear(dateStr));
   L.push('Start Time: '+startTime);
-  L.push('End Time: '+_addMins(startTime,total));
-  L.push('Total Time: '+_fmtHoursMins(mins,false)+' of stretching + '+_fmtHoursMins(jm,false)+' of journal writing = '+_fmtHoursMins(total,true));
-  L.push('');
-  L.push('Completed my post-run cool-down routine from my Runner’s Stretch Guide, which I have attached.');
-  L.push('I also complete the guide’s pre-run dynamic warm-up before I set off running. The guide’s suggested');
-  L.push('timings are approximate; I move through the poses more slowly than that, so the two parts together');
-  L.push('come to around '+mins+' minutes in practice.');
-  L.push('');
-  // Body-part targets and the source line were removed 4 Aug 2026 — both are
-  // already in the attached PDF, so repeating them here was duplication.
-  L.push('Post-run cool-down');
-  L.push('1. Pigeon Pose, both sides');
-  L.push('2. Toe and Arch Stretch');
-  L.push('3. Deep Lunge, both sides');
-  L.push('4. Quad and Hip Flexor Stretch in the Lunge');
-  L.push('5. Sphinx Pose / Upward-Facing Dog');
-  L.push('6. Seated Wide-Leg Stretch');
-  L.push('');
-  L.push('Source: video from YouTube by Run Better with Ash.');
-  L.push('');
-  L.push('Please check the attached Runner’s Stretch Guide PDF, which lists every stretch in this routine.');
+  L.push('End Time: '+_addMins(startTime,mins));
+  L.push('Total Time: '+_fmtHoursMins(mins,true));
   return L.join('\n');
 }
 
@@ -4252,8 +3765,7 @@ function openManualWorkoutEntry(){
   _workoutApp=_workoutApp||'Strava';
   _workoutActivity=_workoutActivity||'Run';
   _workoutResult={date:todayStr(),startTime:null,durationSeconds:0,durationMinutes:0,
-    activity:_workoutActivity,app:_workoutApp,effortLevel:'Low',reflection:null,
-    locationLabel:defaultWorkoutLocation(),weather:null};
+    activity:_workoutActivity,app:_workoutApp};
   showWorkoutSummary(_workoutResult);
 }
 
@@ -4269,21 +3781,18 @@ async function useWorkoutResult(){
     const peId=peSubj?peSubj.id:(subjs[0]?subjs[0].id:'');
     if(peId)sel.value=peId;
   }
-  const locEl=document.getElementById('workout-location-input');
-  const locOverride=locEl?(locEl.value||'').trim():'';
   const numEl=document.getElementById('workout-cyclenum-input');
   const cycleNum=numEl&&numEl.value?parseInt(numEl.value,10):1;
 
   const ld=document.getElementById('log-date');
   if(ld&&result.date)ld.value=result.date;
 
-  // The journal writing time is added to the END of the session. The start time
-  // always matches the screenshot, so it can still be checked against the proof.
-  const jm=JOURNAL_MINUTES[result.activity]||10;
+  // End Time is start + the activity duration only. Both times match the
+  // screenshot exactly, so the entry can be checked against the proof.
   const workoutMins=Math.floor((result.durationSeconds||0)/60);
   if(result.startTime){
     setLogTime('log-start',result.startTime);
-    setLogTime('log-end',_addMins(result.startTime,workoutMins+jm));
+    setLogTime('log-end',_addMins(result.startTime,workoutMins));
   }
   updateLogDuration();
   updateLogFormColour();
@@ -4295,21 +3804,15 @@ async function useWorkoutResult(){
   if(notesEl)notesEl.value=title;
 
   const journalEl=document.getElementById('log-journal');
-  if(journalEl)journalEl.value=buildWorkoutJournal(result,cycleNum,locOverride);
+  if(journalEl)journalEl.value=buildWorkoutJournal(result,cycleNum);
   updateJournalLenWarn();
 
-  // Kept so the next import can compare against this one, and so the effort
-  // level and metrics survive in the session record.
+  // Minimal record: countWorkoutsOnDate() reads .activity, and .durationSeconds
+  // keeps the session self-describing in a restore. Nothing else is extracted
+  // any more, so nothing else is stored.
   _pendingJournalMeta={
-    activity:result.activity, app:result.app, distanceKm:result.distanceKm||null,
-    durationSeconds:result.durationSeconds||0, avgPace:result.avgPace||null,
-    avgHR:result.avgHR||null, cadence:result.cadence||null, calories:result.calories||null,
-    elevationGainM:result.elevationGainM||null, steps:result.steps||null,
-    avgPower:result.avgPower||null, achievements:result.achievements||null,
-    feelNote:result.feelNote||null, journey:result.journey||null,
-    effortLevel:result.effortLevel||null, avgSpeedKmh:result.avgSpeedKmh||null,
-    location:locOverride||result.locationLabel||null,
-    weather:result.weather||null, model:result.model||null
+    activity:result.activity, app:result.app,
+    durationSeconds:result.durationSeconds||0, model:result.model||null
   };
 
   closeModal('workout-import-overlay');
@@ -7553,23 +7056,22 @@ function _maybeOfferStretches(subjectId,date,start,end,notes){
   _showStretchPrompt(date,end);
 }
 function _showStretchPrompt(date,end){
-  const jm=JOURNAL_MINUTES.Stretch;
-  const sStart=_addMins(end,5),sEnd=_addMins(sStart,20+jm);
+  const sStart=_addMins(end,5),sEnd=_addMins(sStart,20);
   const note=_ordinalDate(date)+' - After Run Stretches';
   const el=document.getElementById('stretch-preview');
-  if(el)el.innerHTML='<b style="color:var(--text)">PE / Cardio</b> · 20 min + '+jm+' min journal<br>'+sStart+' – '+sEnd+'<br><span style="color:var(--text2)">'+escHtml(note)+'</span>';
+  if(el)el.innerHTML='<b style="color:var(--text)">PE / Cardio</b> · 20 min<br>'+sStart+' – '+sEnd+'<br><span style="color:var(--text2)">'+escHtml(note)+'</span>';
   const ov=document.getElementById('stretch-modal-overlay');
   if(ov)ov.classList.add('open');
 }
 function fillStretchLog(){
   if(!_pendingStretch){closeModal('stretch-modal-overlay');return}
   const {date,end}=_pendingStretch;
-  // Starts 5 min after the run session ends — INCLUDING that session's journal
-  // writing time. Basing it on the raw workout end instead would overlap the
-  // run session and double-count the hours.
+  // Starts 5 min after the run session ends. Since 18 Aug 2026 the run's End
+  // Time is the real end of the activity — journal-writing minutes no longer
+  // exist — so there is nothing left to double-count against.
   const sStart=_addMins(end,5);
-  const stretchMins=20, journalMins=JOURNAL_MINUTES.Stretch;
-  const sEnd=_addMins(sStart,stretchMins+journalMins);
+  const stretchMins=20;
+  const sEnd=_addMins(sStart,stretchMins);
   showPage('log');
   const sub=document.getElementById('log-subject'); if(sub)sub.value='pe';
   if(typeof updateLogFormColour==='function')updateLogFormColour();
