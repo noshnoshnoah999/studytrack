@@ -1385,6 +1385,11 @@ button:active{transform:scale(0.96)}
       <button class="btn-save" onclick="saveGoalSettings()">Save</button>
       <button class="btn-cancel" onclick="closeModal('goal-modal-overlay')">Cancel</button>
     </div>
+    <!-- Ends the session on this device. Study data stays in localStorage and
+         is still in Supabase, so signing back in restores everything. -->
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);text-align:center">
+      <button onclick="confirmLogout()" style="background:none;border:none;color:var(--err);font-size:13px;cursor:pointer;font-family:inherit;text-decoration:underline">Sign out of this device</button>
+    </div>
   </div>
 </div>
 
@@ -1753,6 +1758,11 @@ button:active{transform:scale(0.96)}
       </div>
       <input type="file" id="workout-file-input" accept="image/*" style="display:none" onchange="handleWorkoutFile(event)">
       <img id="workout-img-preview" class="img-preview" style="display:none;margin-bottom:8px">
+
+      <!-- No screenshot to hand. Goes straight to the result screen with the
+           date / activity / time / duration fields shown, skipping the API
+           entirely — nothing is read and nothing is sent. -->
+      <button onclick="openManualWorkoutEntry()" style="width:100%;background:none;border:none;color:var(--text3);font-size:12.5px;cursor:pointer;font-family:inherit;text-decoration:underline;padding:6px 0">No screenshot? Enter the details manually</button>
     </div>
 
     <!-- Spinner sits outside the upload/source areas so it stays visible while
@@ -1789,6 +1799,18 @@ button:active{transform:scale(0.96)}
       <div class="workout-summary-card" id="workout-summary-card"></div>
       <div id="workout-manual-row" style="display:none">
         <div class="form-group" style="margin:12px 0 0">
+          <label class="form-label">Date</label>
+          <input type="date" class="form-input" id="workout-date-input">
+        </div>
+        <div class="form-group" style="margin:10px 0 0">
+          <label class="form-label">Activity</label>
+          <select class="form-input" id="workout-activity-input">
+            <option value="Run">Run</option>
+            <option value="Cycle">Cycle</option>
+            <option value="Walk">Walk</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:10px 0 0">
           <label class="form-label">Start time</label>
           <input type="time" class="form-input" id="workout-starttime-input">
         </div>
@@ -3601,6 +3623,10 @@ function showWorkoutSummary(result){
   const manual=!result.startTime;
   const manRow=document.getElementById('workout-manual-row');
   if(manRow)manRow.style.display=manual?'block':'none';
+  const dtEl=document.getElementById('workout-date-input');
+  if(dtEl)dtEl.value=manual?(result.date||todayStr()):'';
+  const acEl=document.getElementById('workout-activity-input');
+  if(acEl)acEl.value=result.activity||'Run';
   const stEl=document.getElementById('workout-starttime-input');
   if(stEl)stEl.value='';
   const durEl=document.getElementById('workout-duration-input');
@@ -3766,8 +3792,17 @@ function openManualWorkoutEntry(){
 async function useWorkoutResult(){
   if(!_workoutResult)return;
   const result=_workoutResult;
-  // Manual entries carry no times off a screenshot — take them from the two
-  // fields on the result screen instead. They are blank and hidden for imports.
+  // Manual entries carry nothing off a screenshot — take the date, activity,
+  // start time and duration from the fields on the result screen instead.
+  // They are blank and hidden for imports, so imports are unaffected.
+  const manRow=document.getElementById('workout-manual-row');
+  const isManual=manRow&&manRow.style.display!=='none';
+  if(isManual){
+    const dtEl=document.getElementById('workout-date-input');
+    if(dtEl&&dtEl.value)result.date=dtEl.value;
+    const acEl=document.getElementById('workout-activity-input');
+    if(acEl&&acEl.value)result.activity=acEl.value;
+  }
   const stEl=document.getElementById('workout-starttime-input');
   if(stEl&&stEl.value)result.startTime=stEl.value;
   const durEl=document.getElementById('workout-duration-input');
@@ -9353,6 +9388,13 @@ function scheduleTokenRefresh(){
   },delay);
 }
 
+// Asks first — signing out means re-doing the emailed one-time code, which is
+// slow and needs the inbox to hand.
+function confirmLogout(){
+  if(!confirm('Sign out of StudyTrack on this device?\n\nYou will need a new login code by email to get back in. Your logged sessions are safe.'))return;
+  closeModal('goal-modal-overlay');
+  logoutSession();
+}
 function logoutSession(){
   setAuthSession(null);
   if(_stRefreshTimer)clearTimeout(_stRefreshTimer);
