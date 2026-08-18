@@ -1391,11 +1391,6 @@ button:active{transform:scale(0.96)}
       </div>
       <div style="font-size:11px;color:var(--text3);margin-top:5px">Used to work out the effort level. Never sent to the API — the calculation happens on this device. <b style="color:var(--text2)">Your watch recalculates these on the 1st of each month</b>, so check them now and then (Watch app → Heart Rate).</div>
     </div>
-    <div class="form-group" style="margin-top:6px">
-      <label class="form-label">Default Run / Cycle Location</label>
-      <input type="text" class="form-input" id="settings-workout-location" placeholder="Urayasu Area">
-      <div style="font-size:11px;color:var(--text3);margin-top:4px">Runna reports the wrong ward, so runs use this instead. Editable per import.</div>
-    </div>
     <div class="modal-actions">
       <button class="btn-save" onclick="saveGoalSettings()">Save</button>
       <button class="btn-cancel" onclick="closeModal('goal-modal-overlay')">Cancel</button>
@@ -1413,6 +1408,23 @@ button:active{transform:scale(0.96)}
     <div class="modal-actions">
       <button class="btn-save" onclick="fillStretchLog()">Fill it in</button>
       <button class="btn-cancel" onclick="closeModal('stretch-modal-overlay')">Not now</button>
+    </div>
+  </div>
+</div>
+
+<!-- PRE-RUN STRETCHES PROMPT -->
+<!-- Offered BEFORE the run's own log form is filled in, so the two journals are
+     submitted in the order they actually happened. The run itself is parked in
+     localStorage while this is open, so a reload cannot lose it. -->
+<div class="modal-overlay" id="prerun-stretch-modal-overlay" onclick="handleOverlayClick(event,'prerun-stretch-modal-overlay')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Pre-Run Stretches?</div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:14px">Log your pre-run stretches first? I'll fill the form in — review it and tap Log Session. The run itself follows straight after.</div>
+    <div id="prerun-stretch-preview" style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:13px;line-height:1.7"></div>
+    <div class="modal-actions">
+      <button class="btn-save" onclick="fillPreRunStretchLog()">Fill it in</button>
+      <button class="btn-cancel" onclick="skipPreRunStretch()">Skip to the run</button>
     </div>
   </div>
 </div>
@@ -1785,6 +1797,16 @@ button:active{transform:scale(0.96)}
 
     <div id="workout-result-area" style="display:none">
       <div class="workout-summary-card" id="workout-summary-card"></div>
+      <div id="workout-manual-row" style="display:none">
+        <div class="form-group" style="margin:12px 0 0">
+          <label class="form-label">Start time</label>
+          <input type="time" class="form-input" id="workout-starttime-input">
+        </div>
+        <div class="form-group" style="margin:10px 0 0">
+          <label class="form-label">Duration <span style="font-weight:400;color:var(--text3)">(minutes)</span></label>
+          <input type="number" min="1" class="form-input" id="workout-duration-input" placeholder="45">
+        </div>
+      </div>
       <div class="form-group" id="workout-cyclenum-row" style="margin:10px 0 0;display:none">
         <label class="form-label">Number today <span style="font-weight:400;color:var(--text3)">(e.g. 2 for your second ride)</span></label>
         <input type="number" min="1" class="form-input" id="workout-cyclenum-input" placeholder="1">
@@ -3245,17 +3267,12 @@ function saveHrZonesFromSettings(){
   const z={z2:g('settings-hr-z2')||HR_ZONE_DEFAULTS.z2,z3:g('settings-hr-z3')||HR_ZONE_DEFAULTS.z3,
            z4:g('settings-hr-z4')||HR_ZONE_DEFAULTS.z4,z5:g('settings-hr-z5')||HR_ZONE_DEFAULTS.z5};
   localStorage.setItem('st_hr_zones',JSON.stringify(z));
-  const locEl=document.getElementById('settings-workout-location');
-  if(locEl)localStorage.setItem('st_workout_location',(locEl.value||'').trim()||'Urayasu Area');
 }
 function loadHrZonesIntoSettings(){
   const z=loadHrZones();
   const s=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v};
   s('settings-hr-z2',z.z2); s('settings-hr-z3',z.z3); s('settings-hr-z4',z.z4); s('settings-hr-z5',z.z5);
-  const locEl=document.getElementById('settings-workout-location');
-  if(locEl)locEl.value=localStorage.getItem('st_workout_location')||'Urayasu Area';
 }
-function defaultWorkoutLocation(){return localStorage.getItem('st_workout_location')||'Urayasu Area'}
 
 
 // ── VISION CALL ─────────────────────────────────────────────────────────────
@@ -3612,6 +3629,17 @@ function showWorkoutSummary(result){
       '<div class="workout-summary-row"><span>'+escHtml(activityLabel)+'</span></div>'+
       '<div class="workout-summary-row"><span>'+escHtml(timeStr)+'</span></div>';
   }
+  // A manual entry has no times off a screenshot. Ask for them here rather than
+  // later in the log form, so the journal, the log times and the pre-run stretch
+  // window all get real figures from one place.
+  const manual=!result.startTime;
+  const manRow=document.getElementById('workout-manual-row');
+  if(manRow)manRow.style.display=manual?'block':'none';
+  const stEl=document.getElementById('workout-starttime-input');
+  if(stEl)stEl.value='';
+  const durEl=document.getElementById('workout-duration-input');
+  if(durEl)durEl.value='';
+
   // Cycle number: suggested from existing sessions, but editable.
   const numRow=document.getElementById('workout-cyclenum-row');
   const numEl=document.getElementById('workout-cyclenum-input');
@@ -3725,10 +3753,10 @@ function buildWorkoutJournal(r,cycleNum){
 // Post-run stretches. Factual header only. The routine itself is in the
 // attached Runner's Stretch Guide PDF — repeating it verbatim in every entry
 // read as a copy-pasted template, so it was removed 18 Aug 2026.
-function buildStretchJournal(dateStr,startTime,stretchMins){
+function buildStretchJournal(dateStr,startTime,stretchMins,label){
   const mins=stretchMins||20;
   const L=[];
-  L.push(_ordinalDate(dateStr)+' - After Run Stretches');
+  L.push(_ordinalDate(dateStr)+' - '+(label||'After Run Stretches'));
   L.push('');
   L.push(_weekdayName(dateStr)+' '+_ordinalDate(dateStr)+' '+_journalYear(dateStr));
   L.push('Start Time: '+startTime);
@@ -3772,6 +3800,39 @@ function openManualWorkoutEntry(){
 async function useWorkoutResult(){
   if(!_workoutResult)return;
   const result=_workoutResult;
+  // Manual entries carry no times off a screenshot — take them from the two
+  // fields on the result screen instead. They are blank and hidden for imports.
+  const stEl=document.getElementById('workout-starttime-input');
+  if(stEl&&stEl.value)result.startTime=stEl.value;
+  const durEl=document.getElementById('workout-duration-input');
+  if(durEl&&durEl.value){
+    const m=Math.max(0,parseInt(durEl.value,10)||0);
+    result.durationSeconds=m*60;
+    result.durationMinutes=m;
+  }
+  const numEl0=document.getElementById('workout-cyclenum-input');
+  const cycleNum0=numEl0&&numEl0.value?parseInt(numEl0.value,10):1;
+
+  // Runs only. The pre-run stretch is offered BEFORE the run's own form so the
+  // two journals are submitted in the order they happened. The run is parked in
+  // localStorage, not just a variable, so a reload while the stretch form is
+  // open cannot lose it.
+  if(result.activity==='Run'){
+    const w=_preRunStretchWindow(result.date,result.startTime);
+    if(w){
+      _savePendingRun(result,cycleNum0);
+      closeModal('workout-import-overlay');
+      _showPreRunStretchPrompt(w);
+      return;
+    }
+  }
+  _fillRunLogForm(result,cycleNum0);
+}
+
+// Fills the log form with the workout itself. Split out of useWorkoutResult so
+// the pre-run stretch step can call it afterwards.
+function _fillRunLogForm(result,cycleNum){
+  if(!result)return;
   const subjs=loadSubjects();
   // Every import is now a PE workout — King of Time / work-shift handling was
   // removed once Electives 4 was finished. The el4 subject itself is untouched.
@@ -3781,9 +3842,6 @@ async function useWorkoutResult(){
     const peId=peSubj?peSubj.id:(subjs[0]?subjs[0].id:'');
     if(peId)sel.value=peId;
   }
-  const numEl=document.getElementById('workout-cyclenum-input');
-  const cycleNum=numEl&&numEl.value?parseInt(numEl.value,10):1;
-
   const ld=document.getElementById('log-date');
   if(ld&&result.date)ld.value=result.date;
 
@@ -7012,6 +7070,10 @@ function _doLogSession(){
   // After a PE *run*, offer to pre-fill the post-run stretches (shows behind the
   // form card above, so it's revealed once that's dismissed — i.e. after the form)
   _maybeOfferStretches(subjectId,date,start,end,notes);
+  // If what was just logged is a pre-run stretch, the run it belongs to is
+  // parked in localStorage — fill its form in now, so the run follows the
+  // stretch rather than the other way round.
+  if(/Pre-Run Stretches\s*$/i.test(notes||''))_resumePendingRun();
 }
 
 // ── After-run stretches auto-fill ───────────────────────────────────────────
@@ -7088,6 +7150,95 @@ function fillStretchLog(){
   _pendingStretch=null;
   closeModal('stretch-modal-overlay');
   showToast('Stretches filled in — review & log ✓','var(--ok)');
+}
+
+// ── Pre-run stretches ───────────────────────────────────────────────────────
+// Mirrors the post-run flow, but computed backwards from the run's start time:
+// 15 minutes of stretching, finishing 5 minutes before the run begins. This is
+// bookkeeping for a stretch Noah already does, not a live reminder.
+const PRERUN_STRETCH_MINS=15, PRERUN_GAP_MINS=5;
+const PENDING_RUN_KEY='st_pending_run';
+let _pendingPreRun=null;
+
+// The window is [runStart-20, runStart-5]. A session in this app is a single
+// date with end > start, so a window straddling midnight cannot be represented:
+// for runs starting 00:05–00:19 the prompt is skipped rather than writing a
+// wrong date. A run starting before 00:05 puts the whole window on the previous
+// day, which is representable, so the date is rolled back.
+function _preRunStretchWindow(runDate,runStart){
+  if(!runDate||!runStart)return null;
+  const span=PRERUN_STRETCH_MINS+PRERUN_GAP_MINS;
+  const s=toMins(runStart)-span, e=toMins(runStart)-PRERUN_GAP_MINS;
+  if(isNaN(s)||isNaN(e))return null;
+  if(s<0&&e>=0)return null;
+  let date=runDate;
+  if(e<0){
+    const d=new Date(runDate+'T12:00:00');
+    d.setDate(d.getDate()-1);
+    date=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  return {date:date,start:_addMins(runStart,-span),end:_addMins(runStart,-PRERUN_GAP_MINS)};
+}
+
+function _savePendingRun(result,cycleNum){
+  try{localStorage.setItem(PENDING_RUN_KEY,JSON.stringify({result:result,cycleNum:cycleNum,savedAt:Date.now()}))}catch(e){}
+}
+function _loadPendingRun(){
+  try{
+    const raw=localStorage.getItem(PENDING_RUN_KEY);
+    if(!raw)return null;
+    const p=JSON.parse(raw);
+    // Anything older than 12 hours is stale — a run parked yesterday must not
+    // resurface today and overwrite whatever is in the log form.
+    if(!p||!p.result||(Date.now()-(p.savedAt||0))>43200000){_clearPendingRun();return null}
+    return p;
+  }catch(e){return null}
+}
+function _clearPendingRun(){try{localStorage.removeItem(PENDING_RUN_KEY)}catch(e){}}
+
+function _resumePendingRun(){
+  const p=_loadPendingRun();
+  _clearPendingRun();
+  if(!p)return;
+  _fillRunLogForm(p.result,p.cycleNum||1);
+}
+
+function _showPreRunStretchPrompt(w){
+  _pendingPreRun=w;
+  const note=_ordinalDate(w.date)+' - Pre-Run Stretches';
+  const el=document.getElementById('prerun-stretch-preview');
+  if(el)el.innerHTML='<b style="color:var(--text)">PE / Cardio</b> · '+PRERUN_STRETCH_MINS+' min<br>'+w.start+' – '+w.end+'<br><span style="color:var(--text2)">'+escHtml(note)+'</span>';
+  const ov=document.getElementById('prerun-stretch-modal-overlay');
+  if(ov)ov.classList.add('open');
+}
+
+function fillPreRunStretchLog(){
+  const w=_pendingPreRun;
+  _pendingPreRun=null;
+  closeModal('prerun-stretch-modal-overlay');
+  if(!w){_resumePendingRun();return}
+  showPage('log');
+  const sub=document.getElementById('log-subject'); if(sub)sub.value='pe';
+  if(typeof updateLogFormColour==='function')updateLogFormColour();
+  const dEl=document.getElementById('log-date'); if(dEl)dEl.value=w.date;
+  setLogTime('log-start',w.start);
+  setLogTime('log-end',w.end);
+  const nEl=document.getElementById('log-notes'); if(nEl)nEl.value=_ordinalDate(w.date)+' - Pre-Run Stretches';
+  const jEl=document.getElementById('log-journal');
+  if(jEl)jEl.value=buildStretchJournal(w.date,w.start,PRERUN_STRETCH_MINS,'Pre-Run Stretches');
+  updateJournalLenWarn();
+  _pendingJournalMeta={activity:'Stretch',app:null,durationSeconds:PRERUN_STRETCH_MINS*60};
+  updateLogDuration();
+  const card=document.getElementById('log-form-card');
+  if(card)card.scrollIntoView({behavior:'auto',block:'start'});
+  showToast('Pre-run stretches filled in — log this, then the run follows','var(--ok)');
+}
+
+// "Skip to the run" — the stretch is dropped, the run is not.
+function skipPreRunStretch(){
+  _pendingPreRun=null;
+  closeModal('prerun-stretch-modal-overlay');
+  _resumePendingRun();
 }
 
 function deleteEntry(id){
@@ -9649,6 +9800,15 @@ async function syncFromCloud(){
   // Check todo due times every minute (in-app notification)
   setInterval(checkTodoNotifs, 60000);
   // Check schedule-based in-app notifications every minute
+  // A run parked mid-flow (pre-run stretch offered, app reloaded before the run
+  // itself was logged) is picked back up here rather than quietly lost.
+  try{
+    const _pr=_loadPendingRun();
+    if(_pr&&_pr.result){
+      const _w=_preRunStretchWindow(_pr.result.date,_pr.result.startTime);
+      if(_w)_showPreRunStretchPrompt(_w); else _resumePendingRun();
+    }
+  }catch(e){}
 })();
 
 
