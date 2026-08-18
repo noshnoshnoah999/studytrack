@@ -514,7 +514,6 @@ a{color:inherit;text-decoration:none}
   .wheel-item{scroll-snap-align:center;flex-shrink:0;padding:10px 14px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;letter-spacing:0.4px;white-space:nowrap;user-select:none;-webkit-user-select:none}
   .wheel-item.active{color:var(--o);font-size:15px}
   .wheel-tick{flex-shrink:0;width:1px;height:12px;background:var(--border);opacity:0.6}
-  #bn-restore{display:none}
   .stats-strip{grid-template-columns:repeat(2,1fr)}
   .stat-chips{grid-template-columns:1fr 1fr}
   .two-col{grid-template-columns:1fr}
@@ -806,10 +805,6 @@ input:checked+.notif-slider:before{transform:translateX(18px);background:#fff}
 .notif-pref-label{font-size:14px;font-weight:600;color:var(--text)}
 .notif-pref-desc{font-size:12px;color:var(--text2);margin-top:2px}
 
-/* EXPORT PANEL */
-.export-panel{margin-top:8px;background:var(--bg3);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px}
-.export-btn{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--bg2);border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;color:var(--text2);text-align:left;width:100%}
-.export-btn:hover{background:var(--bg4);color:var(--text)}
 
 /* QUICK LOG FAB */
 
@@ -1028,12 +1023,6 @@ button:active{transform:scale(0.96)}
       <div class="sync-row">
         <div class="sync-dot idle" id="sync-dot-sb"></div>
         <span class="sync-label" id="sync-label-sb">Connecting…</span>
-      </div>
-      <div id="export-panel" style="display:none">
-        <div class="export-panel">
-          <button class="export-btn" onclick="exportReport()"> Print / Save Report</button>
-          <button class="export-btn" onclick="exportJSON()"> Backup Data (JSON)</button>
-        </div>
       </div>
     </div>
   </aside>
@@ -1328,21 +1317,6 @@ button:active{transform:scale(0.96)}
 </div>
 
 <!-- MOBILE MORE SHEET -->
-<div id="mobile-more-overlay" onclick="closeMobileMore()">
-  <div id="mobile-more-sheet" onclick="event.stopPropagation()">
-    <div class="bn-more-handle"></div>
-    <div class="bn-more-grid" id="mobile-more-grid"></div>
-    <button class="bn-more-hide" onclick="hideMobileNav()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg> Hide navigation
-    </button>
-  </div>
-</div>
-
-<!-- FLOATING NAV RESTORE (mobile, shown when nav hidden) -->
-<button id="bn-restore" onclick="showMobileNav()">
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg> Menu
-</button>
-
 <!-- GOAL SETTINGS MODAL -->
 <div class="modal-overlay" id="goal-modal-overlay" onclick="handleOverlayClick(event,'goal-modal-overlay')">
   <div class="modal-sheet" onclick="event.stopPropagation()">
@@ -2129,24 +2103,6 @@ function buildNav(){
   _wheelBuild(items, page);
 }
 
-function openMobileMore(){
-  document.getElementById('mobile-more-overlay').classList.add('open');
-}
-function closeMobileMore(){
-  document.getElementById('mobile-more-overlay').classList.remove('open');
-}
-function hideMobileNav(){
-  closeMobileMore();
-  localStorage.setItem('st_bn_hidden','1');
-  document.getElementById('bottom-nav').classList.add('bn-hidden');
-  document.getElementById('bn-restore').classList.add('visible');
-}
-function showMobileNav(){
-  localStorage.setItem('st_bn_hidden','0');
-  document.getElementById('bottom-nav').classList.remove('bn-hidden');
-  document.getElementById('bn-restore').classList.remove('visible');
-}
-
 function renderNavReorder(){
   const order=loadNavOrder();
   const items=order.map(id=>NAV_ITEMS.find(n=>n.id===id)).filter(Boolean);
@@ -2183,13 +2139,6 @@ function fmtH(h){
   if(hrs&&mins)return hrs+'h '+mins+'m';
   if(hrs)return hrs+'h';
   return mins+'m';
-}
-
-function fmtHColon(h){
-  const tot=Math.round(h*60);
-  const hrs=Math.floor(tot/60);
-  const mins=tot%60;
-  return hrs+':'+String(mins).padStart(2,'0');
 }
 
 function durStr(mins){
@@ -2355,12 +2304,6 @@ function weekRange(){
 function parseLocalDate(s){
   const p=s.split('-');
   return new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));
-}
-
-function daysBetween(a,b){
-  const da=parseLocalDate(a);
-  const db=parseLocalDate(b);
-  return Math.round((db-da)/(1000*60*60*24));
 }
 
 // ── DEFAULT DATA ──────────────────────────────────────────────────────────────
@@ -3975,7 +3918,6 @@ function deleteTodo(id){
 }
 
 // ── TASKS PAGE ────────────────────────────────────────────────────────────────
-const TASK_SUBJ_COLORS={};
 
 function _updateTasksBadge(){
   const todos=loadTodos();
@@ -3996,15 +3938,6 @@ function _updateTasksBadge(){
       if(badge)badge.remove();
     }
   });
-}
-
-let _tasksDoneOpen=false;
-function toggleTasksDoneSection(){
-  _tasksDoneOpen=!_tasksDoneOpen;
-  const body=document.getElementById('tasks-done-body');
-  const chev=document.getElementById('tasks-done-chev');
-  if(body)body.classList.toggle('open',_tasksDoneOpen);
-  if(chev)chev.classList.toggle('open',_tasksDoneOpen);
 }
 
 // Tasks tab is now a shortcut hub — task tracking lives in Notion + Nudge (iOS)
@@ -4046,34 +3979,6 @@ function renderTasksPage(){
       '</div>'+
       '<div style="font-size:11px;color:var(--text3);margin-top:16px;max-width:280px;margin-left:auto;margin-right:auto">Reminders may not open automatically on iPhone — Apple restricts this from Safari.</div>'+
     '</div>';
-}
-
-function toggleTasksSection(bodyId,headerEl){
-  const body=document.getElementById(bodyId);
-  const chev=document.getElementById(bodyId+'-chev');
-  if(!body)return;
-  const opening=!body.classList.contains('open');
-  body.classList.toggle('open',opening);
-  if(chev)chev.classList.toggle('open',opening);
-}
-
-function toggleTodoFull(id){
-  const todos=loadTodos();
-  const t=todos.find(x=>x.id===id);
-  if(!t)return;
-  t.done=!t.done;t.doneAt=t.done?new Date().toISOString():null;
-  saveTodos(todos);
-  // Animate the card out then re-render
-  renderTasksPage();_updateTasksBadge();
-  renderTodos();
-  if(document.getElementById('page-schedule').classList.contains('active'))renderSchedule();
-}
-
-function deleteTodoFull(id){
-  // Was a 450ms wait for the exit animation. Deletes immediately now.
-  const todos=loadTodos().filter(x=>x.id!==id);
-  saveTodos(todos);
-  renderTasksPage();renderTodos();_updateTasksBadge();
 }
 
 function openTodoModal(editId){
@@ -5316,21 +5221,6 @@ function updateLogFormColour(){
     card.style.borderLeft='';
     card.style.boxShadow='';
   }
-}
-
-// ── Quick log from dashboard ──────────────────────────────────────────────────
-function quickLog(subjectId,start){
-  showPage('log');
-  setTimeout(()=>{
-    const sel=document.getElementById('log-subject');
-    const ld=document.getElementById('log-date');
-    if(sel&&subjectId)sel.value=subjectId;
-    if(start)setLogTime('log-start',start);
-    if(ld)ld.value=todayStr();
-    updateLogDuration();
-    updateLogFormColour();
-    document.getElementById('log-end-hh')&&document.getElementById('log-end-hh').focus();
-  },50);
 }
 
 function autofillFromBlock(subjectId,start,end){
@@ -7535,47 +7425,6 @@ function _gradSharedVars(){
   return{sessions,subjs,goals,TOTAL_REQ,totalLogged,remaining,pct,now,MONTHS,recentH,hasGoodData,pace,paceIsGoal,estDateStr,estDate,targetDate,diffDays,ahead,neededPace,expectedPct,pctDiffStr,scheduleAhead};
 }
 
-function _renderGradSection(){
-  const v=_gradSharedVars();
-  const {pct,expectedPct,pctDiffStr,scheduleAhead,totalLogged,remaining,MONTHS}=v;
-  const _gradCard=document.getElementById('grad-progress-card');
-  if(!_gradCard)return;
-  _gradCard.innerHTML=
-    '<div class="grad-hero">'+
-      '<div class="grad-pct-big">'+pct.toFixed(1)+'%</div>'+
-      '<div class="grad-pct-label">of graduation complete</div>'+
-      '<div class="grad-bar-wrap" style="position:relative">'+
-        '<div class="grad-bar-fill" id="grad-bar" style="width:'+pct.toFixed(2)+'%"></div>'+
-        '<div style="position:absolute;top:-3px;bottom:-3px;left:'+expectedPct.toFixed(2)+'%;width:2px;background:var(--text3);border-radius:2px" title="Expected: '+expectedPct.toFixed(1)+'%"></div>'+
-      '</div>'+
-      '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding:10px 14px;background:var(--bg3);border-radius:10px">'+
-        '<div>'+
-          '<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Expected today</div>'+
-          '<div style="font-size:18px;font-weight:800;color:var(--text2);margin-top:2px">'+expectedPct.toFixed(1)+'%</div>'+
-        '</div>'+
-        '<div style="text-align:center">'+
-          '<div style="font-size:20px;font-weight:900;color:'+(scheduleAhead?'var(--ok)':'var(--err)')+'">'+pctDiffStr+'</div>'+
-          '<div style="font-size:11px;color:var(--text3);font-weight:600;margin-top:1px">'+(scheduleAhead?'ahead':'behind')+' schedule</div>'+
-        '</div>'+
-        '<div style="text-align:right">'+
-          '<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">You are</div>'+
-          '<div style="font-size:18px;font-weight:800;color:var(--o);margin-top:2px">'+pct.toFixed(1)+'%</div>'+
-        '</div>'+
-      '</div>'+
-      '<div class="grad-stats-row">'+
-        '<div class="grad-stat"><div class="grad-stat-val">'+fmtH(totalLogged)+'</div><div class="grad-stat-lbl">Logged</div></div>'+
-        '<div class="grad-stat"><div class="grad-stat-val">'+fmtH(remaining)+'</div><div class="grad-stat-lbl">Remaining</div></div>'+
-        '<div class="grad-stat"><div class="grad-stat-val">'+GRAD_TOTAL_CREDITS+'cr</div><div class="grad-stat-lbl">Total Credits</div></div>'+
-      '</div>'+
-    '</div>';
-  // Spring-pop grad stats
-  _gradCard.querySelectorAll('.grad-stat').forEach((s,i)=>{
-    s.classList.add('spring-pop');
-  });
-  // Animate grad bar
-  const gradBarFill=_gradCard.querySelector('.grad-bar-fill');
-}
-
 function _renderGradEstCard(){
   const v=_gradSharedVars();
   const {remaining,pace,paceIsGoal,estDateStr,estDate,targetDate,ahead,neededPace,recentH,MONTHS,now,sessions,subjs}=v;
@@ -7915,150 +7764,6 @@ function _applyCoachAIResults(subjects){
   const expand=document.getElementById('coach-scan-expand');
   if(expand)expand.style.display='none';
   showToast('✓ Filled '+filled+' subject'+(filled!==1?'s':'')+' — review and save');
-}
-
-// ── GRADUATION ────────────────────────────────────────────────────────────────
-// ── PLAN PAGE ─────────────────────────────────────────────────────────────────
-// ── TIMELINE ──────────────────────────────────────────────────────────────────
-function renderTimeline(){
-  const el=document.getElementById('timeline-inner');
-  if(!el)return;
-  const subjs=loadSubjects().filter(s=>!s.extraCredit);
-  const hoursMap=loadHours();
-  const goals=loadGoals();
-  const COLORS={};
-  const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const now=nowLocal();
-
-  // ── Simulation: week-by-week, distribute goal hours among active subjects ────
-  const rem={};
-  subjs.forEach(s=>{rem[s.id]=Math.max(0,s.req-((s.base||0)+(hoursMap[s.id]||0)))});
-  const completedAt={};
-  subjs.forEach(s=>{
-    if(s.done||rem[s.id]<=0){completedAt[s.id]=new Date(now-86400000);rem[s.id]=0}
-  });
-  const weeklyH=goals.daily*(goals.daysPerWeek||5);
-  const simDate=new Date(now);
-  for(let w=0;w<300;w++){
-    const active=subjs.filter(s=>{
-      if(completedAt[s.id])return false;
-      if(rem[s.id]<=0)return false;
-      const p=PREREQS[s.id];
-      return!(p&&!completedAt[p]);
-    });
-    if(!active.length)break;
-    const total=active.reduce((a,s)=>a+rem[s.id],0);
-    if(total<=0)break;
-    // Equal distribution — each active subject gets an equal share of weekly hours.
-    // Subjects with fewer hours left finish first, giving distinct completion dates.
-    const share=weeklyH/active.length;
-    active.forEach(s=>{
-      rem[s.id]=Math.max(0,rem[s.id]-share);
-      if(rem[s.id]<=0&&!completedAt[s.id]){
-        const d=new Date(simDate);d.setDate(d.getDate()+7);
-        completedAt[s.id]=d;
-      }
-    });
-    simDate.setDate(simDate.getDate()+7);
-  }
-
-  // ── Summary numbers ───────────────────────────────────────────────────────────
-  const futureDates=Object.values(completedAt).filter(d=>d>now);
-  const finishDate=futureDates.length?new Date(Math.max(...futureDates.map(d=>d.getTime()))):new Date(now);
-  const deadline=new Date(WORK_DEADLINE);
-  const bufferDays=Math.round((deadline-finishDate)/86400000);
-  const bufferMonths=Math.abs(Math.round(bufferDays/30.4));
-  const monthsToFinish=Math.round((finishDate-now)/86400000/30.4);
-  const onTime=finishDate<=deadline;
-  const finishStr=MON[finishDate.getMonth()]+' '+finishDate.getFullYear();
-
-  // ── Build ordered subject list (done first, then by completion date) ──────────
-  // Split into: already done, active (can study now), locked (prereq not met)
-  const done=subjs.filter(s=>s.done||(completedAt[s.id]&&completedAt[s.id]<=now));
-  const future=subjs
-    .filter(s=>!s.done&&(!completedAt[s.id]||completedAt[s.id]>now))
-    .sort((a,b)=>{
-      const da=completedAt[a.id]?completedAt[a.id].getTime():Infinity;
-      const db=completedAt[b.id]?completedAt[b.id].getTime():Infinity;
-      return da-db;
-    });
-
-  // ── Render ───────────────────────────────────────────────────────────────────
-  let html='';
-
-  // ── Summary card ─────────────────────────────────────────────────────────────
-  html+='<div class="card" style="margin-bottom:16px">'+
-    '<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">'+
-      '<div>'+
-        '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Estimated finish</div>'+
-        '<div style="font-size:34px;font-weight:900;color:var(--text);letter-spacing:-1px;line-height:1">'+escHtml(finishStr)+'</div>'+
-        '<div style="font-size:13px;color:var(--text3);margin-top:6px">'+monthsToFinish+' months from now</div>'+
-      '</div>'+
-      '<div style="text-align:right;padding-bottom:2px">'+
-        '<div style="display:inline-block;font-size:12px;font-weight:700;padding:5px 14px;border-radius:100px;background:'+(onTime?'var(--okl)':'var(--errl)')+';color:'+(onTime?'var(--ok)':'var(--err)')+'">'+
-          (onTime?bufferMonths+'mo ahead':''+bufferMonths+'mo late')+
-        '</div>'+
-        '<div style="font-size:12px;color:var(--text3);margin-top:7px">'+fmtH(goals.daily)+'/day &middot; '+(goals.daysPerWeek||5)+'d/wk</div>'+
-      '</div>'+
-    '</div>'+
-  '</div>';
-
-  // ── Subject rows ─────────────────────────────────────────────────────────────
-  html+='<div class="card" style="padding:0;overflow:hidden">';
-
-  // Done subjects (collapsed header)
-  if(done.length){
-    html+='<div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">'+
-      '<span style="width:8px;height:8px;border-radius:50%;background:var(--ok);flex-shrink:0;display:inline-block"></span>'+
-      '<span style="font-size:12px;font-weight:700;color:var(--ok)">'+done.length+' subject'+(done.length!==1?'s':'')+' complete</span>'+
-      '<span style="font-size:12px;color:var(--text3);margin-left:auto">EL1 · EL2 · EL3 · ...</span>'+
-    '</div>';
-  }
-
-  // Future subjects
-  future.forEach((s,idx)=>{
-    const col=COLORS[s.id]||'var(--o)';
-    const logged=(s.base||0)+(hoursMap[s.id]||0);
-    const pct=s.req>0?Math.min(100,logged/s.req*100):0;
-    const left=Math.max(0,s.req-logged);
-    const isLocked=isSubjPrereqLocked(s.id,subjs);
-    const estDate=completedAt[s.id];
-    const estStr=estDate&&estDate>now?(MON[estDate.getMonth()]+' '+estDate.getFullYear()):'—';
-    const moAway=estDate&&estDate>now?Math.round((estDate-now)/86400000/30.4):null;
-    const isLast=idx===future.length-1;
-
-    html+='<div data-tl-row style="padding:13px 18px;'+(isLast?'':'border-bottom:1px solid var(--border)')+';display:flex;align-items:center;gap:12px;'+(isLocked?'opacity:0.5':'')+'">'+
-      // Color dot
-      '<div style="width:10px;height:10px;border-radius:50%;background:'+col+';flex-shrink:0"></div>'+
-      // Name + progress
-      '<div style="flex:1;min-width:0">'+
-        '<div style="margin-bottom:5px">'+
-          '<div style="font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(s.name)+'</div>'+
-          '<div style="font-size:11px;color:var(--text3);margin-top:1px">'+
-            (isLocked?' locked':fmtH(left)+' left')+
-          '</div>'+
-        '</div>'+
-        '<div style="height:5px;background:var(--bg3);border-radius:100px;overflow:hidden">'+
-          '<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:100px"></div>'+
-        '</div>'+
-      '</div>'+
-      // Est date
-      '<div style="text-align:right;flex-shrink:0">'+
-        '<div style="font-size:13px;font-weight:700;color:'+(isLocked?'var(--text3)':'var(--text2)')+'">'+escHtml(estStr)+'</div>'+
-        (moAway!==null?'<div style="font-size:11px;color:var(--text3)">'+moAway+'mo</div>':'')+
-      '</div>'+
-    '</div>';
-  });
-
-  html+='</div>'; // close card
-  el.innerHTML=html;
-
-  // Stagger the subject rows in the timeline with slide-up
-  const rows=el.querySelectorAll('[data-tl-row]');
-  rows.forEach((r,i)=>{
-    r.classList.add('slide-up');
-  });
-  // Animate graduation progress bars
 }
 
 function renderPlan(){
@@ -9211,10 +8916,6 @@ function setHoliday(paused,until){
     else showToast(' Reminders resumed');
   }
 }
-function onHolidayDateChange(val){
-  const h=loadHoliday();
-  if(h.paused)setHoliday(true,val||null);
-}
 // Modal-based holiday picker — tapping  opens this so the return date is the
 // obvious, central action (the old inline date field was fiddly on iOS).
 function openHolidayModal(){
@@ -9398,6 +9099,10 @@ function confirmLogout(){
 function logoutSession(){
   setAuthSession(null);
   if(_stRefreshTimer)clearTimeout(_stRefreshTimer);
+  // Close the realtime socket too, or it keeps reconnecting and pulling timer
+  // state into a signed-out UI. This is what _rtDisconnect() was written for —
+  // it had simply never been called.
+  _rtDisconnect();
   showLoginScreen();
 }
 
@@ -9816,22 +9521,11 @@ async function syncFromCloud(){
 })();
 
 
-function jumpTo(id){
-  const el=document.getElementById(id);
-  if(el)el.scrollIntoView({behavior:'auto',block:'start'});
-}
-
 // Pull timer state when user switches back to the tab
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'&&currentPage==='timer')timerSyncPull(false);
 });
 
-
-// ── DATA EXPORT ───────────────────────────────────────────────────────────────
-function toggleExportPanel(){
-  const p=document.getElementById('export-panel');
-  if(p)p.style.display=p.style.display==='none'?'block':'none';
-}
 
 function downloadFile(content,filename,mimeType){
   const blob=new Blob([content],{type:mimeType});
@@ -9946,13 +9640,9 @@ function exportJSON(){
   };
   downloadFile(JSON.stringify(data,null,2),'studytrack-backup-'+today+'.json','application/json');
   showToast('Backup downloaded');
-  const p=document.getElementById('export-panel');
-  if(p)p.style.display='none';
 }
 
 function exportReport(){
-  const p=document.getElementById('export-panel');
-  if(p)p.style.display='none';
   // Use DEFAULT_SUBJECTS as authoritative list so no subject goes missing from stored data
   const allStoredSubjs=loadSubjects();
   const subjs=DEFAULT_SUBJECTS.filter(s=>!s.extraCredit).map(def=>{
@@ -10308,7 +9998,6 @@ function _aiRetry(){
 }
 let _aiHistory=_aiLoadHistory();   // [{role,content}] — persisted to localStorage
 let _aiThinking=false;
-let _aiPendingActions=null; // actions waiting for user confirmation
 
 // ── UNIFIED API KEY ───────────────────────────────────────────────────────────
 // The whole app now uses ONE key store: st_anthropic_key (same as the Coach Report
