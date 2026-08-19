@@ -1101,7 +1101,7 @@ button:active{transform:scale(0.96)}
         <div class="duration-display" id="log-duration" style="margin:10px 0 14px"></div>
         <div class="form-group" style="margin-bottom:16px">
           <label class="form-label">Journal Content/What You Studied</label>
-          <input type="text" class="form-input" id="log-notes" placeholder="e.g. chapter 3 review, or 11th July - Morning Cycle" oninput="updateJournalLenWarn()">
+          <input type="text" class="form-input" id="log-notes" oninput="updateJournalLenWarn()">
           <div id="log-notes-len" style="display:none;font-size:11px;line-height:1.45;margin-top:6px"></div>
         </div>
         <div class="dup-warn" id="dup-warn">
@@ -1847,6 +1847,30 @@ const _JOURNAL_URL_WARN=6000, _JOURNAL_URL_MAX=8000;
 
 // Single source of truth for the prefill URL. The length warning and the actual
 // "Open form" link MUST build the URL the same way or the warning drifts.
+// Goes into the Google Form's Contents box and NOWHERE else — never stored on
+// the session, never shown anywhere in StudyTrack, never written by a model.
+// It is added the moment the form URL is built, so what Noah sees in the app
+// stays exactly what he typed. The number after the colon is left blank on
+// purpose: Noah fills it in on the form itself.
+const JOURNAL_WRITING_LINE='Journal Writing Time (Included in Study Time):';
+
+// PE only: a workout of 25 minutes or less doesn't get the line — journal-writing
+// time can't plausibly ride on top of a session that short, and the entry has to
+// match the attached proof. Every other subject always gets it. Noah, 2026-08-19.
+const JOURNAL_WRITING_PE_MIN_MINS=25;
+
+function _formContents(subjectId,start,end,notes){
+  if(subjectId==='pe'){
+    const mins=(start&&end)?(toMins(end)-toMins(start)):0;
+    if(!(mins>JOURNAL_WRITING_PE_MIN_MINS))return notes||'';
+  }
+  const body=(notes||'').replace(/\r/g,'');
+  if(!body)return JOURNAL_WRITING_LINE;
+  const lines=body.split('\n');
+  lines.splice(1,0,JOURNAL_WRITING_LINE);   // straight after the title line
+  return lines.join('\n');
+}
+
 function _buildSubjectFormUrl(subjectId,date,start,end,notes){
   const cfg=_SUBJECT_FORMS[subjectId];
   if(!cfg)return null;
@@ -1854,7 +1878,8 @@ function _buildSubjectFormUrl(subjectId,date,start,end,notes){
   if(date) url+='&entry.911550456='+encodeURIComponent(date);
   if(start){const p=start.split(':');url+='&entry.2130026531_hour='+p[0]+'&entry.2130026531_minute='+(p[1]||'00')}
   if(end){const p=end.split(':');url+='&entry.1426010469_hour='+p[0]+'&entry.1426010469_minute='+(p[1]||'00')}
-  if(notes) url+='&entry.706383331='+encodeURIComponent(notes);
+  const contents=_formContents(subjectId,start,end,notes);
+  if(contents) url+='&entry.706383331='+encodeURIComponent(contents);
   if(cfg.confirmId) url+='&entry.'+cfg.confirmId+'='+encodeURIComponent('確認しました / Confirmed');
   return url;
 }
@@ -6671,10 +6696,10 @@ function _doLogSession(){
   if(currentPage==='progress')renderProgress();
   if(currentPage==='subjects')renderSubjectsPage();
   if(currentPage==='graduation')renderGraduationPage();
-  // Auto-open cardio Google Form after logging a PE session.
-  // The form's Contents box gets the JOURNAL, not the one-line note — that box
-  // is the actual school submission, so it has to carry the real content.
-  if(_SUBJECT_FORMS[subjectId]) _openSubjectForm(subjectId,date,start,end,(journal||notes),_newId);
+  // Auto-open the subject's Google Form after logging. Since the Journal Content
+  // box was merged into Notes on 2026-08-19 there is only one field, so `notes`
+  // IS the submission text. _buildSubjectFormUrl() adds the journal-writing line.
+  if(_SUBJECT_FORMS[subjectId]) _openSubjectForm(subjectId,date,start,end,notes,_newId);
   // After a PE *run*, offer to pre-fill the post-run stretches (shows behind the
   // form card above, so it's revealed once that's dismissed — i.e. after the form)
   _maybeOfferStretches(subjectId,date,start,end,notes);
@@ -10366,7 +10391,7 @@ function renderAIPage(){
     <div id="es-duration" style="font-size:13px;font-weight:700;color:var(--o);min-height:20px;margin:10px 0 4px"></div>
     <div class="form-group">
       <label class="form-label">Journal Content/What You Studied</label>
-      <input type="text" class="form-input" id="es-notes" placeholder="e.g. chapter 3 review">
+      <input type="text" class="form-input" id="es-notes">
     </div>
     <div class="modal-actions">
       <button class="btn-save" onclick="saveEditSession()">Save Changes</button>
