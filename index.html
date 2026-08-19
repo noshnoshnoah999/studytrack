@@ -398,8 +398,14 @@ a{color:inherit;text-decoration:none}
 .tag.locked{background:var(--ol);color:var(--o)}
 .tag.zero{background:var(--bg3);color:var(--text3)}
 .subj-bar-row{display:flex;align-items:center;gap:8px}
-.subj-bar{flex:1;height:5px;background:var(--bg3);border-radius:100px;overflow:hidden}
+/* overflow is visible on purpose: the contract notch below extends past the bar.
+   The fill carries its own border-radius, so nothing needed clipping anyway. */
+.subj-bar{flex:1;height:5px;background:var(--bg3);border-radius:100px;position:relative}
 .subj-bar-fill{height:100%;border-radius:100px}
+/* Contract boundary tick — see CONTRACT_MARKERS. Deliberately taller than the bar:
+   when progress happens to sit ON the boundary, a notch drawn inside the bar is
+   invisible because it lands exactly where the fill stops. */
+.subj-bar-mark{position:absolute;top:-4px;bottom:-4px;width:2px;border-radius:1px;background:var(--text3)}
 .subj-pct{font-size:12px;font-weight:700;color:var(--text2);min-width:34px;text-align:right;display:flex;flex-direction:column;align-items:flex-end;line-height:1.3}
 .subj-left{font-size:10px;font-weight:500;color:var(--text3);white-space:nowrap}
 .subj-hours{font-size:12px;color:var(--text3);margin-top:3px}
@@ -7035,6 +7041,15 @@ function _renderProgSpotlight(){
     '</div>'+rows;
 }
 
+// A subject whose required hours span more than one teacher contract gets a notch
+// on its progress bar where one contract ends and the next begins. PE is the only
+// one today: PE #1 was 150h, then Noah opened a 0.5-credit PE #2 worth 75h, taking
+// the total to the 225h the bar already shows as one continuous requirement.
+// Noah, 2026-08-19. Add an entry here if another subject ever splits the same way.
+const CONTRACT_MARKERS={
+  pe:{at:150, label:'PE #1 ends at 150h'}
+};
+
 function renderSubjectsPage(){
   const allSubjs=loadSubjects();
   const el=document.getElementById('subjects-list');
@@ -7058,6 +7073,10 @@ function renderSubjectsPage(){
     const locked=isSubjPrereqLocked(s.id,allSubjs);
     const logged=getLogged(s.id);
     const pct=s.req>0?Math.min(100,logged/s.req*100):100;
+    // Contract boundary notch. Only drawn when it actually falls inside the bar —
+    // if req ever drops to the marker value the notch would sit on the end cap.
+    const mark=CONTRACT_MARKERS[s.id];
+    const markPct=(mark&&s.req>0&&mark.at>0&&mark.at<s.req)?(mark.at/s.req*100):null;
     const subjColor=locked?'var(--text3)':(SUBJ_COLORS[s.id]||'var(--o)');
     const barBg=s.done||pct>=100?'var(--ok)':subjColor;
     const tags=[];
@@ -7078,10 +7097,13 @@ function renderSubjectsPage(){
         '<div class="subj-name-row"><span class="subj-name">'+escHtml(s.name)+'</span>'+tags.join('')+'</div>'+
         (!locked?
           '<div class="subj-bar-row">'+
-            '<div class="subj-bar"><div class="subj-bar-fill" style="width:'+pct+'%;background:'+barBg+'"></div></div>'+
+            '<div class="subj-bar"><div class="subj-bar-fill" style="width:'+pct+'%;background:'+barBg+'"></div>'+
+              (markPct!==null?'<div class="subj-bar-mark" style="left:'+markPct+'%" title="'+escHtml(mark.label)+'"></div>':'')+
+            '</div>'+
             '<div class="subj-pct">'+Math.round(pct)+'%'+(pct<100?'<span class="subj-left">'+fmtH(Math.max(0,s.req-logged))+' left</span>':'')+'</div>'+
           '</div>'+
-          '<div class="subj-hours">'+fmtH(logged)+' logged · '+fmtH(s.req)+' required</div>'+
+          '<div class="subj-hours">'+fmtH(logged)+' logged · '+fmtH(s.req)+' required'+
+            (markPct!==null?' · '+escHtml(mark.label):'')+'</div>'+
           (logged===0?'<div style="margin-top:8px">'+askClaudeBtn+'</div>':'')
         :
           '<div class="subj-hours" style="color:var(--text3)">'+fmtH(s.req)+' required · unlocks when prereq is done</div>'
