@@ -1745,7 +1745,12 @@ function genId(){return Math.random().toString(36).slice(2,9)+Math.random().toSt
 // Form config per subject: url + confirm checkbox entry ID (differs per form)
 // confirmId: found in page source FB_PUBLIC_LOAD_DATA_ — null = not yet known (checkbox skipped)
 const _SUBJECT_FORMS={
-  pe:       {url:'https://docs.google.com/forms/d/e/1FAIpQLScr3Pp0jDNTQ6P3n6YAFLBzcuKWqb6YiC6lQtJqU3aKFNw-iQ/viewform', confirmId:'144075977'},
+  // PE #2 (0.5-credit, 75h) — PE crossed the 150h contract cap, so the second
+  // contract's form replaces the first from 2026-08-19. Field IDs are identical
+  // to every other subject form; only the confirm checkbox differs. PE #1's form
+  // was .../1FAIpQLScr3Pp0jDNTQ6P3n6YAFLBzcuKWqb6YiC6lQtJqU3aKFNw-iQ/... with
+  // confirmId 144075977 — kept here only as a record, nothing points at it now.
+  pe:       {url:'https://docs.google.com/forms/d/e/1FAIpQLSfH7ynrmIUQr3QljYOEeUQDBBWVTxbaMCyeGj-7r-U2Cvy4kQ/viewform', confirmId:'1203417410'},
   japanese: {url:'https://docs.google.com/forms/d/e/1FAIpQLSfw8qjM8JkTLAsJgxgeDdd4TfqStnxK3hRz9prObOIqxcTL8w/viewform', confirmId:'1757403334'},
   cwp:      {url:'https://docs.google.com/forms/d/e/1FAIpQLSdl9Qkm0AreT18YF1Yx-sHXzdMygeR7E3LtZkt1PNEtwc1wvg/viewform', confirmId:'1832701138'},
   english:  {url:'https://docs.google.com/forms/d/e/1FAIpQLSfS0CMd-ejWxQvAw9Y6x1T_HLgn30j7QFJ_pMs-MpDSdFhqQg/viewform', confirmId:'782219930'},
