@@ -1340,23 +1340,6 @@ button:active{transform:scale(0.96)}
 </div>
 
 <!-- AFTER-RUN STRETCHES PROMPT -->
-<div class="modal-overlay" id="stretch-modal-overlay" onclick="handleOverlayClick(event,'stretch-modal-overlay')">
-  <div class="modal-sheet" onclick="event.stopPropagation()">
-    <div class="modal-handle"></div>
-    <div class="modal-title"> After Run Stretches?</div>
-    <div style="font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:14px">Log your post-run stretches? I'll fill the form in — just review and tap Log Session (the stretches form opens after).</div>
-    <div id="stretch-preview" style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:13px;line-height:1.7"></div>
-    <div class="modal-actions">
-      <button class="btn-save" onclick="fillStretchLog()">Fill it in</button>
-      <button class="btn-cancel" onclick="closeModal('stretch-modal-overlay')">Not now</button>
-    </div>
-  </div>
-</div>
-
-<!-- PRE-RUN STRETCHES PROMPT -->
-<!-- Offered BEFORE the run's own log form is filled in, so the two journals are
-     submitted in the order they actually happened. The run itself is parked in
-     localStorage while this is open, so a reload cannot lose it. -->
 <div class="modal-overlay" id="prerun-stretch-modal-overlay" onclick="handleOverlayClick(event,'prerun-stretch-modal-overlay')">
   <div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
@@ -3508,11 +3491,14 @@ function buildWorkoutJournal(r,cycleNum){
   return title;
 }
 
-// Stretch label — e.g. "11th June - After Run Stretches". One line, same rule as
+// Stretch label — e.g. "11th June - After-Run Stretches". One line, same rule as
 // buildWorkoutJournal(): the form supplies date and times itself. The routine
 // itself is in the attached Runner's Stretch Guide PDF.
+// Hyphenated since 2026-08-19 so it matches "Pre-Run Stretches". Sessions logged
+// before then read "After Run Stretches"; nothing matches on this text, so the
+// old entries are only a cosmetic difference in history.
 function buildStretchJournal(dateStr,label){
-  return _ordinalDate(dateStr)+' - '+(label||'After Run Stretches');
+  return _ordinalDate(dateStr)+' - '+(label||'After-Run Stretches');
 }
 
 // How many of this activity are already logged in the SAME PART OF THE DAY?
@@ -6721,9 +6707,12 @@ function _doLogSession(){
 }
 
 // ── After-run stretches auto-fill ───────────────────────────────────────────
-// After logging a PE run, offer to pre-fill the post-run stretches session:
-// PE/Cardio, starts 5 min after the run ends, lasts 20 min, note
-// "{15th June} - After Run Stretches" (matches Noah's existing log entries).
+// After logging a PE run, the post-run stretches session is filled into the log
+// form automatically: PE/Cardio, starting 5 min after the run ends, 20 min long,
+// note "{15th June} - After-Run Stretches".
+// There used to be a "Fill it in / Not now" prompt here. Noah never picked "Not
+// now", so as of 2026-08-19 it just fills — the modal is gone. The fill happens
+// behind the Google Form card, so it is waiting on screen once that is dismissed.
 let _pendingStretch=null;
 // Metrics from the last import, attached to the session when it is logged so
 // the NEXT import can compare against it.
@@ -6759,18 +6748,10 @@ function _maybeOfferStretches(subjectId,date,start,end,notes){
   if((notes||'').toLowerCase().includes('stretch'))return; // don't loop after the stretch session
   if(!_looksLikeRun(notes))return;                          // runs/jogs/5k-10k only, not cycles/walks
   _pendingStretch={date,end};
-  _showStretchPrompt(date,end);
-}
-function _showStretchPrompt(date,end){
-  const sStart=_addMins(end,5),sEnd=_addMins(sStart,20);
-  const note=_ordinalDate(date)+' - After Run Stretches';
-  const el=document.getElementById('stretch-preview');
-  if(el)el.innerHTML='<b style="color:var(--text)">PE / Cardio</b> · 20 min<br>'+sStart+' – '+sEnd+'<br><span style="color:var(--text2)">'+escHtml(note)+'</span>';
-  const ov=document.getElementById('stretch-modal-overlay');
-  if(ov)ov.classList.add('open');
+  fillStretchLog();
 }
 function fillStretchLog(){
-  if(!_pendingStretch){closeModal('stretch-modal-overlay');return}
+  if(!_pendingStretch)return;
   const {date,end}=_pendingStretch;
   // Starts 5 min after the run session ends. Since 18 Aug 2026 the run's End
   // Time is the real end of the activity — journal-writing minutes no longer
@@ -6791,8 +6772,11 @@ function fillStretchLog(){
   _pendingJournalMeta={activity:'Stretch',app:null,durationSeconds:stretchMins*60};
   updateLogDuration();
   _pendingStretch=null;
-  closeModal('stretch-modal-overlay');
-  showToast('Stretches filled in — review & log ✓','var(--ok)');
+  // Same as the pre-run path: put the form where he lands after dismissing the
+  // Google Form card, rather than leaving him scrolled wherever he was.
+  const card=document.getElementById('log-form-card');
+  if(card)card.scrollIntoView({behavior:'auto',block:'start'});
+  showToast('After-run stretches filled in — review & log ✓','var(--ok)');
 }
 
 // ── Pre-run stretches ───────────────────────────────────────────────────────
