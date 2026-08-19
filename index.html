@@ -637,16 +637,6 @@ a{color:inherit;text-decoration:none}
 .pace-label{font-size:13px;color:var(--text2)}
 .pace-val{font-size:14px;font-weight:700;color:var(--text)}
 
-/* TEMPLATE CHIPS */
-.template-section{margin-bottom:12px}
-.template-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;-ms-overflow-style:none}
-.template-row::-webkit-scrollbar{display:none}
-.template-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:100px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;color:var(--text2);white-space:nowrap;flex-shrink:0}
-.template-chip:hover{background:var(--bg3);color:var(--text);border-color:var(--text3)}
-.template-chip-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.template-chip-add{background:var(--bg2);border:1.5px dashed var(--border);color:var(--text3);font-size:14px;font-weight:700;padding:6px 14px}
-.template-chip-add:hover{border-color:var(--o);color:var(--o);background:var(--ol)}
-.template-empty-hint{font-size:12px;color:var(--text3);font-style:italic;padding:4px 0}
 /* Import button */
 .btn-import-workout{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:12px;color:var(--text2);cursor:pointer;font-family:inherit}
 .btn-import-workout:hover{background:var(--bg4);color:var(--text)}
@@ -704,10 +694,6 @@ a{color:inherit;text-decoration:none}
 .task-btn{background:none;border:none;cursor:pointer;color:var(--text3);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px}
 .task-btn:hover{background:var(--bg3);color:var(--text)}
 .task-btn.del:hover{background:var(--errl);color:var(--err)}
-.tasks-empty{text-align:center;padding:48px 24px;color:var(--text3)}
-.tasks-empty-icon{font-size:40px;margin-bottom:12px}
-.tasks-empty-text{font-size:15px;font-weight:600;margin-bottom:6px;color:var(--text2)}
-.tasks-empty-sub{font-size:13px}
 /* Nav badge */
 .nav-badge{min-width:18px;height:18px;border-radius:100px;background:var(--err);color:#fff;font-size:10px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;padding:0 5px;margin-left:auto}
 .bn-badge{min-width:16px;height:16px;border-radius:100px;background:var(--err);color:#fff;font-size:9px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;position:absolute;top:2px;right:50%;transform:translateX(10px)}
@@ -1075,8 +1061,6 @@ button:active{transform:scale(0.96)}
     <!-- PAGE: LOG -->
     <div class="page active" id="page-log">
       <div id="class-log-prompts"></div>
-      <!-- QUICK TEMPLATES -->
-      <div class="template-section" id="template-section"></div>
       <div class="forms-pending-banner" id="forms-pending-banner" onclick="openFormsPending()"></div>
       <div class="card log-form-card" id="log-form-card" style="margin-bottom:12px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
@@ -1115,17 +1099,10 @@ button:active{transform:scale(0.96)}
           </div>
         </div>
         <div class="duration-display" id="log-duration" style="margin:10px 0 14px"></div>
-        <div class="form-group" style="margin-bottom:12px">
-          <label class="form-label">Notes (optional)</label>
-          <input type="text" class="form-input" id="log-notes" placeholder="e.g. chapter 3 review">
-        </div>
         <div class="form-group" style="margin-bottom:16px">
-          <label class="form-label" style="display:flex;align-items:center;justify-content:space-between">
-            <span>Journal Content <span style="font-weight:400;color:var(--text3)">(for the Google Form)</span></span>
-            <button type="button" id="log-journal-copy" onclick="copyJournalContent()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:3px 9px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit">Copy</button>
-          </label>
-          <textarea class="form-input" id="log-journal" rows="8" placeholder="Auto-filled when you import a workout screenshot" style="resize:vertical;min-height:110px;line-height:1.55" oninput="updateJournalLenWarn()"></textarea>
-          <div id="log-journal-len" style="display:none;font-size:11px;line-height:1.45;margin-top:6px"></div>
+          <label class="form-label">Journal Content/What You Studied</label>
+          <input type="text" class="form-input" id="log-notes" placeholder="e.g. chapter 3 review, or 11th July - Morning Cycle" oninput="updateJournalLenWarn()">
+          <div id="log-notes-len" style="display:none;font-size:11px;line-height:1.45;margin-top:6px"></div>
         </div>
         <div class="dup-warn" id="dup-warn">
           <div class="dup-warn-title"> Possible duplicate</div>
@@ -1272,17 +1249,6 @@ button:active{transform:scale(0.96)}
       <div id="ai-context-bar" class="ai-context-bar" style="margin-top:12px"></div>
       <div id="ai-chat-messages"></div>
       <!-- Fixed input bar (rendered by JS, always shown when page active) -->
-    </div>
-
-    <!-- PAGE: TASKS -->
-    <div class="page" id="page-tasks">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-        <h2 style="font-size:22px;font-weight:800;letter-spacing:-0.5px">Tasks</h2>
-      </div>
-      <!-- Stats bar (kept for badge/data compatibility, unused in shortcut view) -->
-      <div id="tasks-stats-bar" style="display:none"></div>
-      <!-- Task list replaced with external shortcut hub -->
-      <div id="tasks-page-list"></div>
     </div>
 
   </main>
@@ -1670,38 +1636,6 @@ button:active{transform:scale(0.96)}
   </div>
 </div>
 
-<!-- TEMPLATE MODAL -->
-<div class="modal-overlay" id="template-modal-overlay" onclick="handleOverlayClick(event,'template-modal-overlay')">
-  <div class="modal-sheet" onclick="event.stopPropagation()">
-    <div class="modal-handle"></div>
-    <input type="hidden" id="tpl-edit-id">
-    <div class="modal-title" id="tpl-modal-title">New Template</div>
-    <div class="form-group">
-      <label class="form-label">Subject</label>
-      <select class="form-input" id="tpl-subject"></select>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Duration (hours)</label>
-      <input type="number" class="form-input" id="tpl-duration" placeholder="1.5" min="0.1" max="12" step="0.25">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Label (optional)</label>
-      <input type="text" class="form-input" id="tpl-name" placeholder="e.g. Japanese · 1.5h">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Pre-filled note (optional)</label>
-      <input type="text" class="form-input" id="tpl-note" placeholder="e.g. chapter 3 review">
-    </div>
-    <div class="modal-actions">
-      <button class="btn-save" onclick="saveTemplate()">Save</button>
-      <button class="btn-cancel" onclick="closeModal('template-modal-overlay')">Cancel</button>
-    </div>
-    <div id="tpl-delete-row" style="display:none;margin-top:10px;text-align:center">
-      <button onclick="deleteTemplateFromModal()" style="background:none;border:none;color:var(--err);font-size:13px;cursor:pointer;font-family:inherit;text-decoration:underline">Delete this template</button>
-    </div>
-  </div>
-</div>
-
 <!-- WORKOUT IMPORT MODAL -->
 <div class="modal-overlay" id="workout-import-overlay" onclick="handleOverlayClick(event,'workout-import-overlay')">
   <div class="modal-sheet" onclick="event.stopPropagation()">
@@ -1925,12 +1859,14 @@ function _buildSubjectFormUrl(subjectId,date,start,end,notes){
   return url;
 }
 
-// Live length readout under the Journal Content box on the Log page.
-// Warn only — never blocks logging. A half-submitted journal is worse than a
-// long one, so this tells Noah to paste manually rather than silently truncating.
+// Live length readout under the Journal Content/What You Studied box on the Log
+// page. Warn only — never blocks logging. A half-submitted journal is worse than
+// a long one, so this tells Noah to paste manually rather than silently truncating.
+// Watches `log-notes` since 2026-08-19: the separate Journal Content box was
+// merged into Notes, so Notes is now what feeds the form's Contents field.
 function updateJournalLenWarn(){
-  const el=document.getElementById('log-journal-len');
-  const jEl=document.getElementById('log-journal');
+  const el=document.getElementById('log-notes-len');
+  const jEl=document.getElementById('log-notes');
   if(!el||!jEl)return;
   const journal=jEl.value.trim();
   const subjEl=document.getElementById('log-subject');
@@ -1945,18 +1881,19 @@ function updateJournalLenWarn(){
   );
   if(!url){el.style.display='none';return}
   const len=url.length;
+  // Silent below the warn threshold. Since 2026-08-19 the journal is a single
+  // short label, so a permanent "n / 8,000 chars" readout was noise with nothing
+  // to say — the guard still fires the moment the link actually gets long.
+  if(len<_JOURNAL_URL_WARN){el.style.display='none';return}
   el.style.display='block';
   if(len>=_JOURNAL_URL_MAX){
     el.style.color='var(--err)';
     el.innerHTML='<strong>Too long for the prefill link ('+len.toLocaleString()+' chars).</strong> '+
-      'The Contents box will likely be cut off. Use the Copy button and paste it into the form by hand.';
+      'The Contents box will likely be cut off. Copy this field and paste it into the form by hand.';
   }else if(len>=_JOURNAL_URL_WARN){
     el.style.color='var(--warn,#b8860b)';
     el.innerHTML='Getting long for the prefill link ('+len.toLocaleString()+' chars). '+
       'Check the Contents box is complete before you submit.';
-  }else{
-    el.style.color='var(--text3)';
-    el.innerHTML=len.toLocaleString()+' / '+_JOURNAL_URL_MAX.toLocaleString()+' chars in the prefill link';
   }
 }
 
@@ -2005,7 +1942,6 @@ const NAV_ITEMS=[
   {id:'graduation', label:'Graduation', short:'Grad', icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>'},
   {id:'timer',     label:'Timer',     short:'Timer',      icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'},
   {id:'history',   label:'History',   short:'History',    icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>'},
-  {id:'tasks',     label:'Tasks',     short:'Tasks',      icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>'},
   {id:'ai',        label:'AI Coach',  short:'AI',         icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 8v4l3 3"/><circle cx="19" cy="5" r="3" fill="currentColor" stroke="none"/></svg>'},
 ];
 const DEFAULT_NAV_ORDER=NAV_ITEMS.map(n=>n.id);
@@ -3068,139 +3004,6 @@ function loadTodos(){
 }
 function saveTodos(t){localStorage.setItem('st_todos',JSON.stringify(t));localStorage.setItem('st_todos_updated_at',new Date().toISOString());sbPush('st_todos',t)}
 
-// ── SESSION TEMPLATES ─────────────────────────────────────────────────────────
-function loadTemplates(){try{return JSON.parse(localStorage.getItem('st_templates')||'[]')}catch(e){return[]}}
-function saveTemplates(t){localStorage.setItem('st_templates',JSON.stringify(t));localStorage.setItem('st_templates_updated_at',new Date().toISOString());sbPush('st_templates',t)}
-
-const LOG_SUBJ_COLORS_REF={};
-
-function renderTemplates(){
-  const el=document.getElementById('template-section');
-  if(!el)return;
-  const templates=loadTemplates();
-  const subjs=loadSubjects();
-  let chipsHtml='';
-  if(templates.length===0){
-    chipsHtml='<span class="template-empty-hint">Tap ＋ to save a quick template</span>';
-  } else {
-    chipsHtml=templates.map(t=>{
-      const subj=subjs.find(s=>s.id===t.subjectId);
-      const color=(LOG_SUBJ_COLORS_REF[t.subjectId]||'var(--o)');
-      const label=t.name||(subj?subj.name:'?')+' · '+fmtH(t.durationH);
-      const noteHint=t.note?'':'';
-      return '<button class="template-chip" onclick="applyTemplate(\''+t.id+'\')" oncontextmenu="event.preventDefault();openEditTemplate(\''+t.id+'\')">'+
-        '<span class="template-chip-dot" style="background:'+color+'"></span>'+
-        '<span>'+escHtml(label)+noteHint+'</span>'+
-      '</button>';
-    }).join('');
-  }
-  el.innerHTML=
-    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
-      '<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px">Quick Templates</div>'+
-      '<span style="font-size:10px;color:var(--text3)">Hold to edit</span>'+
-    '</div>'+
-    '<div class="template-row">'+
-      chipsHtml+
-      '<button class="template-chip template-chip-add" onclick="openAddTemplate()">＋</button>'+
-    '</div>';
-}
-
-function _openTemplateModal(subjs,t){
-  const sel=document.getElementById('tpl-subject');
-  if(sel)sel.innerHTML=subjs.map(s=>'<option value="'+s.id+'">'+escHtml(s.name)+'</option>').join('');
-  document.getElementById('tpl-edit-id').value=t?t.id:'';
-  document.getElementById('tpl-modal-title').textContent=t?'Edit Template':'New Template';
-  document.getElementById('tpl-subject').value=t?t.subjectId:(subjs[0]?subjs[0].id:'');
-  document.getElementById('tpl-duration').value=t?t.durationH:'';
-  document.getElementById('tpl-name').value=t?t.name:'';
-  document.getElementById('tpl-note').value=t?(t.note||''):'';
-  const delRow=document.getElementById('tpl-delete-row');
-  if(delRow)delRow.style.display=t?'block':'none';
-  document.getElementById('template-modal-overlay').classList.add('open');
-}
-
-function openAddTemplate(){
-  const subjs=loadSubjects().filter(s=>!s.done);
-  _openTemplateModal(subjs,null);
-}
-
-function openEditTemplate(id){
-  const templates=loadTemplates();
-  const t=templates.find(x=>x.id===id);
-  if(!t)return;
-  const subjs=loadSubjects();
-  _openTemplateModal(subjs,t);
-}
-
-function saveTemplate(){
-  const subjectId=document.getElementById('tpl-subject').value;
-  const durationH=parseFloat(document.getElementById('tpl-duration').value);
-  if(!subjectId||!durationH||durationH<=0){showToast('Fill in subject and duration','var(--err)');return}
-  const subjs=loadSubjects();
-  const subj=subjs.find(s=>s.id===subjectId);
-  const rawName=(document.getElementById('tpl-name').value||'').trim();
-  const name=rawName||(subj?subj.name:'?')+' · '+fmtH(durationH);
-  const note=(document.getElementById('tpl-note').value||'').trim();
-  const editId=document.getElementById('tpl-edit-id').value;
-  const templates=loadTemplates();
-  if(editId){
-    const idx=templates.findIndex(x=>x.id===editId);
-    if(idx>-1)templates[idx]={...templates[idx],name,subjectId,durationH,note};
-  }else{
-    templates.push({id:genId(),name,subjectId,durationH,note});
-  }
-  saveTemplates(templates);
-  closeModal('template-modal-overlay');
-  renderTemplates();
-  showToast(editId?'Template updated ✓':'Template saved ✓');
-}
-
-function applyTemplate(id){
-  const templates=loadTemplates();
-  const t=templates.find(x=>x.id===id);
-  if(!t)return;
-  // Set subject
-  const sel=document.getElementById('log-subject');
-  if(sel)sel.value=t.subjectId;
-  // Set date to today
-  const ld=document.getElementById('log-date');
-  if(ld)ld.value=todayStr();
-  // Calculate start = now - durationH, end = now
-  const now=nowLocal();
-  const endH=now.getHours();
-  const endM=now.getMinutes();
-  const startTotalMins=endH*60+endM-Math.round(t.durationH*60);
-  const startH=Math.max(0,Math.floor(startTotalMins/60));
-  const startM=Math.max(0,startTotalMins%60);
-  const startStr=String(startH).padStart(2,'0')+':'+String(startM).padStart(2,'0');
-  const endStr=String(endH).padStart(2,'0')+':'+String(endM).padStart(2,'0');
-  setLogTime('log-start',startStr);
-  setLogTime('log-end',endStr);
-  updateLogDuration();
-  updateLogFormColour();
-  // Fill pre-filled note if set
-  const notesEl=document.getElementById('log-notes');
-  if(notesEl&&t.note)notesEl.value=t.note;
-  // Scroll form into view
-  const card=document.getElementById('log-form-card');
-  if(card)card.scrollIntoView({behavior:'auto',block:'start'});
-  showToast('Template applied ✓');
-}
-
-function deleteTemplate(id){
-  const templates=loadTemplates().filter(x=>x.id!==id);
-  saveTemplates(templates);
-  renderTemplates();
-  showToast('Template removed');
-}
-
-function deleteTemplateFromModal(){
-  const editId=document.getElementById('tpl-edit-id').value;
-  if(!editId)return;
-  deleteTemplate(editId);
-  closeModal('template-modal-overlay');
-}
-
 // ── WORKOUT IMPORT ────────────────────────────────────────────────────────────
 let _workoutImageBase64=null;
 let _workoutImageMime=null;
@@ -3602,12 +3405,6 @@ function showWorkoutSummary(result){
 // Time is now start + the activity duration, with no minutes added on top.
 const WEEKDAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
-function _weekdayName(ds){
-  const p=(ds||'').split('-');
-  if(p.length<3)return '';
-  const d=new Date(+p[0],+p[1]-1,+p[2]);
-  return WEEKDAYS[d.getDay()]||'';
-}
 function _journalYear(ds){const p=(ds||'').split('-');return p.length?p[0]:''}
 
 // ── TITLE PARSING ───────────────────────────────────────────────────────────
@@ -3663,50 +3460,23 @@ function _fmtHoursMins(mins,longUnit){
   const hu=(h===1?' Hour':' Hours');
   return m===0?(h+hu):(h+hu+' '+m+mu);
 }
-// Assembles the Journal Content text for a cycle / run / walk.
-// Factual header only — no metrics, no weather, no route, no reflection.
+// The journal label for a cycle / run / walk — e.g. "11th July - Morning Cycle".
+// ONE LINE, nothing else. The date/time block this used to append was dropped on
+// 2026-08-19: the Google Form already has its own Date, Start Time and End Time
+// fields, so repeating them inside the Contents box was pure duplication.
 function buildWorkoutJournal(r,cycleNum){
   const act=r.activity;
   const daypart=_timeOfDay(r.startTime,null);
-  const secs=r.durationSeconds||0;
-  const workoutMins=Math.floor(secs/60);
-  const sessionEnd=r.startTime?_addMins(r.startTime,workoutMins):'';
-
   let title=_ordinalDate(r.date)+' - '+daypart+' '+act;
   if(act==='Cycle'&&cycleNum&&cycleNum>1)title+=' '+cycleNum;
-
-  const L=[];
-  L.push(title);
-  L.push('');
-  L.push(_weekdayName(r.date)+' '+_ordinalDate(r.date)+' '+_journalYear(r.date));
-  L.push('Start Time: '+(r.startTime||''));
-  L.push('End Time: '+sessionEnd);
-  L.push('Total Time: '+_fmtHoursMins(workoutMins,true));
-  return L.join('\n');
+  return title;
 }
 
-// Post-run stretches. Factual header only. The routine itself is in the
-// attached Runner's Stretch Guide PDF — repeating it verbatim in every entry
-// read as a copy-pasted template, so it was removed 18 Aug 2026.
-function buildStretchJournal(dateStr,startTime,stretchMins,label){
-  const mins=stretchMins||20;
-  const L=[];
-  L.push(_ordinalDate(dateStr)+' - '+(label||'After Run Stretches'));
-  L.push('');
-  L.push(_weekdayName(dateStr)+' '+_ordinalDate(dateStr)+' '+_journalYear(dateStr));
-  L.push('Start Time: '+startTime);
-  L.push('End Time: '+_addMins(startTime,mins));
-  L.push('Total Time: '+_fmtHoursMins(mins,true));
-  return L.join('\n');
-}
-
-function copyJournalContent(){
-  const el=document.getElementById('log-journal');
-  if(!el||!el.value.trim()){showToast('Nothing to copy yet');return}
-  navigator.clipboard.writeText(el.value).then(
-    ()=>showToast('Journal content copied ✓','var(--ok)'),
-    ()=>showToast('Could not copy — select and copy manually','var(--err)')
-  );
+// Stretch label — e.g. "11th June - After Run Stretches". One line, same rule as
+// buildWorkoutJournal(): the form supplies date and times itself. The routine
+// itself is in the attached Runner's Stretch Guide PDF.
+function buildStretchJournal(dateStr,label){
+  return _ordinalDate(dateStr)+' - '+(label||'After Run Stretches');
 }
 
 // How many of this activity are already logged in the SAME PART OF THE DAY?
@@ -3803,10 +3573,7 @@ function _fillRunLogForm(result,cycleNum){
   if(result.activity==='Cycle'&&cycleNum>1)title+=' '+cycleNum;
 
   const notesEl=document.getElementById('log-notes');
-  if(notesEl)notesEl.value=title;
-
-  const journalEl=document.getElementById('log-journal');
-  if(journalEl)journalEl.value=buildWorkoutJournal(result,cycleNum);
+  if(notesEl)notesEl.value=buildWorkoutJournal(result,cycleNum);
   updateJournalLenWarn();
 
   // Minimal record: countWorkoutsOnDate() reads .activity, and .durationSeconds
@@ -3904,7 +3671,6 @@ function toggleTodo(id){
   if(t){t.done=!t.done;t.doneAt=t.done?new Date().toISOString():null}
   saveTodos(todos);
   renderTodos();
-  renderTasksPage();
   _updateTasksBadge();
   if(document.getElementById('page-schedule').classList.contains('active'))renderSchedule();
 }
@@ -3913,7 +3679,6 @@ function deleteTodo(id){
   const todos=loadTodos().filter(x=>x.id!==id);
   saveTodos(todos);
   renderTodos();
-  renderTasksPage();
   _updateTasksBadge();
 }
 
@@ -3938,47 +3703,6 @@ function _updateTasksBadge(){
       if(badge)badge.remove();
     }
   });
-}
-
-// Tasks tab is now a shortcut hub — task tracking lives in Notion + Nudge (iOS)
-// instead of inside StudyTrack. Kept the old todo data/model + renderHomePinned/
-// renderTodos/_updateTasksBadge intact elsewhere; this page just links out.
-const TASKS_EXTERNAL_LINKS={
-  notion:'https://app.notion.com/p/bdd4e8c8b0804f77afdc1aebe339e888?v=0556f92e51f441f9914da1d557fdac1d&source=copy_link',
-  nudge:'nudgeapp://add',
-  reminders:'reminders://'
-};
-
-function openExternalTaskLink(kind){
-  const url=TASKS_EXTERNAL_LINKS[kind];
-  if(!url)return;
-  if(kind==='notion'){
-    // Real webpage — open in a new tab so StudyTrack stays open.
-    window.open(url,'_blank','noopener');
-  } else {
-    // Custom URL schemes (nudgeapp://, reminders://) hand off to a native
-    // app — same-tab redirect is correct here, a new tab would just flash
-    // blank before the OS takes over.
-    window.location.href=url;
-  }
-}
-
-function renderTasksPage(){
-  const el=document.getElementById('tasks-page-list');
-  if(!el)return;
-
-  el.innerHTML=
-    '<div class="tasks-empty" style="padding-top:56px">'+
-      ''+
-      '<div class="tasks-empty-text">Tasks live outside StudyTrack now</div>'+
-      '<div class="tasks-empty-sub" style="margin-bottom:28px">Use Notion for your to‑do list, or Nudge on iOS. Pick one below.</div>'+
-      '<div style="display:flex;flex-direction:column;gap:10px;max-width:280px;margin:0 auto">'+
-        '<button class="btn-add" onclick="openExternalTaskLink(\'notion\')" style="width:100%;justify-content:center">Open Notion To‑Do List</button>'+
-        '<button class="btn-add" onclick="openExternalTaskLink(\'nudge\')" style="width:100%;justify-content:center;background:var(--bg3);color:var(--text)">Open Nudge</button>'+
-        '<button class="btn-add" onclick="openExternalTaskLink(\'reminders\')" style="width:100%;justify-content:center;background:var(--bg3);color:var(--text2)">Open Reminders</button>'+
-      '</div>'+
-      '<div style="font-size:11px;color:var(--text3);margin-top:16px;max-width:280px;margin-left:auto;margin-right:auto">Reminders may not open automatically on iPhone — Apple restricts this from Safari.</div>'+
-    '</div>';
 }
 
 function openTodoModal(editId){
@@ -4052,7 +3776,6 @@ function saveTodoModal(){
   saveTodos(todos);
   closeModal('todo-modal-overlay');
   renderTodos();
-  renderTasksPage();
   _updateTasksBadge();
   if(typeof renderHomePinned==='function')renderHomePinned();
   if(typeof renderDashTasksCard==='function')renderDashTasksCard();
@@ -4128,7 +3851,7 @@ function showPage(id){
   window.scrollTo(0,0);
   if(id==='dashboard')renderDashboard();
   else if(id==='schedule'){renderSchedule()}
-  else if(id==='log'){renderLog();renderTemplates()}
+  else if(id==='log')renderLog();
   else if(id==='history')renderHistory();
   else if(id==='progress')renderProgress();
   else if(id==='subjects')renderSubjectsPage();
@@ -4136,7 +3859,6 @@ function showPage(id){
   else if(id==='plan'){currentPage='progress';showPage('progress');return}
   else if(id==='timeline'){currentPage='graduation';showPage('graduation');return}
   else if(id==='timer'){timerSyncPull(false);renderTimerPage();_startTimerSyncPoll()}
-  else if(id==='tasks')renderTasksPage();
   else if(id==='ai')renderAIPage();
   if(id!=='timer')_stopTimerSyncPoll();
   // Mount / unmount AI input bar
@@ -5101,8 +4823,6 @@ function clearLogForm(){
   document.getElementById('log-start').value='';
   document.getElementById('log-end').value='';
   document.getElementById('log-notes').value='';
-  const jEl=document.getElementById('log-journal');
-  if(jEl)jEl.value='';
   updateJournalLenWarn();
   _pendingJournalMeta=null;
   const dur=document.getElementById('log-duration');
@@ -6922,8 +6642,6 @@ function _doLogSession(){
   const start=document.getElementById('log-start').value;
   const end=document.getElementById('log-end').value;
   const notes=document.getElementById('log-notes').value.trim();
-  const journalEl=document.getElementById('log-journal');
-  const journal=journalEl?journalEl.value.trim():'';
   const mins=toMins(end)-toMins(start);
   if(mins<=0)return;
   const hours=mins/60;
@@ -6931,9 +6649,9 @@ function _doLogSession(){
   const hoursStore=loadHours();
   const _newId=genId();
   const _rec={id:_newId,subjectId,date,start,end,hours,notes,loggedAt:new Date().toISOString()};
-  // Journal Content is stored on the session but is deliberately NOT shown in
-  // History, the journal PDF, or the JSON exports — those keep showing `notes`.
-  if(journal)_rec.journal=journal;
+  // Since 2026-08-19 `notes` IS the journal content (the separate Journal Content
+  // box was merged in). It is a single line — e.g. "11th July - Morning Cycle" —
+  // and that same line is what gets sent to the Google Form's Contents field.
   if(_pendingJournalMeta)_rec.journalMeta=_pendingJournalMeta;
   _pendingJournalMeta=null;
   sessions.push(_rec);
@@ -6943,7 +6661,6 @@ function _doLogSession(){
   setLogTime('log-start','');
   setLogTime('log-end','');
   document.getElementById('log-notes').value='';
-  if(journalEl)journalEl.value='';
   updateJournalLenWarn();
   document.getElementById('log-duration').textContent='';
   dismissDupWarn();
@@ -7031,10 +6748,9 @@ function fillStretchLog(){
   const dEl=document.getElementById('log-date'); if(dEl)dEl.value=date;
   setLogTime('log-start',sStart);
   setLogTime('log-end',sEnd);
-  const nEl=document.getElementById('log-notes'); if(nEl)nEl.value=_ordinalDate(date)+' - After Run Stretches';
   // Fixed content from the stretch guide — no model call needed.
-  const jEl=document.getElementById('log-journal');
-  if(jEl)jEl.value=buildStretchJournal(date,sStart,stretchMins);
+  const nEl=document.getElementById('log-notes');
+  if(nEl)nEl.value=buildStretchJournal(date);
   updateJournalLenWarn();
   _pendingJournalMeta={activity:'Stretch',app:null,durationSeconds:stretchMins*60};
   updateLogDuration();
@@ -7114,9 +6830,8 @@ function fillPreRunStretchLog(){
   const dEl=document.getElementById('log-date'); if(dEl)dEl.value=w.date;
   setLogTime('log-start',w.start);
   setLogTime('log-end',w.end);
-  const nEl=document.getElementById('log-notes'); if(nEl)nEl.value=_ordinalDate(w.date)+' - Pre-Run Stretches';
-  const jEl=document.getElementById('log-journal');
-  if(jEl)jEl.value=buildStretchJournal(w.date,w.start,PRERUN_STRETCH_MINS,'Pre-Run Stretches');
+  const nEl=document.getElementById('log-notes');
+  if(nEl)nEl.value=buildStretchJournal(w.date,'Pre-Run Stretches');
   updateJournalLenWarn();
   _pendingJournalMeta={activity:'Stretch',app:null,durationSeconds:PRERUN_STRETCH_MINS*60};
   updateLogDuration();
@@ -8659,7 +8374,6 @@ function _afterOverdueChange(msg){
   if(typeof showToast==='function')showToast(msg,'var(--ok)');
   _updateTasksBadge();
   if(typeof renderTodos==='function')renderTodos();
-  if(typeof renderTasksPage==='function')renderTasksPage();
   if(typeof renderHomePinned==='function')renderHomePinned();
   if(typeof renderDashTasksCard==='function')renderDashTasksCard();
   if(!_overdueList().length)closeModal('overdue-modal-overlay');
@@ -8701,7 +8415,6 @@ function _markTodoDoneById(id){
   renderHomePinned();
   renderDashTasksCard();
   _updateTasksBadge();
-  if(currentPage==='log')renderTasksPage();
 }
 // ── WEEKLY SUMMARY ────────────────────────────────────────────────────────────
 function renderWeeklySummary(){
@@ -9249,7 +8962,7 @@ async function sbPull(key){
 async function syncFromCloud(){
   setSyncUI('syncing','Syncing…');
   try{
-    const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_templates','st_ai_history','st_holiday','st_notif_prefs','st_notif_templates','st_teacher_plan']; // st_hours is recomputed from sessions below, not pulled directly. st_teacher_plan is written externally by the teacher RPC and only ever pulled here (cloud-authoritative, falls through to the default setItem branch — the app never sbPushes it).
+    const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_ai_history','st_holiday','st_notif_prefs','st_notif_templates','st_teacher_plan']; // st_hours is recomputed from sessions below, not pulled directly. st_teacher_plan is written externally by the teacher RPC and only ever pulled here (cloud-authoritative, falls through to the default setItem branch — the app never sbPushes it).
     // Pull st_deleted_sessions upfront so we can use it synchronously inside forEach
     let cloudDeletedRaw=null;
     try{cloudDeletedRaw=await sbPull('st_deleted_sessions')}catch(e){}
@@ -9299,7 +9012,7 @@ async function syncFromCloud(){
               // NOTE: st_notif_prefs/st_notif_templates are intentionally NOT purged —
               // deleting them makes loadNotifPrefs() return defaults (all types ON), and a
               // later Save & Sync would push those defaults, silently re-enabling toggles.
-              ['st_ai_history','st_hours','st_sched_overrides','st_templates'].forEach(k2=>localStorage.removeItem(k2));
+              ['st_ai_history','st_hours','st_sched_overrides'].forEach(k2=>localStorage.removeItem(k2));
               try{localStorage.setItem('st_sessions',JSON.stringify(data))}catch(e2){
                 console.error('localStorage full even after cleanup:',e2.message);
               }
@@ -9327,7 +9040,7 @@ async function syncFromCloud(){
             localStorage.setItem(k,JSON.stringify(cloud));
             _aiHistory=cloud;
           }
-        } else if(k==='st_subjs'||k==='st_goals'||k==='st_todos'||k==='st_sched_overrides'||k==='st_templates'||k==='st_holiday'||k==='st_notif_prefs'||k==='st_notif_templates'){
+        } else if(k==='st_subjs'||k==='st_goals'||k==='st_todos'||k==='st_sched_overrides'||k==='st_holiday'||k==='st_notif_prefs'||k==='st_notif_templates'){
           // Timestamped last-writer-wins: keep whichever version is newer.
           // Prevents a device with stale data from reverting a fresh edit.
           const cloudUpdatedAt=rows[i].updated_at||'';
@@ -9369,7 +9082,7 @@ async function syncFromCloud(){
     if(e.message&&e.message.includes('quota')){
       // localStorage full — clear non-critical data and retry once.
       // st_notif_prefs/st_notif_templates deliberately excluded (see note in _writeSessionsSafe).
-      ['st_ai_history','st_hours','st_sched_overrides','st_templates'].forEach(k=>localStorage.removeItem(k));
+      ['st_ai_history','st_hours','st_sched_overrides'].forEach(k=>localStorage.removeItem(k));
       try{await syncFromCloud()}catch(e2){setSyncUI('error','Offline — '+e2.message)}
     } else {
       setSyncUI('error','Offline — '+e.message);
@@ -9540,9 +9253,12 @@ function exportJSON(){
   const rawSubjs=JSON.parse(localStorage.getItem('st_subjs')||'[]');
   // NOTE: rawSessions deliberately keeps `journal` / `journalMeta`. This file is
   // a RESTORE point — stripping fields from it would silently lose every journal
-  // on a restore. Teacher-facing output (History, the PDF report, the coach
-  // report) all read `s.notes` only, which is what the "show notes only" rule
-  // was about. Flagged to Noah 4 Aug 2026.
+  // on a restore. `journal` is now LEGACY: sessions logged before 2026-08-19 have
+  // it, newer ones do not (the Journal Content box was merged into `notes` that
+  // day). Nothing reads it any more; it is kept here purely so a restore of an
+  // old backup does not lose those entries. Teacher-facing output (History, the
+  // PDF report, the coach report) all read `s.notes`, which is now the single
+  // journal line itself. Flagged to Noah 4 Aug 2026.
   const rawSessions=JSON.parse(localStorage.getItem('st_sessions')||'[]');
   const rawGoals=JSON.parse(localStorage.getItem('st_goals')||'{}');
 
@@ -9715,7 +9431,7 @@ function exportReport(){
       '<td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;color:#374151;font-size:13px">'+s.date+'</td>'+
       '<td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-weight:600;color:#111;font-size:13px">'+escHtml(name)+'</td>'+
       '<td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:right;color:#374151;font-size:13px">'+Number(s.hours).toFixed(2)+'h</td>'+
-      '<td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:13px">'+escHtml(s.notes||'')+'</td>'+
+      '<td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:13px">'+escHtml(s.notes)+'</td>'+
     '</tr>';
   }).join('');
 
@@ -10649,7 +10365,7 @@ function renderAIPage(){
     </div>
     <div id="es-duration" style="font-size:13px;font-weight:700;color:var(--o);min-height:20px;margin:10px 0 4px"></div>
     <div class="form-group">
-      <label class="form-label">Notes (optional)</label>
+      <label class="form-label">Journal Content/What You Studied</label>
       <input type="text" class="form-input" id="es-notes" placeholder="e.g. chapter 3 review">
     </div>
     <div class="modal-actions">
