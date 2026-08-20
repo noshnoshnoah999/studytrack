@@ -1626,7 +1626,7 @@ button:active{transform:scale(0.96)}
 </div>
 
 <!-- WORKOUT IMPORT MODAL -->
-<div class="modal-overlay" id="workout-import-overlay" onclick="handleOverlayClick(event,'workout-import-overlay')">
+<div class="modal-overlay" id="workout-import-overlay" onclick="_workoutOverlayClick(event)">
   <div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
     <div class="modal-title">Import Screenshot</div>
@@ -3341,6 +3341,31 @@ function openWorkoutImport(){
   document.getElementById('workout-import-overlay').classList.add('open');
 }
 
+// True only while the Anthropic call is in flight. Every one of those costs Noah
+// real credit, so the modal is sealed shut for the duration rather than merely
+// asking — an accidental backdrop tap mid-read used to bin the answer and the
+// money with it. Noah, 2026-08-20.
+let _workoutAnalysing=false;
+
+// The import modal does NOT use handleOverlayClick(). Every other modal in the
+// app is cheap to reopen; this one holds screenshots and, once read, an answer
+// that was paid for. A stray tap on the dark area behind the sheet closed it
+// outright, and it had happened more than once mid-analysis.
+function _workoutOverlayClick(e){
+  if(e.target.id!=='workout-import-overlay')return;   // click landed inside the sheet
+  if(_workoutAnalysing){
+    showToast('Still reading the screenshot — hold on','var(--err)');
+    return;                                            // not even offered
+  }
+  const resultShowing=(document.getElementById('workout-result-area')||{}).style?.display==='block';
+  const msg=resultShowing
+    ? 'Close the import?\n\nThe screenshot has already been read. Closing throws that away, and importing again costs another API call.'
+    : _workoutImageBase64
+      ? 'Close the import?\n\nYour screenshot will be discarded.'
+      : 'Close the import?';
+  if(confirm(msg))closeModal('workout-import-overlay');
+}
+
 // Choose File / photo library. Goes through the single shared path below.
 function handleWorkoutFile(event){
   const file=event.target.files[0];
@@ -3526,7 +3551,13 @@ async function runWorkoutAnalysis(){
   if(!_workoutImageBase64){showToast('No image selected','var(--err)');return}
   const spinner=document.getElementById('workout-spinner');
   if(spinner)spinner.style.display='block';
-  const result=await analyseWorkoutImage(_workoutImageBase64,_workoutImageMime||'image/jpeg',_workoutElapsedBase64,_workoutElapsedMime||'image/jpeg');
+  let result=null;
+  _workoutAnalysing=true;   // see _workoutOverlayClick — the modal is sealed while this is true
+  try{
+    result=await analyseWorkoutImage(_workoutImageBase64,_workoutImageMime||'image/jpeg',_workoutElapsedBase64,_workoutElapsedMime||'image/jpeg');
+  }finally{
+    _workoutAnalysing=false;
+  }
   if(spinner)spinner.style.display='none';
   if(!result){
     // Failed — go back to the source picker so the choice is not lost.
