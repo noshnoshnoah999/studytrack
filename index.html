@@ -3103,11 +3103,17 @@ function _buildWorkoutPrompt(app,activity,hasElapsedShot){
      '- durationSeconds: from the FIRST image, convert the displayed time exactly. "10m 29s" = 629.\n'+
      ' "27:10" = 1630. Never round up.\n'+
      (hasElapsedShot?
-      '- elapsedSeconds: from the SECOND image ONLY, the value under a label that reads exactly\n'+
-      ' "Elapsed Time". Convert it the same way, never rounding up. If the second image does not\n'+
-      ' show a field labelled "Elapsed Time", return null. Do NOT take this from the first image,\n'+
-      ' do NOT use Moving Time, and do NOT estimate it. Returning null is correct and expected\n'+
-      ' whenever that label is not literally on the screen.\n':'')+
+      '- elapsedSeconds: from the SECOND image ONLY, the value on the row whose label is exactly\n'+
+      ' "Elapsed Time" — the whole label, nothing more and nothing less.\n'+
+      ' That screen also lists "Moving Time", "Avg Pace", "Avg Elapsed Pace" and "Fastest Split".\n'+
+      ' NONE of those is the answer. "Avg Elapsed Pace" in particular contains the word Elapsed\n'+
+      ' and looks like a duration but is a PACE PER KILOMETRE — never use it. If the row labelled\n'+
+      ' exactly "Elapsed Time" is not on the screen, return null.\n'+
+      ' FORMAT: a value with THREE parts is H:MM:SS, so "2:14:18" = 2*3600 + 14*60 + 18 = 8058.\n'+
+      ' A value with TWO parts is MM:SS, so "27:24" = 27*60 + 24 = 1644. Count the colons before\n'+
+      ' you convert. Never round up.\n'+
+      ' Do NOT take this from the first image and do NOT estimate it. Returning null is correct\n'+
+      ' and expected whenever that exact label is not on the screen.\n':'')+
      '- date: from the relative timestamp ("Yesterday at...") ONLY as a fallback. If the title contains\n'+
      ' a date, that date is the truth — I write those titles myself and they are correct even when the\n'+
      ' screenshot was taken days later.\n'+
