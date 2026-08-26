@@ -367,6 +367,10 @@ a{color:inherit;text-decoration:none}
 .form-pill.pending{background:var(--warnl);color:var(--warn)}
 .forms-pending-banner{display:none;background:rgba(245,158,11,0.14);border:1px solid rgba(245,158,11,0.4);border-radius:12px;padding:11px 14px;margin-bottom:12px;font-size:13px;color:var(--text);cursor:pointer;align-items:center;gap:8px}
 .forms-pending-banner.show{display:flex}
+.morning-stretch-banner{display:none;background:rgba(245,158,11,0.14);border:1px solid rgba(245,158,11,0.4);border-radius:12px;padding:12px 16px;margin:0 0 14px 0;font-size:13px;color:var(--text);align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.morning-stretch-banner.show{display:flex}
+.morning-stretch-banner-text{flex:1;min-width:200px;line-height:1.4}
+.morning-stretch-banner-btn{background:var(--o);color:var(--bg);border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit}
 .fp-row{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border)}
 .fp-info{flex:1;min-width:0}
 .fp-name{font-size:13px;font-weight:700;color:var(--text)}
@@ -1024,6 +1028,10 @@ button:active{transform:scale(0.96)}
 
   <!-- MAIN -->
   <main id="main">
+    <div class="morning-stretch-banner" id="morning-stretch-banner">
+      <div class="morning-stretch-banner-text">Submit Morning After-Wake Up Stretches</div>
+      <button class="morning-stretch-banner-btn" onclick="fillMorningStretchLog()">Fill Form &amp; Submit</button>
+    </div>
     <!-- PAGE: DASHBOARD -->
     <div class="page" id="page-dashboard">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
@@ -6757,6 +6765,10 @@ function timeSplitInput(hiddenId, thisId, nextId){
   // Only the Log Session page has a log-duration readout; the Edit Session
   // modal calls _esCalcDur() from its own oninput handlers.
   if(wrap==='log-start'||wrap==='log-end')updateLogDuration();
+  // Morning After-Wake Up Stretches: once Start is fully typed, auto-fill
+  // End = Start + 10 minutes. Scoped to wrap==='log-start' plus the notes-field
+  // check inside the function, so it never fires for ordinary log entries.
+  if(wrap==='log-start')_maybeAutoFillMorningStretchEnd();
 }
 
 function setLogTime(prefix, timeStr){
@@ -6960,6 +6972,8 @@ function _doLogSession(){
   // parked in localStorage — fill its form in now, so the run follows the
   // stretch rather than the other way round.
   if(/Pre-Run Stretches\s*$/i.test(notes||''))_resumePendingRun();
+  // If this was the Morning After-Wake Up Stretches entry, hide the banner now.
+  if(typeof updateMorningStretchBanner==='function')updateMorningStretchBanner();
 }
 
 // ── After-run stretches auto-fill ───────────────────────────────────────────
@@ -7093,6 +7107,57 @@ function _showPreRunStretchPrompt(w){
   if(el)el.innerHTML='<b style="color:var(--text)">PE / Cardio</b> · '+PRERUN_STRETCH_MINS+' min<br>'+w.start+' – '+w.end+'<br><span style="color:var(--text2)">'+escHtml(note)+'</span>';
   const ov=document.getElementById('prerun-stretch-modal-overlay');
   if(ov)ov.classList.add('open');
+}
+
+// ── MORNING AFTER-WAKE UP STRETCHES BANNER ─────────────────────────────────
+// Shows at the top of every page (banner lives outside the .page divs, as a
+// direct child of <main>, so page switches don't hide/show it) until the
+// day's "Morning After-Wake Up Stretches" session has actually been logged.
+// Re-derived from real session data on every check (not a localStorage flag)
+// so it stays correct across devices/tabs via the normal Supabase sync.
+const MORNING_STRETCH_MINS = 10;
+function _morningStretchNoteRegex(){ return /Morning After-Wake Up Stretches\s*$/i; }
+
+function _hasLoggedMorningStretchToday(){
+  const today = todayStr();
+  const sessions = loadSessions();
+  return sessions.some(s => s.date === today && _morningStretchNoteRegex().test(s.notes || ''));
+}
+
+function updateMorningStretchBanner(){
+  const el = document.getElementById('morning-stretch-banner');
+  if(!el) return;
+  el.classList.toggle('show', !_hasLoggedMorningStretchToday());
+}
+
+function fillMorningStretchLog(){
+  showPage('log');
+  const sub = document.getElementById('log-subject'); if(sub) sub.value = 'pe';
+  if(typeof updateLogFormColour === 'function') updateLogFormColour();
+  const dEl = document.getElementById('log-date'); if(dEl) dEl.value = todayStr();
+  setLogTime('log-start', '');
+  setLogTime('log-end', '');
+  const nEl = document.getElementById('log-notes');
+  if(nEl) nEl.value = _ordinalDate(todayStr()) + ' - Morning After-Wake Up Stretches';
+  updateJournalLenWarn();
+  _pendingJournalMeta = {activity:'Stretch', app:null, durationSeconds:MORNING_STRETCH_MINS*60};
+  updateLogDuration();
+  const card = document.getElementById('log-form-card');
+  if(card) card.scrollIntoView({behavior:'auto', block:'start'});
+  const hhEl = document.getElementById('log-start-hh');
+  if(hhEl) hhEl.focus();
+  showToast('Enter your start time \u2014 end time fills in automatically', 'var(--ok)');
+}
+
+// While the morning-stretch note is in the log form, completing the Start time
+// auto-fills End = Start + 10 minutes. Does not affect any other log entry.
+function _maybeAutoFillMorningStretchEnd(){
+  const nEl = document.getElementById('log-notes');
+  if(!nEl || !_morningStretchNoteRegex().test(nEl.value || '')) return;
+  const start = document.getElementById('log-start').value;
+  if(!start) return;
+  setLogTime('log-end', _addMins(start, MORNING_STRETCH_MINS));
+  updateLogDuration();
 }
 
 function fillPreRunStretchLog(){
@@ -9450,6 +9515,7 @@ async function syncFromCloud(){
   updateNotifBtn();
   scheduleNotifications();
   renderHolidayUI();
+  if(typeof updateMorningStretchBanner==='function')updateMorningStretchBanner();
   // Register service worker and re-subscribe this device if notifications already granted
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/studytrack/sw.js',{scope:'/studytrack/'})
