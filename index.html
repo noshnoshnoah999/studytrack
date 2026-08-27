@@ -293,12 +293,6 @@ a{color:inherit;text-decoration:none}
 .hist-card-log{background:none;border:none;color:var(--text3);cursor:pointer;width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-left:2px}
 .hist-card-log:hover,.hist-card-log.on{background:var(--bg3);color:var(--text2)}
 .hist-card-logged{font-size:11px;color:var(--text3);margin-top:3px;line-height:1.35}
-/* Archive banner */
-.hist-archive-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;margin-bottom:16px}
-.hist-archive-text{font-size:13px;color:var(--text2);font-weight:500;flex:1}
-.hist-archive-text span{color:var(--text3)}
-.btn-archive{background:var(--o);color:var(--bg);font-size:12px;font-weight:700;padding:7px 14px;border-radius:100px;white-space:nowrap}
-.btn-archive:hover{opacity:0.85}
 
 /* SCHEDULE HEADER */
 .sched-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
@@ -1247,7 +1241,6 @@ button:active{transform:scale(0.96)}
             <input type="date" class="form-input hist-filter" id="hist-date-to" onchange="renderHistory()" style="flex:1">
           </div>
         </div>
-        <div id="hist-archive-banner"></div>
         <div class="hist-summary" id="hist-summary"></div>
         <div id="hist-entries"></div>
       </div>
@@ -5843,23 +5836,6 @@ function renderHistory(){
     return a.date!==b.date?b.date.localeCompare(a.date):b.start.localeCompare(a.start);
   });
 
-  // Archive banner — show if there are sessions older than 4 months
-  const cutoff=nowLocal(); cutoff.setMonth(cutoff.getMonth()-4); // Tokyo time (was raw new Date())
-  const cutoffStr=cutoff.getFullYear()+'-'+String(cutoff.getMonth()+1).padStart(2,'0')+'-'+String(cutoff.getDate()).padStart(2,'0');
-  const archivable=sessions.filter(s=>s.date<cutoffStr);
-  const bannerEl=document.getElementById('hist-archive-banner');
-  if(bannerEl){
-    if(archivable.length){
-      const archiveH=archivable.reduce((a,s)=>a+s.hours,0);
-      bannerEl.innerHTML='<div class="hist-archive-banner">'+
-        '<div class="hist-archive-text">'+archivable.length+' sessions older than 4 months <span>('+fmtH(archiveH)+' · hours kept)</span></div>'+
-        '<button class="btn-archive" onclick="archiveOldSessions()">Archive</button>'+
-      '</div>';
-    } else {
-      bannerEl.innerHTML='';
-    }
-  }
-
   // Summary stats
   const totalH=filtered.reduce((a,s)=>a+s.hours,0);
   const totalSessions=filtered.length;
@@ -5869,7 +5845,12 @@ function renderHistory(){
   if(summaryEl){
     summaryEl.innerHTML=
       '<div class="hist-stat"><div class="hist-stat-val">'+totalSessions+'</div><div class="hist-stat-lbl">Sessions</div></div>'+
-      '<div class="hist-stat"><div class="hist-stat-val">'+fmtH(totalH)+'</div><div class="hist-stat-lbl">Total logged</div></div>'+
+      // "Total in view", not "Total logged": this sums only the session rows that got
+      // through the subject/date/search filters above, so it moves when the filters
+      // move. The all-time figure is the Dashboard's "Total Logged" (getTotalLogged(),
+      // = base + st_hours). Two stats, two meanings — the old shared label read as a
+      // contradiction. Noah, 2026-08-27.
+      '<div class="hist-stat"><div class="hist-stat-val">'+fmtH(totalH)+'</div><div class="hist-stat-lbl">Total in view</div></div>'+
       '<div class="hist-stat"><div class="hist-stat-val">'+fmtH(avgPerDay)+'</div><div class="hist-stat-lbl">Avg per day</div></div>';
     summaryEl.querySelectorAll('.hist-stat').forEach((s,i)=>{
       s.classList.add('spring-pop');
@@ -6007,54 +5988,22 @@ function toggleHistMonth(bodyId, headerEl){
   if(chevron)chevron.classList.toggle('open',opening);
 }
 
-function archiveOldSessions(){
-  const cutoff=nowLocal(); cutoff.setMonth(cutoff.getMonth()-4); // Tokyo time (was raw new Date())
-  const cutoffStr=cutoff.getFullYear()+'-'+String(cutoff.getMonth()+1).padStart(2,'0')+'-'+String(cutoff.getDate()).padStart(2,'0');
-  const sessions=loadSessions();
-  const old=sessions.filter(s=>s.date<cutoffStr);
-  const keep=sessions.filter(s=>s.date>=cutoffStr);
-  if(!old.length)return;
-
-  // IMPORTANT: st_hours is a derived cache — syncFromCloud() recomputes it from
-  // st_sessions on every sync, so hours left only in st_hours would VANISH after
-  // archiving. To truly preserve them, fold the archived sessions' hours into
-  // each subject's base (base = pre-app/teacher hours + archived hours), and
-  // subtract them from st_hours so totals (base + st_hours) stay constant.
-  const subjsArch=loadSubjects();
-  const hoursArch=loadHours();
-  let subjChanged=false;
-  old.forEach(s=>{
-    if(!s.subjectId)return;
-    const subj=subjsArch.find(x=>x.id===s.subjectId);
-    if(subj){subj.base=Math.round(((subj.base||0)+s.hours)*100)/100;subjChanged=true}
-    hoursArch[s.subjectId]=Math.max(0,(hoursArch[s.subjectId]||0)-s.hours);
-  });
-  if(subjChanged)saveSubjects(subjsArch);
-  saveHours(hoursArch);
-
-  // Tombstone every archived ID. Their hours now live in subject.base, so a
-  // device that still holds these sessions locally would re-add them on its next
-  // sync (syncFromCloud only drops IDs it finds in st_deleted_sessions) and the
-  // same hours would then be counted TWICE — once in base, once in the st_hours
-  // recomputed from the resurrected sessions. Reproduced 2026-08-27: a 3h
-  // dataset became 4h on both devices and re-pushed the corruption to the cloud.
-  // Batched into ONE push rather than looping _tombstoneSession(), which pushes
-  // per session and would fire hundreds of requests on a bulk archive.
-  try{
-    const tomb=JSON.parse(localStorage.getItem('st_deleted_sessions')||'[]');
-    old.forEach(s=>{if(s.id&&!tomb.includes(s.id))tomb.push(s.id)});
-    const pruned=tomb.slice(-500);
-    localStorage.setItem('st_deleted_sessions',JSON.stringify(pruned));
-    sbPush('st_deleted_sessions',pruned,{silent:true});
-  }catch(e){}
-
-  saveSessions(keep); // saveSessions already calls sbPush internally
-
-  const count=old.length;
-  renderHistory();
-  renderLogEntries();
-  showToast('Archived '+count+' old sessions — hours preserved ✓');
-}
+// ARCHIVE REMOVED 2026-08-27. archiveOldSessions() and its History banner ("N
+// sessions older than 4 months → Archive") folded each old session's hours into
+// subject.base and then DELETED the session record — permanently, with no confirm
+// and no undo, on records that are school submissions.
+//
+// It was removed rather than repaired. Noah did not want to archive anything, and
+// the storage pressure it existed to relieve is not real: ~371 sessions is roughly
+// 75KB of a multi-megabyte localStorage budget. Against that it mutated `base` —
+// the app's most failure-prone field, see migrations v11/v13/v16-v18 — and it had
+// a live data-corruption bug: it never tombstoned the IDs it deleted, so any
+// device still holding those sessions re-added them on its next sync while base
+// kept the same hours, counting them twice on every device. Reproduced 2026-08-27:
+// a 3h dataset read 4h after one archive and one sync.
+//
+// If session trimming is ever genuinely needed, do NOT restore this: keep the
+// sessions and mark them archived instead of folding hours into base and deleting.
 
 let _editSessionId=null;
 
