@@ -5335,6 +5335,40 @@ function setLogDateAuto(v){
   el.value=v;
   _logDateAuto=v;
 }
+
+// ── Future-session guard ──────────────────────────────────────────────────────
+// Until 2026-08-27 the app happily logged sessions that had not happened yet:
+// logSession() only checked subject / date / times present / end>start, and
+// saveEditSession() checked even less. At 13:55 you could log 19:00–20:00 for
+// today, or pick any future date at all — the date input had no `max` either.
+// These journals are proof of completed work submitted to a teacher, so a record
+// timestamped before the session it describes is worse than useless.
+//
+// Checking the END time is sufficient: end>start is already enforced, so an end
+// that is in the past guarantees the whole session is.
+//
+// The grace window exists only so that logging while you wrap up ("it's
+// basically 8") isn't refused. It is deliberately small — it makes no difference
+// to catching a genuinely early entry, which is hours out, not minutes.
+const LOG_FUTURE_GRACE_MINS=5;
+
+// Returns an error string if (date,end) is in the future, or null if it's fine.
+// Uses nowLocal(), the same Tokyo-pinned clock todayStr() uses, so this can
+// never disagree with the date the app auto-fills.
+function _futureSessionError(date,end){
+  if(!date)return null;
+  const today=todayStr();
+  if(date>today)return 'That date is in the future — you can only log work you have already done.';
+  if(date===today&&end){
+    const now=nowLocal();
+    const nowMins=now.getHours()*60+now.getMinutes();
+    if(toMins(end)>nowMins+LOG_FUTURE_GRACE_MINS){
+      return 'That session hasn\u2019t finished yet — check the end time.';
+    }
+  }
+  return null;
+}
+
 function clearLogForm(){
   hidePreplyProofBanner();
   setLogDateAuto(todayStr());
@@ -5447,6 +5481,10 @@ function renderLog(){
   // A date Noah set by hand, or one an importer set, is left alone. See the
   // _logDateAuto comment above clearLogForm().
   const dateIn=document.getElementById('log-date');
+  // Stop the native picker offering future days. Set on every render so it
+  // rolls over at midnight. The JS guard is the real enforcement — `max` does
+  // not prevent typing — but this catches the mistake before it is made.
+  dateIn.max=todayStr();
   if(!dateIn.value||dateIn.value===_logDateAuto)setLogDateAuto(todayStr());
   updateLogDuration();
   renderLogEntries();
@@ -6042,7 +6080,9 @@ function openEditSession(id){
   sel.innerHTML=subjs.map(x=>'<option value="'+x.id+'"'+(x.id===s.subjectId?' selected':'')+'>'+escHtml(x.name)+'</option>').join('');
 
   // Date
-  document.getElementById('es-date').value=s.date||'';
+  const esDateEl=document.getElementById('es-date');
+  esDateEl.value=s.date||'';
+  esDateEl.max=todayStr(); // same reason as #log-date in renderLog()
 
   // Start time
   const [sH='',sM='']=(s.start||'').split(':');
@@ -6110,6 +6150,11 @@ function saveEditSession(){
 
   if(!newDate){showToast('Date required','var(--err)');return}
   if(!newSubjectId){showToast('Subject required','var(--err)');return}
+  // Same future guard as logSession() — editing a session into the future was
+  // the identical hole. newEnd may be blank here, which _futureSessionError
+  // handles: the date is still checked on its own.
+  const esFutureErr=_futureSessionError(newDate,newEnd);
+  if(esFutureErr){showToast(esFutureErr,'var(--err)');return}
 
   let newHours=old.hours;
   if(newStart&&newEnd){
@@ -7138,6 +7183,11 @@ function logSession(){
   if(!start||!end){showToast('Please enter start and end times.','var(--err)');return}
   const mins=toMins(end)-toMins(start);
   if(mins<=0){showToast('End time must be after start time.','var(--err)');return}
+  // Hard block on future sessions. Deliberately no override: unlike back-dating,
+  // forward-dating a proof-of-work journal has no legitimate use, and an
+  // "log anyway" button would just re-open the hole with one extra click.
+  const futureErr=_futureSessionError(date,end);
+  if(futureErr){showToast(futureErr,'var(--err)');return}
   // Check for duplicates — if found, show warning and stop here
   if(checkAndShowDupWarn(subjectId,date,start,end))return;
   _doLogSession();
