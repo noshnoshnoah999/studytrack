@@ -5314,9 +5314,30 @@ function animateCount(el,target,decimals,suffix){
 }
 
 // ── LOG ───────────────────────────────────────────────────────────────────────
+// The Log page's Date field used to be reset to today by renderLog() on EVERY
+// navigation to the page, so tabbing to History mid-entry and back silently
+// threw away a back-dated day (Subject/Start/End/Notes all survived — Date was
+// the one field renderLog clobbered). Bug reported 2026-08-27: a session done on
+// the 26th was logged, and its Google Form prefilled, as the 27th.
+//
+// _logDateAuto records the last value renderLog itself wrote into the field.
+// renderLog only refreshes the date when the field still holds that exact value
+// (i.e. nobody has changed it since), so:
+//   - a date Noah typed, or an importer set, survives navigation;
+//   - a form left open across midnight still rolls forward to the new today.
+// Anything that deliberately sets a specific past date (Preply / workout /
+// stretch imports) must NOT go through setLogDateAuto — leaving the sentinel
+// stale is exactly what marks the field as user-set and protects it.
+let _logDateAuto='';
+function setLogDateAuto(v){
+  const el=document.getElementById('log-date');
+  if(!el)return;
+  el.value=v;
+  _logDateAuto=v;
+}
 function clearLogForm(){
   hidePreplyProofBanner();
-  document.getElementById('log-date').value=todayStr();
+  setLogDateAuto(todayStr());
   document.getElementById('log-start-hh').value='';
   document.getElementById('log-start-mm').value='';
   document.getElementById('log-end-hh').value='';
@@ -5422,8 +5443,11 @@ function renderLog(){
     if(tsel.value&&!sel.value)sel.value=tsel.value;
   }
 
+  // Only refresh the date if it is still the value renderLog last auto-filled.
+  // A date Noah set by hand, or one an importer set, is left alone. See the
+  // _logDateAuto comment above clearLogForm().
   const dateIn=document.getElementById('log-date');
-  dateIn.value=todayStr();
+  if(!dateIn.value||dateIn.value===_logDateAuto)setLogDateAuto(todayStr());
   updateLogDuration();
   renderLogEntries();
   updateLogFormColour();
@@ -5450,8 +5474,7 @@ function autofillFromBlock(subjectId,start,end){
   if(sel){sel.value=subjectId;updateLogFormColour()}
   setLogTime('log-start',start);
   setLogTime('log-end',end);
-  const ld=document.getElementById('log-date');
-  if(ld)ld.value=todayStr();
+  setLogDateAuto(todayStr());
   updateLogDuration();
   document.getElementById('log-form-card')&&document.getElementById('log-form-card').scrollIntoView({behavior:'auto',block:'start'});
 }
@@ -7329,7 +7352,7 @@ function fillMorningStretchLog(){
   showPage('log');
   const sub = document.getElementById('log-subject'); if(sub) sub.value = 'pe';
   if(typeof updateLogFormColour === 'function') updateLogFormColour();
-  const dEl = document.getElementById('log-date'); if(dEl) dEl.value = todayStr();
+  setLogDateAuto(todayStr());
   setLogTime('log-start', '');
   setLogTime('log-end', '');
   const nEl = document.getElementById('log-notes');
