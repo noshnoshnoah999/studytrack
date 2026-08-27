@@ -1079,6 +1079,14 @@ button:active{transform:scale(0.96)}
     <div class="page active" id="page-log">
       <div id="class-log-prompts"></div>
       <div class="forms-pending-banner" id="forms-pending-banner" onclick="openFormsPending()"></div>
+      <!-- Shown after a Preply lesson import and DELIBERATELY left up through Log
+           Session: the proof is attached on the Google Form, which only opens once
+           the session has been logged. It clears when the log form is cleared or
+           filled with anything that is not a Preply lesson. -->
+      <div class="morning-stretch-banner" id="preply-proof-banner">
+        <div class="morning-stretch-banner-text">Upload Screenshot of Preply Chat with Tutor for Post Lesson Review Proof</div>
+        <a class="morning-stretch-banner-btn" id="preply-proof-link" href="#" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:inline-block;text-align:center">Open Folder</a>
+      </div>
       <div class="card log-form-card" id="log-form-card" style="margin-bottom:12px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
           <div class="card-title" style="margin-bottom:0">Log a Session</div>
@@ -1641,7 +1649,7 @@ button:active{transform:scale(0.96)}
   <div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
     <div class="modal-title">Import Screenshot</div>
-    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Strava (cycle / walk) · Runna (run)</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Strava (cycle / walk) · Runna (run) · Preply (Japanese lesson)</div>
 
     <div id="workout-upload-area">
       <!-- Paste target — hidden contenteditable so native paste (Cmd+V / long-press) works -->
@@ -1691,6 +1699,7 @@ button:active{transform:scale(0.96)}
           <button onclick="pickWorkoutApp('Strava')" style="background:var(--ol);border:1.5px solid var(--o);border-radius:12px;padding:16px 10px;font-size:14px;font-weight:700;color:var(--o);cursor:pointer;font-family:inherit"> Strava</button>
           <button onclick="pickWorkoutApp('Runna')" style="background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:16px 10px;font-size:14px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit"> Runna</button>
         </div>
+        <button onclick="pickWorkoutApp('Preply')" style="width:100%;margin-top:10px;background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:16px 10px;font-size:14px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit"> Preply</button>
       </div>
 
       <div id="workout-step-activity" style="display:none">
@@ -1796,7 +1805,7 @@ function _openFormForSession(sessionId){
   const sessions=loadSessions();
   const s=sessions.find(x=>x.id===sessionId);
   if(!s)return;
-  _openSubjectForm(s.subjectId,s.date,s.start,s.end,s.notes,sessionId,!!(s.journalMeta&&s.journalMeta.usedElapsed));
+  _openSubjectForm(s.subjectId,s.date,s.start,s.end,s.notes,sessionId,!!(s.journalMeta&&s.journalMeta.usedElapsed),!!(s.journalMeta&&s.journalMeta.preply));
 }
 
 // ── GOOGLE FORM SUBMISSION TRACKER ──────────────────────────────────────────
@@ -1886,6 +1895,34 @@ const _JOURNAL_URL_WARN=6000, _JOURNAL_URL_MAX=8000;
 // purpose: Noah fills it in on the form itself.
 const JOURNAL_WRITING_LINE='Journal Writing Time (Included in Study Time):';
 
+// PREPLY LESSONS. A Preply lesson is logged PREPLY_REVIEW_MINS past the lesson's
+// own end time on the card. Those minutes are the post-lesson review: going back
+// through the tutor's notes and corrections in the Preply lesson chat straight
+// after the call. PREPLY_REVIEW_LINE is what states that on the Google Form, and
+// like every other line in this block it is injected when the form URL is built
+// and NOWHERE else — never stored on the session, never shown in StudyTrack,
+// never written by a model. Noah, 2026-08-26.
+const PREPLY_REVIEW_MINS=10;
+const PREPLY_REVIEW_LINE='Post-Lesson Review ('+PREPLY_REVIEW_MINS+' Minutes)';
+// Where the proof screenshot of the Preply chat goes. Set on the banner's link at
+// show time rather than hardcoded in the HTML, so there is exactly one copy of it.
+const PREPLY_PROOF_FOLDER_URL='https://drive.google.com/drive/u/1/folders/1gvfjEEpSvAEpVghbgB1w9dvk5p0ahU4F';
+
+// The banner belongs to whatever is currently in the log form. Every other filler
+// hides it; only a Preply import shows it. It survives _doLogSession() on purpose
+// — see the comment on the markup.
+function showPreplyProofBanner(){
+  const el=document.getElementById('preply-proof-banner');
+  if(!el)return;
+  const a=document.getElementById('preply-proof-link');
+  if(a)a.href=PREPLY_PROOF_FOLDER_URL;
+  el.classList.add('show');
+}
+function hidePreplyProofBanner(){
+  const el=document.getElementById('preply-proof-banner');
+  if(el)el.classList.remove('show');
+}
+
 // PE only: a workout of 25 minutes or less doesn't get the line — journal-writing
 // time can't plausibly ride on top of a session that short, and the entry has to
 // match the attached proof. Every other subject always gets it. Noah, 2026-08-19.
@@ -1912,10 +1949,13 @@ function _isCycleOrWalk(str){
 // false statement in a school submission, so the line is simply left out.
 // PE only: a Japanese note that happens to mention a walk is not a walk.
 // Noah, 2026-08-20.
-function _formContents(subjectId,start,end,notes,usedElapsed){
+function _formContents(subjectId,start,end,notes,usedElapsed,preply){
   const mins=(start&&end)?(toMins(end)-toMins(start)):0;
   const extra=[];
   if(subjectId==='pe'&&usedElapsed&&_isCycleOrWalk(notes)&&mins>0)extra.push('Elapsed Time: '+_fmtHoursMins(mins,true));
+  // Sits above the journal-writing line so the box reads in the order things
+  // happened: the lesson, the review straight after it, then the write-up.
+  if(preply)extra.push(PREPLY_REVIEW_LINE);
   if(subjectId!=='pe'||mins>JOURNAL_WRITING_PE_MIN_MINS)extra.push(JOURNAL_WRITING_LINE);
   if(!extra.length)return notes||'';
   const body=(notes||'').replace(/\r/g,'');
@@ -1925,14 +1965,14 @@ function _formContents(subjectId,start,end,notes,usedElapsed){
   return lines.join('\n');
 }
 
-function _buildSubjectFormUrl(subjectId,date,start,end,notes,usedElapsed){
+function _buildSubjectFormUrl(subjectId,date,start,end,notes,usedElapsed,preply){
   const cfg=_SUBJECT_FORMS[subjectId];
   if(!cfg)return null;
   let url=cfg.url+'?usp=pp_url';
   if(date) url+='&entry.911550456='+encodeURIComponent(date);
   if(start){const p=start.split(':');url+='&entry.2130026531_hour='+p[0]+'&entry.2130026531_minute='+(p[1]||'00')}
   if(end){const p=end.split(':');url+='&entry.1426010469_hour='+p[0]+'&entry.1426010469_minute='+(p[1]||'00')}
-  const contents=_formContents(subjectId,start,end,notes,usedElapsed);
+  const contents=_formContents(subjectId,start,end,notes,usedElapsed,preply);
   if(contents) url+='&entry.706383331='+encodeURIComponent(contents);
   if(cfg.confirmId) url+='&entry.'+cfg.confirmId+'='+encodeURIComponent('確認しました / Confirmed');
   return url;
@@ -1956,7 +1996,9 @@ function updateJournalLenWarn(){
     (document.getElementById('log-date')||{}).value||'',
     (document.getElementById('log-start')||{}).value||'',
     (document.getElementById('log-end')||{}).value||'',
-    journal
+    journal,
+    false,
+    !!(_pendingJournalMeta&&_pendingJournalMeta.preply)
   );
   if(!url){el.style.display='none';return}
   const len=url.length;
@@ -1976,10 +2018,10 @@ function updateJournalLenWarn(){
   }
 }
 
-function _openSubjectForm(subjectId,date,start,end,notes,sessionId,usedElapsed){
+function _openSubjectForm(subjectId,date,start,end,notes,sessionId,usedElapsed,preply){
   const cfg=_SUBJECT_FORMS[subjectId];
   if(!cfg)return; // no form for this subject
-  const url=_buildSubjectFormUrl(subjectId,date,start,end,notes,usedElapsed);
+  const url=_buildSubjectFormUrl(subjectId,date,start,end,notes,usedElapsed,preply);
   if(url&&url.length>=_JOURNAL_URL_MAX){
     showToast('Journal may be truncated in the form — check it before submitting.','var(--err)');
   }
@@ -3099,6 +3141,26 @@ let _lastWorkoutRaw=null;
 
 function _buildWorkoutPrompt(app,activity,hasElapsedShot){
   const today=new Date().toISOString().slice(0,10);
+  // Preply asks for four plain fields off the lesson card and nothing else. No
+  // title is requested: a Preply card has no title Noah wrote, and the journal
+  // line is assembled in JS from the date, times and teacher name.
+  if(app==='Preply'){
+    return 'This is a screenshot of a Preply lesson card \u2014 a booked one-to-one language lesson.\n\n'+
+      'Today\'s date is '+today+'.\n\n'+
+      'Read ONLY the fields listed below. NEVER guess or estimate a value that is not shown \u2014 return null instead.\n\n'+
+      'Return ONLY valid JSON, no markdown fences:\n'+
+      '{"date":"YYYY-MM-DD","startTime":"HH:MM","endTime":"HH:MM","teacher":string|null}\n\n'+
+      'RULES:\n'+
+      '- The card prints one line like "Aug 26, 2026 \u00b7 16:00 \u2014 16:25". The date is on that line,\n'+
+      '  the FIRST time is the START and the SECOND is the END. Both are 24-hour.\n'+
+      '- date: from that line ONLY. It is an explicit calendar date \u2014 never substitute today\'s date.\n'+
+      '- startTime / endTime: copy both exactly as HH:MM. Do not round them, shift them, swap them,\n'+
+      '  or convert them to any other clock. Reading the characters is the whole task.\n'+
+      '- teacher: the tutor\'s name, from the line reading like "Japanese with Naoto". Return the\n'+
+      '  NAME ONLY \u2014 "Naoto", not "Japanese with Naoto". If no name is shown, return null.\n'+
+      '- Return NO other field. The "Confirmed" status, the star rating, the tutor photo, the price\n'+
+      '  and any buttons are deliberately not wanted.\n';
+  }
   let p='This is a screenshot from '+app+'. The activity is a '+activity+'.\n\nToday\'s date is '+today+'.\n\n';
   p+='Read ONLY the fields listed below. NEVER guess or estimate a value that is not shown — return null instead.\n\n';
   if(hasElapsedShot){
@@ -3243,6 +3305,37 @@ async function analyseWorkoutImage(base64,mimeType,elapsedB64,elapsedMime){
     parsed.app=app;
     parsed.activity=activity;
     parsed.model=usedModel;
+
+    // PREPLY. The card gives both ends of the lesson, so the length is
+    // arithmetic rather than a reading, and none of the Strava/Runna title,
+    // relative-date or elapsed-time handling below applies. Bail out with a
+    // clear message rather than half-filling the form: a lesson entry with no
+    // times is worse than no entry at all.
+    if(app==='Preply'){
+      parsed.dateSource='absolute';
+      parsed.teacher=(typeof parsed.teacher==='string'&&parsed.teacher.trim())?parsed.teacher.trim():null;
+      parsed.lessonEndTime=parsed.endTime||null;
+      let lm=0;
+      if(parsed.startTime&&parsed.lessonEndTime){
+        lm=toMins(parsed.lessonEndTime)-toMins(parsed.startTime);
+        if(lm<0)lm+=1440;                       // a lesson running past midnight
+      }
+      if(!parsed.date||!parsed.startTime||!parsed.lessonEndTime||lm<=0){
+        _lastWorkoutRaw=data;
+        showToast('Could not read the date and lesson times off the card','var(--err)');
+        return null;
+      }
+      // durationSeconds/Minutes stay the LESSON's own length. The extra review
+      // minutes are added once, in _fillPreplyLogForm(), so the figure stored on
+      // the session always matches the card that is attached as proof.
+      parsed.lessonMinutes=lm;
+      parsed.durationSeconds=lm*60;
+      parsed.movingSeconds=lm*60;
+      parsed.durationMinutes=lm;
+      parsed.usedElapsed=false;
+      parsed.workoutEndTime=_addMins(parsed.startTime,lm+PREPLY_REVIEW_MINS);
+      return parsed;
+    }
 
     // The title Noah wrote overrides the relative timestamp.
     const _titleDate=_parseTitleDate(parsed.activityTitle,todayStr());
@@ -3507,6 +3600,15 @@ function backToWorkoutUpload(){
 
 function pickWorkoutApp(app){
   _workoutApp=app;
+  if(app==='Preply'){
+    // A Preply lesson card states BOTH ends of the lesson itself, so there is no
+    // activity question and no elapsed-time screenshot. Those two steps exist
+    // only because Strava's headline figure is moving time; neither applies here.
+    _workoutActivity='Lesson';
+    document.getElementById('workout-source-area').style.display='none';
+    runWorkoutAnalysis();
+    return;
+  }
   if(app==='Runna'){
     // Runna is running only — no activity question, straight to analysis.
     _workoutActivity='Run';
@@ -3587,6 +3689,7 @@ async function runWorkoutAnalysis(){
 
 function showWorkoutSummary(result){
   if(!result)return;
+  if(result.app==='Preply'){showPreplySummary(result);return}
   let dateLabel='Unknown date';
   if(result.date)dateLabel=_ordinalDate(result.date)+' '+_journalYear(result.date);
   const daypart=_timeOfDay(result.startTime,null);
@@ -3644,6 +3747,47 @@ function showWorkoutSummary(result){
       numEl.value='';
     }
   }
+  document.getElementById('workout-upload-area').style.display='none';
+  document.getElementById('workout-source-area').style.display='none';
+  document.getElementById('workout-result-area').style.display='block';
+}
+
+// The Preply confirmation screen. It states the lesson length and the logged
+// length SEPARATELY, so the ten added minutes are visible here, before anything
+// is logged, rather than discovered later on the form.
+function showPreplySummary(result){
+  const dateLabel=result.date?(_ordinalDate(result.date)+' '+_journalYear(result.date)):'Unknown date';
+  const lessonMins=Math.max(0,result.lessonMinutes||0);
+  const totalMins=lessonMins+PREPLY_REVIEW_MINS;
+  const sessionEnd=_addMins(result.startTime,totalMins);
+  const el=document.getElementById('workout-summary-card');
+  if(el){
+    el.innerHTML=
+      '<div class="workout-summary-row"><span>'+escHtml(dateLabel)+
+        ' <span style="color:var(--text3);font-size:11px">(dated on the card)</span></span></div>'+
+      '<div class="workout-summary-row"><span>'+escHtml(
+        _timeOfDay(result.startTime,null)+' | '+_fmtLessonLength(lessonMins)+
+        ' Preply Japanese Lesson'+(result.teacher?' with '+result.teacher:''))+'</span></div>'+
+      '<div class="workout-summary-row"><span>'+escHtml(
+        result.startTime+' \u2013 '+sessionEnd+'  ('+_fmtHoursMins(totalMins,false)+')')+'</span></div>'+
+      '<div class="workout-summary-row"><span style="color:var(--text3);font-size:11px">'+escHtml(
+        _fmtHoursMins(lessonMins,false)+' lesson ('+result.startTime+'\u2013'+result.lessonEndTime+
+        ' on the card) + '+PREPLY_REVIEW_MINS+' min post-lesson review')+'</span></div>'+
+      (result.teacher?'':'<div class="workout-summary-row"><span style="color:var(--o);font-size:11px">'+
+        'No teacher name was read off the card \u2014 the title will leave it off</span></div>');
+  }
+  // None of the workout fields apply, and a stale value in any of them would be
+  // picked up by useWorkoutResult() and silently overwrite the card's figures.
+  const manRow=document.getElementById('workout-manual-row');
+  if(manRow)manRow.style.display='none';
+  const numRow=document.getElementById('workout-cyclenum-row');
+  if(numRow)numRow.style.display='none';
+  const numEl=document.getElementById('workout-cyclenum-input');
+  if(numEl)numEl.value='';
+  const stEl=document.getElementById('workout-starttime-input');
+  if(stEl)stEl.value='';
+  const durEl=document.getElementById('workout-duration-input');
+  if(durEl)durEl.value='';
   document.getElementById('workout-upload-area').style.display='none';
   document.getElementById('workout-source-area').style.display='none';
   document.getElementById('workout-result-area').style.display='block';
@@ -3749,6 +3893,35 @@ function buildWorkoutJournal(r,cycleNum){
   return title;
 }
 
+// Lesson length as it reads in front of the word "Lesson": "25 Minute",
+// "50 Minute", "1 Hour 20 Minute", "1 Hour". The unit stays SINGULAR because it
+// is an adjective there, not a count standing on its own — which is why this
+// exists rather than reusing _fmtHoursMins(). Noah, 2026-08-26.
+function _fmtLessonLength(mins){
+  const m0=Math.max(0,Math.floor(mins)), h=Math.floor(m0/60), m=m0%60;
+  if(h===0)return m+' Minute';
+  if(m===0)return h+' Hour';
+  return h+' Hour '+m+' Minute';
+}
+
+// The journal label for a Preply lesson — e.g.
+// "26th August - Afternoon | 25 Minute Preply Japanese Lesson with Naoto".
+// ONE LINE, same rule as buildWorkoutJournal(): the Google Form supplies the
+// date and both times itself.
+//
+// The minutes here are the LESSON's own length off the card, never the logged
+// total. A 16:00–16:25 card gives "25 Minute" even though End Time on the form
+// reads 16:35 — so the title can never contradict the screenshot attached as
+// proof, and the ten extra minutes are accounted for by PREPLY_REVIEW_LINE
+// instead. No teacher name on the card means the name is left off rather than
+// guessed at.
+function buildPreplyJournal(r){
+  let t=_ordinalDate(r.date)+' - '+_timeOfDay(r.startTime,null)+' | '+
+        _fmtLessonLength(r.lessonMinutes||0)+' Preply Japanese Lesson';
+  if(r.teacher)t+=' with '+r.teacher;
+  return t;
+}
+
 // Stretch label — e.g. "11th June - After-Run Stretches". One line, same rule as
 // buildWorkoutJournal(): the form supplies date and times itself. The routine
 // itself is in the attached Runner's Stretch Guide PDF.
@@ -3775,6 +3948,10 @@ function countWorkoutsOnDate(activity,date,daypart){
 }
 
 function openManualWorkoutEntry(){
+  // Manual entry is always a WORKOUT. If Preply was picked and then backed out
+  // of, the leftover app/activity would send a blank Preply lesson through
+  // _fillPreplyLogForm() and produce a "0 Minute" title, so clear it here.
+  if(_workoutApp==='Preply'){_workoutApp=null;_workoutActivity=null}
   _workoutApp=_workoutApp||'Strava';
   _workoutActivity=_workoutActivity||'Run';
   _workoutResult={date:todayStr(),startTime:null,durationSeconds:0,durationMinutes:0,
@@ -3823,10 +4000,50 @@ async function useWorkoutResult(){
   _fillRunLogForm(result,cycleNum0);
 }
 
+// A Preply lesson is logged as JAPANESE, not PE, and its End Time is the
+// lesson's own end plus PREPLY_REVIEW_MINS — the only place in the app that adds
+// minutes to a session. Everything else here mirrors _fillRunLogForm().
+function _fillPreplyLogForm(result){
+  const subjs=loadSubjects();
+  const sel=document.getElementById('log-subject');
+  if(sel){
+    const jp=subjs.find(s=>s.id==='japanese');
+    if(jp)sel.value=jp.id;
+  }
+  const ld=document.getElementById('log-date');
+  if(ld&&result.date)ld.value=result.date;
+  const lessonMins=Math.max(0,result.lessonMinutes||0);
+  if(result.startTime){
+    setLogTime('log-start',result.startTime);
+    setLogTime('log-end',_addMins(result.startTime,lessonMins+PREPLY_REVIEW_MINS));
+  }
+  updateLogDuration();
+  updateLogFormColour();
+  const notesEl=document.getElementById('log-notes');
+  if(notesEl)notesEl.value=buildPreplyJournal(result);
+  _pendingJournalMeta={
+    activity:'Lesson', app:'Preply', teacher:result.teacher||null,
+    // The LESSON's length, matching the card — not the logged total.
+    durationSeconds:lessonMins*60, model:result.model||null,
+    usedElapsed:false, movingSeconds:lessonMins*60,
+    // Re-opening this session's form from History rebuilds PREPLY_REVIEW_LINE
+    // off this flag. Without it the line would silently vanish on a re-open.
+    preply:true, reviewMins:PREPLY_REVIEW_MINS
+  };
+  updateJournalLenWarn();
+  showPreplyProofBanner();
+  closeModal('workout-import-overlay');
+  const anchor=document.getElementById('preply-proof-banner')||document.getElementById('log-form-card');
+  if(anchor)anchor.scrollIntoView({behavior:'auto',block:'start'});
+  showToast('Imported \u2014 review the journal, then Log Session','var(--ok)');
+}
+
 // Fills the log form with the workout itself. Split out of useWorkoutResult so
 // the pre-run stretch step can call it afterwards.
 function _fillRunLogForm(result,cycleNum){
   if(!result)return;
+  if(result.app==='Preply'){_fillPreplyLogForm(result);return}
+  hidePreplyProofBanner();
   const subjs=loadSubjects();
   // Every import is now a PE workout — King of Time / work-shift handling was
   // removed once Electives 4 was finished. The el4 subject itself is untouched.
@@ -5097,6 +5314,7 @@ function animateCount(el,target,decimals,suffix){
 
 // ── LOG ───────────────────────────────────────────────────────────────────────
 function clearLogForm(){
+  hidePreplyProofBanner();
   document.getElementById('log-date').value=todayStr();
   document.getElementById('log-start-hh').value='';
   document.getElementById('log-start-mm').value='';
@@ -5226,6 +5444,7 @@ function updateLogFormColour(){
 }
 
 function autofillFromBlock(subjectId,start,end){
+  hidePreplyProofBanner();
   const sel=document.getElementById('log-subject');
   if(sel){sel.value=subjectId;updateLogFormColour()}
   setLogTime('log-start',start);
@@ -6964,7 +7183,7 @@ function _doLogSession(){
   // Auto-open the subject's Google Form after logging. Since the Journal Content
   // box was merged into Notes on 2026-08-19 there is only one field, so `notes`
   // IS the submission text. _buildSubjectFormUrl() adds the journal-writing line.
-  if(_SUBJECT_FORMS[subjectId]) _openSubjectForm(subjectId,date,start,end,notes,_newId,!!(_rec.journalMeta&&_rec.journalMeta.usedElapsed));
+  if(_SUBJECT_FORMS[subjectId]) _openSubjectForm(subjectId,date,start,end,notes,_newId,!!(_rec.journalMeta&&_rec.journalMeta.usedElapsed),!!(_rec.journalMeta&&_rec.journalMeta.preply));
   // After a PE *run*, offer to pre-fill the post-run stretches (shows behind the
   // form card above, so it's revealed once that's dismissed — i.e. after the form)
   _maybeOfferStretches(subjectId,date,start,end,notes);
@@ -7022,6 +7241,7 @@ function _maybeOfferStretches(subjectId,date,start,end,notes){
 }
 function fillStretchLog(){
   if(!_pendingStretch)return;
+  hidePreplyProofBanner();
   const {date,end}=_pendingStretch;
   // Starts 5 min after the run session ends. Since 18 Aug 2026 the run's End
   // Time is the real end of the activity — journal-writing minutes no longer
@@ -7131,6 +7351,7 @@ function updateMorningStretchBanner(){
 }
 
 function fillMorningStretchLog(){
+  hidePreplyProofBanner();
   showPage('log');
   const sub = document.getElementById('log-subject'); if(sub) sub.value = 'pe';
   if(typeof updateLogFormColour === 'function') updateLogFormColour();
@@ -7161,6 +7382,7 @@ function _maybeAutoFillMorningStretchEnd(){
 }
 
 function fillPreRunStretchLog(){
+  hidePreplyProofBanner();
   const w=_pendingPreRun;
   _pendingPreRun=null;
   closeModal('prerun-stretch-modal-overlay');
