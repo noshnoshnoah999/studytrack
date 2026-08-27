@@ -1086,6 +1086,7 @@ button:active{transform:scale(0.96)}
       <div class="morning-stretch-banner" id="preply-proof-banner">
         <div class="morning-stretch-banner-text">Upload Screenshot of Preply Chat with Tutor for Post Lesson Review Proof</div>
         <a class="morning-stretch-banner-btn" id="preply-proof-link" href="#" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:inline-block;text-align:center">Open Folder</a>
+        <button onclick="hidePreplyProofBanner()" title="Dismiss — proof already uploaded" aria-label="Dismiss" style="background:none;border:none;color:var(--text3);font-size:20px;line-height:1;cursor:pointer;font-family:inherit;padding:0 2px;flex-shrink:0">&times;</button>
       </div>
       <div class="card log-form-card" id="log-form-card" style="margin-bottom:12px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
@@ -1910,7 +1911,14 @@ const PREPLY_PROOF_FOLDER_URL='https://drive.google.com/drive/u/1/folders/1gvfjE
 
 // The banner belongs to whatever is currently in the log form. Every other filler
 // hides it; only a Preply import shows it. It survives _doLogSession() on purpose
-// — see the comment on the markup.
+// — see the comment on the markup — and the × on the banner is how it comes down
+// once the proof has actually been filed.
+//
+// Its state is a DOM class and NOTHING ELSE: never written to localStorage, never
+// restored on boot, and showPreplyProofBanner() has exactly ONE caller
+// (_fillPreplyLogForm). That is what makes it start hidden on every app open.
+// Do not add persistence here — a banner that survived a reload would outlive the
+// upload it is asking for.
 function showPreplyProofBanner(){
   const el=document.getElementById('preply-proof-banner');
   if(!el)return;
@@ -6023,6 +6031,23 @@ function archiveOldSessions(){
   });
   if(subjChanged)saveSubjects(subjsArch);
   saveHours(hoursArch);
+
+  // Tombstone every archived ID. Their hours now live in subject.base, so a
+  // device that still holds these sessions locally would re-add them on its next
+  // sync (syncFromCloud only drops IDs it finds in st_deleted_sessions) and the
+  // same hours would then be counted TWICE — once in base, once in the st_hours
+  // recomputed from the resurrected sessions. Reproduced 2026-08-27: a 3h
+  // dataset became 4h on both devices and re-pushed the corruption to the cloud.
+  // Batched into ONE push rather than looping _tombstoneSession(), which pushes
+  // per session and would fire hundreds of requests on a bulk archive.
+  try{
+    const tomb=JSON.parse(localStorage.getItem('st_deleted_sessions')||'[]');
+    old.forEach(s=>{if(s.id&&!tomb.includes(s.id))tomb.push(s.id)});
+    const pruned=tomb.slice(-500);
+    localStorage.setItem('st_deleted_sessions',JSON.stringify(pruned));
+    sbPush('st_deleted_sessions',pruned,{silent:true});
+  }catch(e){}
+
   saveSessions(keep); // saveSessions already calls sbPush internally
 
   const count=old.length;
