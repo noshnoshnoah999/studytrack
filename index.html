@@ -1026,6 +1026,14 @@ button:active{transform:scale(0.96)}
       <div class="morning-stretch-banner-text" id="morning-stretch-banner-text">Submit Morning After-Wake Up Stretches</div>
       <button class="morning-stretch-banner-btn" onclick="fillMorningStretchLog()">Fill Form &amp; Submit</button>
     </div>
+    <!-- Hatchobori platform transfer walk. Two states: a WAIT state (no button,
+         because cycle-end +20 min has not arrived and the future-session guard
+         would refuse the entry) and a READY state with the Fill button. -->
+    <div class="morning-stretch-banner" id="hatchobori-banner">
+      <div class="morning-stretch-banner-text" id="hatchobori-banner-text"></div>
+      <button class="morning-stretch-banner-btn" id="hatchobori-banner-btn" onclick="fillHatchoboriWalkLog()">Fill Form &amp; Submit</button>
+      <button onclick="dismissHatchoboriBanner()" title="Dismiss for today" aria-label="Dismiss" style="background:none;border:none;color:var(--text3);font-size:20px;line-height:1;cursor:pointer;font-family:inherit;padding:0 2px;flex-shrink:0">&times;</button>
+    </div>
     <!-- PAGE: DASHBOARD -->
     <div class="page" id="page-dashboard">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
@@ -1043,6 +1051,7 @@ button:active{transform:scale(0.96)}
       </div>
       <div id="home-pinned-card"></div>
       <div id="morning-stretch-backlog-card"></div>
+      <div id="hatchobori-card"></div>
       <div id="dash-blocks-container">
         <div id="now-next-banner" data-block="now-next-banner"></div>
         <div id="teacher-plan-card" data-block="teacher-plan-card"></div>
@@ -1087,6 +1096,7 @@ button:active{transform:scale(0.96)}
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
           <div class="card-title" style="margin-bottom:0">Log a Session</div>
           <div style="display:flex;gap:6px;align-items:center">
+            <button onclick="fillHatchoboriWalkLog()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:12px;color:var(--text3);cursor:pointer;font-family:inherit" title="Fill a Hatchobori platform transfer walk">Transfer Walk</button>
             <button onclick="clearLogForm()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:12px;color:var(--text3);cursor:pointer;font-family:inherit" title="Clear form">Clear</button>
             <button class="btn-import-workout" onclick="openWorkoutImport()"> Import</button>
           </div>
@@ -4388,6 +4398,7 @@ function renderDashboard(){
   renderNowNext();
   renderTeacherPlan();
   if(typeof renderMorningStretchBacklog==='function')renderMorningStretchBacklog();
+  if(typeof updateHatchoboriBanner==='function')updateHatchoboriBanner();
   const now=nowLocal();
   const hour=now.getHours();
   let greet='Good Morning';
@@ -7032,6 +7043,7 @@ function timeSplitInput(hiddenId, thisId, nextId){
   // End = Start + 10 minutes. Scoped to wrap==='log-start' plus the notes-field
   // check inside the function, so it never fires for ordinary log entries.
   if(wrap==='log-start')_maybeAutoFillMorningStretchEnd();
+  if(wrap==='log-start')_maybeAutoFillHatchoboriEnd();
 }
 
 function setLogTime(prefix, timeStr){
@@ -7236,12 +7248,206 @@ function _doLogSession(){
   // After a PE *run*, offer to pre-fill the post-run stretches (shows behind the
   // form card above, so it's revealed once that's dismissed — i.e. after the form)
   _maybeOfferStretches(subjectId,date,start,end,notes);
+  // After a PE *cycle*, offer the Hatchobori platform transfer walk, or park
+  // it in a wait banner when the 20-minute window has not passed yet.
+  _maybeOfferHatchoboriWalk(subjectId,date,start,end,notes);
   // If what was just logged is a pre-run stretch, the run it belongs to is
   // parked in localStorage — fill its form in now, so the run follows the
   // stretch rather than the other way round.
   if(/Pre-Run Stretches\s*$/i.test(notes||''))_resumePendingRun();
   // If this was the Morning After-Wake Up Stretches entry, hide the banner now.
   if(typeof updateMorningStretchBanner==='function')updateMorningStretchBanner();
+  if(typeof updateHatchoboriBanner==='function')updateHatchoboriBanner();
+}
+
+// ── Hatchobori platform transfer walk ───────────────────────────────────────
+// The Keiyo-line platform at Hatchobori and the Hibiya-line platform are a real
+// walk apart, done on the way to and from work. Logged as PE, one 6-minute
+// session per leg, numbered per day ("Walk 1", "Walk 2").
+//
+// The OUTBOUND leg is offered after a PE cycle is logged, starting 20 minutes
+// after the ride ends. The RETURN leg happens hours later, so the app never
+// guesses its time — Start is left blank for Noah to type and End fills at +6.
+// Logging both legs as one block would put a false time range on the Google
+// Form, which is why they are two separate sessions.
+const HATCHOBORI_WALK_MINS = 6;
+const HATCHOBORI_GAP_MINS = 20;
+const HATCHOBORI_MAX_PROMPTED = 2;
+const HATCHOBORI_LABEL = 'Hatchobori Platform Transfer Walk';
+const HATCHOBORI_PENDING_KEY = 'st_hatchobori_pending';
+const HATCHOBORI_DISMISS_KEY = 'st_hatchobori_dismissed';
+
+// Matches a Hatchobori walk title with or without its trailing number, so the
+// trigger below can never fire on its own output and loop.
+function _hatchoboriNoteRegex(){ return /Hatchobori Platform Transfer Walk(\s+\d+)?\s*$/i; }
+
+// A CYCLE specifically — not a walk. _isCycleOrWalk() treats both the same,
+// which would let a transfer walk trigger another transfer walk.
+function _looksLikeCycle(str){
+  const n = (str || '').toLowerCase();
+  if(/stretch|hatchobori/.test(n)) return false;
+  return /\b(cycle|cycling|bike|biking|ride|riding)\b/.test(n);
+}
+
+function _countHatchoboriWalksOn(ds){
+  try{
+    const re = _hatchoboriNoteRegex();
+    return loadSessions().filter(s => s.date === ds && re.test(s.notes || '')).length;
+  }catch(e){ return 0; }
+}
+
+function _loadHatchoboriPending(){
+  try{
+    const raw = localStorage.getItem(HATCHOBORI_PENDING_KEY);
+    if(!raw) return null;
+    const p = JSON.parse(raw);
+    return (p && p.date && p.cycleEnd) ? p : null;
+  }catch(e){ return null; }
+}
+function _saveHatchoboriPending(date, cycleEnd){
+  try{ localStorage.setItem(HATCHOBORI_PENDING_KEY, JSON.stringify({date:date, cycleEnd:cycleEnd})); }catch(e){}
+}
+
+// Minutes still to wait before the outbound walk can honestly be logged.
+// 0 once the window has passed, or when there is nothing pending for today.
+function _minsUntilHatchoboriReady(){
+  const p = _loadHatchoboriPending();
+  if(!p || p.date !== todayStr()) return 0;
+  const readyMins = toMins(_addMins(p.cycleEnd, HATCHOBORI_GAP_MINS));
+  const now = nowLocal();
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+  // A ride ending near midnight rolls _addMins past 00:00; treat that as ready
+  // rather than reporting a negative wait or a whole day of waiting.
+  if(readyMins < toMins(p.cycleEnd)) return 0;
+  return Math.max(0, readyMins - nowMins);
+}
+
+// The pre-fill start time for the OUTBOUND leg, or '' when the app has no
+// honest basis for one (nothing pending, wrong day, or still inside the wait).
+function _hatchoboriStartSuggestion(){
+  const p = _loadHatchoboriPending();
+  if(!p || p.date !== todayStr()) return '';
+  if(_minsUntilHatchoboriReady() > 0) return '';
+  return _addMins(p.cycleEnd, HATCHOBORI_GAP_MINS);
+}
+
+function _hatchoboriDismissedToday(){
+  try{ return localStorage.getItem(HATCHOBORI_DISMISS_KEY) === todayStr(); }catch(e){ return false; }
+}
+function dismissHatchoboriBanner(){
+  try{ localStorage.setItem(HATCHOBORI_DISMISS_KEY, todayStr()); }catch(e){}
+  updateHatchoboriBanner();
+}
+
+// Called from _doLogSession(). Fires only on a PE cycle, never on a walk, run,
+// stretch, or on a Hatchobori entry itself.
+function _maybeOfferHatchoboriWalk(subjectId, date, start, end, notes){
+  if(subjectId !== 'pe') return;
+  if(!_looksLikeCycle(notes)) return;
+  if(date !== todayStr()) return;      // a back-dated ride gets no live prompt
+  if(!end) return;
+  _saveHatchoboriPending(date, end);
+  try{ localStorage.removeItem(HATCHOBORI_DISMISS_KEY); }catch(e){}
+  // Only pre-fill when the walk has actually happened. Otherwise the entry
+  // would be refused by _futureSessionError() on submit, so show the wait
+  // banner instead and let Noah press it once the time has passed.
+  if(_countHatchoboriWalksOn(date) === 0 && _minsUntilHatchoboriReady() === 0){
+    fillHatchoboriWalkLog();
+  }
+  updateHatchoboriBanner();
+}
+
+function updateHatchoboriBanner(){
+  const el = document.getElementById('hatchobori-banner');
+  const txt = document.getElementById('hatchobori-banner-text');
+  const btn = document.getElementById('hatchobori-banner-btn');
+  if(el){
+    const p = _loadHatchoboriPending();
+    const today = todayStr();
+    const done = _countHatchoboriWalksOn(today);
+    const show = !!p && p.date === today && done < HATCHOBORI_MAX_PROMPTED && !_hatchoboriDismissedToday();
+    if(show){
+      const next = done + 1;
+      const wait = (next === 1) ? _minsUntilHatchoboriReady() : 0;
+      if(wait > 0){
+        if(txt) txt.textContent = HATCHOBORI_LABEL + ' 1 — you can log this in ' +
+          wait + (wait === 1 ? ' minute' : ' minutes');
+        if(btn) btn.style.display = 'none';
+      }else{
+        if(txt) txt.textContent = 'Log ' + HATCHOBORI_LABEL + ' ' + next;
+        if(btn) btn.style.display = '';
+      }
+    }
+    el.classList.toggle('show', show);
+  }
+  renderHatchoboriCard();
+}
+
+// Dashboard card. Always present, with no cycle needed, so a transfer walk can
+// be logged on a day Noah did not ride.
+function renderHatchoboriCard(){
+  const host = document.getElementById('hatchobori-card');
+  if(!host) return;
+  const today = todayStr();
+  const done = _countHatchoboriWalksOn(today);
+  const wait = (done === 0) ? _minsUntilHatchoboriReady() : 0;
+  const next = done + 1;
+  let sub;
+  if(wait > 0) sub = 'Walk 1 can be logged in ' + wait + (wait === 1 ? ' minute' : ' minutes') +
+    ' — 20 minutes after your ride ended.';
+  else if(done === 0) sub = 'No transfer walks logged today.';
+  else sub = done + (done === 1 ? ' walk' : ' walks') + ' logged today.';
+  host.innerHTML =
+    '<div class="card" style="margin-top:10px">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">' +
+        '<div style="min-width:180px">' +
+          '<div style="font-size:13px;font-weight:800;color:var(--text)">Hatchobori Transfer Walk</div>' +
+          '<div style="font-size:12px;color:var(--text2);margin-top:2px;line-height:1.4">' + sub + '</div>' +
+        '</div>' +
+        (wait > 0 ? '' :
+          '<button class="morning-stretch-banner-btn" onclick="fillHatchoboriWalkLog()">Log Walk ' + next + '</button>') +
+      '</div>' +
+    '</div>';
+}
+
+// opts.date optional (defaults to today). Start is pre-filled ONLY for the
+// outbound leg and ONLY once the wait window has passed; otherwise blank.
+function fillHatchoboriWalkLog(){
+  const ds = todayStr();
+  const next = _countHatchoboriWalksOn(ds) + 1;
+  const suggested = (next === 1) ? _hatchoboriStartSuggestion() : '';
+  hidePreplyProofBanner();
+  showPage('log');
+  const sub = document.getElementById('log-subject'); if(sub) sub.value = 'pe';
+  if(typeof updateLogFormColour === 'function') updateLogFormColour();
+  setLogDateAuto(ds);
+  setLogTime('log-start', suggested);
+  setLogTime('log-end', suggested ? _addMins(suggested, HATCHOBORI_WALK_MINS) : '');
+  const nEl = document.getElementById('log-notes');
+  if(nEl) nEl.value = _ordinalDate(ds) + ' - ' + HATCHOBORI_LABEL + ' ' + next;
+  updateJournalLenWarn();
+  _pendingJournalMeta = {activity:'Walk', app:null, durationSeconds:HATCHOBORI_WALK_MINS*60};
+  updateLogDuration();
+  const card = document.getElementById('log-form-card');
+  if(card) card.scrollIntoView({behavior:'auto', block:'start'});
+  if(!suggested){
+    const hhEl = document.getElementById('log-start-hh');
+    if(hhEl) hhEl.focus();
+    showToast('Transfer Walk ' + next + ' — enter your start time, end time fills in automatically', 'var(--ok)');
+  }else{
+    showToast('Transfer Walk ' + next + ' filled in — review & log', 'var(--ok)');
+  }
+}
+
+// End = Start + 6 while a Hatchobori title is in the form. Mirrors the morning
+// stretch hook and never touches an ordinary log entry.
+function _maybeAutoFillHatchoboriEnd(){
+  const nEl = document.getElementById('log-notes');
+  if(!nEl || !_hatchoboriNoteRegex().test(nEl.value || '')) return;
+  const start = document.getElementById('log-start').value;
+  if(!start) return;
+  setLogTime('log-end', _addMins(start, HATCHOBORI_WALK_MINS));
+  updateLogDuration();
 }
 
 // ── After-run stretches auto-fill ───────────────────────────────────────────
@@ -9877,6 +10083,7 @@ async function syncFromCloud(){
   scheduleNotifications();
   renderHolidayUI();
   if(typeof updateMorningStretchBanner==='function')updateMorningStretchBanner();
+  if(typeof updateHatchoboriBanner==='function')updateHatchoboriBanner();
   // Register service worker and re-subscribe this device if notifications already granted
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/studytrack/sw.js',{scope:'/studytrack/'})
@@ -9938,6 +10145,8 @@ async function syncFromCloud(){
     _adoptOverridesIfNewer(row);
     renderSchedule();
   },60000);
+  // The Hatchobori wait banner counts down in whole minutes, so 60s is enough.
+  setInterval(()=>{ if(typeof updateHatchoboriBanner==='function')updateHatchoboriBanner(); }, 60000);
   // Check todo due times every minute (in-app notification)
   setInterval(checkTodoNotifs, 60000);
   // Check schedule-based in-app notifications every minute
