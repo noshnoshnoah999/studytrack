@@ -365,6 +365,19 @@ a{color:inherit;text-decoration:none}
 .morning-stretch-banner.show{display:flex}
 .morning-stretch-banner-text{flex:1;min-width:200px;line-height:1.4}
 .morning-stretch-banner-btn{background:var(--o);color:var(--bg);border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit}
+/* Contract banners. Deliberately heavier than the amber nudge banners above:
+   these do not go away on their own and are not meant to be easy to ignore. */
+.contract-banner{background:rgba(239,68,68,0.10);border:2px solid rgba(239,68,68,0.45);border-radius:12px;padding:14px 16px;margin:0 0 12px 0;font-size:13px;color:var(--text)}
+.contract-banner.is-warning{background:rgba(245,158,11,0.14);border-color:rgba(245,158,11,0.55)}
+.contract-banner-title{font-size:14.5px;font-weight:800;color:var(--text);line-height:1.35;margin-bottom:4px}
+.contract-banner-sub{font-size:12.5px;color:var(--text2);line-height:1.5}
+.contract-banner-checks{margin-top:12px;display:flex;flex-direction:column;gap:9px}
+.contract-check{display:flex;align-items:flex-start;gap:9px;font-size:12.5px;color:var(--text);line-height:1.4;cursor:pointer;-webkit-user-select:none;user-select:none}
+.contract-check input{margin:1px 0 0 0;width:17px;height:17px;flex-shrink:0;cursor:pointer;accent-color:var(--o)}
+.contract-banner-actions{margin-top:13px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.contract-banner-btn{background:var(--o);color:var(--bg);border:none;border-radius:8px;padding:9px 17px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.contract-banner-btn:disabled{opacity:0.38;cursor:not-allowed}
+.contract-banner-skip{background:none;border:none;color:var(--text3);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:underline;padding:0}
 .fp-row{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border)}
 .fp-info{flex:1;min-width:0}
 .fp-name{font-size:13px;font-weight:700;color:var(--text)}
@@ -403,7 +416,7 @@ a{color:inherit;text-decoration:none}
    The fill carries its own border-radius, so nothing needed clipping anyway. */
 .subj-bar{flex:1;height:5px;background:var(--bg3);border-radius:100px;position:relative}
 .subj-bar-fill{height:100%;border-radius:100px}
-/* Contract boundary tick — see CONTRACT_MARKERS. Deliberately taller than the bar:
+/* Contract boundary tick — see contractNotches(). Deliberately taller than the bar:
    when progress happens to sit ON the boundary, a notch drawn inside the bar is
    invisible because it lands exactly where the fill stops. */
 .subj-bar-mark{position:absolute;top:-4px;bottom:-4px;width:2px;border-radius:1px;background:var(--text3)}
@@ -1034,6 +1047,10 @@ button:active{transform:scale(0.96)}
       <button class="morning-stretch-banner-btn" id="hatchobori-banner-btn" onclick="fillHatchoboriWalkLog()">Fill Form &amp; Submit</button>
       <button onclick="dismissHatchoboriBanner()" title="Dismiss for today" aria-label="Dismiss" style="background:none;border:none;color:var(--text3);font-size:20px;line-height:1;cursor:pointer;font-family:inherit;padding:0 2px;flex-shrink:0">&times;</button>
     </div>
+    <!-- Contract banners. One per contract boundary that is reached, or within
+         CONTRACT_LEAD_H of being reached, and not yet confirmed. Sticky: there is
+         no × here on purpose. Owned by renderContractBanners(). -->
+    <div id="contract-banners"></div>
     <!-- PAGE: DASHBOARD -->
     <div class="page" id="page-dashboard">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
@@ -4345,10 +4362,20 @@ function getWeekH(){
 }
 
 function getTotalLogged(){
-  // Excludes extraCredit subjects — only counts hours that matter for graduation
+  // Excludes extraCredit subjects — only counts hours that matter for graduation.
+  //
+  // Each subject is also CAPPED AT ITS REQUIREMENT. The school stops counting at
+  // the contract amount (Noah confirmed 2026-08-29), so hours logged past req are
+  // real study that earns no credit — Electives 3 alone is ~20h over. Counting
+  // them made the total read high and pulled the graduation estimate earlier than
+  // it should be. Capping here is what makes a missed contract banner survivable:
+  // hours logged into a full contract can no longer flatter the forecast.
   const subjs=_canonicalSubjs().filter(s=>!s.extraCredit);
   const hours=loadHours();
-  return subjs.reduce((a,s)=>a+(s.base||0)+(hours[s.id]||0),0);
+  return subjs.reduce((a,s)=>{
+    const logged=(s.base||0)+(hours[s.id]||0);
+    return a+(s.req>0?Math.min(s.req,logged):logged);
+  },0);
 }
 
 // ── NAVIGATION ────────────────────────────────────────────────────────────────
@@ -7258,6 +7285,8 @@ function _doLogSession(){
   // If this was the Morning After-Wake Up Stretches entry, hide the banner now.
   if(typeof updateMorningStretchBanner==='function')updateMorningStretchBanner();
   if(typeof updateHatchoboriBanner==='function')updateHatchoboriBanner();
+  // A logged session is the usual moment a contract boundary is crossed.
+  if(typeof renderContractBanners==='function')renderContractBanners();
 }
 
 // ── Hatchobori platform transfer walk ───────────────────────────────────────
@@ -7913,14 +7942,201 @@ function _renderProgSpotlight(){
     '</div>'+rows;
 }
 
-// A subject whose required hours span more than one teacher contract gets a notch
-// on its progress bar where one contract ends and the next begins. PE is the only
-// one today: PE #1 was 150h, then Noah opened a 0.5-credit PE #2 worth 75h, taking
-// the total to the 225h the bar already shows as one continuous requirement.
-// Noah, 2026-08-19. Add an entry here if another subject ever splits the same way.
-const CONTRACT_MARKERS={
-  pe:{at:150, label:'PE #1 ends at 150h'}
+// The teacher's spreadsheet caps a single contract at CONTRACT_CAP hours — for
+// EVERY subject, not just PE (Noah, 2026-08-29). So a requirement larger than the
+// cap is several contracts back to back: PE's 225h is 150 + 75, Japanese's 450h is
+// three 150s. StudyTrack still shows ONE row per subject carrying the full
+// requirement; the contracts appear as notches on the bar and as the contract
+// numbers the banners use.
+//
+// This replaces a hand-written CONTRACT_MARKERS table that only had room for one
+// notch per subject — which is why Japanese, needing two, showed none at all.
+const CONTRACT_CAP=150;
+
+// [150, 300, ... , req]. The last chunk is short when req is not a multiple of the
+// cap (PE: [150,225]). Empty for a subject with no requirement.
+function contractBoundaries(req){
+  const out=[];
+  if(!(req>0))return out;
+  for(let x=CONTRACT_CAP;x<req;x+=CONTRACT_CAP)out.push(x);
+  out.push(req);
+  return out;
+}
+
+// Notches drawn inside the bar: every boundary except the last, which is the end
+// of the bar itself and would sit on the end cap.
+function contractNotches(req){
+  return contractBoundaries(req).slice(0,-1);
+}
+
+// ── CONTRACT BANNERS ────────────────────────────────────────────────────────
+// A contract caps at CONTRACT_CAP hours, so most subjects are several contracts
+// back to back. When one is about to fill — or has filled — Noah has to go and
+// make the next one and get his teacher to approve it. The app cannot do that for
+// him, and a contract he never opens means journal entries with nowhere valid to
+// go. Electives 4 sat full from 2026-07-15 to 2026-08-29 with nothing anywhere
+// saying so. That is the failure this exists to stop.
+//
+// These banners are STICKY BY DESIGN. They are not notifications, they do not
+// expire, and there is no × on them. A banner clears only when Noah ticks BOTH
+// confirmations — the contract exists and is approved, and its form is linked in
+// StudyTrack — or when he says he is not taking it. He asked for both ticks to be
+// manual (2026-08-29); the app deliberately does NOT auto-tick the "form linked"
+// half even though it could check, because he is the one who sends Claude the form
+// link that makes it true.
+//
+// Everything here is DERIVED from stored subject data on every render, the same
+// way the morning-stretch banner is. There is no fired-set to go stale, nothing to
+// wait on a first sync for, and no new synced key: the only stored state is the
+// confirmation itself, which rides on the subject inside st_subjs.
+
+const CONTRACT_LEAD_H=10;   // hours of warning before a boundary is reached
+
+// What Noah goes and asks for once a subject's own requirement is finished. Extra
+// credit is PE and Electives ONLY (his rule, 2026-08-29). The numbering carries on
+// from the contracts already inside the requirement — PE's 225h is #1 and #2, so
+// the next one he opens is PE #3. Wording only; add a line when a new series
+// contract is created.
+const CONTRACT_SERIES={
+  pe:  'PE #3',
+  el4: 'Electives 5'
 };
+
+// Boundaries that were already dealt with before these banners existed, so they
+// must not fire on day one. PE crossed 150h long ago and PE #2 has been live since
+// 2026-08-19. Electives 4 is deliberately NOT listed: it really is full with
+// nothing opened after it, and Noah wants to be told. Kept as a derived constant
+// rather than a migration on purpose — nothing is written to st_subjs at boot, so
+// there is nothing for a sync to clobber.
+const CONTRACT_PRE_SETTLED={pe:[150]};
+
+// The subject unlocked by finishing this one (Algebra 1 → Geometry, English 10 →
+// English 11). Each needs its own contract and its own form.
+function _nextSubjectInChain(id){
+  for(const k in PREREQS)if(PREREQS[k]===id)return k;
+  return null;
+}
+
+// What Noah has to go and make for this boundary, or null when nothing follows and
+// the banner is only marking a milestone.
+function contractNextStep(s,num,total){
+  if(num<total)return 'contract #'+(num+1)+' for '+s.name;
+  const nextId=_nextSubjectInChain(s.id);
+  if(nextId){
+    const n=DEFAULT_SUBJECTS.find(x=>x.id===nextId);
+    return 'the '+((n&&n.name)||nextId)+' contract';
+  }
+  return CONTRACT_SERIES[s.id]||null;
+}
+
+function _contractAck(s,at){ return((s&&s.contractAck)||{})[String(at)]||{} }
+function _contractSettled(s,at){ return !!_contractAck(s,at).settled }
+
+// Write a confirmation onto the subject itself. st_subjs is already in the sync
+// KEYS list and saveSubjects() pushes it, so this crosses devices with no new key.
+// Last-writer-wins can drop an ack if two devices write at once; the worst case is
+// the banner coming back once and Noah re-ticking it. Do not add a separate flag to
+// "fix" that — a second source of truth is how the old dismissal bugs happened.
+function _writeContractAck(id,at,patch){
+  const subjs=loadSubjects();
+  let s=subjs.find(x=>x.id===id);
+  if(!s){
+    const def=DEFAULT_SUBJECTS.find(x=>x.id===id);
+    if(!def)return;
+    s={...def};
+    subjs.push(s);
+  }
+  if(!s.contractAck)s.contractAck={};
+  s.contractAck[String(at)]={...(s.contractAck[String(at)]||{}),...patch};
+  saveSubjects(subjs);
+  renderContractBanners();
+  if(currentPage==='subjects')renderSubjectsPage();
+}
+
+// Every boundary that is reached, or within CONTRACT_LEAD_H of being reached, and
+// not yet settled. Recomputed from scratch every time it is called.
+function outstandingContracts(){
+  const out=[];
+  _canonicalSubjs().forEach(s=>{
+    if(s.done)return;                       // marked finished = already handled
+    if(!(s.req>0))return;
+    const logged=getLogged(s.id);
+    const bs=contractBoundaries(s.req);
+    const pre=CONTRACT_PRE_SETTLED[s.id]||[];
+    bs.forEach((at,i)=>{
+      if(pre.indexOf(at)>=0)return;
+      if(_contractSettled(s,at))return;
+      const reached=logged>=at;
+      const next=contractNextStep(s,i+1,bs.length);
+      // Lead time only earns its place when there is something to go and make.
+      // A milestone with nothing after it waits until it is genuinely reached —
+      // warn early and Noah would tick it off before the thing actually happened.
+      if(!reached&&(!next||logged<at-CONTRACT_LEAD_H))return;
+      out.push({s:s,at:at,num:i+1,total:bs.length,logged:logged,reached:reached,next:next});
+    });
+  });
+  return out;
+}
+
+function renderContractBanners(){
+  const host=document.getElementById('contract-banners');
+  if(!host)return;
+  const items=outstandingContracts();
+  if(!items.length){host.innerHTML='';return}
+  host.innerHTML=items.map(function(it){
+    const a=_contractAck(it.s,it.at);
+    const key="'"+it.s.id+"',"+it.at;
+    if(!it.next){
+      // Nothing follows this one, so there is nothing to verify — one plain
+      // acknowledgement rather than two ticks that would confirm nothing.
+      return '<div class="contract-banner">'+
+        '<div class="contract-banner-title">'+escHtml(it.s.name)+' — requirement complete.</div>'+
+        '<div class="contract-banner-sub">'+fmtH(it.logged)+' logged against '+fmtH(it.s.req)+' required. Nothing further to open for this subject.</div>'+
+        '<div class="contract-banner-actions">'+
+          '<button class="contract-banner-btn" onclick="noteContractMilestone('+key+')">Got it</button>'+
+        '</div>'+
+      '</div>';
+    }
+    const title=it.reached?
+      escHtml(it.s.name)+' — contract #'+it.num+' is full.':
+      escHtml(it.s.name)+' — '+fmtH(Math.max(0,it.at-it.logged))+' left in contract #'+it.num+'.';
+    const both=!!(a.approved&&a.linked);
+    return '<div class="contract-banner'+(it.reached?'':' is-warning')+'">'+
+      '<div class="contract-banner-title">'+title+'</div>'+
+      '<div class="contract-banner-sub">Make <strong>'+escHtml(it.next)+'</strong> and get your teacher to approve it. She makes the Google Form — send Claude the link so it can be added to StudyTrack.</div>'+
+      '<div class="contract-banner-checks">'+
+        '<label class="contract-check"><input type="checkbox" '+(a.approved?'checked':'')+' onchange="toggleContractCheck('+key+',\'approved\',this.checked)"><span>Contract made and approved by my teacher</span></label>'+
+        '<label class="contract-check"><input type="checkbox" '+(a.linked?'checked':'')+' onchange="toggleContractCheck('+key+',\'linked\',this.checked)"><span>It\'s in StudyTrack with the form linked</span></label>'+
+      '</div>'+
+      '<div class="contract-banner-actions">'+
+        '<button class="contract-banner-btn" '+(both?'':'disabled')+' onclick="confirmContract('+key+')">'+(both?'Confirm and dismiss':'Tick both to dismiss')+'</button>'+
+        '<button class="contract-banner-skip" onclick="skipContract('+key+')">I\'m not taking this one</button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+function toggleContractCheck(id,at,field,on){
+  const patch={};
+  patch[field]=!!on;
+  _writeContractAck(id,at,patch);
+}
+
+function confirmContract(id,at){
+  const s=_canonicalSubjs().find(x=>x.id===id);
+  const a=_contractAck(s,at);
+  if(!(a.approved&&a.linked))return;   // both ticks or nothing — no shortcuts
+  _writeContractAck(id,at,{settled:new Date().toISOString(),how:'confirmed'});
+}
+
+function skipContract(id,at){
+  if(!confirm('Not taking this contract?\n\nThe banner goes away and StudyTrack stops asking about it. Nothing else changes — your logged hours are untouched.'))return;
+  _writeContractAck(id,at,{settled:new Date().toISOString(),how:'skipped'});
+}
+
+function noteContractMilestone(id,at){
+  _writeContractAck(id,at,{settled:new Date().toISOString(),how:'noted'});
+}
 
 function renderSubjectsPage(){
   const allSubjs=loadSubjects();
@@ -7945,10 +8161,10 @@ function renderSubjectsPage(){
     const locked=isSubjPrereqLocked(s.id,allSubjs);
     const logged=getLogged(s.id);
     const pct=s.req>0?Math.min(100,logged/s.req*100):100;
-    // Contract boundary notch. Only drawn when it actually falls inside the bar —
-    // if req ever drops to the marker value the notch would sit on the end cap.
-    const mark=CONTRACT_MARKERS[s.id];
-    const markPct=(mark&&s.req>0&&mark.at>0&&mark.at<s.req)?(mark.at/s.req*100):null;
+    // Contract boundary notches, derived from the 150h cap — so a subject that
+    // spans three contracts gets two notches, not the single one the old
+    // hand-written table allowed.
+    const notches=s.req>0?contractNotches(s.req):[];
     const subjColor=locked?'var(--text3)':(SUBJ_COLORS[s.id]||'var(--o)');
     const barBg=s.done||pct>=100?'var(--ok)':subjColor;
     const tags=[];
@@ -7970,12 +8186,12 @@ function renderSubjectsPage(){
         (!locked?
           '<div class="subj-bar-row">'+
             '<div class="subj-bar"><div class="subj-bar-fill" style="width:'+pct+'%;background:'+barBg+'"></div>'+
-              (markPct!==null?'<div class="subj-bar-mark" style="left:'+markPct+'%" title="'+escHtml(mark.label)+'"></div>':'')+
+              notches.map((at,i)=>'<div class="subj-bar-mark" style="left:'+(at/s.req*100)+'%" title="'+escHtml('Contract #'+(i+1)+' ends at '+fmtH(at))+'"></div>').join('')+
             '</div>'+
             '<div class="subj-pct">'+Math.round(pct)+'%'+(pct<100?'<span class="subj-left">'+fmtH(Math.max(0,s.req-logged))+' left</span>':'')+'</div>'+
           '</div>'+
           '<div class="subj-hours">'+fmtH(logged)+' logged · '+fmtH(s.req)+' required'+
-            (markPct!==null?' · '+escHtml(mark.label):'')+'</div>'+
+            (notches.length?' · '+escHtml(notches.map((at,i)=>'#'+(i+1)+' ends at '+fmtH(at)).join(', ')):'')+'</div>'+
           (logged===0?'<div style="margin-top:8px">'+askClaudeBtn+'</div>':'')
         :
           '<div class="subj-hours" style="color:var(--text3)">'+fmtH(s.req)+' required · unlocks when prereq is done</div>'
@@ -8002,7 +8218,23 @@ function renderSubjectsPage(){
   const hiddenFooter=hideDone&&done.length?
     '<div style="text-align:center;padding:12px;font-size:12px;color:var(--text3);cursor:pointer" onclick="toggleHideDone()">'+done.length+' completed subject'+(done.length>1?'s':'')+' hidden · tap to show</div>':'';
 
-  el.innerHTML=rows+hiddenFooter;
+  // Extra-credit hours are excluded from every graduation figure in the app, so
+  // until now nothing anywhere SUMMED them — the one thing Noah says StudyTrack
+  // has to do for extra credit ("track how many hours ive submitted") was the one
+  // thing it did not do. The school grades the submitted work outside StudyTrack;
+  // all the app owes him is the total.
+  const ecSubjs=allSubjs.filter(s=>s.extraCredit);
+  const ecTotal=ecSubjs.reduce((a,s)=>a+getLogged(s.id),0);
+  const ecHeader=ecSubjs.length?
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:11px 14px;margin-bottom:14px">'+
+      '<div>'+
+        '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Extra credit submitted</div>'+
+        '<div style="font-size:11px;color:var(--text3);margin-top:3px">'+ecSubjs.length+' contract'+(ecSubjs.length!==1?'s':'')+' · does not count toward graduation</div>'+
+      '</div>'+
+      '<div style="font-size:20px;font-weight:800;color:var(--text);white-space:nowrap">'+fmtH(ecTotal)+'</div>'+
+    '</div>':'';
+
+  el.innerHTML=ecHeader+rows+hiddenFooter;
   el.querySelectorAll('.subj-row').forEach((r,i)=>{
     r.classList.add('slide-up');
   });
@@ -8125,7 +8357,7 @@ function _renderGradEstCard(){
     )+
     (futureH>0?
     '<div style="background:var(--bg3);border-radius:var(--radius);padding:13px 18px;font-size:12px;color:var(--text2);border:1px solid var(--border)">'+
-      '<span style="font-weight:700;color:var(--text)">Includes '+fmtH(futureH)+'h from '+futureSubjs.length+' future subject'+(futureSubjs.length!==1?'s':'')+' not yet started</span>'+
+      '<span style="font-weight:700;color:var(--text)">Includes '+fmtH(futureH)+' from '+futureSubjs.length+' future subject'+(futureSubjs.length!==1?'s':'')+' not yet started</span>'+
       '<div style="margin-top:4px;color:var(--text3)">'+futureNames+'</div>'+
     '</div>':''
     )+
@@ -10001,6 +10233,8 @@ async function syncFromCloud(){
     computeGoalRec(); // recompute after fresh cloud data
     updateRecPrompt();
     renderHolidayUI(); // reflect any holiday state pulled from cloud
+    // Hours and confirmations can both move on a sync, so re-derive the banners.
+    if(typeof renderContractBanners==='function')renderContractBanners();
     if(updated)showPage(currentPage);
   }catch(e){
     if(e.message&&e.message.includes('quota')){
@@ -10084,6 +10318,7 @@ async function syncFromCloud(){
   renderHolidayUI();
   if(typeof updateMorningStretchBanner==='function')updateMorningStretchBanner();
   if(typeof updateHatchoboriBanner==='function')updateHatchoboriBanner();
+  if(typeof renderContractBanners==='function')renderContractBanners();
   // Register service worker and re-subscribe this device if notifications already granted
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/studytrack/sw.js',{scope:'/studytrack/'})
