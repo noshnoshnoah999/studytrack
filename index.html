@@ -1093,10 +1093,10 @@ button:active{transform:scale(0.96)}
         <button onclick="hidePreplyProofBanner()" title="Dismiss — proof already uploaded" aria-label="Dismiss" style="background:none;border:none;color:var(--text3);font-size:20px;line-height:1;cursor:pointer;font-family:inherit;padding:0 2px;flex-shrink:0">&times;</button>
       </div>
       <div class="card log-form-card" id="log-form-card" style="margin-bottom:12px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:8px;flex-wrap:wrap">
           <div class="card-title" style="margin-bottom:0">Log a Session</div>
-          <div style="display:flex;gap:6px;align-items:center">
-            <button onclick="fillHatchoboriWalkLog()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:12px;color:var(--text3);cursor:pointer;font-family:inherit" title="Fill a Hatchobori platform transfer walk">Transfer Walk</button>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+            <button onclick="fillHatchoboriWalkLog()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:14px;color:var(--text);cursor:pointer;font-family:inherit;white-space:nowrap" title="Fill a Hatchobori platform transfer walk">八丁堀駅 Transfer Walk</button>
             <button onclick="clearLogForm()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:12px;color:var(--text3);cursor:pointer;font-family:inherit" title="Clear form">Clear</button>
             <button class="btn-import-workout" onclick="openWorkoutImport()"> Import</button>
           </div>
