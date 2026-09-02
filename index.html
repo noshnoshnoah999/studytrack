@@ -7619,6 +7619,84 @@ function _countHatchoboriWalksOn(ds){
   }catch(e){ return 0; }
 }
 
+const HATCHOBORI_NUDGE_HOURS = 4;
+// Sunday and Monday — Noah's Ningyocho shifts (Sun 10:30-17:00, Mon 09:00-17:00).
+// Used ONLY as backlog corroboration, never to block logging.
+const HATCHOBORI_WORK_DOWS = [0, 1];
+// Clean slate: no day before this can ever appear in the backlog.
+const HATCHOBORI_BACKLOG_ANCHOR = '2026-09-02';
+const HATCHOBORI_BACKLOG_MAX_SCAN = 120;
+const HATCHOBORI_BACKLOG_DISMISS_KEY = 'st_hatchobori_backlog_dismissed';
+
+function _hatchoboriWalksOn(ds, sessions){
+  const list = sessions || loadSessions();
+  const re = _hatchoboriNoteRegex();
+  return list.filter(s => s.date === ds && re.test(s.notes || ''));
+}
+
+// End time of the EARLIEST walk logged on ds, or '' if none.
+function _hatchoboriFirstWalkEnd(ds, sessions){
+  const w = _hatchoboriWalksOn(ds, sessions).slice()
+    .sort((a, b) => toMins(a.start || '00:00') - toMins(b.start || '00:00'));
+  return w.length ? (w[0].end || '') : '';
+}
+
+// Minutes elapsed since today's first walk ended. null when none logged.
+function _minsSinceFirstHatchoboriWalk(){
+  const end = _hatchoboriFirstWalkEnd(todayStr());
+  if(!end) return null;
+  const now = nowLocal();
+  return (now.getHours() * 60 + now.getMinutes()) - toMins(end);
+}
+
+// Corroboration for the PERSISTENT backlog: a cycle logged that day, or a work
+// day. The same-day nudge deliberately does NOT require this — the nudge is
+// disposable and may guess, but a dated backlog entry becomes a BACK-DATED
+// Google Form submission, so it may not.
+function _hatchoboriCorroborated(ds, sessions){
+  const list = sessions || loadSessions();
+  const dow = new Date(ds + 'T12:00:00').getDay();
+  if(HATCHOBORI_WORK_DOWS.indexOf(dow) !== -1) return true;
+  return list.some(s => s.date === ds && s.subjectId === 'pe' && _looksLikeCycle(s.notes || ''));
+}
+
+function _hatchoboriBacklogDismissed(){
+  try{
+    const a = JSON.parse(localStorage.getItem(HATCHOBORI_BACKLOG_DISMISS_KEY) || '[]');
+    return Array.isArray(a) ? a : [];
+  }catch(e){ return []; }
+}
+
+// "Not needed" — the day genuinely was one-way. Clears the claim WITHOUT
+// logging a session, so nothing false reaches the Google Form.
+function dismissHatchoboriBacklogDate(ds){
+  try{
+    const a = _hatchoboriBacklogDismissed();
+    if(a.indexOf(ds) === -1) a.push(ds);
+    localStorage.setItem(HATCHOBORI_BACKLOG_DISMISS_KEY, JSON.stringify(a.slice(-120)));
+  }catch(e){}
+  updateHatchoboriBanner();
+}
+
+// Past days (anchor .. yesterday) with EXACTLY ONE walk logged plus corroboration
+// that a return leg was really made. A day with ZERO walks is never owed — that
+// is simply a day Noah did not travel.
+function _missedHatchoboriDates(){
+  const today = todayStr();
+  if(today < HATCHOBORI_BACKLOG_ANCHOR) return [];
+  const sessions = loadSessions();
+  const skip = _hatchoboriBacklogDismissed();
+  const out = [];
+  let ds = HATCHOBORI_BACKLOG_ANCHOR, guard = 0;
+  while(ds < today && guard++ < HATCHOBORI_BACKLOG_MAX_SCAN){
+    if(_hatchoboriWalksOn(ds, sessions).length === 1 &&
+       _hatchoboriCorroborated(ds, sessions) &&
+       skip.indexOf(ds) === -1) out.push(ds);
+    ds = _dsAddDays(ds, 1);
+  }
+  return out;
+}
+
 function _loadHatchoboriPending(){
   try{
     const raw = localStorage.getItem(HATCHOBORI_PENDING_KEY);
@@ -7684,34 +7762,66 @@ function updateHatchoboriBanner(){
   const el = document.getElementById('hatchobori-banner');
   const txt = document.getElementById('hatchobori-banner-text');
   const btn = document.getElementById('hatchobori-banner-btn');
+  const today = todayStr();
+  const missed = _missedHatchoboriDates();
   if(el){
     const p = _loadHatchoboriPending();
-    const today = todayStr();
     const done = _countHatchoboriWalksOn(today);
-    const show = !!p && p.date === today && done < HATCHOBORI_MAX_PROMPTED && !_hatchoboriDismissedToday();
-    if(show){
-      const next = done + 1;
-      const wait = (next === 1) ? _minsUntilHatchoboriReady() : 0;
+    // ── today ──────────────────────────────────────────────────────────────
+    // Leg 1 is offered off a logged cycle once the 20-minute window passes.
+    // Leg 2 is NOT offered the moment leg 1 is logged — the return trip happens
+    // hours later, so the nudge waits HATCHOBORI_NUDGE_HOURS. Note this branch
+    // does NOT require a pending cycle: one walk logged today is enough.
+    let todayLine = '', todayReady = false;
+    if(done === 0 && p && p.date === today){
+      const wait = _minsUntilHatchoboriReady();
       if(wait > 0){
-        if(txt) txt.textContent = HATCHOBORI_LABEL + ' 1 — you can log this in ' +
-          wait + (wait === 1 ? ' minute' : ' minutes');
-        if(btn) btn.style.display = 'none';
+        todayLine = HATCHOBORI_LABEL + ' 1 — you can log this in ' + wait + (wait === 1 ? ' minute' : ' minutes');
       }else{
-        if(txt) txt.textContent = 'Log ' + HATCHOBORI_LABEL + ' ' + next;
-        if(btn) btn.style.display = '';
+        todayLine = 'Log ' + HATCHOBORI_LABEL + ' 1';
+        todayReady = true;
+      }
+    } else if(done === 1){
+      const since = _minsSinceFirstHatchoboriWalk();
+      if(since !== null && since >= HATCHOBORI_NUDGE_HOURS * 60){
+        todayLine = 'Log ' + HATCHOBORI_LABEL + ' 2';
+        todayReady = true;
+      }
+    }
+    // ── compose ────────────────────────────────────────────────────────────
+    // Backlog wins the button: oldest outstanding day first, same as the
+    // morning-stretch backlog.
+    let line = '', showBtn = false, btnDate = today;
+    if(missed.length){
+      line = missed.length + ' unlogged transfer walk' + (missed.length === 1 ? '' : 's') +
+        ': ' + missed.map(_shortDate).join(', ');
+      if(todayReady) line += ' · plus today’s';
+      showBtn = true;
+      btnDate = missed[0];
+    } else if(todayLine){
+      line = todayLine;
+      showBtn = todayReady;
+    }
+    const show = !!line && !_hatchoboriDismissedToday();
+    if(show){
+      if(txt) txt.textContent = line;
+      if(btn){
+        btn.style.display = showBtn ? '' : 'none';
+        btn.onclick = function(){ fillHatchoboriWalkLog(btnDate); };
       }
     }
     el.classList.toggle('show', show);
   }
-  renderHatchoboriCard();
+  renderHatchoboriCard(missed);
 }
 
 // Dashboard card. Always present, with no cycle needed, so a transfer walk can
 // be logged on a day Noah did not ride.
-function renderHatchoboriCard(){
+function renderHatchoboriCard(missed){
   const host = document.getElementById('hatchobori-card');
   if(!host) return;
   const today = todayStr();
+  const list = missed || _missedHatchoboriDates();
   const done = _countHatchoboriWalksOn(today);
   const wait = (done === 0) ? _minsUntilHatchoboriReady() : 0;
   const next = done + 1;
@@ -7719,7 +7829,31 @@ function renderHatchoboriCard(){
   if(wait > 0) sub = 'Walk 1 can be logged in ' + wait + (wait === 1 ? ' minute' : ' minutes') +
     ' — 20 minutes after your ride ended.';
   else if(done === 0) sub = 'No transfer walks logged today.';
-  else sub = done + (done === 1 ? ' walk' : ' walks') + ' logged today.';
+  else if(done === 1){
+    const since = _minsSinceFirstHatchoboriWalk();
+    const left = (since === null) ? 0 : Math.ceil((HATCHOBORI_NUDGE_HOURS * 60 - since) / 60);
+    sub = (left > 0)
+      ? '1 walk logged today. You’ll be reminded about the return leg in about ' + left + (left === 1 ? ' hour' : ' hours') + '.'
+      : '1 walk logged today. The return leg is still unlogged.';
+  }
+  else sub = done + ' walks logged today.';
+  let rows = '';
+  if(list.length){
+    rows = '<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">' +
+      '<div style="font-size:12px;color:var(--text2);margin-bottom:6px;line-height:1.4">' +
+        list.length + ' earlier day' + (list.length === 1 ? '' : 's') +
+        ' logged only one leg. Add the return walk, or clear the day if you only travelled one way.</div>' +
+      list.map(function(ds){
+        return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--border);flex-wrap:wrap">' +
+          '<div style="font-size:13px;color:var(--text);font-weight:600">' + _ordinalDate(ds) + '</div>' +
+          '<div style="display:flex;gap:6px;align-items:center">' +
+            '<button class="morning-stretch-banner-btn" onclick="fillHatchoboriWalkLog(\'' + ds + '\')">Add Walk 2</button>' +
+            '<button onclick="dismissHatchoboriBacklogDate(\'' + ds + '\')" title="Only travelled one way that day" style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;color:var(--text3);cursor:pointer;font-family:inherit;white-space:nowrap">Not needed</button>' +
+          '</div>' +
+        '</div>';
+      }).join('') +
+    '</div>';
+  }
   host.innerHTML =
     '<div class="card" style="margin-top:10px">' +
       '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">' +
@@ -7729,16 +7863,20 @@ function renderHatchoboriCard(){
         '</div>' +
         (wait > 0 ? '' :
           '<button class="morning-stretch-banner-btn" onclick="fillHatchoboriWalkLog()">Log Walk ' + next + '</button>') +
-      '</div>' +
+      '</div>' + rows +
     '</div>';
 }
 
 // opts.date optional (defaults to today). Start is pre-filled ONLY for the
 // outbound leg and ONLY once the wait window has passed; otherwise blank.
-function fillHatchoboriWalkLog(){
-  const ds = todayStr();
+function fillHatchoboriWalkLog(dateStr){
+  const today = todayStr();
+  let ds = dateStr || today;
+  if(ds > today) ds = today;   // never pre-fill a day that has not happened
   const next = _countHatchoboriWalksOn(ds) + 1;
-  const suggested = (next === 1) ? _hatchoboriStartSuggestion() : '';
+  // A time is only ever suggested for TODAY's outbound leg. A back-dated leg and
+  // any return leg are left blank — the app has no honest basis for guessing.
+  const suggested = (ds === today && next === 1) ? _hatchoboriStartSuggestion() : '';
   hidePreplyProofBanner();
   showPage('log');
   const sub = document.getElementById('log-subject'); if(sub) sub.value = 'pe';
