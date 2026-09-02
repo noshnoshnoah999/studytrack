@@ -1671,7 +1671,7 @@ button:active{transform:scale(0.96)}
   <div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
     <div class="modal-title">Import Screenshot</div>
-    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Strava (cycle / walk) · Runna (run) · Preply (Japanese lesson)</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Strava (cycle / walk) · Runna (run) · Preply (Japanese lesson) · Bungu (work shift)</div>
 
     <div id="workout-upload-area">
       <!-- Paste target — hidden contenteditable so native paste (Cmd+V / long-press) works -->
@@ -1722,6 +1722,7 @@ button:active{transform:scale(0.96)}
           <button onclick="pickWorkoutApp('Runna')" style="background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:16px 10px;font-size:14px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit"> Runna</button>
         </div>
         <button onclick="pickWorkoutApp('Preply')" style="width:100%;margin-top:10px;background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:16px 10px;font-size:14px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit"> Preply</button>
+        <button onclick="pickWorkoutApp('Bungu')" style="width:100%;margin-top:10px;background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:16px 10px;font-size:14px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit"> Bungu (work shift)</button>
       </div>
 
       <div id="workout-step-activity" style="display:none">
@@ -1756,6 +1757,31 @@ button:active{transform:scale(0.96)}
         <a href="https://drive.google.com/drive/u/1/folders/1-EyjijcAu7nNWqJEfu_xViufRc_Nk49t" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;color:var(--text3);font-size:12.5px;text-decoration:underline;padding:6px 0">Open Google Drive folder</a>
         <a href="https://docs.google.com/spreadsheets/d/1lrLzNnAL4YQ6sZp4tASW52eZPXNGNgfhIwqLS6o_guQ/edit?gid=1291500163#gid=1291500163" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;color:var(--text3);font-size:12.5px;text-decoration:underline;padding:6px 0">PE Journal Responses</a>
         <button onclick="skipElapsedShot()" style="width:100%;background:none;border:none;color:var(--text3);font-size:12.5px;cursor:pointer;font-family:inherit;text-decoration:underline;padding:8px 0">Skip second screenshot — use moving time, not elapsed</button>
+      </div>
+
+      <!-- Second screenshot for a Bungu import: the Bungu Scheduler calendar for
+           the same month as the King of Time screenshot. Not skippable — unlike
+           the elapsed-time step above, there is no fallback duration to log
+           without it, only a missing Shift Start/End line in the journal, which
+           _fillBunguLogForm() handles on its own if this step is skipped via the
+           explicit "no schedule" link. -->
+      <div id="workout-step-bungu-schedule" style="display:none">
+        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Now the Bungu Scheduler screenshot</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:12px">The monthly calendar view. I'll find the same date as the King of Time screenshot and read its <b>blue</b> shift time — the green block is your break, not a second shift, and is ignored.</div>
+        <img id="workout-bungu-schedule-preview" class="img-preview" style="display:none;margin-bottom:10px;max-height:220px;object-fit:contain">
+        <div id="workout-bungu-schedule-drop-zone"
+          ondragenter="_wBsDragEnter(event)" ondragover="_wBsDragOver(event)" ondragleave="_wBsDragLeave(event)" ondrop="_wBsDrop(event)"
+          onclick="document.getElementById('workout-bungu-schedule-file-input').click()"
+          style="border:2px dashed var(--border);border-radius:14px;padding:24px 16px;text-align:center;cursor:pointer;margin-bottom:10px">
+          <div style="font-size:14px;font-weight:700;color:var(--text2);margin-bottom:4px">Drop image here</div>
+          <div style="font-size:12px;color:var(--text3)">or click to choose a photo</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+          <button onclick="document.getElementById('workout-bungu-schedule-file-input').click()" style="background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:14px 10px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit">Choose File</button>
+          <button onclick="pasteBunguScheduleImage()" style="background:var(--ol);border:1.5px solid var(--o);border-radius:12px;padding:14px 10px;font-size:13px;font-weight:700;color:var(--o);cursor:pointer;font-family:inherit">Paste</button>
+        </div>
+        <input type="file" id="workout-bungu-schedule-file-input" accept="image/*" style="display:none" onchange="handleBunguScheduleFile(event)">
+        <button onclick="skipBunguScheduleShot()" style="width:100%;background:none;border:none;color:var(--text3);font-size:12.5px;cursor:pointer;font-family:inherit;text-decoration:underline;padding:8px 0">No schedule for this date — leave Shift Start/End out of the journal</button>
       </div>
 
       <button class="btn-cancel" style="margin-top:12px;width:100%" onclick="backToWorkoutUpload()">← Choose a different image</button>
@@ -3168,8 +3194,53 @@ const WORKOUT_MODEL='claude-haiku-4-5-20251001';
 // to see exactly what came back.
 let _lastWorkoutRaw=null;
 
-function _buildWorkoutPrompt(app,activity,hasElapsedShot){
+function _buildWorkoutPrompt(app,activity,hasElapsedShot,hasBunguScheduleShot){
   const today=new Date().toISOString().slice(0,10);
+  // Bungu: TWO images always. The first is a King of Time "Work details"
+  // screen (clock-in/out, source of truth for the session's actual times).
+  // The second, when supplied, is a Bungu Scheduler month calendar — read
+  // ONLY for the date matching the King of Time screenshot, and ONLY its BLUE
+  // chip (the shift). The green chip on that calendar is Noah's break, not a
+  // second shift, and must never be read as one.
+  if(app==='Bungu'){
+    let p='This is a screenshot of a King of Time "Work details" screen \u2014 a work\n'+
+      'clock-in/clock-out record for one specific date.\n\n';
+    if(hasBunguScheduleShot){
+      p+='A SECOND image is attached: a Bungu Scheduler month calendar (a work\n'+
+         'shift schedule). It shows one cell per day, each with zero, one or two\n'+
+         'small colored time-range chips.\n\n';
+    }
+    p+='Today\'s date is '+today+'.\n\n';
+    p+='Read ONLY the fields listed below. NEVER guess or estimate a value that is not shown \u2014 return null instead.\n\n';
+    p+='Return ONLY valid JSON, no markdown fences:\n'+
+       '{"date":"YYYY-MM-DD","clockIn":"HH:MM","clockOut":"HH:MM"'+
+       (hasBunguScheduleShot?',"shiftStart":"HH:MM"|null,"shiftEnd":"HH:MM"|null':'')+'}\n\n'+
+       'RULES:\n'+
+       '- FIRST image only: date, from the header line reading like "2026/08/31(Mon)" \u2014 that is\n'+
+       '  YYYY/MM/DD, convert to YYYY-MM-DD. Ignore the day-of-week letters, they are not needed.\n'+
+       '- FIRST image only: clockIn is the "Clock-in" column value. clockOut is the "Clock-out"\n'+
+       '  column value. Both are 24-hour HH:MM. Copy them exactly \u2014 do not round or shift them.\n'+
+       '- FIRST image only: "Start break" and "End break" are shown on the same row but are\n'+
+       '  DELIBERATELY NOT WANTED \u2014 do not return them under any field name.\n';
+    if(hasBunguScheduleShot){
+      p+='- SECOND image only: find the calendar cell whose day-of-month number matches the date\n'+
+         '  you read from the first image (same month/year as the calendar header). Inside that\n'+
+         '  cell there may be ONE OR TWO small colored time-range chips like "10:30\u201317" or\n'+
+         '  "14\u201314:30".\n'+
+         '- shiftStart / shiftEnd: read ONLY from the BLUE chip in that cell. The blue chip is\n'+
+         '  always the longer, primary shift block. Convert its "H:MM\u2013H:MM" or "H\u2013H:MM" style\n'+
+         '  range to two 24-hour HH:MM values, e.g. "10:30\u201317" means shiftStart "10:30", shiftEnd\n'+
+         '  "17:00". A bare hour like "17" or "14" means that exact hour, minutes "00".\n'+
+         '- The GREEN chip in that cell (if present) is a break block, NEVER a shift \u2014 do not read\n'+
+         '  it, do not merge it with the blue chip, do not return it under any field name.\n'+
+         '- If that date\'s cell has no blue chip at all, return null for both shiftStart and\n'+
+         '  shiftEnd. Do not substitute a different date\'s chip and do not estimate.\n';
+    }
+    p+='- Return NO other field. The month/allowed-hours summary box, the shift-count fraction\n'+
+       '  (e.g. "3/13") printed above each day, and any other calendar chrome are deliberately not\n'+
+       '  wanted.\n';
+    return p;
+  }
   // Preply asks for four plain fields off the lesson card and nothing else. No
   // title is requested: a Preply card has no title Noah wrote, and the journal
   // line is assembled in JS from the date, times and teacher name.
@@ -3291,7 +3362,7 @@ async function analyseWorkoutImage(base64,mimeType,elapsedB64,elapsedMime){
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),45000);
   try{
-    const promptText=_buildWorkoutPrompt(app,activity,!!elapsedB64);
+    const promptText=_buildWorkoutPrompt(app,activity,!!elapsedB64,app==='Bungu'&&!!elapsedB64);
 
     const resp=await _callWorkoutModel(WORKOUT_MODEL,key,base64,mimeType,promptText,controller.signal,elapsedB64,elapsedMime);
     const usedModel=WORKOUT_MODEL;
@@ -3334,6 +3405,36 @@ async function analyseWorkoutImage(base64,mimeType,elapsedB64,elapsedMime){
     parsed.app=app;
     parsed.activity=activity;
     parsed.model=usedModel;
+
+    // BUNGU. King of Time gives the real clock-in/clock-out, which is the
+    // session's actual length — never adjusted, never estimated. The Bungu
+    // Scheduler screenshot (if supplied) only contributes shiftStart/shiftEnd,
+    // which are informational (the journal's "Shift Start/End" line) and never
+    // affect the logged duration. Bail out only if the KOT times themselves
+    // are unreadable — a missing schedule is fine, see buildBunguJournal().
+    if(app==='Bungu'){
+      parsed.dateSource='absolute';
+      let cm=0;
+      if(parsed.clockIn&&parsed.clockOut){
+        cm=toMins(parsed.clockOut)-toMins(parsed.clockIn);
+        if(cm<0)cm+=1440;                       // an overnight shift
+      }
+      if(!parsed.date||!parsed.clockIn||!parsed.clockOut||cm<=0){
+        _lastWorkoutRaw=data;
+        showToast('Could not read the date and clock-in/out off the King of Time screenshot','var(--err)');
+        return null;
+      }
+      parsed.startTime=parsed.clockIn;
+      parsed.workoutEndTime=parsed.clockOut;
+      parsed.durationSeconds=cm*60;
+      parsed.durationMinutes=cm;
+      parsed.movingSeconds=cm*60;
+      parsed.usedElapsed=false;
+      parsed.shiftStart=parsed.shiftStart||null;
+      parsed.shiftEnd=parsed.shiftEnd||null;
+      parsed.hasSchedule=!!(parsed.shiftStart&&parsed.shiftEnd);
+      return parsed;
+    }
 
     // PREPLY. The card gives both ends of the lesson, so the length is
     // arithmetic rather than a reading, and none of the Strava/Runna title,
@@ -3535,6 +3636,11 @@ let _workoutApp=null, _workoutActivity=null;
 // Second screenshot, holding the elapsed-time stat. Only ever collected for a
 // cycle or a walk, and always optional — skipping it falls back to moving time.
 let _workoutElapsedBase64=null, _workoutElapsedMime=null;
+// Second screenshot for a Bungu import: the Bungu Scheduler calendar, read for
+// the blue (shift) chip on the same date as the King of Time screenshot.
+// Skippable via skipBunguScheduleShot() — unlike elapsed, there is no fallback
+// figure, just a journal with no Shift Start/End line.
+let _workoutBunguScheduleBase64=null, _workoutBunguScheduleMime=null;
 
 function _resetElapsedShot(){
   _workoutElapsedBase64=null; _workoutElapsedMime=null;
@@ -3608,9 +3714,84 @@ function skipElapsedShot(){
   runWorkoutAnalysis();
 }
 
+// ── Bungu Scheduler screenshot (second image, Bungu import only) ───────────
+// Mirrors the elapsed-time second-image handlers above exactly, targeting the
+// separate #workout-bungu-schedule-* elements so picking one image never
+// overwrites the other.
+function _resetBunguScheduleShot(){
+  _workoutBunguScheduleBase64=null; _workoutBunguScheduleMime=null;
+  const pv=document.getElementById('workout-bungu-schedule-preview');
+  if(pv){pv.src='';pv.style.display='none'}
+  const fi=document.getElementById('workout-bungu-schedule-file-input');
+  if(fi)fi.value='';
+  const st=document.getElementById('workout-step-bungu-schedule');
+  if(st)st.style.display='none';
+}
+function _wBsDragEnter(e){
+  e.preventDefault();e.stopPropagation();
+  const dz=document.getElementById('workout-bungu-schedule-drop-zone');
+  if(dz){dz.style.borderColor='var(--o)';dz.style.background='var(--ol)';const l=dz.querySelector('div');if(l)l.textContent='Drop it!'}
+}
+function _wBsDragOver(e){e.preventDefault();e.stopPropagation()}
+function _wBsDragLeave(e){
+  e.preventDefault();e.stopPropagation();
+  const dz=document.getElementById('workout-bungu-schedule-drop-zone');
+  if(dz){
+    dz.style.borderColor='';dz.style.background='';
+    const l=dz.querySelector('div');
+    if(l)l.textContent='Drop image here';
+  }
+}
+function _wBsDrop(e){
+  e.preventDefault();e.stopPropagation();
+  const dz=document.getElementById('workout-bungu-schedule-drop-zone');
+  if(dz){dz.style.borderColor='';dz.style.background=''}
+  const file=[...(e.dataTransfer.files||[])].find(f=>f.type.startsWith('image/'));
+  if(!file){showToast('Please drop an image file','var(--err)');return}
+  _handleBunguScheduleBlob(file);
+}
+function handleBunguScheduleFile(event){
+  const f=event.target.files[0];
+  if(f)_handleBunguScheduleBlob(f);
+}
+function _handleBunguScheduleBlob(blob){
+  _workoutBunguScheduleMime='image/jpeg';
+  compressWorkoutImage(blob,function(dataUrl){
+    _workoutBunguScheduleBase64=dataUrl.split(',')[1];
+    const pv=document.getElementById('workout-bungu-schedule-preview');
+    if(pv){pv.src=dataUrl;pv.style.display='block'}
+    document.getElementById('workout-step-bungu-schedule').style.display='none';
+    document.getElementById('workout-source-area').style.display='none';
+    runWorkoutAnalysis();
+  });
+}
+async function pasteBunguScheduleImage(){
+  if(navigator.clipboard&&navigator.clipboard.read){
+    try{
+      const items=await navigator.clipboard.read();
+      for(const item of items){
+        const t=item.types.find(x=>x.startsWith('image/'));
+        if(t){_handleBunguScheduleBlob(await item.getType(t));return}
+      }
+    }catch(e){}
+  }
+  showToast('Could not read the clipboard — use Choose File','var(--err)');
+}
+// Explicit opt-out for a shift that genuinely was not on the Bungu Scheduler
+// calendar (Noah: "i wont work a day if it isnt on the schedule" — this is for
+// the rare exception, not the normal path). The journal then simply omits the
+// Shift Start/End line rather than showing a blank or guessed time.
+function skipBunguScheduleShot(){
+  _resetBunguScheduleShot();
+  document.getElementById('workout-source-area').style.display='none';
+  showToast('No schedule screenshot — journal will omit Shift Start/End','var(--err)');
+  runWorkoutAnalysis();
+}
+
 function _showWorkoutSourcePicker(dataUrl){
   _workoutApp=null; _workoutActivity=null;
   _resetElapsedShot();
+  _resetBunguScheduleShot();
   const p=document.getElementById('workout-source-preview');
   if(p&&dataUrl)p.src=dataUrl;
   document.getElementById('workout-upload-area').style.display='none';
@@ -3622,6 +3803,7 @@ function _showWorkoutSourcePicker(dataUrl){
 
 function backToWorkoutUpload(){
   _resetElapsedShot();
+  _resetBunguScheduleShot();
   document.getElementById('workout-source-area').style.display='none';
   document.getElementById('workout-result-area').style.display='none';
   document.getElementById('workout-upload-area').style.display='block';
@@ -3629,6 +3811,16 @@ function backToWorkoutUpload(){
 
 function pickWorkoutApp(app){
   _workoutApp=app;
+  if(app==='Bungu'){
+    // A work-shift import always needs the Bungu Scheduler screenshot too, so
+    // go straight to that step rather than analysing off one image. There is
+    // no activity question — a Bungu shift is not Run/Cycle/Walk.
+    _workoutActivity='Shift';
+    _resetBunguScheduleShot();
+    document.getElementById('workout-step-app').style.display='none';
+    document.getElementById('workout-step-bungu-schedule').style.display='block';
+    return;
+  }
   if(app==='Preply'){
     // A Preply lesson card states BOTH ends of the lesson itself, so there is no
     // activity question and no elapsed-time screenshot. Those two steps exist
@@ -3700,7 +3892,12 @@ async function runWorkoutAnalysis(){
   let result=null;
   _workoutAnalysing=true;   // see _workoutOverlayClick — the modal is sealed while this is true
   try{
-    result=await analyseWorkoutImage(_workoutImageBase64,_workoutImageMime||'image/jpeg',_workoutElapsedBase64,_workoutElapsedMime||'image/jpeg');
+    // The "second image" slot is elapsed-time for Strava, or the Bungu
+    // Scheduler screenshot for a Bungu import — never both, since the two
+    // imports don't overlap.
+    const _2ndB64=_workoutApp==='Bungu'?_workoutBunguScheduleBase64:_workoutElapsedBase64;
+    const _2ndMime=_workoutApp==='Bungu'?_workoutBunguScheduleMime:_workoutElapsedMime;
+    result=await analyseWorkoutImage(_workoutImageBase64,_workoutImageMime||'image/jpeg',_2ndB64,_2ndMime||'image/jpeg');
   }finally{
     _workoutAnalysing=false;
   }
@@ -3719,6 +3916,7 @@ async function runWorkoutAnalysis(){
 function showWorkoutSummary(result){
   if(!result)return;
   if(result.app==='Preply'){showPreplySummary(result);return}
+  if(result.app==='Bungu'){showBunguSummary(result);return}
   let dateLabel='Unknown date';
   if(result.date)dateLabel=_ordinalDate(result.date)+' '+_journalYear(result.date);
   const daypart=_timeOfDay(result.startTime,null);
@@ -3807,6 +4005,41 @@ function showPreplySummary(result){
   }
   // None of the workout fields apply, and a stale value in any of them would be
   // picked up by useWorkoutResult() and silently overwrite the card's figures.
+  const manRow=document.getElementById('workout-manual-row');
+  if(manRow)manRow.style.display='none';
+  const numRow=document.getElementById('workout-cyclenum-row');
+  if(numRow)numRow.style.display='none';
+  const numEl=document.getElementById('workout-cyclenum-input');
+  if(numEl)numEl.value='';
+  const stEl=document.getElementById('workout-starttime-input');
+  if(stEl)stEl.value='';
+  const durEl=document.getElementById('workout-duration-input');
+  if(durEl)durEl.value='';
+  document.getElementById('workout-upload-area').style.display='none';
+  document.getElementById('workout-source-area').style.display='none';
+  document.getElementById('workout-result-area').style.display='block';
+}
+
+// The Bungu confirmation screen. States the actual KOT clock-in/out (the
+// figures the session is logged on) and, separately, whether a scheduled
+// shift was found \u2014 so a missing schedule is visible here, before anything is
+// logged, exactly like the missing-elapsed-screenshot state for a workout.
+function showBunguSummary(result){
+  const dateLabel=result.date?((_weekdayName(result.date)?_weekdayName(result.date)+' ':'')+_ordinalDate(result.date)+' '+_journalYear(result.date)):'Unknown date';
+  const mins=Math.max(0,result.durationMinutes||0);
+  const el=document.getElementById('workout-summary-card');
+  if(el){
+    el.innerHTML=
+      '<div class="workout-summary-row"><span>'+escHtml(dateLabel)+
+        ' <span style="color:var(--text3);font-size:11px">(dated on the King of Time screenshot)</span></span></div>'+
+      '<div class="workout-summary-row"><span>Work Shift at Bungu</span></div>'+
+      '<div class="workout-summary-row"><span>'+escHtml(
+        'Clock In '+(result.clockIn||'')+' \u2013 Clock Out '+(result.clockOut||'')+'  ('+_fmtHoursMins(mins,false)+')')+'</span></div>'+
+      (result.hasSchedule
+        ? '<div class="workout-summary-row"><span style="color:var(--text3);font-size:11px">Scheduled shift '+escHtml(result.shiftStart+' \u2013 '+result.shiftEnd)+' \u2014 will be included in the journal</span></div>'
+        : '<div class="workout-summary-row"><span style="color:var(--o);font-size:11px">No scheduled shift found for this date \u2014 the journal will not include a Shift Start/End line</span></div>');
+  }
+  // None of the workout-specific fields apply.
   const manRow=document.getElementById('workout-manual-row');
   if(manRow)manRow.style.display='none';
   const numRow=document.getElementById('workout-cyclenum-row');
@@ -3951,6 +4184,29 @@ function buildPreplyJournal(r){
   return t;
 }
 
+// The journal for a Bungu work-shift import \u2014 THREE fixed lines, exact format
+// Noah specified 2026-09-02, all times 24-hour zero-padded, no AM/PM anywhere:
+//   Monday 31st August 2026 - Work Shift at Bungu
+//   Shift Start: 10:30 - Shift End: 17:00      (omitted entirely if no schedule was read)
+//   Actual Clock In Time: 09:26 - Actual Clock Out Time: 17:05
+// Line 1 is deliberately the ONLY line before _formContents() splices in
+// "Journal Writing Time (Included in Study Time):" \u2014 Noah confirmed he wants
+// that line to land here, straight after the title, same as every other
+// non-PE subject, then write his own shift summary below all of it himself.
+function _weekdayName(ds){
+  const d=new Date((ds||'')+'T00:00:00');
+  return isNaN(d.getTime())?'':WEEKDAYS[d.getDay()];
+}
+function buildBunguJournal(r){
+  const wd=_weekdayName(r.date);
+  let t=(wd?wd+' ':'')+_ordinalDate(r.date)+' '+_journalYear(r.date)+' - Work Shift at Bungu';
+  if(r.hasSchedule&&r.shiftStart&&r.shiftEnd){
+    t+='\nShift Start: '+r.shiftStart+' - Shift End: '+r.shiftEnd;
+  }
+  t+='\nActual Clock In Time: '+(r.clockIn||r.startTime||'')+' - Actual Clock Out Time: '+(r.clockOut||r.workoutEndTime||'');
+  return t;
+}
+
 // Stretch label — e.g. "11th June - After-Run Stretches". One line, same rule as
 // buildWorkoutJournal(): the form supplies date and times itself. The routine
 // itself is in the attached Runner's Stretch Guide PDF.
@@ -4032,6 +4288,43 @@ async function useWorkoutResult(){
 // A Preply lesson is logged as JAPANESE, not PE, and its End Time is the
 // lesson's own end plus PREPLY_REVIEW_MINS — the only place in the app that adds
 // minutes to a session. Everything else here mirrors _fillRunLogForm().
+// A Bungu work shift is logged as an ELECTIVES extra-credit session \u2014 same
+// treatment as EL4 today \u2014 but unlike Preply\u2192japanese or Run\u2192pe, there is no
+// fixed subject id to select yet: no Electives 5+ contract exists, no teacher
+// approval, no _SUBJECT_FORMS entry (Noah, 2026-09-02 \u2014 built ahead of time on
+// purpose, wired to a real subject later, same pattern as pe3). So the subject
+// dropdown is deliberately left exactly as it was rather than guessing or
+// forcing a value \u2014 Noah picks the right elective subject himself once one
+// exists. Everything else (date, times, duration, journal) is filled in full.
+function _fillBunguLogForm(result){
+  const ld=document.getElementById('log-date');
+  if(ld&&result.date)ld.value=result.date;
+  if(result.clockIn&&result.clockOut){
+    setLogTime('log-start',result.clockIn);
+    setLogTime('log-end',result.clockOut);
+  }
+  updateLogDuration();
+  updateLogFormColour();
+  const notesEl=document.getElementById('log-notes');
+  if(notesEl)notesEl.value=buildBunguJournal(result);
+  _pendingJournalMeta={
+    activity:'Shift', app:'Bungu',
+    durationSeconds:(result.durationSeconds||0), model:result.model||null,
+    usedElapsed:false, movingSeconds:(result.durationSeconds||0),
+    // Carried so re-opening this session's form from History can rebuild the
+    // exact same journal text, same purpose as journalMeta.preply.
+    bungu:true, clockIn:result.clockIn||null, clockOut:result.clockOut||null,
+    shiftStart:result.shiftStart||null, shiftEnd:result.shiftEnd||null,
+    hasSchedule:!!result.hasSchedule
+  };
+  updateJournalLenWarn();
+  hidePreplyProofBanner();
+  closeModal('workout-import-overlay');
+  const anchor=document.getElementById('log-form-card');
+  if(anchor)anchor.scrollIntoView({behavior:'auto',block:'start'});
+  showToast('Imported \u2014 choose the Electives subject, check the journal, then Log Session','var(--ok)');
+}
+
 function _fillPreplyLogForm(result){
   const subjs=loadSubjects();
   const sel=document.getElementById('log-subject');
@@ -4072,6 +4365,7 @@ function _fillPreplyLogForm(result){
 function _fillRunLogForm(result,cycleNum){
   if(!result)return;
   if(result.app==='Preply'){_fillPreplyLogForm(result);return}
+  if(result.app==='Bungu'){_fillBunguLogForm(result);return}
   hidePreplyProofBanner();
   const subjs=loadSubjects();
   // Every import is now a PE workout — King of Time / work-shift handling was
