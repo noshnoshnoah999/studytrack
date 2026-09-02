@@ -1041,11 +1041,23 @@ button:active{transform:scale(0.96)}
     </div>
     <!-- Hatchobori platform transfer walk. Two states: a WAIT state (no button,
          because cycle-end +20 min has not arrived and the future-session guard
-         would refuse the entry) and a READY state with the Fill button. -->
+         would refuse the entry) and a READY state with the Fill button.
+         Dismiss is a snooze (never a permanent dismiss): "Snooze 1h" jumps
+         straight to a 1-hour snooze, "Snooze until…" opens an inline time
+         picker. Both hide the banner only until the chosen time passes, then
+         updateHatchoboriBanner() (polled every 60s) brings it back on its own. -->
     <div class="morning-stretch-banner" id="hatchobori-banner">
       <div class="morning-stretch-banner-text" id="hatchobori-banner-text"></div>
       <button class="morning-stretch-banner-btn" id="hatchobori-banner-btn" onclick="fillHatchoboriWalkLog()">Fill Form &amp; Submit</button>
-      <button onclick="dismissHatchoboriBanner()" title="Dismiss for today" aria-label="Dismiss" style="background:none;border:none;color:var(--text3);font-size:20px;line-height:1;cursor:pointer;font-family:inherit;padding:0 2px;flex-shrink:0">&times;</button>
+      <div id="hatchobori-snooze-controls" style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <button onclick="snoozeHatchoboriBanner(60)" title="Snooze for 1 hour" style="background:none;border:1px solid var(--text3);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;color:var(--text3);cursor:pointer;font-family:inherit;white-space:nowrap">Snooze 1h</button>
+        <button onclick="toggleHatchoboriSnoozePicker()" title="Snooze until a time you choose" style="background:none;border:1px solid var(--text3);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;color:var(--text3);cursor:pointer;font-family:inherit;white-space:nowrap">Snooze until…</button>
+      </div>
+      <div id="hatchobori-snooze-picker" style="display:none;align-items:center;gap:6px;flex-shrink:0">
+        <input type="time" id="hatchobori-snooze-time" style="background:var(--bg);border:1px solid var(--text3);border-radius:8px;padding:5px 8px;font-size:12px;color:var(--text);font-family:inherit">
+        <button onclick="confirmHatchoboriSnoozeUntil()" style="background:var(--o);color:var(--bg);border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">Set</button>
+        <button onclick="toggleHatchoboriSnoozePicker(false)" title="Cancel" aria-label="Cancel" style="background:none;border:none;color:var(--text3);font-size:18px;line-height:1;cursor:pointer;font-family:inherit;padding:0 2px">&times;</button>
+      </div>
     </div>
     <!-- Contract banners. One per contract boundary that is reached, or within
          CONTRACT_LEAD_H of being reached, and not yet confirmed. Sticky: there is
@@ -7732,12 +7744,63 @@ function _hatchoboriStartSuggestion(){
   return _addMins(p.cycleEnd, HATCHOBORI_GAP_MINS);
 }
 
+// HATCHOBORI_DISMISS_KEY historically held a plain date string (dismissed for
+// the whole day). It now holds an epoch-ms "snoozed until" timestamp instead,
+// so the banner can come back at a specific time rather than only tomorrow.
+// _hatchoboriDismissedToday() is kept as the read-check name other code calls;
+// a stray leftover date-string value (pre-snooze localStorage) parses to NaN
+// and is treated as "not snoozed", so old installs just see the banner again.
 function _hatchoboriDismissedToday(){
-  try{ return localStorage.getItem(HATCHOBORI_DISMISS_KEY) === todayStr(); }catch(e){ return false; }
+  try{
+    const raw = localStorage.getItem(HATCHOBORI_DISMISS_KEY);
+    if(!raw) return false;
+    const until = parseInt(raw, 10);
+    return !isNaN(until) && Date.now() < until;
+  }catch(e){ return false; }
 }
-function dismissHatchoboriBanner(){
-  try{ localStorage.setItem(HATCHOBORI_DISMISS_KEY, todayStr()); }catch(e){}
+function _snoozeHatchoboriUntilEpoch(epochMs){
+  try{ localStorage.setItem(HATCHOBORI_DISMISS_KEY, String(epochMs)); }catch(e){}
+  toggleHatchoboriSnoozePicker(false);
   updateHatchoboriBanner();
+}
+// Quick snooze: N minutes from now, real elapsed time (works the same across
+// a midnight rollover, unlike the Tokyo-wall-clock math used for "until").
+function snoozeHatchoboriBanner(mins){
+  _snoozeHatchoboriUntilEpoch(Date.now() + mins * 60000);
+  showToast('Snoozed for ' + (mins === 60 ? '1 hour' : mins + ' minutes'), 'var(--text2)');
+}
+function toggleHatchoboriSnoozePicker(show){
+  const controls = document.getElementById('hatchobori-snooze-controls');
+  const picker = document.getElementById('hatchobori-snooze-picker');
+  if(!controls || !picker) return;
+  const open = (show === undefined) ? (picker.style.display === 'none') : !!show;
+  picker.style.display = open ? 'flex' : 'none';
+  controls.style.display = open ? 'none' : 'flex';
+  if(open){
+    const t = document.getElementById('hatchobori-snooze-time');
+    if(t){ if(!t.value) t.value = _hatchoboriStartSuggestion() || ''; t.focus(); }
+  }
+}
+// Turns a Tokyo wall-clock "HH:MM" into the real epoch ms for the next
+// occurrence of that time (today if still ahead of now, else tomorrow) —
+// mirrors the Tokyo-anchoring nowLocal()/toAppTz() already use elsewhere.
+function _hatchoboriNextEpochForTime(hhmm){
+  const nowUtc = new Date();
+  const nowTokyo = toAppTz(nowUtc);
+  const target = new Date(nowTokyo);
+  const parts = (hhmm || '').split(':');
+  target.setHours(parseInt(parts[0], 10) || 0, parseInt(parts[1] || '0', 10) || 0, 0, 0);
+  let diffMs = target.getTime() - nowTokyo.getTime();
+  if(diffMs <= 0) diffMs += 86400000; // already passed today — snooze to tomorrow
+  return nowUtc.getTime() + diffMs;
+}
+function confirmHatchoboriSnoozeUntil(){
+  const t = document.getElementById('hatchobori-snooze-time');
+  const hhmm = t && t.value;
+  if(!hhmm){ if(t) t.focus(); return; }
+  const epoch = _hatchoboriNextEpochForTime(hhmm);
+  _snoozeHatchoboriUntilEpoch(epoch);
+  showToast('Snoozed until ' + hhmm, 'var(--text2)');
 }
 
 // Called from _doLogSession(). Fires only on a PE cycle, never on a walk, run,
@@ -7810,6 +7873,7 @@ function updateHatchoboriBanner(){
         btn.onclick = function(){ fillHatchoboriWalkLog(btnDate); };
       }
     }
+    if(!show) toggleHatchoboriSnoozePicker(false); // banner hidden — leave the picker closed for next time
     el.classList.toggle('show', show);
   }
   renderHatchoboriCard(missed);
