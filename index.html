@@ -7747,16 +7747,31 @@ function _hatchoboriStartSuggestion(){
 // HATCHOBORI_DISMISS_KEY historically held a plain date string (dismissed for
 // the whole day). It now holds an epoch-ms "snoozed until" timestamp instead,
 // so the banner can come back at a specific time rather than only tomorrow.
-// _hatchoboriDismissedToday() is kept as the read-check name other code calls;
-// a stray leftover date-string value (pre-snooze localStorage) parses to NaN
+// A stray leftover date-string value (pre-snooze localStorage) parses to NaN
 // and is treated as "not snoozed", so old installs just see the banner again.
-function _hatchoboriDismissedToday(){
+// Returns the still-active snooze-until epoch ms, or null if not snoozed
+// (nothing stored, unparsable, or the time has already passed).
+function _hatchoboriActiveSnoozeEpoch(){
   try{
     const raw = localStorage.getItem(HATCHOBORI_DISMISS_KEY);
-    if(!raw) return false;
+    if(!raw) return null;
     const until = parseInt(raw, 10);
-    return !isNaN(until) && Date.now() < until;
-  }catch(e){ return false; }
+    return (!isNaN(until) && Date.now() < until) ? until : null;
+  }catch(e){ return null; }
+}
+// _hatchoboriDismissedToday() is kept as the read-check name other code calls.
+function _hatchoboriDismissedToday(){
+  return _hatchoboriActiveSnoozeEpoch() !== null;
+}
+// "4:00pm" (via the shared _fmtTime formatter) for the Dashboard card, or ''
+// when not currently snoozed. Tokyo wall-clock, same as every other display
+// time in the app.
+function _hatchoboriSnoozedUntilLabel(){
+  const until = _hatchoboriActiveSnoozeEpoch();
+  if(until == null) return '';
+  const d = toAppTz(new Date(until));
+  const hhmm = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  return _fmtTime(hhmm);
 }
 function _snoozeHatchoboriUntilEpoch(epochMs){
   try{ localStorage.setItem(HATCHOBORI_DISMISS_KEY, String(epochMs)); }catch(e){}
@@ -7901,6 +7916,11 @@ function renderHatchoboriCard(missed){
       : '1 walk logged today. The return leg is still unlogged.';
   }
   else sub = done + ' walks logged today.';
+  // The top banner hides itself while snoozed, so this card is the only place
+  // left that shows it's snoozed at all — the button stays live on purpose
+  // (Noah can still log early), this just confirms the snooze took effect.
+  const snoozedUntil = _hatchoboriSnoozedUntilLabel();
+  if(snoozedUntil) sub += ' Reminder snoozed until ' + snoozedUntil + '.';
   let rows = '';
   if(list.length){
     rows = '<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">' +
