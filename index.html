@@ -448,6 +448,9 @@ a{color:inherit;text-decoration:none}
 .plan-cal-cell.miss{background:rgba(255,77,106,0.12)}
 .plan-cal-cell.miss-zero{background:rgba(180,180,180,0.13)}
 .plan-cal-cell.zero{background:var(--bg3);opacity:0.5}
+.plan-cal-cell.cal-day-clickable{cursor:pointer;transition:transform .12s ease,box-shadow .12s ease}
+.plan-cal-cell.cal-day-clickable:hover{transform:translateY(-1px)}
+.plan-cal-cell.cal-day-selected{box-shadow:inset 0 0 0 2px var(--o)}
 .plan-cal-day{font-size:10px;font-weight:600;color:var(--text3);line-height:1}
 .plan-cal-cell.today-cell .plan-cal-day{color:rgba(255,255,255,0.8)}
 .plan-cal-val{font-size:12px;font-weight:800;color:var(--text);line-height:1}
@@ -6146,6 +6149,7 @@ function switchHistTab(tab){
     calendar.style.display='none';
     btnS.style.background='var(--o)';btnS.style.color='#fff';
     btnC.style.background='var(--bg2)';btnC.style.color='var(--text2)';
+    _calDayDetailOpen=null; // don't carry a stale expanded day back into the next Calendar visit
   } else {
     sessions.style.display='none';
     calendar.style.display='';
@@ -9455,11 +9459,13 @@ function _renderStudyCalendar(targetElId){
           // Below graduation pace (neither goal met)
           cls='miss';val=fmtH(h);
         }
+        cells+='<div class="plan-cal-cell '+cls+' cal-day-clickable" data-date="'+dStr+'" onclick="_toggleCalDayDetail(\''+dStr+'\')"><div class="plan-cal-day">'+d+'</div><div class="plan-cal-val">'+val+'</div></div>';
+        continue;
       }else if(dStr===todayStr){
         const h=hoursOn(dStr);
         let todayCls='today-cell';
         const val2=h>0?fmtH(h):'·';
-        cells+='<div class="plan-cal-cell '+todayCls+'"><div class="plan-cal-day">'+d+'</div><div class="plan-cal-val">'+val2+'</div></div>';
+        cells+='<div class="plan-cal-cell '+todayCls+' cal-day-clickable" data-date="'+dStr+'" onclick="_toggleCalDayDetail(\''+dStr+'\')"><div class="plan-cal-day">'+d+'</div><div class="plan-cal-val">'+val2+'</div></div>';
         continue;
       }else{
         cls='future';val='—';
@@ -9484,10 +9490,84 @@ function _renderStudyCalendar(targetElId){
   '</div>';
   el.innerHTML='<div class="card" style="margin-bottom:16px">'+
     '<div class="card-title">Study Calendar</div>'+
-    '<div style="font-size:12px;color:var(--text3);margin-bottom:12px">Past days show actual hours logged · Future shows projected recommended hours</div>'+
+    '<div style="font-size:12px;color:var(--text3);margin-bottom:12px">Past days show actual hours logged · Future shows projected recommended hours · Tap a day to see sessions</div>'+
     legendHtml+calHtml+
+    '<div id="cal-day-detail" style="display:none"></div>'+
   '</div>';
+  // Re-open the previously selected day's detail after a re-render (e.g. after
+  // logging/editing a session while the panel was open), so it doesn't silently
+  // vanish out from under Noah.
+  if(_calDayDetailOpen)_renderCalDayDetail(_calDayDetailOpen);
   // Stagger calendar cells with fade-in
+}
+
+// ── Calendar day detail panel ──────────────────────────────────────────
+// Tapping a past/today cell in the Study Calendar expands this panel inline
+// below the grid, listing that day's logged sessions (reuses the same card
+// look as the Sessions tab's hist-card, minus the edit/delete/form controls —
+// this is a read-only glance view; editing still happens in the Sessions tab).
+let _calDayDetailOpen=null; // date string ('YYYY-MM-DD') currently expanded, or null
+function _toggleCalDayDetail(dateStr){
+  _calDayDetailOpen=(_calDayDetailOpen===dateStr)?null:dateStr;
+  _renderCalDayDetail(_calDayDetailOpen);
+}
+function _renderCalDayDetail(dateStr){
+  const el=document.getElementById('cal-day-detail');
+  if(!el)return;
+  // Clear the previous selection highlight
+  document.querySelectorAll('.plan-cal-cell.cal-day-selected').forEach(c=>c.classList.remove('cal-day-selected'));
+  if(!dateStr){
+    el.style.display='none';
+    el.innerHTML='';
+    return;
+  }
+  const sel=document.querySelector('.plan-cal-cell[data-date="'+dateStr+'"]');
+  if(sel)sel.classList.add('cal-day-selected');
+
+  const sessions=loadSessions().filter(s=>s.date===dateStr).sort((a,b)=>(a.start||'').localeCompare(b.start||''));
+  const subjs=loadSubjects();
+  const d=new Date(dateStr+'T12:00:00');
+  const dateLabel=d.toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long'});
+
+  let bodyHtml;
+  if(!sessions.length){
+    bodyHtml='<div class="empty-state" style="padding:18px 0">No sessions logged this day</div>';
+  }else{
+    // Total matches the grid cell above (which excludes extra-credit subjects via
+    // hoursOn/_hoursOnDate) so the two numbers never disagree. Extra-credit sessions
+    // still show in the list below — just called out separately — so nothing logged
+    // that day goes missing from view.
+    const ecIds=_extraCreditIds();
+    const dayTotal=sessions.filter(s=>!ecIds.has(s.subjectId)).reduce((a,s)=>a+s.hours,0);
+    const ecTotal=sessions.filter(s=>ecIds.has(s.subjectId)).reduce((a,s)=>a+s.hours,0);
+    const cards=sessions.map(s=>{
+      const subj=subjs.find(x=>x.id===s.subjectId);
+      const name=subj?subj.name:(s.subjectId||'Unknown');
+      const timeStr=(s.start&&s.end)?s.start+' – '+s.end:'';
+      return '<div class="hist-card">'+
+        '<div class="hist-card-dot" style="background:var(--o)"></div>'+
+        '<div class="hist-card-main">'+
+          '<div class="hist-card-subject">'+escHtml(name)+'</div>'+
+          '<div class="hist-card-meta">'+
+            (timeStr?'<span class="hist-card-time">'+timeStr+'</span>':'')+
+          '</div>'+
+          (s.notes?'<div class="hist-card-notes">'+escHtml(s.notes)+'</div>':'')+
+        '</div>'+
+        '<div class="hist-card-dur">'+fmtH(s.hours)+'</div>'+
+      '</div>';
+    }).join('');
+    bodyHtml='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
+        '<span style="font-size:12px;color:var(--text3)">'+sessions.length+' session'+(sessions.length===1?'':'s')+(ecTotal>0?' · '+fmtH(ecTotal)+' extra credit':'')+'</span>'+
+        '<span style="font-size:13px;font-weight:700;color:var(--o)">'+fmtH(dayTotal)+' total</span>'+
+      '</div>'+
+      '<div style="background:var(--bg2);border-radius:12px;overflow:hidden">'+cards+'</div>';
+  }
+
+  el.innerHTML='<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">'+
+      '<div style="font-size:14px;font-weight:700;margin-bottom:10px">'+dateLabel+'</div>'+
+      bodyHtml+
+    '</div>';
+  el.style.display='';
 }
 
 function _fmtDecimalToHm(h){
