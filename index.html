@@ -718,6 +718,25 @@ a{color:inherit;text-decoration:none}
 .task-btn:hover{background:var(--bg3);color:var(--text)}
 .task-btn.del:hover{background:var(--errl);color:var(--err)}
 /* Nav badge */
+.jr-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px}
+.jr-card.jr-prio{border-color:rgba(245,158,11,0.5)}
+.jr-card.jr-done{opacity:0.55}
+.jr-title{font-size:14px;font-weight:800;color:var(--text);line-height:1.35;word-break:break-word}
+.jr-meta{font-size:12px;color:var(--text2);margin-top:4px;line-height:1.45}
+.jr-desc{font-size:13px;color:var(--text2);margin-top:8px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+.jr-proof{font-size:12px;color:var(--text3);margin-top:6px;line-height:1.45;word-break:break-word}
+.jr-flag{display:inline-block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;padding:2px 7px;border-radius:100px;margin-right:6px;vertical-align:middle}
+.jr-flag-prio{background:rgba(245,158,11,0.18);color:#f59e0b}
+.jr-flag-over{background:rgba(239,68,68,0.16);color:var(--err)}
+.jr-flag-noform{background:rgba(148,163,184,0.2);color:var(--text3)}
+.jr-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.jr-btn{background:none;border:1px solid var(--border);border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit}
+.jr-btn-fill{border-color:var(--o);color:var(--o)}
+.jr-warn{display:none;font-size:12px;color:#f59e0b;line-height:1.45;margin:0 0 14px 0;align-items:flex-start;gap:10px}
+.jr-warn.show{display:flex}
+.jr-warn-x{background:none;border:none;color:#f59e0b;font-size:18px;line-height:1;cursor:pointer;font-family:inherit;padding:0 2px;flex-shrink:0;opacity:0.8}
+.jr-sec{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin:22px 0 10px}
+textarea.form-input{font-family:inherit;resize:vertical;min-height:96px;line-height:1.5}
 .nav-badge{min-width:18px;height:18px;border-radius:100px;background:var(--err);color:#fff;font-size:10px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;padding:0 5px;margin-left:auto}
 .bn-badge{min-width:16px;height:16px;border-radius:100px;background:var(--err);color:#fff;font-size:9px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;position:absolute;top:2px;right:50%;transform:translateX(10px)}
 
@@ -1084,6 +1103,7 @@ button:active{transform:scale(0.96)}
       <div id="home-pinned-card"></div>
       <div id="morning-stretch-backlog-card"></div>
       <div id="hatchobori-card"></div>
+      <div id="journals-backlog-card"></div>
       <div id="dash-blocks-container">
         <div id="now-next-banner" data-block="now-next-banner"></div>
         <div id="teacher-plan-card" data-block="teacher-plan-card"></div>
@@ -1123,6 +1143,14 @@ button:active{transform:scale(0.96)}
         <div class="morning-stretch-banner-text">Upload Screenshot of Preply Chat with Tutor for Post Lesson Review Proof</div>
         <a class="morning-stretch-banner-btn" id="preply-proof-link" href="#" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:inline-block;text-align:center">Open Folder</a>
         <button onclick="hidePreplyProofBanner()" title="Dismiss — proof already uploaded" aria-label="Dismiss" style="background:none;border:none;color:var(--text3);font-size:20px;line-height:1;cursor:pointer;font-family:inherit;padding:0 2px;flex-shrink:0">&times;</button>
+      </div>
+      <!-- Shows the Description + Proof note of the Journals entry that filled
+           this form, so the reminder is readable while the Google Form is open.
+           Same in-flow banner class as the Preply proof banner: it is NOT fixed
+           or sticky, so it never covers the form. -->
+      <div class="morning-stretch-banner" id="journal-note-banner">
+        <div class="morning-stretch-banner-text" id="journal-note-banner-text"></div>
+        <button onclick="hideJournalNoteBanner()" title="Dismiss" aria-label="Dismiss" style="background:none;border:none;color:var(--text3);font-size:20px;line-height:1;cursor:pointer;font-family:inherit;padding:0 2px;flex-shrink:0">&times;</button>
       </div>
       <div class="card log-form-card" id="log-form-card" style="margin-bottom:12px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:8px;flex-wrap:wrap">
@@ -1190,6 +1218,19 @@ button:active{transform:scale(0.96)}
         </div>
         <div id="log-entries"></div>
       </div>
+    </div>
+
+    <!-- PAGE: JOURNALS -->
+    <div class="page" id="page-journals">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;gap:12px;flex-wrap:wrap">
+        <div style="min-width:0">
+          <h2 style="font-size:22px;font-weight:800;letter-spacing:-0.5px;color:var(--text)">Journals</h2>
+          <p style="font-size:12px;color:var(--text3);margin-top:4px;line-height:1.5;max-width:420px">Work you have already done but have not logged or submitted yet. Fill Log sends one straight to the Log page.</p>
+        </div>
+        <button class="jr-btn jr-btn-fill" onclick="openJournalModal()" style="flex-shrink:0">+ New Journal</button>
+      </div>
+      <div id="journals-open"></div>
+      <div id="journals-done"></div>
     </div>
 
     <!-- PAGE: PROGRESS -->
@@ -1446,6 +1487,68 @@ button:active{transform:scale(0.96)}
 </div>
 
 <!-- GOOGLE FORMS PENDING REVIEW -->
+<div class="modal-overlay" id="journal-modal-overlay" onclick="handleOverlayClick(event,'journal-modal-overlay')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="journal-modal-title">New Journal</div>
+    <input type="hidden" id="journal-edit-id">
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">Journal Title</label>
+      <input type="text" class="form-input" id="jr-title" placeholder="e.g. 2nd September - Algebra 1 Unit 4 Review">
+      <div style="font-size:11px;color:var(--text3);margin-top:5px;line-height:1.45">Fills &ldquo;Journal Content/What You Studied&rdquo; on the Log page, and the Google Form.</div>
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">Description</label>
+      <textarea class="form-input" id="jr-desc" placeholder="What this was, what proof you still need, anything you want to remember when you come back to it."></textarea>
+      <div style="font-size:11px;color:var(--text3);margin-top:5px;line-height:1.45">For you only. Never sent to the Log page or the form.</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Subject</label>
+        <select class="form-input" id="jr-subject" onchange="_jrCheckForm()"></select>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Day Studied</label>
+        <input type="date" class="form-input" id="jr-date">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Start</label>
+        <input type="hidden" id="jr-start">
+        <div class="time-split-input">
+          <input class="tsplit-hh" id="jr-start-hh" type="text" inputmode="numeric" maxlength="2" placeholder="12" autocomplete="off" oninput="timeSplitInput('jr-start','jr-start-hh','jr-start-mm')">
+          <span class="tsplit-sep">:</span>
+          <input class="tsplit-mm" id="jr-start-mm" type="text" inputmode="numeric" maxlength="2" placeholder="30" autocomplete="off" oninput="timeSplitInput('jr-start','jr-start-mm','jr-end-hh')" onkeydown="timeSplitBack(event,'jr-start-hh')">
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">End</label>
+        <input type="hidden" id="jr-end">
+        <div class="time-split-input">
+          <input class="tsplit-hh" id="jr-end-hh" type="text" inputmode="numeric" maxlength="2" placeholder="12" autocomplete="off" oninput="timeSplitInput('jr-end','jr-end-hh','jr-end-mm')" onkeydown="timeSplitBack(event,'jr-start-mm')">
+          <span class="tsplit-sep">:</span>
+          <input class="tsplit-mm" id="jr-end-mm" type="text" inputmode="numeric" maxlength="2" placeholder="30" autocomplete="off" oninput="timeSplitInput('jr-end','jr-end-mm',null)" onkeydown="timeSplitBack(event,'jr-end-hh')">
+        </div>
+      </div>
+    </div>
+    <div class="jr-warn" id="jr-form-warn">
+      <span id="jr-form-warn-text" style="flex:1;min-width:0"></span>
+      <button type="button" class="jr-warn-x" onclick="dismissJrFormWarn()" title="Dismiss" aria-label="Dismiss">&times;</button>
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">Proof / files</label>
+      <input type="text" class="form-input" id="jr-proof" placeholder="e.g. screenshot in Photos, 2 Sep">
+    </div>
+    <label style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text);cursor:pointer">
+      <input type="checkbox" id="jr-priority" style="width:18px;height:18px;accent-color:var(--o);flex-shrink:0">
+      Priority &mdash; keep this at the top
+    </label>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="saveJournalEntry()">Save</button>
+      <button class="btn-cancel" onclick="closeModal('journal-modal-overlay')">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="forms-pending-modal-overlay" onclick="handleOverlayClick(event,'forms-pending-modal-overlay')">
   <div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
@@ -2128,6 +2231,7 @@ const NAV_ITEMS=[
   {id:'dashboard', label:'Dashboard', short:'Home',       icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>'},
   {id:'schedule',  label:'Schedule',  short:'Schedule',   icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'},
   {id:'log',       label:'Log Hours', short:'Log',        icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>'},
+  {id:'journals',  label:'Journals',  short:'Journals',   icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2h6a1 1 0 0 1 1 1v2H8V3a1 1 0 0 1 1-1z"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>'},
   {id:'progress',  label:'Progress',  short:'Progress',   icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>'},
   {id:'subjects',  label:'Subjects',  short:'Subjects',   icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>'},
   {id:'graduation', label:'Graduation', short:'Grad', icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>'},
@@ -2228,6 +2332,7 @@ function buildNav(){
 
   // Wheel nav
   _wheelBuild(items, page);
+  if(typeof _updateJournalsBadge==='function')_updateJournalsBadge();
 }
 
 function renderNavReorder(){
@@ -4702,6 +4807,7 @@ function showPage(id){
   else if(id==='schedule'){renderSchedule()}
   else if(id==='log')renderLog();
   else if(id==='history')renderHistory();
+  else if(id==='journals')renderJournals();
   else if(id==='progress')renderProgress();
   else if(id==='subjects')renderSubjectsPage();
   else if(id==='graduation')renderGraduationPage();
@@ -4735,6 +4841,7 @@ function renderDashboard(){
   renderTeacherPlan();
   if(typeof renderMorningStretchBacklog==='function')renderMorningStretchBacklog();
   if(typeof updateHatchoboriBanner==='function')updateHatchoboriBanner();
+  if(typeof renderJournalsBacklog==='function')renderJournalsBacklog();
   const now=nowLocal();
   const hour=now.getHours();
   let greet='Good Morning';
@@ -5730,6 +5837,10 @@ function clearLogForm(){
   document.getElementById('log-notes').value='';
   updateJournalLenWarn();
   _pendingJournalMeta=null;
+  // Still drop the pending link, so a journal can never be ticked off by an
+  // unrelated session logged after a Clear. The BANNER stays up though - only
+  // its cross closes it (Noah's call, 2026-09-03).
+  _pendingJournalEntryId=null;
   const dur=document.getElementById('log-duration');
   if(dur)dur.textContent='';
   dismissDupWarn();
@@ -7565,6 +7676,17 @@ function _doLogSession(){
   hoursStore[subjectId]=(hoursStore[subjectId]||0)+hours;
   saveSessions(sessions);
   saveHours(hoursStore);
+  // A Journals entry filled this form -> tick it complete now that the session
+  // really exists. Runs before the Google Form opens below.
+  // Captured BEFORE _completeJournalFromLog clears the pending id.
+  const _cameFromJournal=!!_pendingJournalEntryId;
+  if(typeof _completeJournalFromLog==='function')_completeJournalFromLog(_newId);
+  // The reminder banner SURVIVES logging its own journal: the Google Form only
+  // opens once the session is logged, so this is the moment Noah needs to read
+  // the proof note (same reasoning as the Preply proof banner). But a session
+  // that did NOT come from a journal leaves the banner stale on screen, so that
+  // is the one thing besides the cross that closes it. Noah's call, 2026-09-03.
+  if(!_cameFromJournal)hideJournalNoteBanner();
   setLogTime('log-start','');
   setLogTime('log-end','');
   document.getElementById('log-notes').value='';
@@ -7597,6 +7719,361 @@ function _doLogSession(){
   if(typeof updateHatchoboriBanner==='function')updateHatchoboriBanner();
   // A logged session is the usual moment a contract boundary is crossed.
   if(typeof renderContractBanners==='function')renderContractBanners();
+}
+
+// == JOURNALS ================================================================
+// A backlog of work Noah has actually done but has not logged in StudyTrack or
+// submitted a Google Form for. Deliberately SEPARATE from the form tracker
+// above: that one covers sessions already logged whose form is outstanding;
+// this one covers work that has not reached the Log page at all yet.
+//
+// Two text fields on purpose (Noah's call, 2026-09-03):
+//   desc  - a note to himself. Never leaves this page or the reminder banner.
+//   title - the ONE line that fills the Log page's "Journal Content/What You
+//           Studied" box, and therefore the Google Form's Contents field.
+const JOURNAL_OVERDUE_DAYS = 7;
+
+function loadJournals(){
+  try{const s=localStorage.getItem('st_journals');if(s){const p=JSON.parse(s);if(Array.isArray(p))return p}}catch(e){}
+  return [];
+}
+
+// Whole-list last-writer-wins, identical to st_todos. An ID-level merge was
+// considered and REJECTED on purpose: without tombstones it resurrects deleted
+// entries, and a resurrected entry can be filled into the Log page a second
+// time - which is the resurrect-and-double-count bug that got Archive deleted
+// outright (dd740cc). Losing an unsynced entry is visible and re-typeable;
+// silently double-counting graduation hours is not.
+function saveJournals(list){
+  localStorage.setItem('st_journals',JSON.stringify(list));
+  localStorage.setItem('st_journals_updated_at',new Date().toISOString());
+  try{sbPush('st_journals',list)}catch(e){}
+  _updateJournalsBadge();
+}
+
+function _journalSubjName(id){
+  if(!id)return '';
+  const s=loadSubjects().find(x=>x.id===id);
+  return s?s.name:id;
+}
+function _journalHasForm(id){ return !!(id && _SUBJECT_FORMS[id]); }
+
+function _journalAgeDays(ds){
+  if(!ds)return 0;
+  const a=new Date(ds+'T00:00:00'), b=new Date(todayStr()+'T00:00:00');
+  return Math.round((b-a)/86400000);
+}
+function _journalOverdue(j){
+  return !j.done && !!j.date && _journalAgeDays(j.date) > JOURNAL_OVERDUE_DAYS;
+}
+
+// Priority first, then auto-overdue, then oldest Day Studied first - the oldest
+// backlog item is the one most likely to have been forgotten.
+function _sortJournals(list){
+  return list.slice().sort((a,b)=>{
+    const ar=(a.priority?2:0)+(_journalOverdue(a)?1:0);
+    const br=(b.priority?2:0)+(_journalOverdue(b)?1:0);
+    if(ar!==br)return br-ar;
+    const ad=a.date||'9999-99-99', bd=b.date||'9999-99-99';
+    if(ad!==bd)return ad.localeCompare(bd);
+    return (a.createdAt||'').localeCompare(b.createdAt||'');
+  });
+}
+function _openJournals(){ return loadJournals().filter(j=>!j.done); }
+
+// Sidebar only. The wheel nav's .bn-badge is absolutely positioned for a nav
+// style this app no longer uses, so a badge there would sit wrong; the
+// Dashboard card is what covers the phone.
+function _updateJournalsBadge(){
+  const n=_openJournals().length;
+  document.querySelectorAll('.nav-item[data-page="journals"]').forEach(el=>{
+    let badge=el.querySelector('.nav-badge');
+    if(n>0){
+      if(!badge){badge=document.createElement('span');badge.className='nav-badge';el.appendChild(badge)}
+      badge.textContent=n>9?'9+':n;
+    } else if(badge){ badge.remove() }
+  });
+}
+
+function renderJournals(){
+  const all=loadJournals();
+  const open=_sortJournals(all.filter(j=>!j.done));
+  const done=all.filter(j=>j.done).sort((a,b)=>(b.completedAt||'').localeCompare(a.completedAt||''));
+  const oh=document.getElementById('journals-open');
+  const dh=document.getElementById('journals-done');
+  if(!oh||!dh)return;
+  oh.innerHTML = open.length
+    ? open.map(_journalCard).join('')
+    : '<div class="empty-state">Nothing outstanding. Add a journal whenever you do work you cannot log straight away.</div>';
+  dh.innerHTML = done.length
+    ? '<div class="jr-sec">Completed ('+done.length+')</div>'+done.map(_journalCard).join('')
+    : '';
+  _updateJournalsBadge();
+}
+
+function _journalCard(j){
+  const over=_journalOverdue(j);
+  const flags=
+    (j.priority&&!j.done?'<span class="jr-flag jr-flag-prio">Priority</span>':'')+
+    (over?'<span class="jr-flag jr-flag-over">'+_journalAgeDays(j.date)+' days old</span>':'')+
+    (j.subjectId&&!_journalHasForm(j.subjectId)?'<span class="jr-flag jr-flag-noform">No form linked</span>':'');
+  const bits=[];
+  if(j.subjectId)bits.push(escHtml(_journalSubjName(j.subjectId)));
+  if(j.date)bits.push(_ordinalDate(j.date));
+  if(j.start&&j.end)bits.push(j.start+'-'+j.end);
+  else if(j.start)bits.push('from '+j.start);
+  return '<div class="jr-card'+(j.priority&&!j.done?' jr-prio':'')+(j.done?' jr-done':'')+'">'+
+    (flags?'<div style="margin-bottom:7px">'+flags+'</div>':'')+
+    '<div class="jr-title">'+escHtml(j.title||'(no title yet)')+'</div>'+
+    (bits.length?'<div class="jr-meta">'+bits.join(' · ')+'</div>':'')+
+    (j.desc?'<div class="jr-desc">'+escHtml(j.desc)+'</div>':'')+
+    (j.proof?'<div class="jr-proof">Proof: '+escHtml(j.proof)+'</div>':'')+
+    '<div class="jr-actions">'+
+      (j.done?'':'<button class="jr-btn jr-btn-fill" onclick="fillLogFromJournal(\''+j.id+'\')">Fill Log &rarr;</button>')+
+      '<button class="jr-btn" onclick="toggleJournalDone(\''+j.id+'\')">'+(j.done?'Undo complete':'Complete')+'</button>'+
+      '<button class="jr-btn" onclick="openJournalModal(\''+j.id+'\')">Edit</button>'+
+      '<button class="jr-btn" onclick="deleteJournalEntry(\''+j.id+'\')">Delete</button>'+
+    '</div>'+
+  '</div>';
+}
+
+function openJournalModal(editId){
+  const j = editId ? loadJournals().find(x=>x.id===editId) : null;
+  document.getElementById('journal-modal-title').textContent = j ? 'Edit Journal' : 'New Journal';
+  document.getElementById('journal-edit-id').value = j ? j.id : '';
+  // Same availability rule as the Log page, so a journal can never be queued
+  // against a subject the Log page will not let you pick. A closed subject on
+  // an existing entry is kept as an option so editing it does not wipe it.
+  const avail=loadSubjects().filter(s=>!s.done&&getLogged(s.id)<s.req);
+  const sel=document.getElementById('jr-subject');
+  let opts='<option value="">- Select -</option>'+
+    avail.map(s=>'<option value="'+s.id+'">'+escHtml(s.name)+'</option>').join('');
+  if(j&&j.subjectId&&!avail.find(s=>s.id===j.subjectId)){
+    opts+='<option value="'+escHtml(j.subjectId)+'">'+escHtml(_journalSubjName(j.subjectId))+' (closed)</option>';
+  }
+  sel.innerHTML=opts;
+  sel.value = j&&j.subjectId ? j.subjectId : '';
+  document.getElementById('jr-title').value = j?(j.title||''):'';
+  document.getElementById('jr-desc').value  = j?(j.desc||''):'';
+  const dEl=document.getElementById('jr-date');
+  dEl.max=todayStr();               // native picker stops offering future days
+  dEl.value = j?(j.date||''):todayStr();
+  setLogTime('jr-start', j?(j.start||''):'');
+  setLogTime('jr-end',   j?(j.end||''):'');
+  document.getElementById('jr-proof').value = j?(j.proof||''):'';
+  document.getElementById('jr-priority').checked = !!(j&&j.priority);
+  _jrWarnDismissed=false;   // a dismissal lasts for THIS modal session only,
+                            // so reopening the box can never hide the warning
+                            // for a subject that still has no form.
+  _jrCheckForm();
+  document.getElementById('journal-modal-overlay').classList.add('open');
+}
+
+// Warns, never blocks. Noah's call: a subject with no Google Form registered in
+// the app can still have a journal queued against it - the warning tells him to
+// get the form link added rather than letting it fall through silently.
+// Dismissed by the cross, reset by openJournalModal. Scoped to one modal
+// session on purpose: a permanent dismissal would silently hide a warning that
+// is still true the next time the subject is picked.
+let _jrWarnDismissed=false;
+
+function dismissJrFormWarn(){
+  _jrWarnDismissed=true;
+  const w=document.getElementById('jr-form-warn');
+  if(w)w.classList.remove('show');
+}
+
+// Only the cross closes this warning - EXCEPT when the selected subject does
+// have a form, where it is hidden because the sentence would otherwise be
+// false ("No Google Form is linked to English Grade 11" while Algebra 1 is
+// selected). Switching between two form-less subjects rewrites the text rather
+// than clearing it. Noah's call, 2026-09-03.
+function _jrCheckForm(){
+  const w=document.getElementById('jr-form-warn');
+  const t=document.getElementById('jr-form-warn-text');
+  const sel=document.getElementById('jr-subject');
+  if(!w||!t||!sel)return;
+  const id=sel.value;
+  if(id&&!_journalHasForm(id)&&!_jrWarnDismissed){
+    t.textContent='No Google Form is linked to '+_journalSubjName(id)+' in StudyTrack yet. You can still save this reminder, but ask Claude to add the form link before you try to submit it.';
+    w.classList.add('show');
+  } else {
+    w.classList.remove('show');
+  }
+}
+
+function saveJournalEntry(){
+  const id=document.getElementById('journal-edit-id').value;
+  const title=document.getElementById('jr-title').value.trim();
+  const desc=document.getElementById('jr-desc').value.trim();
+  const date=document.getElementById('jr-date').value;
+  const subjectId=document.getElementById('jr-subject').value;
+  const start=document.getElementById('jr-start').value;
+  const end=document.getElementById('jr-end').value;
+  const proof=document.getElementById('jr-proof').value.trim();
+  const priority=document.getElementById('jr-priority').checked;
+  if(!title&&!desc){showToast('Add a Journal Title or a Description.','var(--err)');return}
+  // Same future rule as the Log page (120463d). A journal is proof of work
+  // already done, so a Day Studied in the future is meaningless.
+  if(date&&date>todayStr()){
+    showToast('That date is in the future - a journal can only cover work you have already done.','var(--err)');return;
+  }
+  if(start&&end&&toMins(end)<=toMins(start)){
+    showToast('End time must be after start time.','var(--err)');return;
+  }
+  const list=loadJournals();
+  const now=new Date().toISOString();
+  if(id){
+    const j=list.find(x=>x.id===id);
+    if(!j)return;
+    j.title=title; j.desc=desc; j.date=date; j.subjectId=subjectId;
+    j.start=start; j.end=end; j.proof=proof; j.priority=priority; j.updatedAt=now;
+  } else {
+    list.push({id:genId(),title:title,desc:desc,date:date,subjectId:subjectId,
+      start:start,end:end,proof:proof,priority:priority,
+      done:false,completedBy:null,completedAt:null,createdAt:now,updatedAt:now});
+  }
+  saveJournals(list);
+  closeModal('journal-modal-overlay');
+  renderJournals();
+  if(typeof renderJournalsBacklog==='function')renderJournalsBacklog();
+  showToast('Journal saved','var(--ok)');
+}
+
+function toggleJournalDone(id){
+  const list=loadJournals();
+  const j=list.find(x=>x.id===id);
+  if(!j)return;
+  j.done=!j.done;
+  if(j.done){ j.completedAt=new Date().toISOString() }
+  else { j.completedAt=null; j.completedBy=null }   // undo is a clean reset
+  j.updatedAt=new Date().toISOString();
+  saveJournals(list);
+  renderJournals();
+  if(typeof renderJournalsBacklog==='function')renderJournalsBacklog();
+}
+
+function deleteJournalEntry(id){
+  const j=loadJournals().find(x=>x.id===id);
+  if(!j)return;
+  if(!confirm('Delete this journal reminder? This cannot be undone.'))return;
+  const list=loadJournals().filter(x=>x.id!==id);
+  saveJournals(list);
+  renderJournals();
+  if(typeof renderJournalsBacklog==='function')renderJournalsBacklog();
+  showToast('Journal deleted','var(--text3)');
+}
+
+// Set by fillLogFromJournal, consumed once by _doLogSession. clearLogForm()
+// wipes it, so a journal can never be ticked off by an unrelated session that
+// happened to be logged afterwards.
+let _pendingJournalEntryId=null;
+
+function fillLogFromJournal(id){
+  const j=loadJournals().find(x=>x.id===id);
+  if(!j)return;
+  hidePreplyProofBanner();
+  showPage('log');                      // renderLog() runs here - fill AFTER it
+  const sub=document.getElementById('log-subject');
+  if(sub&&j.subjectId){
+    if(Array.prototype.some.call(sub.options,o=>o.value===j.subjectId)){
+      sub.value=j.subjectId;
+    } else {
+      showToast(_journalSubjName(j.subjectId)+' is no longer selectable on the Log page - pick a subject by hand.','var(--err)');
+    }
+  }
+  if(typeof updateLogFormColour==='function')updateLogFormColour();
+  // Set the date DIRECTLY, not via setLogDateAuto(). setLogDateAuto moves the
+  // _logDateAuto sentinel, which tells renderLog() the date was auto-filled and
+  // may be reset to today - and a journal's Day Studied is often weeks old.
+  // That silent re-dating is the bug 041a518 fixed; the importers avoid it the
+  // same way.
+  if(j.date){ const dEl=document.getElementById('log-date'); if(dEl)dEl.value=j.date }
+  setLogTime('log-start',j.start||'');
+  setLogTime('log-end',j.end||'');
+  const nEl=document.getElementById('log-notes');
+  if(nEl)nEl.value=j.title||'';
+  if(typeof updateJournalLenWarn==='function')updateJournalLenWarn();
+  if(typeof dismissDupWarn==='function')dismissDupWarn();
+  updateLogDuration();
+  _pendingJournalEntryId=j.id;
+  showJournalNoteBanner(j);
+  const card=document.getElementById('log-form-card');
+  if(card)card.scrollIntoView({behavior:'auto',block:'start'});
+  showToast('Journal filled in - check the times, then Log Session','var(--ok)');
+}
+
+function showJournalNoteBanner(j){
+  const el=document.getElementById('journal-note-banner');
+  const t=document.getElementById('journal-note-banner-text');
+  if(!el||!t)return;
+  if(!j.desc&&!j.proof){ el.classList.remove('show'); return }
+  // The title line is what stops this reading as a note about whatever is
+  // currently typed into the form. Everything is escHtml'd - this text is
+  // Noah's own, but it goes through innerHTML, so it is escaped on principle.
+  let h='<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;opacity:0.7;margin-bottom:4px">Journal: '+
+        escHtml(j.title||'(no title yet)')+'</div>';
+  if(j.desc)h+='<div style="white-space:pre-wrap">'+escHtml(j.desc)+'</div>';
+  if(j.proof)h+='<div style="margin-top:4px">Proof: '+escHtml(j.proof)+'</div>';
+  t.innerHTML=h;
+  el.classList.add('show');
+}
+function hideJournalNoteBanner(){
+  const el=document.getElementById('journal-note-banner');
+  if(el)el.classList.remove('show');
+}
+
+// Called from _doLogSession. Ticks the entry regardless of whether the subject
+// has a Google Form: English 11 and English 12 have no form registered yet, and
+// making the tick depend on a form opening would leave those entries stuck open
+// forever. Stores the session id so "Undo complete" is a clean reset.
+function _completeJournalFromLog(sessionId){
+  if(!_pendingJournalEntryId)return;
+  const wanted=_pendingJournalEntryId;
+  _pendingJournalEntryId=null;
+  const list=loadJournals();
+  const j=list.find(x=>x.id===wanted);
+  if(!j||j.done)return;
+  j.done=true;
+  j.completedBy=sessionId;
+  j.completedAt=new Date().toISOString();
+  j.updatedAt=j.completedAt;
+  saveJournals(list);
+  if(currentPage==='journals')renderJournals();
+  if(typeof renderJournalsBacklog==='function')renderJournalsBacklog();
+}
+
+function renderJournalsBacklog(){
+  const host=document.getElementById('journals-backlog-card');
+  if(!host)return;
+  const open=_sortJournals(_openJournals());
+  if(!open.length){ host.innerHTML=''; return }
+  let h='<div class="card" style="margin-top:10px;border-color:rgba(245,158,11,0.4)">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">'+
+      '<div style="font-size:13px;font-weight:800;color:var(--text)">Journals to Submit</div>'+
+      '<button onclick="showPage(\'journals\')" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--text3);cursor:pointer">All &rarr;</button>'+
+    '</div>'+
+    '<div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.4">'+
+      open.length+' outstanding. Priority and oldest first.</div>';
+  open.slice(0,5).forEach(function(j){
+    const meta=[j.subjectId?_journalSubjName(j.subjectId):'', j.date?_ordinalDate(j.date):''].filter(Boolean).join(' · ');
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--border)">'+
+      '<div style="min-width:0;flex:1">'+
+        '<div style="font-size:13px;color:var(--text);font-weight:600;line-height:1.35;word-break:break-word">'+
+          (j.priority?'<span class="jr-flag jr-flag-prio">Priority</span>':'')+
+          (_journalOverdue(j)?'<span class="jr-flag jr-flag-over">'+_journalAgeDays(j.date)+'d</span>':'')+
+          escHtml(j.title||'(no title yet)')+'</div>'+
+        (meta?'<div style="font-size:11px;color:var(--text3);margin-top:3px">'+escHtml(meta)+'</div>':'')+
+      '</div>'+
+      '<button class="morning-stretch-banner-btn" style="flex-shrink:0" onclick="fillLogFromJournal(\''+j.id+'\')">Fill Log</button>'+
+    '</div>';
+  });
+  if(open.length>5){
+    h+='<div style="font-size:11px;color:var(--text3);padding-top:9px;border-top:1px solid var(--border)">+'+
+      (open.length-5)+' more on the Journals page</div>';
+  }
+  h+='</div>';
+  host.innerHTML=h;
 }
 
 // ── Hatchobori platform transfer walk ───────────────────────────────────────
@@ -10714,7 +11191,7 @@ async function sbPull(key){
 async function syncFromCloud(){
   setSyncUI('syncing','Syncing…');
   try{
-    const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_ai_history','st_holiday','st_notif_prefs','st_notif_templates','st_teacher_plan']; // st_hours is recomputed from sessions below, not pulled directly. st_teacher_plan is written externally by the teacher RPC and only ever pulled here (cloud-authoritative, falls through to the default setItem branch — the app never sbPushes it).
+    const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_ai_history','st_holiday','st_notif_prefs','st_notif_templates','st_teacher_plan','st_journals']; // st_hours is recomputed from sessions below, not pulled directly. st_teacher_plan is written externally by the teacher RPC and only ever pulled here (cloud-authoritative, falls through to the default setItem branch — the app never sbPushes it).
     // Pull st_deleted_sessions upfront so we can use it synchronously inside forEach
     let cloudDeletedRaw=null;
     try{cloudDeletedRaw=await sbPull('st_deleted_sessions')}catch(e){}
@@ -10792,7 +11269,7 @@ async function syncFromCloud(){
             localStorage.setItem(k,JSON.stringify(cloud));
             _aiHistory=cloud;
           }
-        } else if(k==='st_subjs'||k==='st_goals'||k==='st_todos'||k==='st_sched_overrides'||k==='st_holiday'||k==='st_notif_prefs'||k==='st_notif_templates'){
+        } else if(k==='st_subjs'||k==='st_goals'||k==='st_todos'||k==='st_sched_overrides'||k==='st_holiday'||k==='st_notif_prefs'||k==='st_notif_templates'||k==='st_journals'){
           // Timestamped last-writer-wins: keep whichever version is newer.
           // Prevents a device with stale data from reverting a fresh edit.
           const cloudUpdatedAt=rows[i].updated_at||'';
@@ -10900,9 +11377,10 @@ async function syncFromCloud(){
   // Attach scroll listener to #main (the actual scroll container in this SPA layout)
   // Deep link support: open specific page via URL hash e.g. #log
   const hash=window.location.hash.replace('#','');
-  const validPages=['dashboard','schedule','log','progress','subjects','graduation','timer','history','tasks','ai'];
+  const validPages=['dashboard','schedule','log','progress','subjects','graduation','timer','history','journals','tasks','ai'];
   showPage(validPages.includes(hash)?hash:'log');
   _updateTasksBadge();
+  _updateJournalsBadge();
   // Run the overdue-task check once the cloud sync settles (so it reflects tasks
   // completed/rescheduled on other devices), falling back to local data if it fails.
   // (On a fresh device this is now effectively a second, cheap sync — the first
