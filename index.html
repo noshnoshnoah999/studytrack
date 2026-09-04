@@ -1168,7 +1168,7 @@ button:active{transform:scale(0.96)}
           </div>
           <div class="form-group" style="margin-bottom:0">
             <label class="form-label">Date</label>
-            <input type="date" class="form-input" id="log-date">
+            <input type="date" class="form-input" id="log-date" oninput="_logDayLoad()" onchange="_logDayLoad()">
           </div>
           <div class="form-group" style="margin-bottom:0">
             <label class="form-label">Start</label>
@@ -1190,6 +1190,7 @@ button:active{transform:scale(0.96)}
           </div>
         </div>
         <div class="duration-display" id="log-duration" style="margin:10px 0 14px"></div>
+        <div id="log-dayload" style="display:none;margin-bottom:14px"></div>
         <div class="form-group" style="margin-bottom:16px">
           <label class="form-label">Journal Content/What You Studied</label>
           <input type="text" class="form-input" id="log-notes" oninput="updateJournalLenWarn()">
@@ -1509,7 +1510,7 @@ button:active{transform:scale(0.96)}
       </div>
       <div class="form-group" style="margin-bottom:0">
         <label class="form-label">Day Studied</label>
-        <input type="date" class="form-input" id="jr-date">
+        <input type="date" class="form-input" id="jr-date" oninput="_jrDayLoad()" onchange="_jrDayLoad()">
       </div>
       <div class="form-group" style="margin-bottom:0">
         <label class="form-label">Start</label>
@@ -1530,6 +1531,7 @@ button:active{transform:scale(0.96)}
         </div>
       </div>
     </div>
+    <div id="jr-dayload" style="display:none;margin-bottom:14px"></div>
     <div class="jr-warn" id="jr-form-warn">
       <span id="jr-form-warn-text" style="flex:1;min-width:0"></span>
       <button type="button" class="jr-warn-x" onclick="dismissJrFormWarn()" title="Dismiss" aria-label="Dismiss">&times;</button>
@@ -5790,6 +5792,7 @@ function setLogDateAuto(v){
   if(!el)return;
   el.value=v;
   _logDateAuto=v;
+  if(typeof _logDayLoad==='function')_logDayLoad();
 }
 
 // ── Future-session guard ──────────────────────────────────────────────────────
@@ -5843,6 +5846,7 @@ function clearLogForm(){
   _pendingJournalEntryId=null;
   const dur=document.getElementById('log-duration');
   if(dur)dur.textContent='';
+  _logDayLoad();
   dismissDupWarn();
   updateLogFormColour();
 }
@@ -5947,6 +5951,7 @@ function renderLog(){
   dateIn.max=todayStr();
   if(!dateIn.value||dateIn.value===_logDateAuto)setLogDateAuto(todayStr());
   updateLogDuration();
+  _logDayLoad();
   renderLogEntries();
   updateLogFormColour();
 }
@@ -7487,6 +7492,10 @@ function timeSplitInput(hiddenId, thisId, nextId){
   // Only the Log Session page has a log-duration readout; the Edit Session
   // modal calls _esCalcDur() from its own oninput handlers.
   if(wrap==='log-start'||wrap==='log-end')updateLogDuration();
+  // Keep the "already on this day" panel's clash warning in step with the times
+  // being typed. Cheap: it only reads localStorage for one date.
+  if(wrap==='log-start'||wrap==='log-end')_logDayLoad();
+  if(wrap==='jr-start'||wrap==='jr-end')_jrDayLoad();
   // Morning After-Wake Up Stretches: once Start is fully typed, auto-fill
   // End = Start + 10 minutes. Scoped to wrap==='log-start' plus the notes-field
   // check inside the function, so it never fires for ordinary log entries.
@@ -7523,6 +7532,141 @@ function updateLogDuration(){
     if(mins>0){el.textContent='Duration: '+durStr(mins);return}
   }
   el.textContent='';
+}
+
+
+// ── "Already on this day" panel ──────────────────────────────────────────────
+// Both the Journal modal and the Log page let you set a date and then type
+// Start/End with no view of what that day already holds, so a back-dated entry
+// could land on top of a session already logged — or on top of another journal
+// queued minutes earlier, which is invisible because a queued journal is not a
+// session yet. This panel lists both, names the free gaps, and WARNS on an
+// overlap. It never blocks: extra-credit work shifts and study legitimately
+// overlap in the real data, so a hard block would fight Noah rather than help.
+// Read-only — editing still happens where it always did. Noah's call 2026-09-04.
+var DAYLOAD_MIN_GAP_MINS=15;   // shorter than this is noise, not a usable slot
+var DAYLOAD_DAY_START=360;     // 06:00 — window the free gaps are measured in
+var DAYLOAD_DAY_END=1440;      // 24:00
+
+function _dayLoadItems(dateStr,excludeJournalId){
+  if(!dateStr)return{timed:[],untimed:[]};
+  var subjs=loadSubjects();
+  function nameOf(id){var s=subjs.find(function(x){return x.id===id});return s?s.name:(id||'Unknown')}
+  var out=[];
+  loadSessions().filter(function(s){return s.date===dateStr}).forEach(function(s){
+    out.push({start:s.start||'',end:s.end||'',label:nameOf(s.subjectId),kind:'logged'});
+  });
+  // Queued journals count as busy too — see header comment.
+  loadJournals().filter(function(j){
+    return j.date===dateStr&&!j.done&&(!excludeJournalId||j.id!==excludeJournalId);
+  }).forEach(function(j){
+    out.push({start:j.start||'',end:j.end||'',
+      label:(j.title||nameOf(j.subjectId)||'Journal'),kind:'planned'});
+  });
+  function isTimed(x){return !!(x.start&&x.end&&toMins(x.end)>toMins(x.start))}
+  return{
+    timed:out.filter(isTimed).sort(function(a,b){return toMins(a.start)-toMins(b.start)}),
+    untimed:out.filter(function(x){return !isTimed(x)})
+  };
+}
+
+// Merge overlapping/touching busy blocks, then invert them inside the day
+// window. The window widens if the day itself starts before 06:00 or runs past
+// midnight, so a 05:30 run never makes its own hours disappear from the maths.
+function _dayLoadFreeGaps(timed){
+  if(!timed.length)return[[DAYLOAD_DAY_START,DAYLOAD_DAY_END]];
+  var merged=[];
+  timed.map(function(x){return[toMins(x.start),toMins(x.end)]})
+       .sort(function(a,b){return a[0]-b[0]})
+       .forEach(function(iv){
+    var last=merged[merged.length-1];
+    if(last&&iv[0]<=last[1]){last[1]=Math.max(last[1],iv[1])}
+    else merged.push([iv[0],iv[1]]);
+  });
+  var winStart=Math.min(DAYLOAD_DAY_START,merged[0][0]);
+  var winEnd=Math.max(DAYLOAD_DAY_END,merged[merged.length-1][1]);
+  var gaps=[],cur=winStart;
+  merged.forEach(function(iv){
+    if(iv[0]-cur>=DAYLOAD_MIN_GAP_MINS)gaps.push([cur,iv[0]]);
+    cur=Math.max(cur,iv[1]);
+  });
+  if(winEnd-cur>=DAYLOAD_MIN_GAP_MINS)gaps.push([cur,winEnd]);
+  return gaps;
+}
+
+function _dayLoadHHMM(m){
+  return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
+}
+
+function _dayLoadOverlaps(timed,startVal,endVal){
+  if(!startVal||!endVal)return[];
+  var s=toMins(startVal),e=toMins(endVal);
+  if(e<=s)return[];   // end<=start is already its own error elsewhere
+  return timed.filter(function(x){return s<toMins(x.end)&&e>toMins(x.start)});
+}
+
+function _renderDayLoad(elId,dateStr,startVal,endVal,excludeJournalId){
+  var el=document.getElementById(elId);
+  if(!el)return;
+  if(!dateStr){el.style.display='none';el.innerHTML='';return}
+  var items=_dayLoadItems(dateStr,excludeJournalId);
+  var timed=items.timed,untimed=items.untimed;
+  var d=new Date(dateStr+'T12:00:00');
+  var dateLabel=isNaN(d.getTime())?dateStr:d.toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'});
+  var h='<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:6px">Already on '+escHtml(dateLabel)+'</div>';
+  if(!timed.length&&!untimed.length){
+    h+='<div style="font-size:12px;color:var(--text3)">Nothing on this day yet — the whole day is free.</div>';
+  }else{
+    var rows=timed.concat(untimed).map(function(x){
+      var planned=x.kind==='planned';
+      var t=(x.start&&x.end)?x.start+'–'+x.end:'no time set';
+      var dur=(x.start&&x.end&&toMins(x.end)>toMins(x.start))?durStr(toMins(x.end)-toMins(x.start)):'';
+      return '<div style="display:flex;align-items:baseline;gap:8px;padding:5px 0;border-top:1px solid var(--border)">'+
+        '<span style="font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:86px;color:'+(planned?'var(--text3)':'var(--text)')+'">'+escHtml(t)+'</span>'+
+        '<span style="font-size:12px;color:var(--text2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+
+          escHtml(x.label)+(planned?'<span style="color:var(--text3)"> · journal, not logged</span>':'')+
+        '</span>'+
+        '<span style="font-size:11px;color:var(--text3);white-space:nowrap">'+escHtml(dur)+'</span>'+
+      '</div>';
+    }).join('');
+    h+='<div style="max-height:148px;overflow-y:auto">'+rows+'</div>';
+    var gaps=_dayLoadFreeGaps(timed);
+    h+='<div style="font-size:11px;color:var(--text3);margin-top:7px;line-height:1.5">'+
+       (gaps.length
+         ? 'Free: '+gaps.map(function(g){return _dayLoadHHMM(g[0])+'–'+_dayLoadHHMM(g[1])}).join(', ')
+         : 'No free gap of '+DAYLOAD_MIN_GAP_MINS+' minutes or more today.')+
+       '</div>';
+    if(untimed.length){
+      h+='<div style="font-size:11px;color:var(--text3);margin-top:4px;line-height:1.5">'+
+         untimed.length+' entr'+(untimed.length===1?'y has':'ies have')+' no times, so '+
+         (untimed.length===1?'it is':'they are')+' not counted in the free gaps.</div>';
+    }
+  }
+  var clash=_dayLoadOverlaps(timed,startVal,endVal);
+  if(clash.length){
+    var names=clash.slice(0,2).map(function(c){return c.label+' ('+c.start+'–'+c.end+')'}).join(', ');
+    h+='<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(245,158,11,0.25);font-size:12px;line-height:1.45;color:#f59e0b">'+
+       'Those times overlap '+escHtml(names)+(clash.length>2?' and '+(clash.length-2)+' more':'')+
+       '. You can still save it.</div>';
+  }
+  el.innerHTML='<div style="background:var(--bg2);border-radius:12px;padding:10px 12px">'+h+'</div>';
+  el.style.display='';
+}
+
+function _jrDayLoad(){
+  var v=function(id){var e=document.getElementById(id);return e?e.value:''};
+  _renderDayLoad('jr-dayload',v('jr-date'),v('jr-start'),v('jr-end'),v('journal-edit-id')||null);
+}
+
+function _logDayLoad(){
+  var v=function(id){var e=document.getElementById(id);return e?e.value:''};
+  // _pendingJournalEntryId is a `let` declared further down the file; reading it
+  // from a render that runs during load would throw on the temporal dead zone,
+  // so it is read defensively. Excluding it stops the panel warning that the
+  // journal you just pressed "Fill Log" on clashes with itself.
+  var pend=null;
+  try{pend=_pendingJournalEntryId}catch(e){}
+  _renderDayLoad('log-dayload',v('log-date'),v('log-start'),v('log-end'),pend);
 }
 
 // ── DUPLICATE DETECTION ──────────────────────────────────────────────────────
@@ -7866,6 +8010,7 @@ function openJournalModal(editId){
                             // so reopening the box can never hide the warning
                             // for a subject that still has no form.
   _jrCheckForm();
+  _jrDayLoad();
   document.getElementById('journal-modal-overlay').classList.add('open');
 }
 
@@ -7997,6 +8142,9 @@ function fillLogFromJournal(id){
   if(typeof dismissDupWarn==='function')dismissDupWarn();
   updateLogDuration();
   _pendingJournalEntryId=j.id;
+  // AFTER the id is set, so the panel excludes the very journal just filled in
+  // and does not warn that these times clash with themselves.
+  _logDayLoad();
   showJournalNoteBanner(j);
   const card=document.getElementById('log-form-card');
   if(card)card.scrollIntoView({behavior:'auto',block:'start'});
