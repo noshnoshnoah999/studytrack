@@ -7536,17 +7536,26 @@ function updateLogDuration(){
 
 
 // ── "Already on this day" panel ──────────────────────────────────────────────
-// Both the Journal modal and the Log page let you set a date and then type
+// The Journal modal and the Log page both let you set a date and then type
 // Start/End with no view of what that day already holds, so a back-dated entry
 // could land on top of a session already logged — or on top of another journal
 // queued minutes earlier, which is invisible because a queued journal is not a
-// session yet. This panel lists both, names the free gaps, and WARNS on an
-// overlap. It never blocks: extra-credit work shifts and study legitimately
-// overlap in the real data, so a hard block would fight Noah rather than help.
-// Read-only — editing still happens where it always did. Noah's call 2026-09-04.
-var DAYLOAD_MIN_GAP_MINS=15;   // shorter than this is noise, not a usable slot
-var DAYLOAD_DAY_START=360;     // 06:00 — window the free gaps are measured in
-var DAYLOAD_DAY_END=1440;      // 24:00
+// session yet. This panel lists both and WARNS on an overlap. It never blocks:
+// extra-credit work shifts and study legitimately overlap in the real data, so
+// a hard block would fight Noah rather than help. Read-only.
+//
+// Free-gap suggestions ("Free: 06:00–09:00, …") were built and then REMOVED at
+// Noah's request, 2026-09-04: he does not want the app naming free time
+// anywhere in the app. Do not reintroduce them.
+//
+// On the Log page, when the date is TODAY, the logged-session rows are hidden
+// because the "Sessions Today" list directly below the form already shows them.
+// Queued journals for today are still listed (they appear nowhere else on that
+// page) under a "Queued for …" heading, and the clash check still runs against
+// EVERYTHING including the hidden sessions - the warning names what it hit, so
+// it reads fine without the row being on screen. With no queued journals and no
+// clash, the panel renders nothing at all. Noah's calls, 2026-09-04.
+// The Journal modal always shows the full panel, today included.
 
 function _dayLoadItems(dateStr,excludeJournalId){
   if(!dateStr)return{timed:[],untimed:[]};
@@ -7554,14 +7563,17 @@ function _dayLoadItems(dateStr,excludeJournalId){
   function nameOf(id){var s=subjs.find(function(x){return x.id===id});return s?s.name:(id||'Unknown')}
   var out=[];
   loadSessions().filter(function(s){return s.date===dateStr}).forEach(function(s){
-    out.push({start:s.start||'',end:s.end||'',label:nameOf(s.subjectId),kind:'logged'});
+    out.push({start:s.start||'',end:s.end||'',label:nameOf(s.subjectId),desc:'',kind:'logged'});
   });
-  // Queued journals count as busy too — see header comment.
+  // Queued journals count as busy too — see header comment. desc is the
+  // journal's private Description: it never leaves the app, but it is exactly
+  // what tells Noah what that block of time actually was.
   loadJournals().filter(function(j){
     return j.date===dateStr&&!j.done&&(!excludeJournalId||j.id!==excludeJournalId);
   }).forEach(function(j){
     out.push({start:j.start||'',end:j.end||'',
-      label:(j.title||nameOf(j.subjectId)||'Journal'),kind:'planned'});
+      label:(j.title||nameOf(j.subjectId)||'Journal'),
+      desc:j.desc||'',kind:'planned'});
   });
   function isTimed(x){return !!(x.start&&x.end&&toMins(x.end)>toMins(x.start))}
   return{
@@ -7570,82 +7582,66 @@ function _dayLoadItems(dateStr,excludeJournalId){
   };
 }
 
-// Merge overlapping/touching busy blocks, then invert them inside the day
-// window. The window widens if the day itself starts before 06:00 or runs past
-// midnight, so a 05:30 run never makes its own hours disappear from the maths.
-function _dayLoadFreeGaps(timed){
-  if(!timed.length)return[[DAYLOAD_DAY_START,DAYLOAD_DAY_END]];
-  var merged=[];
-  timed.map(function(x){return[toMins(x.start),toMins(x.end)]})
-       .sort(function(a,b){return a[0]-b[0]})
-       .forEach(function(iv){
-    var last=merged[merged.length-1];
-    if(last&&iv[0]<=last[1]){last[1]=Math.max(last[1],iv[1])}
-    else merged.push([iv[0],iv[1]]);
-  });
-  var winStart=Math.min(DAYLOAD_DAY_START,merged[0][0]);
-  var winEnd=Math.max(DAYLOAD_DAY_END,merged[merged.length-1][1]);
-  var gaps=[],cur=winStart;
-  merged.forEach(function(iv){
-    if(iv[0]-cur>=DAYLOAD_MIN_GAP_MINS)gaps.push([cur,iv[0]]);
-    cur=Math.max(cur,iv[1]);
-  });
-  if(winEnd-cur>=DAYLOAD_MIN_GAP_MINS)gaps.push([cur,winEnd]);
-  return gaps;
-}
-
-function _dayLoadHHMM(m){
-  return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
-}
-
 function _dayLoadOverlaps(timed,startVal,endVal){
   if(!startVal||!endVal)return[];
   var s=toMins(startVal),e=toMins(endVal);
   if(e<=s)return[];   // end<=start is already its own error elsewhere
+  // Touching blocks (10:30 end / 10:30 start) are deliberately not a clash.
   return timed.filter(function(x){return s<toMins(x.end)&&e>toMins(x.start)});
 }
 
-function _renderDayLoad(elId,dateStr,startVal,endVal,excludeJournalId){
+function _renderDayLoad(elId,dateStr,startVal,endVal,excludeJournalId,opts){
   var el=document.getElementById(elId);
   if(!el)return;
-  if(!dateStr){el.style.display='none';el.innerHTML='';return}
+  function blank(){el.style.display='none';el.innerHTML=''}
+  if(!dateStr){blank();return}
+  var hideLogged=!!(opts&&opts.hideLogged);
   var items=_dayLoadItems(dateStr,excludeJournalId);
   var timed=items.timed,untimed=items.untimed;
+  // The clash check always runs against EVERYTHING on the day, including rows
+  // hidden by hideLogged. The warning names what it overlapped, so it still
+  // makes sense with the row off screen - and that row is in "Sessions Today"
+  // right below the form anyway.
+  var clash=_dayLoadOverlaps(timed,startVal,endVal);
+  var all=timed.concat(untimed);
+  var visible=hideLogged?all.filter(function(x){return x.kind==='planned'}):all;
+  // Nothing to say at all - render nothing rather than an empty box.
+  if(hideLogged&&!visible.length&&!clash.length){blank();return}
+
   var d=new Date(dateStr+'T12:00:00');
   var dateLabel=isNaN(d.getTime())?dateStr:d.toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'});
-  var h='<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:6px">Already on '+escHtml(dateLabel)+'</div>';
-  if(!timed.length&&!untimed.length){
-    h+='<div style="font-size:12px;color:var(--text3)">Nothing on this day yet — the whole day is free.</div>';
-  }else{
-    var rows=timed.concat(untimed).map(function(x){
+  var h='';
+  if(visible.length||!hideLogged){
+    h+='<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:6px">'+
+       (hideLogged?'Queued for ':'Already on ')+escHtml(dateLabel)+'</div>';
+  }
+  if(!visible.length&&!hideLogged){
+    h+='<div style="font-size:12px;color:var(--text3)">Nothing logged on this day yet.</div>';
+  }else if(visible.length){
+    var rows=visible.map(function(x){
       var planned=x.kind==='planned';
       var t=(x.start&&x.end)?x.start+'–'+x.end:'no time set';
       var dur=(x.start&&x.end&&toMins(x.end)>toMins(x.start))?durStr(toMins(x.end)-toMins(x.start)):'';
-      return '<div style="display:flex;align-items:baseline;gap:8px;padding:5px 0;border-top:1px solid var(--border)">'+
-        '<span style="font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:86px;color:'+(planned?'var(--text3)':'var(--text)')+'">'+escHtml(t)+'</span>'+
-        '<span style="font-size:12px;color:var(--text2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+
-          escHtml(x.label)+(planned?'<span style="color:var(--text3)"> · journal, not logged</span>':'')+
-        '</span>'+
-        '<span style="font-size:11px;color:var(--text3);white-space:nowrap">'+escHtml(dur)+'</span>'+
+      // The Description always gets its own line under the title rather than
+      // sharing it - a consistent row shape beats squeezing short ones inline.
+      // Full text, no clamp; the list scrolls if it gets long. Noah, 2026-09-04.
+      return '<div style="padding:6px 0;border-top:1px solid var(--border)">'+
+        '<div style="display:flex;align-items:baseline;gap:8px">'+
+          '<span style="font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:86px;color:'+(planned?'var(--text3)':'var(--text)')+'">'+escHtml(t)+'</span>'+
+          '<span style="font-size:12px;color:var(--text2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+
+            escHtml(x.label)+(planned?'<span style="color:var(--text3)"> · journal, not logged</span>':'')+
+          '</span>'+
+          '<span style="font-size:11px;color:var(--text3);white-space:nowrap">'+escHtml(dur)+'</span>'+
+        '</div>'+
+        (x.desc?'<div style="font-size:11px;color:var(--text3);line-height:1.45;margin-top:3px;white-space:pre-wrap;word-break:break-word">'+escHtml(x.desc)+'</div>':'')+
       '</div>';
     }).join('');
-    h+='<div style="max-height:148px;overflow-y:auto">'+rows+'</div>';
-    var gaps=_dayLoadFreeGaps(timed);
-    h+='<div style="font-size:11px;color:var(--text3);margin-top:7px;line-height:1.5">'+
-       (gaps.length
-         ? 'Free: '+gaps.map(function(g){return _dayLoadHHMM(g[0])+'–'+_dayLoadHHMM(g[1])}).join(', ')
-         : 'No free gap of '+DAYLOAD_MIN_GAP_MINS+' minutes or more today.')+
-       '</div>';
-    if(untimed.length){
-      h+='<div style="font-size:11px;color:var(--text3);margin-top:4px;line-height:1.5">'+
-         untimed.length+' entr'+(untimed.length===1?'y has':'ies have')+' no times, so '+
-         (untimed.length===1?'it is':'they are')+' not counted in the free gaps.</div>';
-    }
+    h+='<div style="max-height:190px;overflow-y:auto">'+rows+'</div>';
   }
-  var clash=_dayLoadOverlaps(timed,startVal,endVal);
   if(clash.length){
     var names=clash.slice(0,2).map(function(c){return c.label+' ('+c.start+'–'+c.end+')'}).join(', ');
-    h+='<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(245,158,11,0.25);font-size:12px;line-height:1.45;color:#f59e0b">'+
+    h+='<div style="'+(h?'margin-top:8px;padding-top:8px;border-top:1px solid rgba(245,158,11,0.25);':'')+
+       'font-size:12px;line-height:1.45;color:#f59e0b">'+
        'Those times overlap '+escHtml(names)+(clash.length>2?' and '+(clash.length-2)+' more':'')+
        '. You can still save it.</div>';
   }
@@ -7660,13 +7656,16 @@ function _jrDayLoad(){
 
 function _logDayLoad(){
   var v=function(id){var e=document.getElementById(id);return e?e.value:''};
+  var date=v('log-date');
   // _pendingJournalEntryId is a `let` declared further down the file; reading it
   // from a render that runs during load would throw on the temporal dead zone,
   // so it is read defensively. Excluding it stops the panel warning that the
   // journal you just pressed "Fill Log" on clashes with itself.
   var pend=null;
   try{pend=_pendingJournalEntryId}catch(e){}
-  _renderDayLoad('log-dayload',v('log-date'),v('log-start'),v('log-end'),pend);
+  // Today drops the logged-session rows only - see header comment.
+  _renderDayLoad('log-dayload',date,v('log-start'),v('log-end'),pend,
+    {hideLogged:!!(date&&date===todayStr())});
 }
 
 // ── DUPLICATE DETECTION ──────────────────────────────────────────────────────
