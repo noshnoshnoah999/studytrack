@@ -1488,7 +1488,7 @@ button:active{transform:scale(0.96)}
 </div>
 
 <!-- GOOGLE FORMS PENDING REVIEW -->
-<div class="modal-overlay" id="journal-modal-overlay" onclick="handleOverlayClick(event,'journal-modal-overlay')">
+<div class="modal-overlay" id="journal-modal-overlay" onclick="_journalOverlayClick(event)">
   <div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
     <div class="modal-title" id="journal-modal-title">New Journal</div>
@@ -1546,7 +1546,7 @@ button:active{transform:scale(0.96)}
     </label>
     <div class="modal-actions">
       <button class="btn-primary" onclick="saveJournalEntry()">Save</button>
-      <button class="btn-cancel" onclick="closeModal('journal-modal-overlay')">Cancel</button>
+      <button class="btn-cancel" onclick="_journalCancelClick()">Cancel</button>
     </div>
   </div>
 </div>
@@ -7625,28 +7625,30 @@ function _renderDayLoad(elId,dateStr,startVal,endVal,excludeJournalId,opts){
   var clash=_dayLoadOverlaps(timed,startVal,endVal);
   var all=timed.concat(untimed);
   var visible=hideLogged?all.filter(function(x){return x.kind==='planned'}):all;
-  // Nothing to say at all - render nothing rather than an empty box. The day's
-  // total counts as something to say, so a today with hours logged still shows
-  // its figure even though the rows themselves live in "Sessions Today".
-  if(hideLogged&&!visible.length&&!clash.length&&!(items.gradH>0||items.ecH>0)){blank();return}
+  // Nothing to say at all - render nothing rather than an empty box. On today's
+  // Log page that means: no queued journals and no clash => nothing, however
+  // many hours are logged, because the total is not shown there either.
+  if(hideLogged&&!visible.length&&!clash.length){blank();return}
 
   var d=new Date(dateStr+'T12:00:00');
   var dateLabel=isNaN(d.getTime())?dateStr:d.toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'});
   // fmtH gives "7h 34m" / "45m" / "2h" - the same formatter History and the
   // Calendar use, so the same day never renders two different-looking totals.
   // The extra-credit half only appears when there IS extra credit that day, so
-  // an ordinary day reads as a single clean figure. It is shown even in the
-  // hideLogged (today, Log page) view: the rows are hidden there, not the day.
-  var totalStr=(items.gradH>0||items.ecH>0)
+  // an ordinary day reads as a single clean figure.
+  //
+  // NOT shown in the hideLogged (today, Log page) view: today's total is
+  // already on the Dashboard, in Today's Progress and under Sessions Today, and
+  // a panel existing only to repeat it is the duplication this whole today rule
+  // exists to remove. Noah's call, 2026-09-05.
+  var totalStr=(!hideLogged&&(items.gradH>0||items.ecH>0))
     ? fmtH(items.gradH)+(items.ecH>0?' · '+fmtH(items.ecH)+' extra credit':'')
     : '';
   var h='';
-  if(visible.length||!hideLogged||totalStr){
+  if(visible.length||!hideLogged){
     h+='<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:6px">'+
        '<span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3)">'+
-         // "Queued for" is a lie when there is nothing queued and the heading is
-         // only carrying the day's total, which happens on today's Log page.
-         ((hideLogged&&visible.length)?'Queued for ':'Already on ')+escHtml(dateLabel)+'</span>'+
+         (hideLogged?'Queued for ':'Already on ')+escHtml(dateLabel)+'</span>'+
        (totalStr?'<span style="font-size:12px;font-weight:700;color:var(--text2);white-space:nowrap">'+escHtml(totalStr)+'</span>':'')+
        '</div>';
   }
@@ -8047,6 +8049,7 @@ function openJournalModal(editId){
                             // for a subject that still has no form.
   _jrCheckForm();
   _jrDayLoad();
+  _jrSnapshot=_jrCurrentValues();   // baseline for the close-guard below - captured after every field is set
   document.getElementById('journal-modal-overlay').classList.add('open');
 }
 
@@ -8119,6 +8122,48 @@ function saveJournalEntry(){
   renderJournals();
   if(typeof renderJournalsBacklog==='function')renderJournalsBacklog();
   showToast('Journal saved','var(--ok)');
+}
+
+// Snapshot taken the moment the modal opens (New or Edit) by openJournalModal,
+// so a click that lands on the backdrop or the Cancel button can tell whether
+// anything would actually be thrown away. Mirrors the workout-import guard
+// (_workoutOverlayClick, ~3708): a cheap close (nothing typed, or an edit with
+// no changes) stays instant; a real loss gets a confirm() first. Noah, 2026-09-05.
+let _jrSnapshot=null;
+
+function _jrCurrentValues(){
+  return {
+    title:document.getElementById('jr-title').value,
+    desc:document.getElementById('jr-desc').value,
+    date:document.getElementById('jr-date').value,
+    subjectId:document.getElementById('jr-subject').value,
+    start:document.getElementById('jr-start').value,
+    end:document.getElementById('jr-end').value,
+    proof:document.getElementById('jr-proof').value,
+    priority:document.getElementById('jr-priority').checked
+  };
+}
+
+function _jrHasUnsavedChanges(){
+  if(!_jrSnapshot)return false;
+  const now=_jrCurrentValues();
+  return Object.keys(now).some(k=>now[k]!==_jrSnapshot[k]);
+}
+
+// Backdrop tap. Every other modal in the app uses handleOverlayClick() and
+// closes instantly - cheap to reopen. This one can hold a half-written journal
+// entry, so a stray tap outside the sheet used to bin it silently.
+function _journalOverlayClick(e){
+  if(e.target.id!=='journal-modal-overlay')return;   // click landed inside the sheet
+  if(_jrHasUnsavedChanges()&&!confirm('Close without saving?\n\nYour journal entry will be discarded.'))return;
+  closeModal('journal-modal-overlay');
+}
+
+// Cancel button. Same guard as the backdrop tap above - a mis-tap on Cancel
+// loses the same half-written entry a mis-tap outside the sheet does.
+function _journalCancelClick(){
+  if(_jrHasUnsavedChanges()&&!confirm('Close without saving?\n\nYour journal entry will be discarded.'))return;
+  closeModal('journal-modal-overlay');
 }
 
 function toggleJournalDone(id){
