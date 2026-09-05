@@ -1955,6 +1955,13 @@ const _SUBJECT_FORMS={
   // was .../1FAIpQLScr3Pp0jDNTQ6P3n6YAFLBzcuKWqb6YiC6lQtJqU3aKFNw-iQ/... with
   // confirmId 144075977 — kept here only as a record, nothing points at it now.
   pe:       {url:'https://docs.google.com/forms/d/e/1FAIpQLSfH7ynrmIUQr3QljYOEeUQDBBWVTxbaMCyeGj-7r-U2Cvy4kQ/viewform', confirmId:'1203417410'},
+  // PE #3 (extra credit, 150h) - its own contract, approved by the teacher
+  // 2026-09-05, so it needs its own form. Field IDs verified identical to every
+  // other form on 2026-09-05 by loading a prefilled link and reading the values
+  // back; only confirmId differs, as always. NOTE: the confirm checkbox does NOT
+  // prefill from the URL on ANY of these forms (PE #2 tested as a control) -
+  // Noah ticks it by hand. That is expected, not a bug in this entry.
+  pe3:      {url:'https://docs.google.com/forms/d/e/1FAIpQLSeSBbX2NmJG_mypKjUfg1KBMJMQ0RBCHARO0miJMUirvvOh2g/viewform', confirmId:'934725923'},
   japanese: {url:'https://docs.google.com/forms/d/e/1FAIpQLSfw8qjM8JkTLAsJgxgeDdd4TfqStnxK3hRz9prObOIqxcTL8w/viewform', confirmId:'1757403334'},
   cwp:      {url:'https://docs.google.com/forms/d/e/1FAIpQLSdl9Qkm0AreT18YF1Yx-sHXzdMygeR7E3LtZkt1PNEtwc1wvg/viewform', confirmId:'1832701138'},
   english:  {url:'https://docs.google.com/forms/d/e/1FAIpQLSfS0CMd-ejWxQvAw9Y6x1T_HLgn30j7QFJ_pMs-MpDSdFhqQg/viewform', confirmId:'782219930'},
@@ -1968,6 +1975,39 @@ const _SUBJECT_FORMS={
   algebra1: {url:'https://docs.google.com/forms/d/e/1FAIpQLSeNbuYwyIvbTFJMU3CiaMsz080GIlltcCsCouwC_pmGyBXjIg/viewform', confirmId:'496521582'},
   el4:      {url:'https://docs.google.com/forms/d/e/1FAIpQLSf0FVqiA69J6mjnirxeSjeFOi_WPL8FiO8aOZEJqwayhJdukg/viewform', confirmId:'892713493'},
 };
+
+// -- PE CONTRACT ROUTING ---------------------------------------------------
+// PE is a SERIES of contracts: `pe` carries the 225h requirement (PE #1 + #2)
+// and `pe3` is the first extra-credit one (150h). Every flow that auto-fills a
+// PE session routes through _peTargetId() so it lands in whichever contract is
+// actually open, instead of hardcoding 'pe' and quietly overflowing a full one.
+//
+// Noah's rule (2026-09-05, explicit): stay on `pe` while it has even ONE MINUTE
+// left, EVEN IF that session overshoots its requirement. Only move to `pe3`
+// once `pe` is genuinely full. Splitting one workout across two contracts is
+// worse than a small overshoot on the last session of the old one. Do not
+// "optimise" this into picking whichever contract has room for the duration.
+//
+// _isPeId() is the read-side counterpart: anything that used to ask
+// `subjectId === 'pe'` to decide PE-specific BEHAVIOUR must accept pe3 too, or
+// pe3 journals come out formatted differently from pe ones. The dated base /
+// migration blocks further down deliberately still say 'pe' - they describe
+// history and must not be widened.
+const PE_SERIES=['pe','pe3'];
+function _isPeId(id){ return PE_SERIES.indexOf(id)!==-1 }
+function _peTargetId(){
+  try{
+    const subjs=loadSubjects(),hours=loadHours();
+    for(let i=0;i<PE_SERIES.length;i++){
+      const id=PE_SERIES[i];
+      const s=subjs.find(x=>x.id===id);
+      if(!s)continue;
+      if(!s.done&&((s.base||0)+(hours[id]||0))<s.req)return id;
+    }
+    const last=subjs.find(x=>x.id===PE_SERIES[PE_SERIES.length-1]);
+    return last?last.id:'pe';
+  }catch(e){return 'pe'}
+}
 
 function _openFormForSession(sessionId){
   const sessions=loadSessions();
@@ -2127,11 +2167,11 @@ function _isCycleOrWalk(str){
 function _formContents(subjectId,start,end,notes,usedElapsed,preply){
   const mins=(start&&end)?(toMins(end)-toMins(start)):0;
   const extra=[];
-  if(subjectId==='pe'&&usedElapsed&&_isCycleOrWalk(notes)&&mins>0)extra.push('Elapsed Time: '+_fmtHoursMins(mins,true));
+  if(_isPeId(subjectId)&&usedElapsed&&_isCycleOrWalk(notes)&&mins>0)extra.push('Elapsed Time: '+_fmtHoursMins(mins,true));
   // Sits above the journal-writing line so the box reads in the order things
   // happened: the lesson, the review straight after it, then the write-up.
   if(preply)extra.push(PREPLY_REVIEW_LINE);
-  if(subjectId!=='pe'||mins>JOURNAL_WRITING_PE_MIN_MINS)extra.push(JOURNAL_WRITING_LINE);
+  if(!_isPeId(subjectId)||mins>JOURNAL_WRITING_PE_MIN_MINS)extra.push(JOURNAL_WRITING_LINE);
   if(!extra.length)return notes||'';
   const body=(notes||'').replace(/\r/g,'');
   if(!body)return extra.join('\n');
@@ -2568,6 +2608,13 @@ const DEFAULT_SUBJECTS=[
   {id:'fine_art',    name:'Fine Art / Film',     req:150, base:28.9,  passive:true,  locked:false, done:false},
   // PE — 1.5 credits = 225h
   {id:'pe',          name:'PE / Cardio',         req:225, base:50.1,  passive:true,  locked:false, done:false},
+  // PE #3 - EXTRA CREDIT, 1 credit = 150h. Contract approved 2026-09-05, period
+  // 2026-09-07 to 2027-03-31. A SEPARATE row, not a bump of pe.req to 375: `pe`
+  // is not extraCredit and getTotalLogged() filters on the subject-level flag,
+  // so folding 150h of extra credit into `pe` would silently count it toward
+  // graduation and move the projected date. See _peTargetId() for which of the
+  // two a newly auto-filled session lands in.
+  {id:'pe3',         name:'PE #3 | Extra',       req:150, base:0,     passive:true,  locked:false, done:false, extraCredit:true},
   // Health
   {id:'health',      name:'Health Science',      req:75,  base:3.3,   passive:false, locked:false, done:false},
   // Science — 1 credit each remaining
@@ -4347,7 +4394,7 @@ function buildStretchJournal(dateStr,label){
 // so the field stays editable and a number in his own title always wins.
 function countWorkoutsOnDate(activity,date,daypart){
   try{
-    return loadSessions().filter(s=> s.subjectId==='pe'&&s.date===date&&
+    return loadSessions().filter(s=> _isPeId(s.subjectId)&&s.date===date&&
       s.journalMeta&&s.journalMeta.activity===activity&&
       (!daypart||_timeOfDay(s.start,null)===daypart)
     ).length;
@@ -4494,8 +4541,8 @@ function _fillRunLogForm(result,cycleNum){
   // removed once Electives 4 was finished. The el4 subject itself is untouched.
   const sel=document.getElementById('log-subject');
   if(sel){
-    const peSubj=subjs.find(s=>s.id==='pe')||subjs.find(s=>s.name&&s.name.toLowerCase().includes('pe'));
-    const peId=peSubj?peSubj.id:(subjs[0]?subjs[0].id:'');
+    // Whichever PE contract is still open - see _peTargetId().
+    const peId=_peTargetId()||(subjs[0]?subjs[0].id:'');
     if(peId)sel.value=peId;
   }
   const ld=document.getElementById('log-date');
@@ -8379,7 +8426,7 @@ function _hatchoboriCorroborated(ds, sessions){
   const list = sessions || loadSessions();
   const dow = new Date(ds + 'T12:00:00').getDay();
   if(HATCHOBORI_WORK_DOWS.indexOf(dow) !== -1) return true;
-  return list.some(s => s.date === ds && s.subjectId === 'pe' && _looksLikeCycle(s.notes || ''));
+  return list.some(s => s.date === ds && _isPeId(s.subjectId) && _looksLikeCycle(s.notes || ''));
 }
 
 function _hatchoboriBacklogDismissed(){
@@ -8531,7 +8578,7 @@ function confirmHatchoboriSnoozeUntil(){
 // Called from _doLogSession(). Fires only on a PE cycle, never on a walk, run,
 // stretch, or on a Hatchobori entry itself.
 function _maybeOfferHatchoboriWalk(subjectId, date, start, end, notes){
-  if(subjectId !== 'pe') return;
+  if(!_isPeId(subjectId)) return;
   if(!_looksLikeCycle(notes)) return;
   if(date !== todayStr()) return;      // a back-dated ride gets no live prompt
   if(!end) return;
@@ -8673,7 +8720,7 @@ function fillHatchoboriWalkLog(dateStr){
   const suggested = (ds === today && next === 1) ? _hatchoboriStartSuggestion() : '';
   hidePreplyProofBanner();
   showPage('log');
-  const sub = document.getElementById('log-subject'); if(sub) sub.value = 'pe';
+  const sub = document.getElementById('log-subject'); if(sub) sub.value = _peTargetId();
   if(typeof updateLogFormColour === 'function') updateLogFormColour();
   setLogDateAuto(ds);
   setLogTime('log-start', suggested);
@@ -8743,7 +8790,7 @@ function _timeOfDay(startStr,label){
   return h<12?'Morning':h<17?'Afternoon':'Evening';
 }
 function _maybeOfferStretches(subjectId,date,start,end,notes){
-  if(subjectId!=='pe')return;
+  if(!_isPeId(subjectId))return;
   if((notes||'').toLowerCase().includes('stretch'))return; // don't loop after the stretch session
   if(!_looksLikeRun(notes))return;                          // runs/jogs/5k-10k only, not cycles/walks
   _pendingStretch={date,end};
@@ -8760,7 +8807,7 @@ function fillStretchLog(){
   const stretchMins=20;
   const sEnd=_addMins(sStart,stretchMins);
   showPage('log');
-  const sub=document.getElementById('log-subject'); if(sub)sub.value='pe';
+  const sub=document.getElementById('log-subject'); if(sub)sub.value=_peTargetId();
   if(typeof updateLogFormColour==='function')updateLogFormColour();
   const dEl=document.getElementById('log-date'); if(dEl)dEl.value=date;
   setLogTime('log-start',sStart);
@@ -8952,7 +8999,7 @@ function fillMorningStretchLog(dateStr){
   if(ds > today) ds = today;
   hidePreplyProofBanner();
   showPage('log');
-  const sub = document.getElementById('log-subject'); if(sub) sub.value = 'pe';
+  const sub = document.getElementById('log-subject'); if(sub) sub.value = _peTargetId();
   if(typeof updateLogFormColour === 'function') updateLogFormColour();
   setLogDateAuto(ds);
   setLogTime('log-start', '');
@@ -8988,7 +9035,7 @@ function fillPreRunStretchLog(){
   closeModal('prerun-stretch-modal-overlay');
   if(!w){_resumePendingRun();return}
   showPage('log');
-  const sub=document.getElementById('log-subject'); if(sub)sub.value='pe';
+  const sub=document.getElementById('log-subject'); if(sub)sub.value=_peTargetId();
   if(typeof updateLogFormColour==='function')updateLogFormColour();
   const dEl=document.getElementById('log-date'); if(dEl)dEl.value=w.date;
   setLogTime('log-start',w.start);
@@ -9225,6 +9272,7 @@ const CONTRACT_LEAD_H=10;   // hours of warning before a boundary is reached
 // contract is created.
 const CONTRACT_SERIES={
   pe:  'PE #3',
+  pe3: 'PE #4',
   el4: 'Electives 5'
 };
 
@@ -9304,12 +9352,64 @@ function outstandingContracts(){
   return out;
 }
 
+// -- PE CONTRACT SWITCH NUDGE ----------------------------------------------
+// _peTargetId() moves new sessions onto pe3 by itself, so this banner REPORTS a
+// switch that has already happened rather than asking for an action. Sticky
+// until ticked (Noah, 2026-09-05) precisely because an automatic switch is the
+// kind of thing he would otherwise not notice for weeks - the same failure that
+// left Electives 4 full and silent from July.
+//
+// The tick lives on the `pe` subject in st_subjs, which is already in the sync
+// KEYS list, so it crosses devices with no new synced key. _canonicalSubjs()
+// spreads {...def,...s} and only force-overrides req/extraCredit, so these
+// fields survive. Last-writer-wins can drop it; worst case the banner returns
+// once and he re-ticks. Do NOT add a second flag to "fix" that.
+function _peSwitchBannerHtml(){
+  try{
+    const subjs=loadSubjects();
+    const pe=subjs.find(s=>s.id==='pe'), pe3=subjs.find(s=>s.id==='pe3');
+    if(!pe||!pe3||pe.peSwitchAck)return '';
+    const logged=(pe.base||0)+(loadHours()['pe']||0);
+    if(!(pe.done||logged>=pe.req))return '';
+    const ticked=!!pe._peSwitchTick;
+    return '<div class="contract-banner">'+
+      '<div class="contract-banner-title">PE #2 is full - new PE sessions now go to '+escHtml(pe3.name)+'.</div>'+
+      '<div class="contract-banner-sub">'+fmtH(logged)+' logged against '+fmtH(pe.req)+' required. Workout imports, Hatchobori walks and every stretch log now fill in <strong>'+escHtml(pe3.name)+'</strong> automatically and open its Google Form instead. Nothing for you to change - just don\'t submit new PE work to the PE #2 form.</div>'+
+      '<div class="contract-banner-checks">'+
+        '<label class="contract-check"><input type="checkbox" '+(ticked?'checked':'')+' onchange="togglePeSwitchCheck(this.checked)"><span>Got it - PE sessions go to '+escHtml(pe3.name)+' from now on</span></label>'+
+      '</div>'+
+      '<div class="contract-banner-actions">'+
+        '<button class="contract-banner-btn" '+(ticked?'':'disabled')+' onclick="confirmPeSwitch()">'+(ticked?'Confirm and dismiss':'Tick to dismiss')+'</button>'+
+      '</div>'+
+    '</div>';
+  }catch(e){return ''}
+}
+function togglePeSwitchCheck(v){
+  const subjs=loadSubjects();
+  const pe=subjs.find(s=>s.id==='pe');
+  if(!pe)return;
+  pe._peSwitchTick=!!v;
+  saveSubjects(subjs);
+  renderContractBanners();
+}
+function confirmPeSwitch(){
+  const subjs=loadSubjects();
+  const pe=subjs.find(s=>s.id==='pe');
+  if(!pe||!pe._peSwitchTick)return;
+  delete pe._peSwitchTick;
+  pe.peSwitchAck=true;
+  saveSubjects(subjs);
+  renderContractBanners();
+  if(typeof showToast==='function')showToast('PE #3 is now the active contract','var(--ok)');
+}
+
 function renderContractBanners(){
   const host=document.getElementById('contract-banners');
   if(!host)return;
   const items=outstandingContracts();
-  if(!items.length){host.innerHTML='';return}
-  host.innerHTML=items.map(function(it){
+  const switchHtml=_peSwitchBannerHtml();
+  if(!items.length&&!switchHtml){host.innerHTML='';return}
+  host.innerHTML=switchHtml+items.map(function(it){
     const a=_contractAck(it.s,it.at);
     const key="'"+it.s.id+"',"+it.at;
     if(!it.next){
