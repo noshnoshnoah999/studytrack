@@ -7558,7 +7558,7 @@ function updateLogDuration(){
 // The Journal modal always shows the full panel, today included.
 
 function _dayLoadItems(dateStr,excludeJournalId){
-  if(!dateStr)return{timed:[],untimed:[]};
+  if(!dateStr)return{timed:[],untimed:[],gradH:0,ecH:0};
   var subjs=loadSubjects();
   function nameOf(id){var s=subjs.find(function(x){return x.id===id});return s?s.name:(id||'Unknown')}
   var out=[];
@@ -7580,10 +7580,25 @@ function _dayLoadItems(dateStr,excludeJournalId){
       label:(j.title||nameOf(j.subjectId)||'Journal'),
       desc:j.desc||'',kind:'planned'});
   });
+  // Day totals, from LOGGED sessions only - a queued journal is work not yet
+  // logged, so counting it would inflate the day against History, the Calendar
+  // and Today's Progress. Split graduation / extra-credit exactly the way the
+  // Calendar day detail does (48d6446): `hours` is the stored decimal, and
+  // Electives 4 is flagged extraCredit so it must never be folded into the
+  // graduation figure. Reusing _extraCreditIds() is what keeps this panel's
+  // number from ever disagreeing with the Calendar grid cell.
+  var ecIds=_extraCreditIds();
+  var daySessions=loadSessions().filter(function(s){return s.date===dateStr});
+  var gradH=0,ecH=0;
+  daySessions.forEach(function(s){
+    var v=(typeof s.hours==='number'&&isFinite(s.hours))?s.hours:0;
+    if(ecIds.has(s.subjectId))ecH+=v; else gradH+=v;
+  });
   function isTimed(x){return !!(x.start&&x.end&&toMins(x.end)>toMins(x.start))}
   return{
     timed:out.filter(isTimed).sort(function(a,b){return toMins(a.start)-toMins(b.start)}),
-    untimed:out.filter(function(x){return !isTimed(x)})
+    untimed:out.filter(function(x){return !isTimed(x)}),
+    gradH:gradH,ecH:ecH
   };
 }
 
@@ -7610,15 +7625,30 @@ function _renderDayLoad(elId,dateStr,startVal,endVal,excludeJournalId,opts){
   var clash=_dayLoadOverlaps(timed,startVal,endVal);
   var all=timed.concat(untimed);
   var visible=hideLogged?all.filter(function(x){return x.kind==='planned'}):all;
-  // Nothing to say at all - render nothing rather than an empty box.
-  if(hideLogged&&!visible.length&&!clash.length){blank();return}
+  // Nothing to say at all - render nothing rather than an empty box. The day's
+  // total counts as something to say, so a today with hours logged still shows
+  // its figure even though the rows themselves live in "Sessions Today".
+  if(hideLogged&&!visible.length&&!clash.length&&!(items.gradH>0||items.ecH>0)){blank();return}
 
   var d=new Date(dateStr+'T12:00:00');
   var dateLabel=isNaN(d.getTime())?dateStr:d.toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'});
+  // fmtH gives "7h 34m" / "45m" / "2h" - the same formatter History and the
+  // Calendar use, so the same day never renders two different-looking totals.
+  // The extra-credit half only appears when there IS extra credit that day, so
+  // an ordinary day reads as a single clean figure. It is shown even in the
+  // hideLogged (today, Log page) view: the rows are hidden there, not the day.
+  var totalStr=(items.gradH>0||items.ecH>0)
+    ? fmtH(items.gradH)+(items.ecH>0?' · '+fmtH(items.ecH)+' extra credit':'')
+    : '';
   var h='';
-  if(visible.length||!hideLogged){
-    h+='<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:6px">'+
-       (hideLogged?'Queued for ':'Already on ')+escHtml(dateLabel)+'</div>';
+  if(visible.length||!hideLogged||totalStr){
+    h+='<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:6px">'+
+       '<span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3)">'+
+         // "Queued for" is a lie when there is nothing queued and the heading is
+         // only carrying the day's total, which happens on today's Log page.
+         ((hideLogged&&visible.length)?'Queued for ':'Already on ')+escHtml(dateLabel)+'</span>'+
+       (totalStr?'<span style="font-size:12px;font-weight:700;color:var(--text2);white-space:nowrap">'+escHtml(totalStr)+'</span>':'')+
+       '</div>';
   }
   if(!visible.length&&!hideLogged){
     h+='<div style="font-size:12px;color:var(--text3)">Nothing logged on this day yet.</div>';
