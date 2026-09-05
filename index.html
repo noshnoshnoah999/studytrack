@@ -719,6 +719,9 @@ a{color:inherit;text-decoration:none}
 .task-btn.del:hover{background:var(--errl);color:var(--err)}
 /* Nav badge */
 .jr-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px}
+.jr-pending{display:inline-block;background:var(--bg2);border:1px solid var(--o);border-radius:12px;padding:9px 15px;margin:0 0 14px;font-size:13px;color:var(--text);line-height:1.45}
+.jr-pending-h{font-weight:800;font-size:15px}
+.jr-pending-sub{color:var(--text2)}
 .jr-card.jr-prio{border-color:rgba(245,158,11,0.5)}
 .jr-card.jr-done{opacity:0.55}
 .jr-title{font-size:14px;font-weight:800;color:var(--text);line-height:1.35;word-break:break-word}
@@ -1230,6 +1233,7 @@ button:active{transform:scale(0.96)}
         </div>
         <button class="jr-btn jr-btn-fill" onclick="openJournalModal()" style="flex-shrink:0">+ New Journal</button>
       </div>
+      <div id="journals-pending"></div>
       <div id="journals-open"></div>
       <div id="journals-done"></div>
     </div>
@@ -8024,12 +8028,52 @@ function _updateJournalsBadge(){
   });
 }
 
+// Duration of one journal entry in minutes, or null when it has no usable
+// start/end. toMins() returns 0 for an empty string, so the presence of both
+// fields is checked first - otherwise a journal with no times would silently
+// count as a real zero-minute session.
+function _journalMins(j){
+  if(!j||!j.start||!j.end)return null;
+  let m=toMins(j.end)-toMins(j.start);
+  if(isNaN(m))return null;
+  if(m<0)m+=1440;                 // spans midnight
+  return m;
+}
+
+// The Journals page headline: how many hours of work are done but not yet
+// logged or submitted. OPEN entries only - a Completed one has already been
+// submitted, so counting it would overstate what is actually outstanding.
+// Entries with no time set are reported SEPARATELY rather than folded in as
+// zero, because the New Journal form allows saving without times and a total
+// that quietly understates the backlog is worse than no total at all.
+function _journalPendingHtml(open){
+  if(!open||!open.length)return '';
+  let mins=0,timed=0,untimed=0;
+  open.forEach(function(j){
+    const m=_journalMins(j);
+    if(m===null){untimed++;return}
+    mins+=m;timed++;
+  });
+  if(!timed){
+    return '<div class="jr-pending"><span class="jr-pending-sub">'+
+      untimed+' journal'+(untimed===1?'':'s')+' pending, none with a time set yet</span></div>';
+  }
+  let sub=timed+' journal'+(timed===1?'':'s');
+  if(untimed)sub+=' &middot; '+untimed+' with no time set';
+  return '<div class="jr-pending">'+
+    '<span class="jr-pending-h">'+fmtH(mins/60)+'</span> pending to submit'+
+    '<span class="jr-pending-sub"> &middot; '+sub+'</span>'+
+  '</div>';
+}
+
 function renderJournals(){
   const all=loadJournals();
   const open=_sortJournals(all.filter(j=>!j.done));
   const done=all.filter(j=>j.done).sort((a,b)=>(b.completedAt||'').localeCompare(a.completedAt||''));
   const oh=document.getElementById('journals-open');
   const dh=document.getElementById('journals-done');
+  const ph=document.getElementById('journals-pending');
+  if(ph)ph.innerHTML=_journalPendingHtml(open);
   if(!oh||!dh)return;
   oh.innerHTML = open.length
     ? open.map(_journalCard).join('')
