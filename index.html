@@ -7563,11 +7563,16 @@ function _dayLoadItems(dateStr,excludeJournalId){
   function nameOf(id){var s=subjs.find(function(x){return x.id===id});return s?s.name:(id||'Unknown')}
   var out=[];
   loadSessions().filter(function(s){return s.date===dateStr}).forEach(function(s){
-    out.push({start:s.start||'',end:s.end||'',label:nameOf(s.subjectId),desc:'',kind:'logged'});
+    // s.notes IS the Journal Content line typed before Log Session - the same
+    // text that goes to the Google Form and shows in History / Sessions Today.
+    // Without it six PE / Cardio rows on one day are indistinguishable.
+    out.push({start:s.start||'',end:s.end||'',label:nameOf(s.subjectId),
+      desc:s.notes||'',kind:'logged'});
   });
-  // Queued journals count as busy too — see header comment. desc is the
-  // journal's private Description: it never leaves the app, but it is exactly
-  // what tells Noah what that block of time actually was.
+  // Queued journals count as busy too — see header comment. For a journal,
+  // desc is its private Description (never leaves the app); for a session it is
+  // the Journal Content line. Different fields, same job here: saying what that
+  // block of time actually was.
   loadJournals().filter(function(j){
     return j.date===dateStr&&!j.done&&(!excludeJournalId||j.id!==excludeJournalId);
   }).forEach(function(j){
@@ -7622,9 +7627,11 @@ function _renderDayLoad(elId,dateStr,startVal,endVal,excludeJournalId,opts){
       var planned=x.kind==='planned';
       var t=(x.start&&x.end)?x.start+'–'+x.end:'no time set';
       var dur=(x.start&&x.end&&toMins(x.end)>toMins(x.start))?durStr(toMins(x.end)-toMins(x.start)):'';
-      // The Description always gets its own line under the title rather than
-      // sharing it - a consistent row shape beats squeezing short ones inline.
-      // Full text, no clamp; the list scrolls if it gets long. Noah, 2026-09-04.
+      // The detail line (a journal's Description, a session's Journal Content)
+      // always gets its own line under the title rather than sharing it - a
+      // consistent row shape beats squeezing short ones inline, and Noah's
+      // titles run long enough that inline would truncate most of them. Full
+      // text, no clamp, not italic; the list scrolls. Noah, 2026-09-04/05.
       return '<div style="padding:6px 0;border-top:1px solid var(--border)">'+
         '<div style="display:flex;align-items:baseline;gap:8px">'+
           '<span style="font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:86px;color:'+(planned?'var(--text3)':'var(--text)')+'">'+escHtml(t)+'</span>'+
