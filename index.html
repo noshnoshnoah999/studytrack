@@ -1535,6 +1535,7 @@ button:active{transform:scale(0.96)}
         </div>
       </div>
     </div>
+    <div class="duration-display" id="jr-duration" style="margin:10px 0 14px"></div>
     <div id="jr-dayload" style="display:none;margin-bottom:14px"></div>
     <div class="jr-warn" id="jr-form-warn">
       <span id="jr-form-warn-text" style="flex:1;min-width:0"></span>
@@ -7547,6 +7548,7 @@ function timeSplitInput(hiddenId, thisId, nextId){
   // being typed. Cheap: it only reads localStorage for one date.
   if(wrap==='log-start'||wrap==='log-end')_logDayLoad();
   if(wrap==='jr-start'||wrap==='jr-end')_jrDayLoad();
+  if(wrap==='jr-start'||wrap==='jr-end')updateJrDuration();
   // Morning After-Wake Up Stretches: once Start is fully typed, auto-fill
   // End = Start + 10 minutes. Scoped to wrap==='log-start' plus the notes-field
   // check inside the function, so it never fires for ordinary log entries.
@@ -7578,6 +7580,18 @@ function updateLogDuration(){
   const start=document.getElementById('log-start').value;
   const end=document.getElementById('log-end').value;
   const el=document.getElementById('log-duration');
+  if(start&&end){
+    const mins=toMins(end)-toMins(start);
+    if(mins>0){el.textContent='Duration: '+durStr(mins);return}
+  }
+  el.textContent='';
+}
+
+function updateJrDuration(){
+  const start=document.getElementById('jr-start').value;
+  const end=document.getElementById('jr-end').value;
+  const el=document.getElementById('jr-duration');
+  if(!el)return;
   if(start&&end){
     const mins=toMins(end)-toMins(start);
     if(mins>0){el.textContent='Duration: '+durStr(mins);return}
@@ -8140,6 +8154,7 @@ function openJournalModal(editId){
                             // for a subject that still has no form.
   _jrCheckForm();
   _jrDayLoad();
+  updateJrDuration();
   _jrSnapshot=_jrCurrentValues();   // baseline for the close-guard below - captured after every field is set
   document.getElementById('journal-modal-overlay').classList.add('open');
 }
