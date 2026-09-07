@@ -726,6 +726,7 @@ a{color:inherit;text-decoration:none}
 .jr-card.jr-done{opacity:0.55}
 .jr-title{font-size:14px;font-weight:800;color:var(--text);line-height:1.35;word-break:break-word}
 .jr-meta{font-size:12px;color:var(--text2);margin-top:4px;line-height:1.45}
+.jr-meta-dur{color:var(--text3)}
 .jr-desc{font-size:13px;color:var(--text2);margin-top:8px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
 .jr-proof{font-size:12px;color:var(--text3);margin-top:6px;line-height:1.45;word-break:break-word}
 .jr-flag{display:inline-block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;padding:2px 7px;border-radius:100px;margin-right:6px;vertical-align:middle}
@@ -8109,6 +8110,8 @@ function _journalCard(j){
   if(j.date)bits.push(_ordinalDate(j.date));
   if(j.start&&j.end)bits.push(j.start+'-'+j.end);
   else if(j.start)bits.push('from '+j.start);
+  const jmins=_journalMins(j);
+  if(jmins!==null)bits.push('<span class="jr-meta-dur">'+fmtH(jmins/60)+'</span>');
   return '<div class="jr-card'+(j.priority&&!j.done?' jr-prio':'')+(j.done?' jr-done':'')+'">'+
     (flags?'<div style="margin-bottom:7px">'+flags+'</div>':'')+
     '<div class="jr-title">'+escHtml(j.title||'(no title yet)')+'</div>'+
