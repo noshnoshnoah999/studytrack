@@ -2860,7 +2860,7 @@ function runMigrations(){
   // Heal by recomputing base = teacherTotal(CURRENT) - sessionHours, so base+sessions equals
   // the teacher total exactly. Electives (el1-el4) are intentionally excluded to preserve
   // their done/extra-credit state. Pushes to cloud so other synced devices get the fix.
-  if(!localStorage.getItem('st_migration_v13_base_recalib_jul2026')){
+  if(!localStorage.getItem('st_migration_v13_base_recalib_jul2026')&&_baseMigrationsAllowed()){
     try{
       const raw=localStorage.getItem('st_subjs');
       if(raw){
@@ -2910,7 +2910,7 @@ function runMigrations(){
   // subtracts sessions dated on or before the report date, so anything logged after
   // 2026-07-31 stays additive on top of the teacher total instead of being absorbed.
   // Electives (el1-el4) are excluded, same as v13, to preserve done/extra-credit state.
-  if(!localStorage.getItem('st_migration_v14_base_recalib_jul31_2026')){
+  if(!localStorage.getItem('st_migration_v14_base_recalib_jul31_2026')&&_baseMigrationsAllowed()){
     try{
       const raw=localStorage.getItem('st_subjs');
       if(raw){
@@ -2984,7 +2984,7 @@ function runMigrations(){
   // (PE 225, Japanese 450) are correct. Only `base` is ever synced from a teacher report.
   // Electives (el1-el4) remain excluded — el4 in particular must stay base 0 and be driven
   // entirely by sessions (see migration v11).
-  if(!localStorage.getItem('st_migration_v15_base_recalib_aug06_2026')){
+  if(!localStorage.getItem('st_migration_v15_base_recalib_aug06_2026')&&_baseMigrationsAllowed()){
     try{
       const raw=localStorage.getItem('st_subjs');
       if(raw){
@@ -3041,7 +3041,7 @@ function runMigrations(){
   // PE's total (base + all logged PE sessions, no date cutoff) must read exactly 139.15h as of today.
   // Same self-correcting pattern as v15: base = confirmedTotal − currently logged session hours,
   // so the figure stays accurate as new PE sessions are logged going forward.
-  if(!localStorage.getItem('st_migration_v16_pe_total_aug12_2026')){
+  if(!localStorage.getItem('st_migration_v16_pe_total_aug12_2026')&&_baseMigrationsAllowed()){
     try{
       const raw=localStorage.getItem('st_subjs');
       if(raw){
@@ -3085,7 +3085,7 @@ function runMigrations(){
   // whatever bad base is currently present (local or just-pulled-from-cloud),
   // same self-correcting formula as v16: base = confirmedTotal − currently
   // logged session hours (so today's real sessions are preserved, not lost).
-  if(!localStorage.getItem('st_migration_v17_pe_corruption_fix_aug13_2026')){
+  if(!localStorage.getItem('st_migration_v17_pe_corruption_fix_aug13_2026')&&_baseMigrationsAllowed()){
     try{
       const raw=localStorage.getItem('st_subjs');
       if(raw){
@@ -3133,7 +3133,7 @@ function runMigrations(){
   // (Noah-confirmed). Only sessions dated on or before 2026-08-12 are
   // subtracted from it; anything logged on 2026-08-13 or later stays
   // additive on top, same as v14/v15's REPORT_DATE guard.
-  if(!localStorage.getItem('st_migration_v18_pe_date_cutoff_fix_aug13_2026')){
+  if(!localStorage.getItem('st_migration_v18_pe_date_cutoff_fix_aug13_2026')&&_baseMigrationsAllowed()){
     try{
       const raw=localStorage.getItem('st_subjs');
       if(raw){
@@ -3165,6 +3165,66 @@ function runMigrations(){
       }
     }catch(e){console.warn('[Migration v18] Error:',e)}
     localStorage.setItem('st_migration_v18_pe_date_cutoff_fix_aug13_2026','1');
+  }
+  // -- Migration v19: PE base drift fix (2026-09-09) --------------------------
+  // BUG THIS FIXES: on 2026-09-08 PE read 4h11m remaining while the teacher's
+  // journal responses said 10h06m. pe.base was 44.11 where v18's own formula
+  // gives 139.15 - 100.91 = 38.24, i.e. 5.87h too high. Cause: v18 ran on a
+  // device whose local session list was 5.87h short of complete, wrote base
+  // against that short sum, pushed it to Supabase via the st_subjs LWW row, and
+  // the missing sessions then merged in ON TOP of a base that had already
+  // accounted for them. Same class as the 2026-08-13 boot race; that fix only
+  // covered devices with no st_subjs_updated_at, and syncFromCloud() never
+  // throws, so a silently-failed pull looked identical to a good one.
+  // THE REAL FIX is _baseMigrationsAllowed() (above) plus the integrity guard
+  // below - not this constant. Noah re-verified 9h49m remaining against the full
+  // PE journal-response PDF on 2026-09-09, which is a 225h total of 215.1833h;
+  // 0.25h of that was logged on 2026-09-09, so the total through 2026-09-08 is
+  // 214.9333h. Cutoff is end of 2026-09-08 so anything logged from 2026-09-09
+  // onward stays additive (the mistake v17 made and v18 had to undo).
+  // INTEGRITY GUARD: refuses to write, and refuses to set its own flag, while the
+  // local PE session sum through the cutoff is BELOW the value measured when this
+  // was written. That is precisely the "list not merged yet" state that caused the
+  // bug. It retries on the next load instead. Back-dating a session later only
+  // raises the sum, so it will not false-block.
+  if(!localStorage.getItem('st_migration_v19_pe_base_drift_sep09_2026')&&_baseMigrationsAllowed()){
+    let v19done=false;
+    try{
+      const raw=localStorage.getItem('st_subjs');
+      if(raw){
+        const subjs=JSON.parse(raw);
+        const sessions=JSON.parse(localStorage.getItem('st_sessions')||'[]');
+        const REPORT_DATE='2026-09-08';        // sessions on/before this count toward the baseline
+        const PE_CONFIRMED_TOTAL=214.9333;     // Noah-verified PE total through end of 2026-09-08
+        const PE_EXPECTED_SESSION_H=176.4633;  // PE session hours on/before REPORT_DATE, measured 2026-09-09
+        const pe=subjs.find(s=>s.id==='pe');
+        if(pe){
+          const sessionH=sessions
+            .filter(x=>x.subjectId==='pe'&&(!x.date||x.date<=REPORT_DATE))
+            .reduce((a,x)=>a+(x.hours||0),0);
+          if(sessionH<PE_EXPECTED_SESSION_H-0.01){
+            console.warn('[Migration v19] PE session history looks incomplete ('+
+              sessionH.toFixed(4)+'h on/before '+REPORT_DATE+', expected at least '+
+              PE_EXPECTED_SESSION_H+'h). NOT writing base and NOT setting the flag - '+
+              'will retry on the next load once sessions have merged.');
+          } else {
+            const newBase=Math.max(0,parseFloat((PE_CONFIRMED_TOTAL-sessionH).toFixed(4)));
+            if(Math.abs((pe.base||0)-newBase)>0.01){
+              pe.base=newBase;
+              localStorage.setItem('st_subjs',JSON.stringify(subjs));
+              localStorage.setItem('st_subjs_updated_at',new Date().toISOString());
+              sbPush('st_subjs',subjs,{silent:true});
+              console.log('[Migration v19] PE base corrected to '+newBase+'h (was '+
+                'carrying a stale session sum from v18)');
+            }
+            // Anchor for the drift check below.
+            localStorage.setItem('st_pe_base_seen',String(newBase));
+            v19done=true;
+          }
+        }
+      }
+    }catch(e){console.warn('[Migration v19] Error:',e)}
+    if(v19done)localStorage.setItem('st_migration_v19_pe_base_drift_sep09_2026','1');
   }
   if(!localStorage.getItem('st_migration_v7')){
     try{
@@ -9511,13 +9571,63 @@ function confirmPeSwitch(){
   if(typeof showToast==='function')showToast('PE #3 is now the active contract','var(--ok)');
 }
 
+// -- PE BASE DRIFT CHECK -------------------------------------------------------
+// pe.base is a DERIVED number and it has now silently gone wrong three times
+// (migrations v17, v18, v19), each time because a device wrote it against a
+// session list that had not finished merging and pushed that through st_subjs.
+// It went unnoticed for 26 days on the last occasion. After v19, base should
+// never move on its own again, so the check is simply: did it move?
+//
+// Deliberately NOT "base + sessions == confirmed total" - the morning-stretch
+// backlog back-dates real sessions, which legitimately raises that sum and would
+// cry wolf. A change in base itself has no legitimate cause except a baseline
+// edit Noah makes on purpose, which re-anchors via the dismiss button.
+function peBaseAnchorDrift(){
+  try{
+    const seen=localStorage.getItem('st_pe_base_seen');
+    if(seen===null)return null; // v19 has not run here yet
+    const subjs=JSON.parse(localStorage.getItem('st_subjs')||'[]');
+    const pe=subjs.find(s=>s.id==='pe');
+    if(!pe)return null;
+    const cur=parseFloat((pe.base||0).toFixed(4)),prev=parseFloat(seen);
+    if(!isFinite(prev)||Math.abs(cur-prev)<=0.005)return null;
+    return {prev:prev,cur:cur,delta:parseFloat((cur-prev).toFixed(4))};
+  }catch(e){return null}
+}
+function _peBaseDriftBannerHtml(){
+  const d=peBaseAnchorDrift();
+  if(!d)return '';
+  console.warn('[PE base drift] base moved from '+d.prev+'h to '+d.cur+'h ('+
+    (d.delta>0?'+':'')+d.delta+'h) with no baseline edit on this device.');
+  return '<div class="contract-banner is-warning">'+
+    '<div class="contract-banner-title">PE hours changed on their own - reading '+
+      (d.delta>0?'too high':'too low')+' by '+fmtH(Math.abs(d.delta))+'.</div>'+
+    '<div class="contract-banner-sub">PE\'s baseline moved from '+fmtH(d.prev)+
+      ' to '+fmtH(d.cur)+' without you editing it here. That is the cross-device bug '+
+      'that put PE 5h52m out on 2026-09-08. <strong>Do not send this figure to your '+
+      'teacher.</strong> Tell Claude, and check PE against your journal responses.</div>'+
+    '<div class="contract-banner-actions">'+
+      '<button class="contract-banner-btn" onclick="acceptPeBaseChange()">I changed this on purpose</button>'+
+    '</div>'+
+  '</div>';
+}
+function acceptPeBaseChange(){
+  try{
+    const subjs=JSON.parse(localStorage.getItem('st_subjs')||'[]');
+    const pe=subjs.find(s=>s.id==='pe');
+    if(pe)localStorage.setItem('st_pe_base_seen',String(parseFloat((pe.base||0).toFixed(4))));
+  }catch(e){}
+  renderContractBanners();
+}
+
 function renderContractBanners(){
   const host=document.getElementById('contract-banners');
   if(!host)return;
   const items=outstandingContracts();
   const switchHtml=_peSwitchBannerHtml();
-  if(!items.length&&!switchHtml){host.innerHTML='';return}
-  host.innerHTML=switchHtml+items.map(function(it){
+  const driftHtml=_peBaseDriftBannerHtml();
+  if(!items.length&&!switchHtml&&!driftHtml){host.innerHTML='';return}
+  host.innerHTML=driftHtml+switchHtml+items.map(function(it){
     const a=_contractAck(it.s,it.at);
     const key="'"+it.s.id+"',"+it.at;
     if(!it.next){
@@ -9916,6 +10026,10 @@ function saveCoachReport(){
     const oldBase=s.base||0;
     if(Math.abs(newBase-oldBase)<0.01)return; // no change
     s.base=newBase;
+    // This is the ONE deliberate way pe.base is meant to change, so re-anchor the
+    // drift check here — otherwise entering a coach total for PE would trip the
+    // "PE hours changed on their own" banner (see peBaseAnchorDrift).
+    if(s.id==='pe')localStorage.setItem('st_pe_base_seen',String(parseFloat(newBase.toFixed(4))));
     changed++;
   });
   if(!changed){closeModal('coach-modal-overlay');return}
@@ -11616,17 +11730,29 @@ async function sbPush(key,value,{silent=false}={}){
   }
 }
 
+// True once ANY sbPull in the current syncFromCloud() cycle failed at the network
+// level. sbPull returns null both for "no such row" (legitimate) and for "the
+// request failed" (not legitimate), and those two cases must never be confused:
+// a failed pull means the local session list may be incomplete, which is exactly
+// the condition under which a base-recalibration migration corrupts pe.base.
+let _sbPullFailed=false;
+// Set only after a syncFromCloud() cycle in which every pull succeeded AND the
+// sessions row actually came back. Base migrations refuse to run without it.
+let _syncOkThisLoad=false;
+function _baseMigrationsAllowed(){return _syncOkThisLoad}
+
 async function sbPull(key){
   try{
     const res=await fetch(SB_URL+'/rest/v1/study_data?key=eq.'+key+'&select=value,updated_at',{headers:sbHeaders()});
-    if(!res.ok)return null;
+    if(!res.ok){_sbPullFailed=true;return null}
     const rows=await res.json();
     return rows&&rows[0]?rows[0]:null;
-  }catch(e){return null}
+  }catch(e){_sbPullFailed=true;return null}
 }
 
 async function syncFromCloud(){
   setSyncUI('syncing','Syncing…');
+  _sbPullFailed=false; // reset per cycle — see _baseMigrationsAllowed()
   try{
     const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_ai_history','st_holiday','st_notif_prefs','st_notif_templates','st_teacher_plan','st_journals']; // st_hours is recomputed from sessions below, not pulled directly. st_teacher_plan is written externally by the teacher RPC and only ever pulled here (cloud-authoritative, falls through to the default setItem branch — the app never sbPushes it).
     // Pull st_deleted_sessions upfront so we can use it synchronously inside forEach
@@ -11738,6 +11864,16 @@ async function syncFromCloud(){
         localStorage.setItem('st_hours',next);
         sbPush('st_hours',recomputed,{silent:true});
       }
+    }
+    // A sync only counts as "good" if nothing failed at the network level AND the
+    // sessions row genuinely came back. Migrations that derive `base` from the
+    // session list (v13-v19) are gated on this: running them against a partial
+    // list is what corrupted PE on 2026-08-13 and again on 2026-09-08.
+    if(!_sbPullFailed&&rows[KEYS.indexOf('st_sessions')]){
+      _syncOkThisLoad=true;
+      // Re-run migrations now that the data behind them is trustworthy. Every
+      // migration is flag-guarded and idempotent, so this is a no-op once done.
+      try{runMigrations()}catch(e){console.warn('[Sync] post-sync runMigrations failed:',e)}
     }
     setSyncUI('synced','Synced ✓');
     computeGoalRec(); // recompute after fresh cloud data
