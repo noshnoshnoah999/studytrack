@@ -740,6 +740,9 @@ a{color:inherit;text-decoration:none}
 .jr-warn.show{display:flex}
 .jr-warn-x{background:none;border:none;color:#f59e0b;font-size:18px;line-height:1;cursor:pointer;font-family:inherit;padding:0 2px;flex-shrink:0;opacity:0.8}
 .jr-sec{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin:22px 0 10px}
+.jr-sec-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:22px 0 10px}
+.jr-sec-row .jr-sec{margin:0}
+.jr-sec-toggle{background:none;border:1px solid var(--border);border-radius:8px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;color:var(--text3);cursor:pointer;font-size:10px;line-height:1;flex-shrink:0}
 textarea.form-input{font-family:inherit;resize:vertical;min-height:96px;line-height:1.5}
 .nav-badge{min-width:18px;height:18px;border-radius:100px;background:var(--err);color:#fff;font-size:10px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;padding:0 5px;margin-left:auto}
 .bn-badge{min-width:16px;height:16px;border-radius:100px;background:var(--err);color:#fff;font-size:9px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;position:absolute;top:2px;right:50%;transform:translateX(10px)}
@@ -8093,9 +8096,17 @@ function renderJournals(){
   oh.innerHTML = open.length
     ? open.map(_journalCard).join('')
     : '<div class="empty-state">Nothing outstanding. Add a journal whenever you do work you cannot log straight away.</div>';
-  dh.innerHTML = done.length
-    ? '<div class="jr-sec">Completed ('+done.length+')</div>'+done.map(_journalCard).join('')
-    : '';
+  if(done.length){
+    const collapsed=_journalsCompletedCollapsed();
+    let dhtml='<div class="jr-sec-row"><div class="jr-sec">Completed ('+done.length+')</div>'+
+      '<button class="jr-sec-toggle" onclick="toggleJournalsCompleted()" aria-label="'+(collapsed?'Expand':'Collapse')+' completed journals">'+
+        (collapsed?'&#9660;':'&#9650;')+
+      '</button></div>';
+    if(!collapsed)dhtml+=done.map(_journalCard).join('');
+    dh.innerHTML=dhtml;
+  }else{
+    dh.innerHTML='';
+  }
   _updateJournalsBadge();
 }
 
@@ -8391,6 +8402,18 @@ function toggleJournalsBacklog(){
   const collapsed = !_journalsBacklogCollapsed();
   try{ localStorage.setItem(JOURNALS_BACKLOG_COLLAPSE_KEY, collapsed ? '1' : '0'); }catch(e){}
   renderJournalsBacklog();
+}
+
+const JOURNALS_COMPLETED_COLLAPSE_KEY = 'st_journals_completed_collapsed';
+
+function _journalsCompletedCollapsed(){
+  try{ return localStorage.getItem(JOURNALS_COMPLETED_COLLAPSE_KEY) === '1'; }catch(e){ return false; }
+}
+
+function toggleJournalsCompleted(){
+  const collapsed = !_journalsCompletedCollapsed();
+  try{ localStorage.setItem(JOURNALS_COMPLETED_COLLAPSE_KEY, collapsed ? '1' : '0'); }catch(e){}
+  renderJournals();
 }
 
 function renderJournalsBacklog(){
