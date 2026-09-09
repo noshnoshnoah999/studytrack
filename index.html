@@ -1984,6 +1984,12 @@ const _SUBJECT_FORMS={
   lab_sci:  {url:'https://docs.google.com/forms/d/e/1FAIpQLScw0KynyQ6IKxDhTVEMUX9nmi1teL2PgBcLMKlDu4H0_izuCQ/viewform', confirmId:'1347563556'},
   algebra1: {url:'https://docs.google.com/forms/d/e/1FAIpQLSeNbuYwyIvbTFJMU3CiaMsz080GIlltcCsCouwC_pmGyBXjIg/viewform', confirmId:'496521582'},
   el4:      {url:'https://docs.google.com/forms/d/e/1FAIpQLSf0FVqiA69J6mjnirxeSjeFOi_WPL8FiO8aOZEJqwayhJdukg/viewform', confirmId:'892713493'},
+  // EL5/EL6 confirmIds read from FB_PUBLIC_LOAD_DATA_ on 2026-09-09. The four
+  // shared entry IDs (911550456 date / 2130026531 start / 1426010469 end /
+  // 706383331 contents) were verified IDENTICAL on both forms, as on every other
+  // form - only confirmId differs, which is the rule this map is built on.
+  el5:      {url:'https://docs.google.com/forms/d/e/1FAIpQLSdJnU1QYMMjlyFr_RjRwC-afRc9srovyaXVJ6vsxubOGJIG2Q/viewform', confirmId:'1310844807'},
+  el6:      {url:'https://docs.google.com/forms/d/e/1FAIpQLSdpjAAL-KyS7U66DmNlQpU2e_oO5A8-8vvvV3LPMJe9n89Pcw/viewform', confirmId:'2090681393'},
 };
 
 // -- PE CONTRACT ROUTING ---------------------------------------------------
@@ -2610,6 +2616,19 @@ const DEFAULT_SUBJECTS=[
   // May-2026 teacher-report snapshot that predates full session logging, and was being
   // double-counted on top of sessions that already include that same period (2026-07-15).
   {id:'el4',         name:'Electives 4',         req:150, base:0,  passive:true,  locked:false, done:false, extraCredit:true},
+  // EL5 and EL6 = extra credit, exactly like el4: GPA only, ZERO hours toward the
+  // 24-credit requirement and zero effect on the projected graduation date. Both
+  // are 1 credit / 150h, contracts and forms supplied by Noah 2026-09-09. base=0 -
+  // both start empty, there is no teacher-report history to fold in.
+  //
+  // ORDER MATTERS - this IS the sequencing mechanism. The work-shift chips on the
+  // Log page (hasActiveElective / activeElective) pick the FIRST id in the
+  // ['el1'..'el6'] list that is not done and still under its req. el1-el3 are
+  // done:true and el4 is full at 150h 9m, so work routes to el5 until it fills,
+  // then el6 - which is Noah's stated sequence (2026-09-09). This needs NO
+  // PE-style _peTargetId() router: do not add one, and do not reorder these rows.
+  {id:'el5',         name:'Electives 5',         req:150, base:0,  passive:true,  locked:false, done:false, extraCredit:true},
+  {id:'el6',         name:'Electives 6',         req:150, base:0,  passive:true,  locked:false, done:false, extraCredit:true},
   // History
   {id:'wa_hist',     name:'WA State History',    req:75,  base:8.1,   passive:false, locked:false, done:false},
   {id:'us_hist',     name:'US History',          req:150, base:23.2,  passive:false, locked:false, done:false},
@@ -5978,7 +5997,7 @@ function renderLog(){
 
   // ── Smart suggestions: past study/class/work blocks not yet logged ─────────
   // Work blocks only appear if there's still an incomplete elective to log toward
-  const hasActiveElective=subjs.some(s=>['el1','el2','el3','el4'].includes(s.id)&&!s.done&&getLogged(s.id)<s.req);
+  const hasActiveElective=subjs.some(s=>['el1','el2','el3','el4','el5','el6'].includes(s.id)&&!s.done&&getLogged(s.id)<s.req);
   const pastUnlogged=getTodayActualBlocks()
     .filter(b=>(b.subjectId||(b.type==='work'&&hasActiveElective))&&nowMins>toMins(b.end))
     .filter(b=>{
@@ -5998,7 +6017,7 @@ function renderLog(){
       const chips=pastUnlogged.map(b=>{
         const isWork=b.type==='work';
         // Work blocks log toward the first incomplete elective; skip entirely if all electives done
-        const activeElective=isWork?subjs.find(s=>['el1','el2','el3','el4'].includes(s.id)&&!s.done&&getLogged(s.id)<s.req):null;
+        const activeElective=isWork?subjs.find(s=>['el1','el2','el3','el4','el5','el6'].includes(s.id)&&!s.done&&getLogged(s.id)<s.req):null;
         if(isWork&&!activeElective)return''; // all electives complete — don't show work chip
         const workSubjId=activeElective?activeElective.id:'';
         const subj=b.subjectId?subjs.find(s=>s.id===b.subjectId):null;
@@ -13277,7 +13296,7 @@ window.addEventListener('load',function(){
       var subjs=JSON.parse(localStorage.getItem('st_subjs')||'[]');
       var ecSet=new Set(subjs.filter(function(s){return s.extraCredit}).map(function(s){return s.id}));
       // Also add built-in extra credit IDs (el4 etc) in case st_subjs not yet loaded
-      ['el4'].forEach(function(id){ecSet.add(id)});
+      ['el4','el5','el6'].forEach(function(id){ecSet.add(id)});
       var yh=ss.filter(function(s){return s.date===ds&&!ecSet.has(s.subjectId)}).reduce(function(a,s){return a+(s.hours||0)},0);
       var pc=tg>0?yh/tg:1;
       function hm(h){var tot=Math.round(h*60);var hr=Math.floor(tot/60),mn=tot%60;return hr&&mn?hr+'h '+mn+'m':hr?hr+'h':mn+'m'}
