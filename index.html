@@ -1164,6 +1164,7 @@ button:active{transform:scale(0.96)}
           <div class="card-title" style="margin-bottom:0">Log a Session</div>
           <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
             <button onclick="fillHatchoboriWalkLog()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:14px;color:var(--text);cursor:pointer;font-family:inherit;white-space:nowrap" title="Fill a Hatchobori platform transfer walk">八丁堀駅 Transfer Walk</button>
+            <button onclick="transferLogToJournal()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:14px;color:var(--text);cursor:pointer;font-family:inherit;white-space:nowrap" title="Move what you have typed here into a pending journal on the Journals page">Transfer as Pending Journal</button>
             <button onclick="clearLogForm()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:12px;color:var(--text3);cursor:pointer;font-family:inherit" title="Clear form">Clear</button>
             <button class="btn-import-workout" onclick="openWorkoutImport()"> Import</button>
           </div>
@@ -8199,6 +8200,9 @@ function _journalCard(j){
 }
 
 function openJournalModal(editId){
+  // Cleared on every open so a plain "+ New Journal" can never inherit the
+  // Log-transfer flag and wipe a Log form Noah is still using.
+  _jrFromLog=false;
   const j = editId ? loadJournals().find(x=>x.id===editId) : null;
   document.getElementById('journal-modal-title').textContent = j ? 'Edit Journal' : 'New Journal';
   document.getElementById('journal-edit-id').value = j ? j.id : '';
@@ -8299,6 +8303,12 @@ function saveJournalEntry(){
   }
   saveJournals(list);
   closeModal('journal-modal-overlay');
+  // Transferred from the Log page: the Log form is cleared ONLY now the
+  // journal is safely stored. Clearing at click time would bin everything if
+  // this modal were cancelled; leaving it filled would let the same session be
+  // logged twice - once now, and again when this journal is completed from the
+  // Journals page via fillLogFromJournal(). Noah, 2026-09-09.
+  if(_jrFromLog){ _jrFromLog=false; if(typeof clearLogForm==='function')clearLogForm(); }
   renderJournals();
   if(typeof renderJournalsBacklog==='function')renderJournalsBacklog();
   showToast('Journal saved','var(--ok)');
@@ -8336,6 +8346,7 @@ function _jrHasUnsavedChanges(){
 function _journalOverlayClick(e){
   if(e.target.id!=='journal-modal-overlay')return;   // click landed inside the sheet
   if(_jrHasUnsavedChanges()&&!confirm('Close without saving?\n\nYour journal entry will be discarded.'))return;
+  _jrFromLog=false;   // abandoned transfer - the Log form keeps its values
   closeModal('journal-modal-overlay');
 }
 
@@ -8343,6 +8354,7 @@ function _journalOverlayClick(e){
 // loses the same half-written entry a mis-tap outside the sheet does.
 function _journalCancelClick(){
   if(_jrHasUnsavedChanges()&&!confirm('Close without saving?\n\nYour journal entry will be discarded.'))return;
+  _jrFromLog=false;   // abandoned transfer - the Log form keeps its values
   closeModal('journal-modal-overlay');
 }
 
@@ -8410,6 +8422,66 @@ function fillLogFromJournal(id){
   const card=document.getElementById('log-form-card');
   if(card)card.scrollIntoView({behavior:'auto',block:'start'});
   showToast('Journal filled in - check the times, then Log Session','var(--ok)');
+}
+
+// Set by transferLogToJournal, consumed once by saveJournalEntry. Any close
+// that is not a save clears it, so clearLogForm() can only ever fire on the
+// back of a journal that actually made it into storage.
+let _jrFromLog=false;
+
+// Log form -> pending journal. The exact mirror of fillLogFromJournal above:
+// that turns a queued journal into a filled Log form, this turns a filled Log
+// form into a queued journal. Nothing is written until Save is pressed in the
+// modal. Added 2026-09-09 so a session Noah has typed up but cannot journal
+// right now does not have to be retyped on the Journals page.
+function transferLogToJournal(){
+  const gv=id=>{const e=document.getElementById(id);return e?e.value:''};
+  const subjectId=gv('log-subject');
+  const date=gv('log-date');
+  const start=gv('log-start');
+  const end=gv('log-end');
+  const title=(gv('log-notes')||'').trim();
+  // saveJournalEntry() refuses an entry with no Title and no Description, so a
+  // transfer with an empty content line would open a modal that cannot be
+  // saved. Stop here and put the cursor where the text belongs instead.
+  if(!title){
+    showToast('Add the Journal Content line first - that becomes the journal title.','var(--err)');
+    const n=document.getElementById('log-notes'); if(n)n.focus();
+    return;
+  }
+  // Both mirror saveJournalEntry's own guards, checked here so the failure is
+  // reported against the form Noah is actually looking at.
+  if(date&&date>todayStr()){
+    showToast('That date is in the future - a journal can only cover work you have already done.','var(--err)');
+    return;
+  }
+  if(start&&end&&toMins(end)<=toMins(start)){
+    showToast('End time must be after start time.','var(--err)');
+    return;
+  }
+  showPage('journals');   // renderJournals() runs here - fill AFTER it
+  openJournalModal();     // resets _jrFromLog and snapshots the EMPTY baseline
+  const sel=document.getElementById('jr-subject');
+  if(sel&&subjectId){
+    if(Array.prototype.some.call(sel.options,o=>o.value===subjectId)){
+      sel.value=subjectId;
+    } else {
+      showToast(_journalSubjName(subjectId)+' is not selectable here - pick a subject by hand.','var(--err)');
+    }
+  }
+  const tEl=document.getElementById('jr-title'); if(tEl)tEl.value=title;
+  if(date){const dEl=document.getElementById('jr-date'); if(dEl)dEl.value=date}
+  setLogTime('jr-start',start);
+  setLogTime('jr-end',end);
+  // Deliberately NOT re-snapshotting _jrSnapshot: the baseline stays empty, so
+  // the close-guard treats these transferred values as unsaved work and asks
+  // before discarding them.
+  _jrFromLog=true;
+  _jrCheckForm();
+  _jrDayLoad();
+  updateJrDuration();
+  const dsc=document.getElementById('jr-desc'); if(dsc)dsc.focus();
+  showToast('Transferred - add anything missing, then Save','var(--ok)');
 }
 
 function showJournalNoteBanner(j){
