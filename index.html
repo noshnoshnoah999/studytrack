@@ -736,6 +736,23 @@ a{color:inherit;text-decoration:none}
 .jr-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .jr-btn{background:none;border:1px solid var(--border);border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit}
 .jr-btn-fill{border-color:var(--o);color:var(--o)}
+.sw-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px}
+.sw-card.sw-due{border-color:var(--o)}
+.sw-card.sw-fin{opacity:0.62}
+.sw-title{font-size:15px;font-weight:800;color:var(--text);line-height:1.35}
+.sw-chip{display:inline-block;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--bg3);color:var(--text2);white-space:nowrap;margin:0 4px 4px 0}
+.sw-chip-edit{background:var(--ol);color:var(--o)}
+.sw-meta{font-size:12px;color:var(--text3);line-height:1.6}
+.sw-sec{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:8px;margin:0 5px 5px 0;background:var(--bg3);color:var(--text2);cursor:pointer;user-select:none;border:1px solid var(--border)}
+.sw-sec.done{color:var(--ok);border-color:var(--ok);text-decoration:line-through}
+.sw-sec.cur{border-color:var(--o);color:var(--o)}
+.sw-next{display:flex;align-items:flex-start;gap:9px;padding:5px 0;font-size:13px;color:var(--text);line-height:1.45;cursor:pointer}
+.sw-next.done{color:var(--text3);text-decoration:line-through}
+.sw-box{width:16px;height:16px;border-radius:5px;border:1.5px solid var(--border);flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;line-height:1}
+.sw-next.done .sw-box{border-color:var(--ok);color:var(--ok)}
+.sw-group-h{font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin:20px 0 9px}
+.sw-date-in{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:12px;color:var(--text);font-family:inherit}
+.sw-link{color:var(--o);font-size:12px;text-decoration:underline;word-break:break-all}
 .jr-warn{display:none;font-size:12px;color:#f59e0b;line-height:1.45;margin:0 0 14px 0;align-items:flex-start;gap:10px}
 .jr-warn.show{display:flex}
 .jr-warn-x{background:none;border:none;color:#f59e0b;font-size:18px;line-height:1;cursor:pointer;font-family:inherit;padding:0 2px;flex-shrink:0;opacity:0.8}
@@ -1216,6 +1233,18 @@ button:active{transform:scale(0.96)}
       <div id="journals-done"></div>
     </div>
 
+    <!-- PAGE: SCHOOLWORK -->
+    <div class="page" id="page-schoolwork">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;gap:12px;flex-wrap:wrap">
+        <div style="min-width:0">
+          <h2 style="font-size:22px;font-weight:800;letter-spacing:-0.5px;color:var(--text)">Schoolwork</h2>
+          <p style="font-size:12px;color:var(--text3);margin-top:4px;line-height:1.5;max-width:440px">Projects and documents to start or carry on with. Log Work queues a pending journal and moves a document on an edit in one step.</p>
+        </div>
+        <button class="jr-btn jr-btn-fill" onclick="openSchoolworkModal()" style="flex-shrink:0">+ New Item</button>
+      </div>
+      <div id="sw-list"></div>
+    </div>
+
     <!-- PAGE: PROGRESS -->
     <div class="page" id="page-progress">
       <div class="prog-header">
@@ -1470,6 +1499,119 @@ button:active{transform:scale(0.96)}
 </div>
 
 <!-- GOOGLE FORMS PENDING REVIEW -->
+<!-- SCHOOLWORK ITEM -->
+<div class="modal-overlay" id="sw-modal-overlay" onclick="handleOverlayClick(event,'sw-modal-overlay')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="sw-modal-title">New Schoolwork</div>
+    <input type="hidden" id="sw-edit-id">
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">Title</label>
+      <input type="text" class="form-input" id="sw-title" placeholder="e.g. Ginger Shot Document">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Subject</label>
+        <select class="form-input" id="sw-subject"></select>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Start Date</label>
+        <input type="date" class="form-input" id="sw-start">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Carry On Date</label>
+        <input type="date" class="form-input" id="sw-carry">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Edit Number</label>
+        <input type="number" min="0" step="1" class="form-input" id="sw-editno" placeholder="4">
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">Link</label>
+      <input type="url" class="form-input" id="sw-url" placeholder="https://docs.google.com/...">
+    </div>
+    <label style="display:flex;align-items:center;gap:9px;font-size:13px;color:var(--text);cursor:pointer;margin-bottom:14px">
+      <input type="checkbox" id="sw-isdoc" onchange="_swToggleDocFields()">
+      <span>This is a document (adds the edit number, sections and next-up list)</span>
+    </label>
+    <div id="sw-doc-fields">
+      <div class="form-group" style="margin-bottom:14px">
+        <label class="form-label">Sections &mdash; one per line</label>
+        <textarea class="form-input" id="sw-sections" placeholder="Ginger&#10;Lemon&#10;Orange&#10;Carrot"></textarea>
+        <div style="font-size:11px;color:var(--text3);margin-top:5px;line-height:1.45">Tick them off on the card as you finish each one. Editing this list keeps whatever is already ticked.</div>
+      </div>
+      <div class="form-group" style="margin-bottom:14px">
+        <label class="form-label">Next Up &mdash; one per line</label>
+        <textarea class="form-input" id="sw-next" placeholder="Collagen - not written yet&#10;Immune role - not written yet"></textarea>
+        <div style="font-size:11px;color:var(--text3);margin-top:5px;line-height:1.45">What is left on the section you are on. Tickable on the card.</div>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">Notes</label>
+      <textarea class="form-input" id="sw-notes" placeholder="Anything you want to remember when you come back to this."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-save" onclick="saveSchoolworkItem()">Save</button>
+      <button class="btn-cancel" onclick="closeModal('sw-modal-overlay')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCHOOLWORK -> PENDING JOURNAL -->
+<div class="modal-overlay" id="sw-log-overlay" onclick="handleOverlayClick(event,'sw-log-overlay')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Log Work</div>
+    <div id="sw-log-for" style="font-size:12px;color:var(--text3);margin:-6px 0 14px;line-height:1.5"></div>
+    <input type="hidden" id="sw-log-id">
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">Journal Title</label>
+      <input type="text" class="form-input" id="sw-log-title" placeholder="e.g. 11th September - Ginger Shot Document">
+      <div style="font-size:11px;color:var(--text3);margin-top:5px;line-height:1.45">Fills &ldquo;Journal Content/What You Studied&rdquo; on the Log page, and the Google Form.</div>
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">Description</label>
+      <textarea class="form-input" id="sw-log-desc" placeholder="Research | 13:00 - 13:35&#10;Document Writing &amp; Formatting | 13:35 - 15:10"></textarea>
+      <div style="font-size:11px;color:var(--text3);margin-top:5px;line-height:1.45">For you only. Never sent to the Log page or the form.</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:4px">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Day Studied</label>
+        <input type="date" class="form-input" id="sw-log-date">
+      </div>
+      <div class="form-group" style="margin-bottom:0" id="sw-log-editwrap">
+        <label class="form-label">New Edit Number</label>
+        <input type="number" min="0" step="1" class="form-input" id="sw-log-edit">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Start</label>
+        <input type="hidden" id="sw-log-start">
+        <div class="time-split-input">
+          <input class="tsplit-hh" id="sw-log-start-hh" type="text" inputmode="numeric" maxlength="2" placeholder="13" autocomplete="off" oninput="timeSplitInput('sw-log-start','sw-log-start-hh','sw-log-start-mm');_swLogDuration()">
+          <span class="tsplit-sep">:</span>
+          <input class="tsplit-mm" id="sw-log-start-mm" type="text" inputmode="numeric" maxlength="2" placeholder="00" autocomplete="off" oninput="timeSplitInput('sw-log-start','sw-log-start-mm','sw-log-end-hh');_swLogDuration()" onkeydown="timeSplitBack(event,'sw-log-start-hh')">
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">End</label>
+        <input type="hidden" id="sw-log-end">
+        <div class="time-split-input">
+          <input class="tsplit-hh" id="sw-log-end-hh" type="text" inputmode="numeric" maxlength="2" placeholder="15" autocomplete="off" oninput="timeSplitInput('sw-log-end','sw-log-end-hh','sw-log-end-mm');_swLogDuration()" onkeydown="timeSplitBack(event,'sw-log-start-mm')">
+          <span class="tsplit-sep">:</span>
+          <input class="tsplit-mm" id="sw-log-end-mm" type="text" inputmode="numeric" maxlength="2" placeholder="10" autocomplete="off" oninput="timeSplitInput('sw-log-end','sw-log-end-mm',null);_swLogDuration()" onkeydown="timeSplitBack(event,'sw-log-end-hh')">
+        </div>
+      </div>
+    </div>
+    <div class="duration-display" id="sw-log-duration" style="margin:10px 0 4px"></div>
+    <div style="font-size:11px;color:var(--text3);line-height:1.45;margin-bottom:4px">Times are optional. Leave them blank and it queues as an untimed journal, exactly like one made on the Journals page.</div>
+    <div class="modal-actions">
+      <button class="btn-save" onclick="saveSwLog()">Queue Journal</button>
+      <button class="btn-cancel" onclick="closeModal('sw-log-overlay')">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="journal-modal-overlay" onclick="_journalOverlayClick(event)">
   <div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
@@ -2219,6 +2361,7 @@ const NAV_ITEMS=[
   {id:'schedule',  label:'Schedule',  short:'Schedule',   icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'},
   {id:'log',       label:'Log Hours', short:'Log',        icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>'},
   {id:'journals',  label:'Journals',  short:'Journals',   icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2h6a1 1 0 0 1 1 1v2H8V3a1 1 0 0 1 1-1z"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>'},
+  {id:'schoolwork', label:'Schoolwork', short:'School', icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2z"/></svg>'},
   {id:'progress',  label:'Progress',  short:'Progress',   icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>'},
   {id:'subjects',  label:'Subjects',  short:'Subjects',   icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>'},
   {id:'graduation', label:'Graduation', short:'Grad', icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>'},
@@ -4726,6 +4869,7 @@ function showPage(id){
   else if(id==='log')renderLog();
   else if(id==='history')renderHistory();
   else if(id==='journals')renderJournals();
+  else if(id==='schoolwork')renderSchoolwork();
   else if(id==='progress')renderProgress();
   else if(id==='subjects')renderSubjectsPage();
   else if(id==='graduation')renderGraduationPage();
@@ -7411,9 +7555,6 @@ function timeSplitInput(hiddenId, thisId, nextId){
   if(wrap==='log-start'||wrap==='log-end')_logDayLoad();
   if(wrap==='jr-start'||wrap==='jr-end')_jrDayLoad();
   if(wrap==='jr-start'||wrap==='jr-end')updateJrDuration();
-  // Morning After-Wake Up Stretches: once Start is fully typed, auto-fill
-  // End = Start + 10 minutes. Scoped to wrap==='log-start' plus the notes-field
-  // check inside the function, so it never fires for ordinary log entries.
 }
 
 function setLogTime(prefix, timeStr){
@@ -7820,6 +7961,309 @@ function _doLogSession(){
   if(/Pre-Run Stretches\s*$/i.test(notes||''))_resumePendingRun();
   // A logged session is the usual moment a contract boundary is crossed.
   if(typeof renderContractBanners==='function')renderContractBanners();
+}
+
+// == SCHOOLWORK ==============================================================
+// Forward-looking planner for the projects and documents Noah wants to START or
+// CARRY ON with. Deliberately NOT a record of work already done - that is what
+// the Journals page is for - and the two are joined by exactly one button:
+// "Log Work" queues a pending journal AND moves a document on an edit together.
+//
+// An item is either a plain study topic ("Start Learning Photographic Science")
+// or a DOCUMENT, in which case it also carries an edit number, a section list
+// and a next-up checklist. isDoc gates those three; every other field is shared.
+//
+// Sections and next-up lines are typed one-per-line in the modal but ticked off
+// on the CARD, because ticking is a daily action and editing the list is not.
+// Noah, 2026-09-12.
+const SW_KEY='st_schoolwork';
+
+function loadSchoolwork(){
+  try{const s=localStorage.getItem(SW_KEY);if(s){const p=JSON.parse(s);if(Array.isArray(p))return p}}catch(e){}
+  return [];
+}
+// Whole-list last-writer-wins, identical to st_journals and st_todos on purpose:
+// an ID-level merge would resurrect items deleted on another device.
+function saveSchoolwork(list){
+  localStorage.setItem(SW_KEY,JSON.stringify(list));
+  localStorage.setItem(SW_KEY+'_updated_at',new Date().toISOString());
+  try{sbPush(SW_KEY,list)}catch(e){}
+}
+
+// The date that decides where an item sits on the page: the carry-on date once
+// there is one, otherwise the planned start. Empty means unscheduled.
+function _swNextDate(it){ return (it&&(it.carryOn||it.startDate))||''; }
+function _swSubjName(id){ const s=loadSubjects().find(function(x){return x.id===id}); return s?s.name:(id||''); }
+function _swLines(v){ return String(v||'').split('\n').map(function(x){return x.trim()}).filter(Boolean); }
+// Rebuild a tickable list from textarea lines, carrying `done` across on exact
+// text match, so editing the list never silently unticks finished work.
+function _swRelist(lines,prev,field){
+  const old=Array.isArray(prev)?prev:[];
+  return lines.map(function(t){
+    const m=old.find(function(o){return o&&(o[field]||'')===t});
+    const row={id:m?m.id:genId(),done:m?!!m.done:false};
+    row[field]=t;
+    return row;
+  });
+}
+
+function renderSchoolwork(){
+  const host=document.getElementById('sw-list');
+  if(!host)return;
+  const list=loadSchoolwork();
+  if(!list.length){
+    host.innerHTML='<div class="card" style="text-align:center;padding:30px 18px">'+
+      '<div style="font-size:13px;color:var(--text2);font-weight:700">Nothing here yet</div>'+
+      '<div style="font-size:12px;color:var(--text3);margin-top:6px;line-height:1.5">Add a project or document you want to start or carry on with.</div></div>';
+    return;
+  }
+  const today=todayStr();
+  const open=list.filter(function(i){return !i.done});
+  const fin=list.filter(function(i){return i.done});
+  const by=function(a,b){return _swNextDate(a).localeCompare(_swNextDate(b))};
+  const ready=open.filter(function(i){const d=_swNextDate(i);return !!d&&d<=today}).sort(by);
+  const later=open.filter(function(i){const d=_swNextDate(i);return !!d&&d>today}).sort(by);
+  const none=open.filter(function(i){return !_swNextDate(i)});
+  let h='';
+  if(ready.length)h+='<div class="sw-group-h">Ready now ('+ready.length+')</div>'+ready.map(function(i){return _swCard(i)}).join('');
+  if(later.length)h+='<div class="sw-group-h">Scheduled ('+later.length+')</div>'+later.map(function(i){return _swCard(i)}).join('');
+  if(none.length)h+='<div class="sw-group-h">No date set ('+none.length+')</div>'+none.map(function(i){return _swCard(i)}).join('');
+  if(fin.length)h+='<div class="sw-group-h">Finished ('+fin.length+')</div>'+fin.map(function(i){return _swCard(i)}).join('');
+  host.innerHTML=h;
+}
+
+function _swCard(it){
+  const today=todayStr();
+  const secs=Array.isArray(it.sections)?it.sections:[];
+  const nexts=Array.isArray(it.nextItems)?it.nextItems:[];
+  const nd=_swNextDate(it);
+  const due=!it.done&&!!nd&&nd<=today;
+  let chips='';
+  if(it.subjectId)chips+='<span class="sw-chip">'+escHtml(_swSubjName(it.subjectId))+'</span>';
+  if(it.isDoc)chips+='<span class="sw-chip sw-chip-edit">Edit '+(parseInt(it.edit,10)||0)+'</span>';
+  if(it.isDoc&&secs.length)chips+='<span class="sw-chip">'+secs.filter(function(s){return s.done}).length+'/'+secs.length+' sections</span>';
+
+  let secHtml='';
+  if(it.isDoc&&secs.length){
+    const cur=secs.find(function(s){return !s.done});
+    secHtml='<div style="margin-top:9px">'+secs.map(function(s){
+      const cls='sw-sec'+(s.done?' done':'')+(cur&&cur.id===s.id?' cur':'');
+      return '<span class="'+cls+'" onclick="toggleSwSection(\''+it.id+'\',\''+s.id+'\')">'+(s.done?'&#10003; ':'')+escHtml(s.name||'')+'</span>';
+    }).join('')+'</div>';
+  }
+
+  let nextHtml='';
+  if(it.isDoc&&nexts.length){
+    nextHtml='<div style="margin-top:9px;border-top:1px solid var(--border);padding-top:8px">'+
+      '<div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px">Next up</div>'+
+      nexts.map(function(n){
+        return '<div class="sw-next'+(n.done?' done':'')+'" onclick="toggleSwNext(\''+it.id+'\',\''+n.id+'\')">'+
+          '<span class="sw-box">'+(n.done?'&#10003;':'')+'</span><span>'+escHtml(n.text||'')+'</span></div>';
+      }).join('')+'</div>';
+  }
+
+  let meta='';
+  if(it.startDate)meta+='Start '+escHtml(_ordinalDate(it.startDate));
+  if(!it.done&&it.carryOn)meta+=(meta?' &middot; ':'')+'Carry on '+escHtml(_ordinalDate(it.carryOn));
+
+  const carryRow=it.done?'':
+    '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px">'+
+      '<span style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Carry on</span>'+
+      '<input type="date" class="sw-date-in" value="'+escHtml(it.carryOn||'')+'" onchange="setSwCarryOn(\''+it.id+'\',this.value)">'+
+      (due?'<span style="font-size:11px;font-weight:800;color:var(--o)">READY</span>':'')+
+    '</div>';
+
+  const btns='<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:11px">'+
+    (it.done?'':'<button class="jr-btn jr-btn-fill" onclick="openSwLog(\''+it.id+'\')">Log Work</button>')+
+    '<button class="jr-btn" onclick="openSchoolworkModal(\''+it.id+'\')">Edit</button>'+
+    '<button class="jr-btn" onclick="toggleSwDone(\''+it.id+'\')">'+(it.done?'Reopen':'Finished')+'</button>'+
+    '<button class="jr-btn" onclick="deleteSchoolworkItem(\''+it.id+'\')" style="color:var(--err)">Delete</button>'+
+  '</div>';
+
+  return '<div class="sw-card'+(due?' sw-due':'')+(it.done?' sw-fin':'')+'">'+
+    '<div class="sw-title">'+escHtml(it.title||'Untitled')+'</div>'+
+    (chips?'<div style="margin-top:7px">'+chips+'</div>':'')+
+    (meta?'<div class="sw-meta" style="margin-top:3px">'+meta+'</div>':'')+
+    (it.url?'<div style="margin-top:6px"><a class="sw-link" href="'+escHtml(it.url)+'" target="_blank" rel="noopener noreferrer">'+escHtml(it.url)+'</a></div>':'')+
+    secHtml+nextHtml+
+    (it.notes?'<div class="sw-meta" style="margin-top:9px;white-space:pre-wrap;color:var(--text2)">'+escHtml(it.notes)+'</div>':'')+
+    carryRow+btns+
+  '</div>';
+}
+
+function toggleSwSection(itemId,secId){
+  const list=loadSchoolwork();
+  const it=list.find(function(x){return x.id===itemId}); if(!it)return;
+  const s=(it.sections||[]).find(function(x){return x.id===secId}); if(!s)return;
+  s.done=!s.done; it.updatedAt=new Date().toISOString();
+  saveSchoolwork(list); renderSchoolwork();
+}
+function toggleSwNext(itemId,nid){
+  const list=loadSchoolwork();
+  const it=list.find(function(x){return x.id===itemId}); if(!it)return;
+  const n=(it.nextItems||[]).find(function(x){return x.id===nid}); if(!n)return;
+  n.done=!n.done; it.updatedAt=new Date().toISOString();
+  saveSchoolwork(list); renderSchoolwork();
+}
+// Inline on the card on purpose: the carry-on date is the thing that changes
+// most often, and deliberately NOT part of the Log Work form (Noah, 2026-09-12).
+function setSwCarryOn(itemId,val){
+  const list=loadSchoolwork();
+  const it=list.find(function(x){return x.id===itemId}); if(!it)return;
+  it.carryOn=val||''; it.updatedAt=new Date().toISOString();
+  saveSchoolwork(list); renderSchoolwork();
+  showToast(val?('Carry on '+_ordinalDate(val)):'Carry-on date cleared','var(--ok)');
+}
+function toggleSwDone(itemId){
+  const list=loadSchoolwork();
+  const it=list.find(function(x){return x.id===itemId}); if(!it)return;
+  it.done=!it.done;
+  it.completedAt=it.done?new Date().toISOString():null;
+  it.updatedAt=new Date().toISOString();
+  saveSchoolwork(list); renderSchoolwork();
+  showToast(it.done?'Marked finished':'Reopened','var(--ok)');
+}
+function deleteSchoolworkItem(id){
+  const it=loadSchoolwork().find(function(x){return x.id===id});
+  if(!it)return;
+  if(!confirm('Delete "'+(it.title||'this item')+'"? This cannot be undone.'))return;
+  saveSchoolwork(loadSchoolwork().filter(function(x){return x.id!==id}));
+  renderSchoolwork();
+  showToast('Deleted','var(--text3)');
+}
+
+function _swToggleDocFields(){
+  const on=document.getElementById('sw-isdoc').checked;
+  const f=document.getElementById('sw-doc-fields');
+  if(f)f.style.display=on?'':'none';
+  const e=document.getElementById('sw-editno');
+  if(e&&e.closest('.form-group'))e.closest('.form-group').style.display=on?'':'none';
+}
+
+function openSchoolworkModal(editId){
+  const it=editId?loadSchoolwork().find(function(x){return x.id===editId}):null;
+  document.getElementById('sw-modal-title').textContent=it?'Edit Schoolwork':'New Schoolwork';
+  document.getElementById('sw-edit-id').value=it?it.id:'';
+  // Same availability rule as the Journals modal, so an item can never be filed
+  // against a subject the Log page would refuse. A closed subject already on the
+  // item is kept as an option so editing it does not silently wipe it.
+  const avail=loadSubjects().filter(function(s){return !s.done&&getLogged(s.id)<s.req});
+  const sel=document.getElementById('sw-subject');
+  let opts='<option value="">- Select -</option>'+avail.map(function(s){return '<option value="'+s.id+'">'+escHtml(s.name)+'</option>'}).join('');
+  if(it&&it.subjectId&&!avail.find(function(s){return s.id===it.subjectId})){
+    opts+='<option value="'+escHtml(it.subjectId)+'">'+escHtml(_swSubjName(it.subjectId))+' (closed)</option>';
+  }
+  sel.innerHTML=opts;
+  sel.value=it&&it.subjectId?it.subjectId:'';
+  document.getElementById('sw-title').value=it?(it.title||''):'';
+  document.getElementById('sw-url').value=it?(it.url||''):'';
+  document.getElementById('sw-start').value=it?(it.startDate||''):'';
+  document.getElementById('sw-carry').value=it?(it.carryOn||''):'';
+  document.getElementById('sw-isdoc').checked=!!(it&&it.isDoc);
+  document.getElementById('sw-editno').value=(it&&it.isDoc)?(parseInt(it.edit,10)||0):'';
+  document.getElementById('sw-sections').value=(it&&Array.isArray(it.sections))?it.sections.map(function(s){return s.name||''}).join('\n'):'';
+  document.getElementById('sw-next').value=(it&&Array.isArray(it.nextItems))?it.nextItems.map(function(n){return n.text||''}).join('\n'):'';
+  document.getElementById('sw-notes').value=it?(it.notes||''):'';
+  _swToggleDocFields();
+  document.getElementById('sw-modal-overlay').classList.add('open');
+}
+
+function saveSchoolworkItem(){
+  const id=document.getElementById('sw-edit-id').value;
+  const title=document.getElementById('sw-title').value.trim();
+  if(!title){showToast('Give it a title.','var(--err)');return}
+  const isDoc=document.getElementById('sw-isdoc').checked;
+  const list=loadSchoolwork();
+  const now=new Date().toISOString();
+  const prev=id?list.find(function(x){return x.id===id}):null;
+  const secLines=isDoc?_swLines(document.getElementById('sw-sections').value):[];
+  const nextLines=isDoc?_swLines(document.getElementById('sw-next').value):[];
+  const fields={
+    title:title,
+    subjectId:document.getElementById('sw-subject').value,
+    url:document.getElementById('sw-url').value.trim(),
+    startDate:document.getElementById('sw-start').value,
+    carryOn:document.getElementById('sw-carry').value,
+    isDoc:isDoc,
+    edit:isDoc?(parseInt(document.getElementById('sw-editno').value,10)||0):0,
+    sections:_swRelist(secLines,prev?prev.sections:[],'name'),
+    nextItems:_swRelist(nextLines,prev?prev.nextItems:[],'text'),
+    notes:document.getElementById('sw-notes').value.trim(),
+    updatedAt:now
+  };
+  if(prev){Object.assign(prev,fields)}
+  else{list.push(Object.assign({id:genId(),done:false,completedAt:null,createdAt:now},fields))}
+  saveSchoolwork(list);
+  closeModal('sw-modal-overlay');
+  renderSchoolwork();
+  showToast('Saved','var(--ok)');
+}
+
+function _swLogDuration(){
+  const s=document.getElementById('sw-log-start').value;
+  const e=document.getElementById('sw-log-end').value;
+  const el=document.getElementById('sw-log-duration');
+  if(!el)return;
+  if(s&&e){const m=toMins(e)-toMins(s);if(m>0){el.textContent='Duration: '+durStr(m);return}}
+  el.textContent='';
+}
+
+function openSwLog(id){
+  const it=loadSchoolwork().find(function(x){return x.id===id});
+  if(!it)return;
+  const today=todayStr();
+  document.getElementById('sw-log-id').value=id;
+  document.getElementById('sw-log-for').innerHTML='Queues a pending journal for <strong style="color:var(--text2)">'+escHtml(it.title||'')+'</strong>'+(it.subjectId?(' under '+escHtml(_swSubjName(it.subjectId))):'')+'.';
+  // Prefilled but always editable - this title is what reaches the Google Form.
+  const base=_ordinalDate(today)+' - '+(it.title||'');
+  document.getElementById('sw-log-title').value=it.isDoc?(base+' | Edit '+((parseInt(it.edit,10)||0)+1)):base;
+  document.getElementById('sw-log-desc').value='';
+  const d=document.getElementById('sw-log-date');
+  d.max=today;                      // a journal only ever covers work already done
+  d.value=today;
+  setLogTime('sw-log-start','');
+  setLogTime('sw-log-end','');
+  const ew=document.getElementById('sw-log-editwrap');
+  if(ew)ew.style.display=it.isDoc?'':'none';
+  document.getElementById('sw-log-edit').value=it.isDoc?((parseInt(it.edit,10)||0)+1):'';
+  _swLogDuration();
+  document.getElementById('sw-log-overlay').classList.add('open');
+}
+
+function saveSwLog(){
+  const id=document.getElementById('sw-log-id').value;
+  const list=loadSchoolwork();
+  const it=list.find(function(x){return x.id===id});
+  if(!it)return;
+  const title=document.getElementById('sw-log-title').value.trim();
+  const desc=document.getElementById('sw-log-desc').value.trim();
+  const date=document.getElementById('sw-log-date').value;
+  const start=document.getElementById('sw-log-start').value;
+  const end=document.getElementById('sw-log-end').value;
+  if(!title&&!desc){showToast('Add a Journal Title or a Description.','var(--err)');return}
+  // The same two rules saveJournalEntry() enforces, so an entry queued from here
+  // can never be one the Journals page itself would have refused.
+  if(date&&date>todayStr()){showToast('That date is in the future - a journal can only cover work you have already done.','var(--err)');return}
+  if(start&&end&&toMins(end)<=toMins(start)){showToast('End time must be after start time.','var(--err)');return}
+  const now=new Date().toISOString();
+  const jl=loadJournals();
+  jl.push({id:genId(),title:title,desc:desc,date:date,subjectId:it.subjectId||'',
+    start:start,end:end,proof:'',priority:false,
+    done:false,completedBy:null,completedAt:null,createdAt:now,updatedAt:now});
+  saveJournals(jl);
+  // Move the document on an edit in the same action - that pairing is the whole
+  // point of this button. A non-document just gets the journal.
+  if(it.isDoc){
+    const ne=parseInt(document.getElementById('sw-log-edit').value,10);
+    if(!isNaN(ne))it.edit=ne;
+  }
+  it.updatedAt=now;
+  saveSchoolwork(list);
+  closeModal('sw-log-overlay');
+  renderSchoolwork();
+  if(typeof renderJournalsBacklog==='function')renderJournalsBacklog();
+  if(typeof _updateJournalsBadge==='function')_updateJournalsBadge();
+  showToast('Journal queued on the Journals page','var(--ok)');
 }
 
 // == JOURNALS ================================================================
@@ -11073,7 +11517,7 @@ async function syncFromCloud(){
   setSyncUI('syncing','Syncing…');
   _sbPullFailed=false; // reset per cycle — see _baseMigrationsAllowed()
   try{
-    const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_ai_history','st_holiday','st_notif_prefs','st_notif_templates','st_teacher_plan','st_journals']; // st_hours is recomputed from sessions below, not pulled directly. st_teacher_plan is written externally by the teacher RPC and only ever pulled here (cloud-authoritative, falls through to the default setItem branch — the app never sbPushes it).
+    const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_ai_history','st_holiday','st_notif_prefs','st_notif_templates','st_teacher_plan','st_journals','st_schoolwork']; // st_hours is recomputed from sessions below, not pulled directly. st_teacher_plan is written externally by the teacher RPC and only ever pulled here (cloud-authoritative, falls through to the default setItem branch — the app never sbPushes it).
     // Pull st_deleted_sessions upfront so we can use it synchronously inside forEach
     let cloudDeletedRaw=null;
     try{cloudDeletedRaw=await sbPull('st_deleted_sessions')}catch(e){}
@@ -11151,7 +11595,7 @@ async function syncFromCloud(){
             localStorage.setItem(k,JSON.stringify(cloud));
             _aiHistory=cloud;
           }
-        } else if(k==='st_subjs'||k==='st_goals'||k==='st_todos'||k==='st_sched_overrides'||k==='st_holiday'||k==='st_notif_prefs'||k==='st_notif_templates'||k==='st_journals'){
+        } else if(k==='st_subjs'||k==='st_goals'||k==='st_todos'||k==='st_sched_overrides'||k==='st_holiday'||k==='st_notif_prefs'||k==='st_notif_templates'||k==='st_journals'||k==='st_schoolwork'){
           // Timestamped last-writer-wins: keep whichever version is newer.
           // Prevents a device with stale data from reverting a fresh edit.
           const cloudUpdatedAt=rows[i].updated_at||'';
