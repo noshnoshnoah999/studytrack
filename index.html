@@ -671,8 +671,8 @@ a{color:inherit;text-decoration:none}
 .img-drop-zone:hover{border-color:var(--o);background:var(--ol);color:var(--o)}
 .img-drop-zone.has-image{border-color:var(--ok);background:var(--okl)}
 .img-preview{max-width:100%;max-height:180px;border-radius:10px;margin-top:10px;display:block}
-#workout-drop-zone,#workout-elapsed-drop-zone{user-select:none;-webkit-user-select:none}
-#workout-drop-zone:hover,#workout-elapsed-drop-zone:hover{border-color:var(--o)!important;background:var(--ol)!important}
+#workout-drop-zone{user-select:none;-webkit-user-select:none}
+#workout-drop-zone:hover{border-color:var(--o)!important;background:var(--ol)!important}
 #workout-drop-zone.has-image{border-style:solid;border-color:var(--ok);background:var(--bg3)}
 /* SYNC INDICATOR */
 .sync-row{display:flex;align-items:center;gap:6px;margin-top:8px}
@@ -1837,37 +1837,12 @@ button:active{transform:scale(0.96)}
         </div>
       </div>
 
-      <!-- Second screenshot: the elapsed-time stat. Cycle and walk only, because
-           Strava's headline "Time" on those is MOVING time, while Noah's PE hours
-           are counted on elapsed. A run's moving and elapsed time barely differ,
-           so runs are never asked for one. -->
-      <div id="workout-step-elapsed" style="display:none">
-        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Now the elapsed time screenshot</div>
-        <div style="font-size:12px;color:var(--text3);margin-bottom:12px">The one showing <b>Elapsed Time</b>. Study time is counted on elapsed, so this is the figure that gets logged — not the moving time on the first screen.</div>
-        <img id="workout-elapsed-preview" class="img-preview" style="display:none;margin-bottom:10px;max-height:180px;object-fit:contain">
-        <div id="workout-elapsed-drop-zone"
-          ondragenter="_wElDragEnter(event)" ondragover="_wElDragOver(event)" ondragleave="_wElDragLeave(event)" ondrop="_wElDrop(event)"
-          onclick="document.getElementById('workout-elapsed-file-input').click()"
-          style="border:2px dashed var(--border);border-radius:14px;padding:24px 16px;text-align:center;cursor:pointer;margin-bottom:10px">
-          <div style="font-size:14px;font-weight:700;color:var(--text2);margin-bottom:4px">Drop image here</div>
-          <div style="font-size:12px;color:var(--text3)">or click to choose a photo</div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-          <button onclick="document.getElementById('workout-elapsed-file-input').click()" style="background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:14px 10px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit">Choose File</button>
-          <button onclick="pasteWorkoutElapsedImage()" style="background:var(--ol);border:1.5px solid var(--o);border-radius:12px;padding:14px 10px;font-size:13px;font-weight:700;color:var(--o);cursor:pointer;font-family:inherit">Paste</button>
-        </div>
-        <input type="file" id="workout-elapsed-file-input" accept="image/*" style="display:none" onchange="handleWorkoutElapsedFile(event)">
-        <a href="https://drive.google.com/drive/u/1/folders/1-EyjijcAu7nNWqJEfu_xViufRc_Nk49t" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;color:var(--text3);font-size:12.5px;text-decoration:underline;padding:6px 0">Open Google Drive folder</a>
-        <a href="https://docs.google.com/spreadsheets/d/1lrLzNnAL4YQ6sZp4tASW52eZPXNGNgfhIwqLS6o_guQ/edit?gid=1291500163#gid=1291500163" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;color:var(--text3);font-size:12.5px;text-decoration:underline;padding:6px 0">PE Journal Responses</a>
-        <button onclick="skipElapsedShot()" style="width:100%;background:none;border:none;color:var(--text3);font-size:12.5px;cursor:pointer;font-family:inherit;text-decoration:underline;padding:8px 0">Skip second screenshot — use moving time, not elapsed</button>
-      </div>
-
       <!-- Second screenshot for a Bungu import: the Bungu Scheduler calendar for
-           the same month as the King of Time screenshot. Not skippable — unlike
-           the elapsed-time step above, there is no fallback duration to log
-           without it, only a missing Shift Start/End line in the journal, which
-           _fillBunguLogForm() handles on its own if this step is skipped via the
-           explicit "no schedule" link. -->
+           the same month as the King of Time screenshot. Skipping it never changes
+           the logged duration — the King of Time clock-in/out is the source of
+           truth — it only leaves out the Shift Start/End line in the journal,
+           which _fillBunguLogForm() handles on its own if this step is skipped
+           via the explicit "no schedule" link. -->
       <div id="workout-step-bungu-schedule" style="display:none">
         <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Now the Bungu Scheduler screenshot</div>
         <div style="font-size:12px;color:var(--text3);margin-bottom:12px">The monthly calendar view. I'll find the same date as the King of Time screenshot and read its <b>blue</b> shift time — the green block is your break, not a second shift, and is ignored.</div>
@@ -2002,7 +1977,7 @@ function _openFormForSession(sessionId){
   const sessions=loadSessions();
   const s=sessions.find(x=>x.id===sessionId);
   if(!s)return;
-  _openSubjectForm(s.subjectId,s.date,s.start,s.end,s.notes,sessionId,!!(s.journalMeta&&s.journalMeta.usedElapsed),!!(s.journalMeta&&s.journalMeta.preply));
+  _openSubjectForm(s.subjectId,s.date,s.start,s.end,s.notes,sessionId,!!(s.journalMeta&&s.journalMeta.preply));
 }
 
 // ── GOOGLE FORM SUBMISSION TRACKER ──────────────────────────────────────────
@@ -2132,31 +2107,13 @@ function hidePreplyProofBanner(){
 // match the attached proof. Every other subject always gets it. Noah, 2026-08-19.
 const JOURNAL_WRITING_PE_MIN_MINS=25;
 
-// A cycle or a walk, judged from the journal title, the same way _looksLikeRun()
-// judges a run. Stretch sessions are excluded explicitly: they are neither, and
-// saying so here makes the intent obvious to the next reader.
-function _isCycleOrWalk(str){
-  const n=(str||'').toLowerCase();
-  if(/stretch/.test(n))return false;
-  return /\b(cycle|cycling|ride|walk|walking)\b/.test(n);
-}
-
 // Everything injected into the Google Form's Contents box lives here, and NOWHERE
 // else — never stored on the session, never shown in StudyTrack, never written by
-// a model. Order is title, then elapsed, then journal-writing time, so it reads
-// in the order things happened: the activity, then the write-up.
-//
-// "Elapsed Time:" carries a real figure computed from the session's own start and
-// end, and is emitted ONLY when `usedElapsed` says the duration genuinely came
-// from an elapsed-time screenshot. Skip that screenshot and the duration is
-// moving time — printing "Elapsed Time" over a moving-time figure would be a
-// false statement in a school submission, so the line is simply left out.
-// PE only: a Japanese note that happens to mention a walk is not a walk.
-// Noah, 2026-08-20.
-function _formContents(subjectId,start,end,notes,usedElapsed,preply){
+// a model. Order is title, then the Preply review line, then journal-writing
+// time, so it reads in the order things happened: the activity, then the write-up.
+function _formContents(subjectId,start,end,notes,preply){
   const mins=(start&&end)?(toMins(end)-toMins(start)):0;
   const extra=[];
-  if(_isPeId(subjectId)&&usedElapsed&&_isCycleOrWalk(notes)&&mins>0)extra.push('Elapsed Time: '+_fmtHoursMins(mins,true));
   // Sits above the journal-writing line so the box reads in the order things
   // happened: the lesson, the review straight after it, then the write-up.
   if(preply)extra.push(PREPLY_REVIEW_LINE);
@@ -2169,14 +2126,14 @@ function _formContents(subjectId,start,end,notes,usedElapsed,preply){
   return lines.join('\n');
 }
 
-function _buildSubjectFormUrl(subjectId,date,start,end,notes,usedElapsed,preply){
+function _buildSubjectFormUrl(subjectId,date,start,end,notes,preply){
   const cfg=_SUBJECT_FORMS[subjectId];
   if(!cfg)return null;
   let url=cfg.url+'?usp=pp_url';
   if(date) url+='&entry.911550456='+encodeURIComponent(date);
   if(start){const p=start.split(':');url+='&entry.2130026531_hour='+p[0]+'&entry.2130026531_minute='+(p[1]||'00')}
   if(end){const p=end.split(':');url+='&entry.1426010469_hour='+p[0]+'&entry.1426010469_minute='+(p[1]||'00')}
-  const contents=_formContents(subjectId,start,end,notes,usedElapsed,preply);
+  const contents=_formContents(subjectId,start,end,notes,preply);
   if(contents) url+='&entry.706383331='+encodeURIComponent(contents);
   if(cfg.confirmId) url+='&entry.'+cfg.confirmId+'='+encodeURIComponent('確認しました / Confirmed');
   return url;
@@ -2201,7 +2158,6 @@ function updateJournalLenWarn(){
     (document.getElementById('log-start')||{}).value||'',
     (document.getElementById('log-end')||{}).value||'',
     journal,
-    false,
     !!(_pendingJournalMeta&&_pendingJournalMeta.preply)
   );
   if(!url){el.style.display='none';return}
@@ -2222,10 +2178,10 @@ function updateJournalLenWarn(){
   }
 }
 
-function _openSubjectForm(subjectId,date,start,end,notes,sessionId,usedElapsed,preply){
+function _openSubjectForm(subjectId,date,start,end,notes,sessionId,preply){
   const cfg=_SUBJECT_FORMS[subjectId];
   if(!cfg)return; // no form for this subject
-  const url=_buildSubjectFormUrl(subjectId,date,start,end,notes,usedElapsed,preply);
+  const url=_buildSubjectFormUrl(subjectId,date,start,end,notes,preply);
   if(url&&url.length>=_JOURNAL_URL_MAX){
     showToast('Journal may be truncated in the form — check it before submitting.','var(--err)');
   }
@@ -3425,7 +3381,7 @@ const WORKOUT_MODEL='claude-haiku-4-5-20251001';
 // to see exactly what came back.
 let _lastWorkoutRaw=null;
 
-function _buildWorkoutPrompt(app,activity,hasElapsedShot,hasBunguScheduleShot){
+function _buildWorkoutPrompt(app,activity,hasBunguScheduleShot){
   const today=new Date().toISOString().slice(0,10);
   // Bungu: TWO images always. The first is a King of Time "Work details"
   // screen (clock-in/out, source of truth for the session's actual times).
@@ -3494,10 +3450,6 @@ function _buildWorkoutPrompt(app,activity,hasElapsedShot,hasBunguScheduleShot){
   }
   let p='This is a screenshot from '+app+'. The activity is a '+activity+'.\n\nToday\'s date is '+today+'.\n\n';
   p+='Read ONLY the fields listed below. NEVER guess or estimate a value that is not shown — return null instead.\n\n';
-  if(hasElapsedShot){
-    p+='TWO images are attached. The FIRST is the activity screen. The SECOND is a screenshot of\n'+
-       'the same activity showing its ELAPSED TIME.\n\n';
-  }
   if(app==='Strava'){
     p+='STRAVA NOTES:\n'+
        '- The timestamp ("Today at HH:MM", "Yesterday at HH:MM", or a date) is ALWAYS the START time, never the end.\n'+
@@ -3507,8 +3459,7 @@ function _buildWorkoutPrompt(app,activity,hasElapsedShot,hasBunguScheduleShot){
        '- The header reads like "31 Jul 2026 at 20:49". That single timestamp is the START time. There is no end time shown — do not invent one.\n\n';
   }
   p+='Return ONLY valid JSON, no markdown fences:\n'+
-     '{"activityTitle":string|null,"date":"YYYY-MM-DD","timestampWasRelative":boolean,"startTime":"HH:MM","durationSeconds":number'+
-     (hasElapsedShot?',"elapsedText":string|null':'')+'}\n\n'+
+     '{"activityTitle":string|null,"date":"YYYY-MM-DD","timestampWasRelative":boolean,"startTime":"HH:MM","durationSeconds":number}\n\n'+
      'RULES:\n'+
      '- activityTitle: the large activity title on the screen, copied out EXACTLY and in full,\n'+
      ' e.g. "1st August - Afternoon Cycle 2". If there is no title, return null. Do not tidy it up,\n'+
@@ -3517,20 +3468,6 @@ function _buildWorkoutPrompt(app,activity,hasElapsedShot,hasBunguScheduleShot){
      ' calendar date. false if an actual date was printed, e.g. "31 Jul 2026 at 20:49".\n'+
      '- durationSeconds: from the FIRST image, convert the displayed time exactly. "10m 29s" = 629.\n'+
      ' "27:10" = 1630. Never round up.\n'+
-     (hasElapsedShot?
-      '- elapsedText: from the SECOND image ONLY. Find the row whose label is exactly\n'+
-      ' "Elapsed Time" and copy its value as a STRING, character for character, exactly as it\n'+
-      ' is printed — for example "15:53" or "2:14:18".\n'+
-      ' Copy it VERBATIM. Do NOT convert it to seconds, do NOT do any arithmetic, do NOT add or\n'+
-      ' remove digits or colons, do NOT reformat it. Reading the characters is the whole task;\n'+
-      ' the app does the conversion itself.\n'+
-      ' The rest of that screen varies by activity — a walk shows "Avg Pace", "Avg Elapsed Pace"\n'+
-      ' and "Fastest Split", a ride shows "Avg Speed" and "Max Speed" — and every one of them\n'+
-      ' shows "Moving Time". NONE of those rows is the answer, however similar it looks.\n'+
-      ' "Avg Elapsed Pace" in particular contains the word Elapsed and is formatted like a\n'+
-      ' duration, but it is a pace per kilometre — never use it.\n'+
-      ' If there is no row labelled exactly "Elapsed Time", return null. Do NOT take this from\n'+
-      ' the first image and do NOT estimate it.\n':'')+
      '- date: from the relative timestamp ("Yesterday at...") ONLY as a fallback. If the title contains\n'+
      ' a date, that date is the truth — I write those titles myself and they are correct even when the\n'+
      ' screenshot was taken days later.\n'+
@@ -3539,7 +3476,7 @@ function _buildWorkoutPrompt(app,activity,hasElapsedShot,hasBunguScheduleShot){
   return p;
 }
 
-async function _callWorkoutModel(model,key,base64,mimeType,promptText,signal,elapsedB64,elapsedMime){
+async function _callWorkoutModel(model,key,base64,mimeType,promptText,signal,secondB64,secondMime){
   const resp=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     signal:signal,
@@ -3556,7 +3493,7 @@ async function _callWorkoutModel(model,key,base64,mimeType,promptText,signal,ela
       max_tokens:2000,
       messages:[{role:'user',content:(function(){
         const c=[{type:'image',source:{type:'base64',media_type:mimeType,data:base64}}];
-        if(elapsedB64)c.push({type:'image',source:{type:'base64',media_type:elapsedMime||'image/jpeg',data:elapsedB64}});
+        if(secondB64)c.push({type:'image',source:{type:'base64',media_type:secondMime||'image/jpeg',data:secondB64}});
         c.push({type:'text',text:promptText});
         return c;
       })()}]
@@ -3565,27 +3502,7 @@ async function _callWorkoutModel(model,key,base64,mimeType,promptText,signal,ela
   return resp;
 }
 
-// Strava prints a duration as MM:SS or H:MM:SS and NEVER as H:MM. Two parts is
-// therefore ALWAYS minutes:seconds — "15:53" is 15 minutes 53 seconds, not 15
-// hours 53 minutes.
-//
-// That exact misread produced a 15h53m PE entry on 2026-08-20. The model was
-// being asked to convert the value itself, and a "2:14:18" worked example in the
-// prompt tipped it into reading hours. The model now only reports the characters
-// it saw; the arithmetic happens here, where no example can influence it.
-//
-// Strict on purpose: minutes and seconds must be 00-59, so a malformed read
-// returns null and falls back to moving time rather than inventing a duration.
-function _parseDurationText(txt){
-  if(txt==null)return null;
-  const m=String(txt).trim().match(/^(\d{1,3}):([0-5]\d)(?::([0-5]\d))?$/);
-  if(!m)return null;
-  return m[3]!==undefined
-    ? (+m[1])*3600+(+m[2])*60+(+m[3])   // H:MM:SS
-    : (+m[1])*60+(+m[2]);                // MM:SS
-}
-
-async function analyseWorkoutImage(base64,mimeType,elapsedB64,elapsedMime){
+async function analyseWorkoutImage(base64,mimeType,secondB64,secondMime){
   const key=localStorage.getItem('st_anthropic_key');
   if(!key){showToast('Add Anthropic API key in  Settings','var(--err)');return null}
   const app=_workoutApp||'Strava';
@@ -3593,9 +3510,9 @@ async function analyseWorkoutImage(base64,mimeType,elapsedB64,elapsedMime){
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),45000);
   try{
-    const promptText=_buildWorkoutPrompt(app,activity,!!elapsedB64,app==='Bungu'&&!!elapsedB64);
+    const promptText=_buildWorkoutPrompt(app,activity,app==='Bungu'&&!!secondB64);
 
-    const resp=await _callWorkoutModel(WORKOUT_MODEL,key,base64,mimeType,promptText,controller.signal,elapsedB64,elapsedMime);
+    const resp=await _callWorkoutModel(WORKOUT_MODEL,key,base64,mimeType,promptText,controller.signal,secondB64,secondMime);
     const usedModel=WORKOUT_MODEL;
     clearTimeout(timer);
     if(!resp.ok){
@@ -3659,8 +3576,6 @@ async function analyseWorkoutImage(base64,mimeType,elapsedB64,elapsedMime){
       parsed.workoutEndTime=parsed.clockOut;
       parsed.durationSeconds=cm*60;
       parsed.durationMinutes=cm;
-      parsed.movingSeconds=cm*60;
-      parsed.usedElapsed=false;
       parsed.shiftStart=parsed.shiftStart||null;
       parsed.shiftEnd=parsed.shiftEnd||null;
       parsed.hasSchedule=!!(parsed.shiftStart&&parsed.shiftEnd);
@@ -3668,10 +3583,10 @@ async function analyseWorkoutImage(base64,mimeType,elapsedB64,elapsedMime){
     }
 
     // PREPLY. The card gives both ends of the lesson, so the length is
-    // arithmetic rather than a reading, and none of the Strava/Runna title,
-    // relative-date or elapsed-time handling below applies. Bail out with a
-    // clear message rather than half-filling the form: a lesson entry with no
-    // times is worse than no entry at all.
+    // arithmetic rather than a reading, and none of the Strava/Runna title or
+    // relative-date handling below applies. Bail out with a clear message rather
+    // than half-filling the form: a lesson entry with no times is worse than no
+    // entry at all.
     if(app==='Preply'){
       parsed.dateSource='absolute';
       parsed.teacher=(typeof parsed.teacher==='string'&&parsed.teacher.trim())?parsed.teacher.trim():null;
@@ -3691,9 +3606,7 @@ async function analyseWorkoutImage(base64,mimeType,elapsedB64,elapsedMime){
       // the session always matches the card that is attached as proof.
       parsed.lessonMinutes=lm;
       parsed.durationSeconds=lm*60;
-      parsed.movingSeconds=lm*60;
       parsed.durationMinutes=lm;
-      parsed.usedElapsed=false;
       parsed.workoutEndTime=_addMins(parsed.startTime,lm+PREPLY_REVIEW_MINS);
       return parsed;
     }
@@ -3717,19 +3630,7 @@ async function analyseWorkoutImage(base64,mimeType,elapsedB64,elapsedMime){
     // Derive end time from start + floored duration. Runna shows no end time
     // at all, and Strava's displayed seconds must never round up.
     const secs=Math.max(0,parseInt(parsed.durationSeconds||0,10));
-    parsed.movingSeconds=secs;
     parsed.durationSeconds=secs;
-    // Cycle and walk are logged on ELAPSED time — the hours count time spent
-    // stopped at lights, not just time moving. When the elapsed screenshot was
-    // supplied AND the model read a field literally labelled "Elapsed Time" off
-    // it, that figure becomes the session duration. End Time, the logged hours
-    // and the journal's "Elapsed Time:" line then all derive from ONE number and
-    // cannot contradict each other. Without the second image nothing changes and
-    // moving time is what gets logged. Noah, 2026-08-20.
-    const _eSecs=elapsedB64?(_parseDurationText(parsed.elapsedText)||0):0;
-    parsed.elapsedSeconds=_eSecs||null;
-    parsed.usedElapsed=!!((activity==='Cycle'||activity==='Walk')&&_eSecs>0);
-    if(parsed.usedElapsed)parsed.durationSeconds=_eSecs;
     parsed.durationMinutes=Math.floor(parsed.durationSeconds/60);
     if(parsed.startTime){
       const total=toMins(parsed.startTime)+parsed.durationMinutes;
@@ -3864,91 +3765,15 @@ function _handleWorkoutBlob(blob){
 // Strava tracks both cycles and walks, so it needs a follow-up question.
 // Runna is running-only, so it goes straight through.
 let _workoutApp=null, _workoutActivity=null;
-// Second screenshot, holding the elapsed-time stat. Only ever collected for a
-// cycle or a walk, and always optional — skipping it falls back to moving time.
-let _workoutElapsedBase64=null, _workoutElapsedMime=null;
 // Second screenshot for a Bungu import: the Bungu Scheduler calendar, read for
 // the blue (shift) chip on the same date as the King of Time screenshot.
-// Skippable via skipBunguScheduleShot() — unlike elapsed, there is no fallback
-// figure, just a journal with no Shift Start/End line.
+// Skippable via skipBunguScheduleShot(): the King of Time clock-in/out stays the
+// source of truth, so skipping only drops the Shift Start/End line.
 let _workoutBunguScheduleBase64=null, _workoutBunguScheduleMime=null;
 
-function _resetElapsedShot(){
-  _workoutElapsedBase64=null; _workoutElapsedMime=null;
-  const pv=document.getElementById('workout-elapsed-preview');
-  if(pv){pv.src='';pv.style.display='none'}
-  const fi=document.getElementById('workout-elapsed-file-input');
-  if(fi)fi.value='';
-  const st=document.getElementById('workout-step-elapsed');
-  if(st)st.style.display='none';
-}
-// Drag-and-drop for the elapsed screenshot. Deliberately a separate set from
-// _wDrop() and friends: those are hardwired to #workout-drop-zone and to
-// _handleWorkoutBlob(), which would overwrite the FIRST image with the elapsed
-// one. Same behaviour, different target.
-function _wElDragEnter(e){
-  e.preventDefault();e.stopPropagation();
-  const dz=document.getElementById('workout-elapsed-drop-zone');
-  if(dz){dz.style.borderColor='var(--o)';dz.style.background='var(--ol)';const l=dz.querySelector('div');if(l)l.textContent='Drop it!'}
-}
-function _wElDragOver(e){e.preventDefault();e.stopPropagation()}
-function _wElDragLeave(e){
-  e.preventDefault();e.stopPropagation();
-  const dz=document.getElementById('workout-elapsed-drop-zone');
-  if(dz){
-    dz.style.borderColor='';dz.style.background='';
-    const l=dz.querySelector('div');
-    if(l)l.textContent='Drop image here';
-  }
-}
-function _wElDrop(e){
-  e.preventDefault();e.stopPropagation();
-  const dz=document.getElementById('workout-elapsed-drop-zone');
-  if(dz){dz.style.borderColor='';dz.style.background=''}
-  const file=[...(e.dataTransfer.files||[])].find(f=>f.type.startsWith('image/'));
-  if(!file){showToast('Please drop an image file','var(--err)');return}
-  _handleWorkoutElapsedBlob(file);
-}
-function handleWorkoutElapsedFile(event){
-  const f=event.target.files[0];
-  if(f)_handleWorkoutElapsedBlob(f);
-}
-function _handleWorkoutElapsedBlob(blob){
-  _workoutElapsedMime='image/jpeg';
-  compressWorkoutImage(blob,function(dataUrl){
-    _workoutElapsedBase64=dataUrl.split(',')[1];
-    const pv=document.getElementById('workout-elapsed-preview');
-    if(pv){pv.src=dataUrl;pv.style.display='block'}
-    document.getElementById('workout-step-elapsed').style.display='none';
-    document.getElementById('workout-source-area').style.display='none';
-    runWorkoutAnalysis();
-  });
-}
-async function pasteWorkoutElapsedImage(){
-  if(navigator.clipboard&&navigator.clipboard.read){
-    try{
-      const items=await navigator.clipboard.read();
-      for(const item of items){
-        const t=item.types.find(x=>x.startsWith('image/'));
-        if(t){_handleWorkoutElapsedBlob(await item.getType(t));return}
-      }
-    }catch(e){}
-  }
-  showToast('Could not read the clipboard — use Choose File','var(--err)');
-}
-// The escape hatch. Says out loud what is being logged, so a missing elapsed
-// screenshot can never quietly turn into a journal that claims elapsed anyway.
-function skipElapsedShot(){
-  _resetElapsedShot();
-  document.getElementById('workout-source-area').style.display='none';
-  showToast('No elapsed screenshot — logging moving time','var(--err)');
-  runWorkoutAnalysis();
-}
-
 // ── Bungu Scheduler screenshot (second image, Bungu import only) ───────────
-// Mirrors the elapsed-time second-image handlers above exactly, targeting the
-// separate #workout-bungu-schedule-* elements so picking one image never
-// overwrites the other.
+// Targets its own #workout-bungu-schedule-* elements with its own handlers,
+// kept separate from the first image's so picking one never overwrites the other.
 function _resetBunguScheduleShot(){
   _workoutBunguScheduleBase64=null; _workoutBunguScheduleMime=null;
   const pv=document.getElementById('workout-bungu-schedule-preview');
@@ -4021,7 +3846,6 @@ function skipBunguScheduleShot(){
 
 function _showWorkoutSourcePicker(dataUrl){
   _workoutApp=null; _workoutActivity=null;
-  _resetElapsedShot();
   _resetBunguScheduleShot();
   const p=document.getElementById('workout-source-preview');
   if(p&&dataUrl)p.src=dataUrl;
@@ -4033,7 +3857,6 @@ function _showWorkoutSourcePicker(dataUrl){
 }
 
 function backToWorkoutUpload(){
-  _resetElapsedShot();
   _resetBunguScheduleShot();
   document.getElementById('workout-source-area').style.display='none';
   document.getElementById('workout-result-area').style.display='none';
@@ -4054,8 +3877,7 @@ function pickWorkoutApp(app){
   }
   if(app==='Preply'){
     // A Preply lesson card states BOTH ends of the lesson itself, so there is no
-    // activity question and no elapsed-time screenshot. Those two steps exist
-    // only because Strava's headline figure is moving time; neither applies here.
+    // activity question — the length is arithmetic, not a reading off a screen.
     _workoutActivity='Lesson';
     document.getElementById('workout-source-area').style.display='none';
     runWorkoutAnalysis();
@@ -4074,11 +3896,11 @@ function pickWorkoutApp(app){
 
 function pickWorkoutActivity(act){
   _workoutActivity=act;
-  // Cycle and walk are logged on elapsed time, so ask for that screenshot before
-  // anything is sent to the model. Skippable — see skipElapsedShot().
-  _resetElapsedShot();
+  // One screenshot is all a cycle or a walk needs: the duration on that first
+  // screen is what gets logged, exactly as it already works for a run.
   document.getElementById('workout-step-activity').style.display='none';
-  document.getElementById('workout-step-elapsed').style.display='block';
+  document.getElementById('workout-source-area').style.display='none';
+  runWorkoutAnalysis();
 }
 async function pasteWorkoutImage(){
   // Try Clipboard API first (works on Mac Chrome/Safari, iOS 16+)
@@ -4123,11 +3945,10 @@ async function runWorkoutAnalysis(){
   let result=null;
   _workoutAnalysing=true;   // see _workoutOverlayClick — the modal is sealed while this is true
   try{
-    // The "second image" slot is elapsed-time for Strava, or the Bungu
-    // Scheduler screenshot for a Bungu import — never both, since the two
-    // imports don't overlap.
-    const _2ndB64=_workoutApp==='Bungu'?_workoutBunguScheduleBase64:_workoutElapsedBase64;
-    const _2ndMime=_workoutApp==='Bungu'?_workoutBunguScheduleMime:_workoutElapsedMime;
+    // The "second image" slot is used ONLY by a Bungu import, for the Bungu
+    // Scheduler calendar. Every other import sends its one screenshot alone.
+    const _2ndB64=_workoutApp==='Bungu'?_workoutBunguScheduleBase64:null;
+    const _2ndMime=_workoutApp==='Bungu'?_workoutBunguScheduleMime:null;
     result=await analyseWorkoutImage(_workoutImageBase64,_workoutImageMime||'image/jpeg',_2ndB64,_2ndMime||'image/jpeg');
   }finally{
     _workoutAnalysing=false;
@@ -4166,15 +3987,7 @@ function showWorkoutSummary(result){
         (result.dateSource==='title'? ' <span style="color:var(--text3);font-size:11px">(from your title'+(result.dateFromTimestamp?', not "'+escHtml(_ordinalDate(result.dateFromTimestamp))+'"':'')+')</span>': result.dateSource==='relative'? ' <span style="color:var(--o);font-size:11px">(screenshot only said &ldquo;yesterday&rdquo; — check this)</span>': ' <span style="color:var(--text3);font-size:11px">(dated on the screenshot)</span>')+
         '</span></div>'+
       '<div class="workout-summary-row"><span>'+escHtml(activityLabel)+'</span></div>'+
-      '<div class="workout-summary-row"><span>'+escHtml(timeStr)+'</span></div>'+
-      // Which clock this session is being logged on. Stated every time for a
-      // cycle or walk, so a missing elapsed screenshot is visible here rather
-      // than discovered later in the journal.
-      ((result.activity==='Cycle'||result.activity==='Walk')
-        ? (result.usedElapsed
-            ? '<div class="workout-summary-row"><span style="color:var(--text3);font-size:11px">Elapsed time'+(result.elapsedText?' '+escHtml(result.elapsedText):'')+' — logged instead of the '+escHtml(_fmtHoursMins(Math.floor((result.movingSeconds||0)/60),false))+' moving time</span></div>'
-            : '<div class="workout-summary-row"><span style="color:var(--err);font-size:11px">Moving time — no elapsed screenshot was read</span></div>')
-        : '');
+      '<div class="workout-summary-row"><span>'+escHtml(timeStr)+'</span></div>';
   }
   // A manual entry has no times off a screenshot. Ask for them here rather than
   // later in the log form, so the journal, the log times and the pre-run stretch
@@ -4254,7 +4067,7 @@ function showPreplySummary(result){
 // The Bungu confirmation screen. States the actual KOT clock-in/out (the
 // figures the session is logged on) and, separately, whether a scheduled
 // shift was found \u2014 so a missing schedule is visible here, before anything is
-// logged, exactly like the missing-elapsed-screenshot state for a workout.
+// logged rather than discovered later in the journal.
 function showBunguSummary(result){
   const dateLabel=result.date?((_weekdayName(result.date)?_weekdayName(result.date)+' ':'')+_ordinalDate(result.date)+' '+_journalYear(result.date)):'Unknown date';
   const mins=Math.max(0,result.durationMinutes||0);
@@ -4541,7 +4354,6 @@ function _fillBunguLogForm(result){
   _pendingJournalMeta={
     activity:'Shift', app:'Bungu',
     durationSeconds:(result.durationSeconds||0), model:result.model||null,
-    usedElapsed:false, movingSeconds:(result.durationSeconds||0),
     // Carried so re-opening this session's form from History can rebuild the
     // exact same journal text, same purpose as journalMeta.preply.
     bungu:true, clockIn:result.clockIn||null, clockOut:result.clockOut||null,
@@ -4578,7 +4390,6 @@ function _fillPreplyLogForm(result){
     activity:'Lesson', app:'Preply', teacher:result.teacher||null,
     // The LESSON's length, matching the card — not the logged total.
     durationSeconds:lessonMins*60, model:result.model||null,
-    usedElapsed:false, movingSeconds:lessonMins*60,
     // Re-opening this session's form from History rebuilds PREPLY_REVIEW_LINE
     // off this flag. Without it the line would silently vanish on a re-open.
     preply:true, reviewMins:PREPLY_REVIEW_MINS
@@ -4632,11 +4443,7 @@ function _fillRunLogForm(result,cycleNum){
   // any more, so nothing else is stored.
   _pendingJournalMeta={
     activity:result.activity, app:result.app,
-    durationSeconds:result.durationSeconds||0, model:result.model||null,
-    // Which clock this session was logged on, and what the other figure was.
-    // Kept so a re-opened form states the same basis as the original, and so a
-    // backup records how each cycle/walk was counted.
-    usedElapsed:!!result.usedElapsed, movingSeconds:result.movingSeconds||0
+    durationSeconds:result.durationSeconds||0, model:result.model||null
   };
 
   closeModal('workout-import-overlay');
@@ -8003,7 +7810,7 @@ function _doLogSession(){
   // Auto-open the subject's Google Form after logging. Since the Journal Content
   // box was merged into Notes on 2026-08-19 there is only one field, so `notes`
   // IS the submission text. _buildSubjectFormUrl() adds the journal-writing line.
-  if(_SUBJECT_FORMS[subjectId]) _openSubjectForm(subjectId,date,start,end,notes,_newId,!!(_rec.journalMeta&&_rec.journalMeta.usedElapsed),!!(_rec.journalMeta&&_rec.journalMeta.preply));
+  if(_SUBJECT_FORMS[subjectId]) _openSubjectForm(subjectId,date,start,end,notes,_newId,!!(_rec.journalMeta&&_rec.journalMeta.preply));
   // After a PE *run*, offer to pre-fill the post-run stretches (shows behind the
   // form card above, so it's revealed once that's dismissed — i.e. after the form)
   _maybeOfferStretches(subjectId,date,start,end,notes);
