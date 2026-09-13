@@ -733,6 +733,7 @@ a{color:inherit;text-decoration:none}
 .jr-flag-prio{background:rgba(245,158,11,0.18);color:#f59e0b}
 .jr-flag-over{background:rgba(239,68,68,0.16);color:var(--err)}
 .jr-flag-noform{background:rgba(148,163,184,0.2);color:var(--text3)}
+.jr-flag-open{background:rgba(34,197,94,0.16);color:var(--ok)}
 .jr-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .jr-btn{background:none;border:1px solid var(--border);border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit}
 .jr-btn-fill{border-color:var(--o);color:var(--o)}
@@ -1655,7 +1656,8 @@ button:active{transform:scale(0.96)}
         </div>
       </div>
     </div>
-    <div class="duration-display" id="jr-duration" style="margin:10px 0 14px"></div>
+    <div class="duration-display" id="jr-duration" style="margin:10px 0 4px"></div>
+    <div style="font-size:11px;color:var(--text3);line-height:1.45;margin-bottom:14px">Still studying? Save it with just a Start time &mdash; it shows as <strong>In progress</strong> until you come back and fill the End in.</div>
     <div id="jr-dayload" style="display:none;margin-bottom:14px"></div>
     <div class="jr-warn" id="jr-form-warn">
       <span id="jr-form-warn-text" style="flex:1;min-width:0"></span>
@@ -8352,6 +8354,18 @@ function _journalMins(j){
   return m;
 }
 
+// An OPEN SESSION: a start time recorded with no end yet, i.e. work Noah began
+// and has not finished. This is a deliberate state, not a half-filled form - the
+// journal form has always allowed saving a start without an end (its end-after-
+// start check only fires when BOTH are present), but nothing named or surfaced
+// it, so the only way to record "I started at 13:00" mid-session was to wait
+// until you stopped. Noah, 2026-09-13.
+//
+// Kept separate from "no time set at all": an open session is in progress, an
+// untimed journal is simply undated work. Folding them together would have the
+// page report a session you are actively in as something you forgot to fill in.
+function _journalOpenSession(j){ return !!(j&&j.start&&!j.end); }
+
 // The Journals page headline: how many hours of work are done but not yet
 // logged or submitted. OPEN entries only - a Completed one has already been
 // submitted, so counting it would overstate what is actually outstanding.
@@ -8360,17 +8374,24 @@ function _journalMins(j){
 // that quietly understates the backlog is worse than no total at all.
 function _journalPendingHtml(open){
   if(!open||!open.length)return '';
-  let mins=0,timed=0,untimed=0;
+  let mins=0,timed=0,untimed=0,openNow=0;
   open.forEach(function(j){
+    if(_journalOpenSession(j)){openNow++;return}   // in progress - not a gap to fill
     const m=_journalMins(j);
     if(m===null){untimed++;return}
     mins+=m;timed++;
   });
+  const openTxt=openNow?(openNow+' in progress'):'';
   if(!timed){
+    const parts=[];
+    if(openNow)parts.push(openTxt);
+    if(untimed)parts.push(untimed+' with no time set');
     return '<div class="jr-pending"><span class="jr-pending-sub">'+
-      untimed+' journal'+(untimed===1?'':'s')+' pending, none with a time set yet</span></div>';
+      open.length+' journal'+(open.length===1?'':'s')+' pending'+
+      (parts.length?' &middot; '+parts.join(' &middot; '):'')+'</span></div>';
   }
   let sub=timed+' journal'+(timed===1?'':'s');
+  if(openNow)sub+=' &middot; '+openTxt;
   if(untimed)sub+=' &middot; '+untimed+' with no time set';
   return '<div class="jr-pending">'+
     '<span class="jr-pending-h">'+fmtH(mins/60)+'</span> pending to submit'+
@@ -8409,12 +8430,13 @@ function _journalCard(j){
   const flags=
     (j.priority&&!j.done?'<span class="jr-flag jr-flag-prio">Priority</span>':'')+
     (over?'<span class="jr-flag jr-flag-over">'+_journalAgeDays(j.date)+' days old</span>':'')+
-    (j.subjectId&&!_journalHasForm(j.subjectId)?'<span class="jr-flag jr-flag-noform">No form linked</span>':'');
+    (j.subjectId&&!_journalHasForm(j.subjectId)?'<span class="jr-flag jr-flag-noform">No form linked</span>':'')+
+    (_journalOpenSession(j)&&!j.done?'<span class="jr-flag jr-flag-open">In progress</span>':'');
   const bits=[];
   if(j.subjectId)bits.push(escHtml(_journalSubjName(j.subjectId)));
   if(j.date)bits.push(_ordinalDate(j.date));
   if(j.start&&j.end)bits.push(j.start+'-'+j.end);
-  else if(j.start)bits.push('from '+j.start);
+  else if(j.start)bits.push('started '+j.start+' &middot; no end time yet');
   const jmins=_journalMins(j);
   if(jmins!==null)bits.push('<span class="jr-meta-dur">'+fmtH(jmins/60)+'</span>');
   return '<div class="jr-card'+(j.priority&&!j.done?' jr-prio':'')+(j.done?' jr-done':'')+'">'+
@@ -8802,14 +8824,17 @@ function renderJournalsBacklog(){
     host.innerHTML=h;
     return;
   }
+  const _openNow=open.filter(_journalOpenSession).length;
   h+='<div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.4">'+
-      open.length+' outstanding. Priority and oldest first.</div>';
+      open.length+' outstanding'+(_openNow?(' &middot; '+_openNow+' in progress'):'')+
+      '. Priority and oldest first.</div>';
   open.slice(0,5).forEach(function(j){
     const meta=[j.subjectId?_journalSubjName(j.subjectId):'', j.date?_ordinalDate(j.date):''].filter(Boolean).join(' · ');
     h+='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--border)">'+
       '<div style="min-width:0;flex:1">'+
         '<div style="font-size:13px;color:var(--text);font-weight:600;line-height:1.35;word-break:break-word">'+
           (j.priority?'<span class="jr-flag jr-flag-prio">Priority</span>':'')+
+          (_journalOpenSession(j)?'<span class="jr-flag jr-flag-open">In progress</span>':'')+
           (_journalOverdue(j)?'<span class="jr-flag jr-flag-over">'+_journalAgeDays(j.date)+'d</span>':'')+
           escHtml(j.title||'(no title yet)')+'</div>'+
         (meta?'<div style="font-size:11px;color:var(--text3);margin-top:3px">'+escHtml(meta)+'</div>':'')+
