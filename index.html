@@ -722,6 +722,8 @@ a{color:inherit;text-decoration:none}
 .jr-pending{display:inline-block;background:var(--bg2);border:1px solid var(--o);border-radius:12px;padding:9px 15px;margin:0 0 14px;font-size:13px;color:var(--text);line-height:1.45}
 .jr-pending-h{font-weight:800;font-size:15px}
 .jr-pending-sub{color:var(--text2)}
+.open-sess-banner{display:none;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.45);border-radius:12px;padding:11px 14px;margin-bottom:12px;font-size:13px;color:var(--text);cursor:pointer;align-items:center;gap:9px;line-height:1.45}
+.open-sess-banner.show{display:flex}
 .jr-card.jr-prio{border-color:rgba(245,158,11,0.5)}
 .jr-card.jr-done{opacity:0.55}
 .jr-title{font-size:14px;font-weight:800;color:var(--text);line-height:1.35;word-break:break-word}
@@ -1133,6 +1135,12 @@ button:active{transform:scale(0.96)}
     <!-- PAGE: LOG -->
     <div class="page active" id="page-log">
       <div id="class-log-prompts"></div>
+      <!-- An open study session (start logged, no end yet) follows Noah onto the
+           Log page, because that is where he lands when work finishes and is the
+           moment the end time is actually known. Tapping it opens that journal.
+           Journals page and Dashboard carry the same state; Noah chose these
+           three surfaces and deliberately NOT an app-wide banner. -->
+      <div class="open-sess-banner" id="open-sess-banner" onclick="openOldestOpenSession()"></div>
       <div class="forms-pending-banner" id="forms-pending-banner" onclick="openFormsPending()"></div>
       <!-- Shown after a Preply lesson import and DELIBERATELY left up through Log
            Session: the proof is attached on the Google Form, which only opens once
@@ -1227,7 +1235,7 @@ button:active{transform:scale(0.96)}
           <h2 style="font-size:22px;font-weight:800;letter-spacing:-0.5px;color:var(--text)">Journals</h2>
           <p style="font-size:12px;color:var(--text3);margin-top:4px;line-height:1.5;max-width:420px">Work you have already done but have not logged or submitted yet. Fill Log sends one straight to the Log page.</p>
         </div>
-        <button class="jr-btn jr-btn-fill" onclick="openJournalModal()" style="flex-shrink:0">+ New Journal</button>
+        <button class="jr-btn jr-btn-fill" onclick="openJournalStartChoice()" style="flex-shrink:0">+ New Journal</button>
       </div>
       <div id="journals-pending"></div>
       <div id="journals-open"></div>
@@ -1609,6 +1617,53 @@ button:active{transform:scale(0.96)}
     <div class="modal-actions">
       <button class="btn-save" onclick="saveSwLog()">Queue Journal</button>
       <button class="btn-cancel" onclick="closeModal('sw-log-overlay')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- STARTING OR FINISHED? -->
+<div class="modal-overlay" id="jr-start-choice-overlay" onclick="handleOverlayClick(event,'jr-start-choice-overlay')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Have you finished studying?</div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:16px">If you are still going, record the start now and come back for the end time. Nothing is lost either way.</div>
+    <div class="modal-actions">
+      <button class="btn-save" onclick="chooseJournalFinished()">Yes &mdash; finished, log it all</button>
+      <button class="btn-cancel" onclick="chooseJournalStarting()">Not yet &mdash; just starting</button>
+    </div>
+  </div>
+</div>
+
+<!-- STILL STUDYING: minimal open-session form -->
+<div class="modal-overlay" id="jr-open-overlay" onclick="handleOverlayClick(event,'jr-open-overlay')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Starting a session</div>
+    <div style="font-size:12px;color:var(--text3);line-height:1.5;margin:-6px 0 16px">Just enough to not lose the start time. You fill the rest in when you stop.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Subject</label>
+        <select class="form-input" id="jro-subject"></select>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Start</label>
+        <input type="hidden" id="jro-start">
+        <div class="time-split-input">
+          <input class="tsplit-hh" id="jro-start-hh" type="text" inputmode="numeric" maxlength="2" placeholder="13" autocomplete="off" oninput="timeSplitInput('jro-start','jro-start-hh','jro-start-mm')">
+          <span class="tsplit-sep">:</span>
+          <input class="tsplit-mm" id="jro-start-mm" type="text" inputmode="numeric" maxlength="2" placeholder="00" autocomplete="off" oninput="timeSplitInput('jro-start','jro-start-mm',null)" onkeydown="timeSplitBack(event,'jro-start-hh')">
+        </div>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">Title</label>
+      <input type="text" class="form-input" id="jro-title" placeholder="e.g. Ginger Shot Document">
+      <div style="font-size:11px;color:var(--text3);margin-top:5px;line-height:1.45">Keep it short &mdash; you can expand it later when you add the end time.</div>
+    </div>
+    <input type="hidden" id="jro-date">
+    <div class="modal-actions">
+      <button class="btn-save" onclick="saveOpenSession()">Start session</button>
+      <button class="btn-cancel" onclick="closeModal('jr-open-overlay')">Cancel</button>
     </div>
   </div>
 </div>
@@ -6014,6 +6069,7 @@ function renderLog(){
   _logDayLoad();
   renderLogEntries();
   updateLogFormColour();
+  if(typeof renderOpenSessionBanner==='function')renderOpenSessionBanner();
 }
 
 // ── Log form colour accent ────────────────────────────────────────────────────
@@ -8268,6 +8324,94 @@ function saveSwLog(){
   showToast('Journal queued on the Journals page','var(--ok)');
 }
 
+// == STARTING A SESSION ======================================================
+// "+ New Journal" asks first: finished, or just starting? Finished goes to the
+// full form as before. Just starting opens a three-field form whose whole job is
+// not losing the start time - subject, start, short title - and saves it as an
+// open session (see _journalOpenSession). Noah, 2026-09-13.
+//
+// Date pre-fills to today; Start is left BLANK on purpose, at Noah's request -
+// he may be recording a session that began earlier, and a pre-stamped "now"
+// would quietly become the recorded start if he did not notice it.
+
+// The entry point the "+ New Journal" button now calls.
+function openJournalStartChoice(){
+  document.getElementById('jr-start-choice-overlay').classList.add('open');
+}
+function chooseJournalFinished(){
+  closeModal('jr-start-choice-overlay');
+  openJournalModal();
+}
+function chooseJournalStarting(){
+  closeModal('jr-start-choice-overlay');
+  openOpenSessionModal();
+}
+
+function openOpenSessionModal(){
+  // Same availability rule as the full journal modal, so a session can never be
+  // started against a subject the Log page would refuse.
+  const avail=loadSubjects().filter(function(s){return !s.done&&getLogged(s.id)<s.req});
+  const sel=document.getElementById('jro-subject');
+  sel.innerHTML='<option value="">- Select -</option>'+
+    avail.map(function(s){return '<option value="'+s.id+'">'+escHtml(s.name)+'</option>'}).join('');
+  sel.value='';
+  document.getElementById('jro-title').value='';
+  setLogTime('jro-start','');
+  document.getElementById('jro-date').value=todayStr();
+  document.getElementById('jr-open-overlay').classList.add('open');
+}
+
+function saveOpenSession(){
+  const subjectId=document.getElementById('jro-subject').value;
+  const start=document.getElementById('jro-start').value;
+  const title=document.getElementById('jro-title').value.trim();
+  const date=document.getElementById('jro-date').value||todayStr();
+  if(!start){showToast('Add the time you started.','var(--err)');return}
+  if(!subjectId&&!title){showToast('Pick a subject or give it a title.','var(--err)');return}
+  const now=new Date().toISOString();
+  const list=loadJournals();
+  list.push({id:genId(),title:title,desc:'',date:date,subjectId:subjectId,
+    start:start,end:'',proof:'',priority:false,
+    done:false,completedBy:null,completedAt:null,createdAt:now,updatedAt:now});
+  saveJournals(list);
+  closeModal('jr-open-overlay');
+  if(typeof renderJournals==='function')renderJournals();
+  if(typeof renderJournalsBacklog==='function')renderJournalsBacklog();
+  if(typeof _updateJournalsBadge==='function')_updateJournalsBadge();
+  if(typeof renderOpenSessionBanner==='function')renderOpenSessionBanner();
+  showToast('Session started - add the end time when you stop','var(--ok)');
+}
+
+// The Log page banner. Not app-wide by Noah's choice: Journals, Dashboard and
+// Log are the three surfaces, and Log is where he lands when work finishes,
+// which is exactly when the end time becomes knowable.
+function _oldestOpenSession(){
+  const open=loadJournals().filter(function(j){return !j.done&&_journalOpenSession(j)});
+  if(!open.length)return null;
+  return open.slice().sort(function(a,b){
+    return ((a.date||'')+(a.start||'')).localeCompare((b.date||'')+(b.start||''));
+  })[0];
+}
+function renderOpenSessionBanner(){
+  const el=document.getElementById('open-sess-banner');
+  if(!el)return;
+  const open=loadJournals().filter(function(j){return !j.done&&_journalOpenSession(j)});
+  if(!open.length){el.classList.remove('show');return}
+  const j=_oldestOpenSession();
+  const who=j.subjectId?_journalSubjName(j.subjectId):(j.title||'A session');
+  const more=open.length>1?(' &middot; +'+(open.length-1)+' more'):'';
+  el.innerHTML='<span style="flex:1;min-width:0"><strong>Still studying '+escHtml(who)+'</strong> &mdash; started '+
+    escHtml(j.start||'')+(j.date&&j.date!==todayStr()?(' on '+escHtml(_ordinalDate(j.date))):'')+
+    '. Add your end time.'+more+'</span>';
+  el.classList.add('show');
+}
+function openOldestOpenSession(){
+  const j=_oldestOpenSession();
+  if(!j)return;
+  showPage('journals');
+  openJournalModal(j.id);
+}
+
 // == JOURNALS ================================================================
 // A backlog of work Noah has actually done but has not logged in StudyTrack or
 // submitted a Google Form for. Deliberately SEPARATE from the form tracker
@@ -8566,6 +8710,7 @@ function saveJournalEntry(){
   if(_jrFromLog){ _jrFromLog=false; if(typeof clearLogForm==='function')clearLogForm(); }
   renderJournals();
   if(typeof renderJournalsBacklog==='function')renderJournalsBacklog();
+  if(typeof renderOpenSessionBanner==='function')renderOpenSessionBanner();
   showToast('Journal saved','var(--ok)');
 }
 
