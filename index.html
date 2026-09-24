@@ -3375,6 +3375,66 @@ function runMigrations(){
     }catch(e){console.warn('[Migration v19] Error:',e)}
     if(v19done)localStorage.setItem('st_migration_v19_pe_base_drift_sep09_2026','1');
   }
+  // ── Migration v20: Civics & Lab Science base corrected to 2026-09-24 teacher report ──
+  // Same class of bug as v19 (PE): base was set from a session list that had not
+  // finished merging in from another device, so it is carrying stale/incomplete
+  // session data. The 2026-09-24 teacher report shows civics at 2:06 (2.1h) and
+  // lab_sci at 2:18 (2.3h) — IDENTICAL to the 2026-08-06 report used by v15,
+  // meaning no new work has been logged in either subject since then. That lets
+  // us solve directly for the correct base from today's full (undated) session
+  // sum: civics base should be 2.1 - 1.1333 = 0.9667 (currently 1.55, +0.58h too
+  // high); lab_sci base should be 2.3 - 2.25 = 0.05 (currently 0.3, +0.25h too
+  // high). Both numbers were already flagged as suspicious-but-unconfirmed in
+  // the 2026-09-08 PE drift audit; this report is the confirmation.
+  // INTEGRITY GUARD: same pattern as v19 — refuses to write, and refuses to set
+  // its own flag, while either subject's local session sum is BELOW the value
+  // measured when this was written. That is the "list not merged yet" state
+  // that caused the original bug. It retries on the next load instead. A new
+  // session logged later only raises the sum, so it cannot false-block.
+  if(!localStorage.getItem('st_migration_v20_civics_labsci_fix_sep24_2026')&&_baseMigrationsAllowed()){
+    let v20done=true;
+    try{
+      const raw=localStorage.getItem('st_subjs');
+      if(raw){
+        const subjs=JSON.parse(raw);
+        const sessions=JSON.parse(localStorage.getItem('st_sessions')||'[]');
+        const REPORT_DATE='2026-09-24';
+        const FIXES={
+          civics:{confirmedTotal:2.1,expectedSessionH:1.1333},
+          lab_sci:{confirmedTotal:2.3,expectedSessionH:2.25}
+        };
+        let changed=false;
+        Object.keys(FIXES).forEach(id=>{
+          const s=subjs.find(x=>x.id===id);
+          if(!s)return;
+          const {confirmedTotal,expectedSessionH}=FIXES[id];
+          const sessionH=sessions
+            .filter(x=>x.subjectId===id&&(!x.date||x.date<=REPORT_DATE))
+            .reduce((a,x)=>a+(x.hours||0),0);
+          if(sessionH<expectedSessionH-0.01){
+            console.warn('[Migration v20] '+id+' session history looks incomplete ('+
+              sessionH.toFixed(4)+'h, expected at least '+expectedSessionH+
+              'h). NOT writing base and NOT setting the flag - will retry next load.');
+            v20done=false;
+            return;
+          }
+          const newBase=Math.max(0,parseFloat((confirmedTotal-sessionH).toFixed(4)));
+          if(Math.abs((s.base||0)-newBase)>0.01){
+            s.base=newBase;
+            changed=true;
+            console.log('[Migration v20] '+id+' base corrected to '+newBase+'h (was '+
+              'carrying a stale session sum)');
+          }
+        });
+        if(changed){
+          localStorage.setItem('st_subjs',JSON.stringify(subjs));
+          localStorage.setItem('st_subjs_updated_at',new Date().toISOString());
+          sbPush('st_subjs',subjs,{silent:true});
+        }
+      }
+    }catch(e){console.warn('[Migration v20] Error:',e);v20done=false}
+    if(v20done)localStorage.setItem('st_migration_v20_civics_labsci_fix_sep24_2026','1');
+  }
   if(!localStorage.getItem('st_migration_v7')){
     try{
       const raw=localStorage.getItem('st_sched');
