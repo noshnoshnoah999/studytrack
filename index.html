@@ -365,6 +365,8 @@ a{color:inherit;text-decoration:none}
 .morning-stretch-banner.show{display:flex}
 .morning-stretch-banner-text{flex:1;min-width:200px;line-height:1.4}
 .morning-stretch-banner-btn{background:var(--o);color:var(--bg);border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit}
+.ka-proof-banner{display:none;background:rgba(245,158,11,0.14);border:1px solid rgba(245,158,11,0.4);border-radius:12px;padding:12px 16px;margin:0 0 14px 0;font-size:13px;color:var(--text);line-height:1.45}
+.ka-proof-banner.show{display:block}
 /* Contract banners. Deliberately heavier than the amber nudge banners above:
    these do not go away on their own and are not meant to be easy to ignore. */
 .contract-banner{background:rgba(239,68,68,0.10);border:2px solid rgba(239,68,68,0.45);border-radius:12px;padding:14px 16px;margin:0 0 12px 0;font-size:13px;color:var(--text)}
@@ -1168,10 +1170,11 @@ button:active{transform:scale(0.96)}
             <button class="btn-import-workout" onclick="openWorkoutImport()"> Import</button>
           </div>
         </div>
+        <div class="ka-proof-banner" id="ka-proof-banner-log"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
           <div class="form-group" style="margin-bottom:0">
             <label class="form-label">Subject</label>
-            <select class="form-input" id="log-subject" onchange="updateLogFormColour();dismissDupWarn();updateJournalLenWarn()"></select>
+            <select class="form-input" id="log-subject" onchange="updateLogFormColour();dismissDupWarn();updateJournalLenWarn();updateKaProofBanner()"></select>
           </div>
           <div class="form-group" style="margin-bottom:0">
             <label class="form-label">Date</label>
@@ -1683,10 +1686,11 @@ button:active{transform:scale(0.96)}
       <textarea class="form-input" id="jr-desc" placeholder="What this was, what proof you still need, anything you want to remember when you come back to it."></textarea>
       <div style="font-size:11px;color:var(--text3);margin-top:5px;line-height:1.45">For you only. Never sent to the Log page or the form.</div>
     </div>
+    <div class="ka-proof-banner" id="ka-proof-banner-jr" style="margin-bottom:14px"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
       <div class="form-group" style="margin-bottom:0">
         <label class="form-label">Subject</label>
-        <select class="form-input" id="jr-subject" onchange="_jrCheckForm()"></select>
+        <select class="form-input" id="jr-subject" onchange="_jrCheckForm();updateKaProofBanner('jr-subject','ka-proof-banner-jr')"></select>
       </div>
       <div class="form-group" style="margin-bottom:0">
         <label class="form-label">Day Studied</label>
@@ -2338,6 +2342,36 @@ function _buildSubjectFormUrl(subjectId,date,start,end,notes,preply){
   return url;
 }
 
+// ── Khan Academy screenshot-proof banner ────────────────────────────────────
+// Coach Mori once flagged a genuine Khan Academy screenshot as AI-generated.
+// For the subjects actually studied via Khan Academy (the three maths courses
+// plus Science), every Log/Journal/Edit-Session form shows a standing reminder
+// to capture the FULL screen — including the Chrome address bar — as proof the
+// lesson was really opened in the browser, not AI-generated. Always visible
+// while one of these subjects is selected; no dismiss, because it must show
+// every time, not just once per form-open. Noah's request, 2026-09-27.
+const KA_PROOF_SUBJECTS=['algebra1','geometry','algebra2','science'];
+const KA_PROOF_TEXT='If this is from a Khan Academy lesson: when you take the screenshot, capture the <strong>whole screen</strong>, including the Chrome address bar, as proof the lesson was actually opened in the browser and not AI-generated. (Coach Mori previously flagged a genuine Khan Academy screenshot as AI-generated.)';
+function _isKaProofSubject(id){return KA_PROOF_SUBJECTS.includes(id)}
+// selectId: the <select> holding the subject. bannerId: the banner div to show/hide.
+// Defaults to the Log page's own select/banner so the existing
+// onchange="...;updateKaProofBanner()" call on #log-subject needs no args.
+// Called on every subject onchange AND after any code sets that select's value
+// directly (openJournalModal, openEditSession, renderLog, fillLogFromJournal) —
+// see each call site for why a plain onchange is not enough.
+function updateKaProofBanner(selectId,bannerId){
+  selectId=selectId||'log-subject';
+  bannerId=bannerId||'ka-proof-banner-log';
+  const sel=document.getElementById(selectId);
+  const banner=document.getElementById(bannerId);
+  if(!sel||!banner)return;
+  if(_isKaProofSubject(sel.value)){
+    banner.innerHTML=KA_PROOF_TEXT;
+    banner.classList.add('show');
+  } else {
+    banner.classList.remove('show');
+  }
+}
 // Live length readout under the Journal Content/What You Studied box on the Log
 // page. Warn only — never blocks logging. A half-submitted journal is worse than
 // a long one, so this tells Noah to paste manually rather than silently truncating.
@@ -6129,6 +6163,7 @@ function renderLog(){
   _logDayLoad();
   renderLogEntries();
   updateLogFormColour();
+  updateKaProofBanner();
   if(typeof renderOpenSessionBanner==='function')renderOpenSessionBanner();
 }
 
@@ -6150,7 +6185,7 @@ function updateLogFormColour(){
 function autofillFromBlock(subjectId,start,end){
   hidePreplyProofBanner();
   const sel=document.getElementById('log-subject');
-  if(sel){sel.value=subjectId;updateLogFormColour()}
+  if(sel){sel.value=subjectId;updateLogFormColour();updateKaProofBanner()}
   setLogTime('log-start',start);
   setLogTime('log-end',end);
   setLogDateAuto(todayStr());
@@ -6741,6 +6776,7 @@ function openEditSession(id){
   // Notes
   document.getElementById('es-notes').value=s.notes||'';
 
+  updateKaProofBanner('es-subject','ka-proof-banner-es');
   _esCalcDur();
   document.getElementById('edit-session-overlay').classList.add('open');
 }
@@ -8690,6 +8726,7 @@ function openJournalModal(editId){
                             // so reopening the box can never hide the warning
                             // for a subject that still has no form.
   _jrCheckForm();
+  updateKaProofBanner('jr-subject','ka-proof-banner-jr');
   _jrDayLoad();
   updateJrDuration();
   _jrSnapshot=_jrCurrentValues();   // baseline for the close-guard below - captured after every field is set
@@ -8861,6 +8898,7 @@ function fillLogFromJournal(id){
     }
   }
   if(typeof updateLogFormColour==='function')updateLogFormColour();
+  updateKaProofBanner();
   // Set the date DIRECTLY, not via setLogDateAuto(). setLogDateAuto moves the
   // _logDateAuto sentinel, which tells renderLog() the date was auto-filled and
   // may be reset to today - and a journal's Day Studied is often weeks old.
@@ -8938,6 +8976,7 @@ function transferLogToJournal(){
   // before discarding them.
   _jrFromLog=true;
   _jrCheckForm();
+  updateKaProofBanner('jr-subject','ka-proof-banner-jr');
   _jrDayLoad();
   updateJrDuration();
   const dsc=document.getElementById('jr-desc'); if(dsc)dsc.focus();
@@ -13134,9 +13173,10 @@ function renderAIPage(){
   <div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
     <div class="modal-title">Edit Session</div>
+    <div class="ka-proof-banner" id="ka-proof-banner-es" style="margin-bottom:14px"></div>
     <div class="form-group">
       <label class="form-label">Subject</label>
-      <select class="form-input" id="es-subject"></select>
+      <select class="form-input" id="es-subject" onchange="updateKaProofBanner('es-subject','ka-proof-banner-es')"></select>
     </div>
     <div class="form-group">
       <label class="form-label">Date</label>
