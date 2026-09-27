@@ -1418,7 +1418,7 @@ button:active{transform:scale(0.96)}
     <div class="form-group" style="margin-bottom:14px">
       <label class="form-label">Teacher's target <span style="font-weight:400;color:var(--text3)">(computed &mdash; not editable)</span></label>
       <input type="text" class="form-input" id="goal-teacher-target" readonly style="background:var(--bg3);color:var(--text2);cursor:not-allowed">
-      <div style="font-size:11px;color:var(--text3);margin-top:5px;line-height:1.45">Remaining hours &divide; study days left until the 3rd Graduation Guidance (20 Sep 2027), at 5 days/week. Recalculates on every render so it cannot go stale. Teacher quoted 7h12m off the 31 Jul 2026 report.</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:5px;line-height:1.45">(Remaining hours &minus; 150h) &divide; study days left until the 1st Graduation Guidance (20 Jul 2027), at 5 days/week &mdash; you must have &le;150h left on that date. Recalculates on every render so it cannot go stale. Teacher quoted 8h/day (Sep 2026).</div>
     </div>
     <!-- Recommended goal card -->
     <div id="goal-rec-card" style="background:var(--bg3);border-radius:10px;padding:12px 14px;margin-bottom:14px;border:1.5px solid var(--o);display:none">
@@ -5110,11 +5110,12 @@ function renderDashboard(){
   const heroBar=document.querySelector('.dash-hero-bar-fill');
 
   // Pace strip — minimum / teacher target / my goal
-  const deadline=new Date(WORK_DEADLINE);
+  const deadline=new Date(FIRST_GUIDANCE_DEADLINE);
   const daysLeft=Math.max(1,(deadline-now)/(1000*60*60*24));
   const studyDaysLeft=Math.max(1,daysLeft/7*(goals.daysPerWeek||5));
-  const minRequired=Math.max(0,remaining/studyDaysLeft);
-  const teacherRate=goals.teacherTarget||6.3;
+  const minRequired=_hoursToCheckpoint(remaining)/studyDaysLeft;
+  // Live value, not the persisted goals.teacherTarget snapshot, which goes stale.
+  const teacherRate=teacherDaily();
   const paceStripEl=document.getElementById('dash-pace-strip');
   if(paceStripEl){
     const chip=(label,val,col)=>
@@ -9852,29 +9853,40 @@ function _gradSharedVars(){
     estDate=new Date(now);estDate.setDate(now.getDate()+Math.round(weeksLeft*7));
     estDateStr=MONTHS[estDate.getMonth()]+' '+estDate.getFullYear();
   }
-  const targetDate=new Date(WORK_DEADLINE);
-  const diffDays=estDate?Math.round((targetDate-estDate)/(1000*60*60*24)):null;
-  const ahead=diffDays!==null&&diffDays>0;
-  // Pace actually required to clear the remaining hours by the deadline (dynamic).
-  // Using the static teacher standard here contradicted the on-track check when behind.
+  // targetDate is the 1st Graduation Guidance checkpoint (<=150h left by Jul 20).
+  // estDate above is still the projected FULL finish (0h) - used by the PDF report
+  // and the coach. The on-track verdict uses checkpointEstDate: when remaining
+  // falls to 150h at the current pace.
+  const targetDate=new Date(FIRST_GUIDANCE_DEADLINE);
+  const toClear=_hoursToCheckpoint(remaining);
+  let checkpointEstDate=null,checkpointEstStr='—';
+  if(pace>0){
+    checkpointEstDate=new Date(now);checkpointEstDate.setDate(now.getDate()+Math.round(toClear/pace*7));
+    checkpointEstStr=MONTHS[checkpointEstDate.getMonth()]+' '+checkpointEstDate.getFullYear();
+  }
+  const diffDays=checkpointEstDate?Math.round((targetDate-checkpointEstDate)/(1000*60*60*24)):null;
+  const ahead=diffDays!==null&&diffDays>=0;
+  // Pace actually required to reach <=150h left by the checkpoint (dynamic).
   const weeksToDeadline=Math.max(0,(targetDate-now)/(1000*60*60*24*7));
-  const neededPace=weeksToDeadline>0.1?remaining/weeksToDeadline:remaining;
+  const neededPace=weeksToDeadline>0.1?toClear/weeksToDeadline:toClear;
   const totalBase=subjs.reduce((a,s)=>a+(s.base||0),0);
   const basePct=TOTAL_REQ>0?Math.min(100,totalBase/TOTAL_REQ*100):0;
   const startDate=new Date('2025-09-01T12:00:00');
   const totalDays=Math.max(1,(targetDate-startDate)/(1000*60*60*24));
   const daysElapsed=Math.max(0,(now-startDate)/(1000*60*60*24));
   const progress=Math.min(1,daysElapsed/totalDays);
-  const expectedPct=Math.min(100,basePct+progress*(100-basePct));
+  // At the checkpoint the expected completion is (TOTAL_REQ-150)/TOTAL_REQ, not 100%.
+  const checkpointPct=TOTAL_REQ>0?Math.max(0,(TOTAL_REQ-FIRST_GUIDANCE_FLOOR_H)/TOTAL_REQ*100):100;
+  const expectedPct=Math.min(100,basePct+progress*(checkpointPct-basePct));
   const pctDiff=pct-expectedPct;
   const pctDiffStr=(pctDiff>=0?'+':'')+pctDiff.toFixed(1)+'%';
   const scheduleAhead=pctDiff>=0;
-  return{sessions,subjs,goals,TOTAL_REQ,totalLogged,remaining,pct,now,MONTHS,recentH,hasGoodData,pace,paceIsGoal,estDateStr,estDate,targetDate,diffDays,ahead,neededPace,expectedPct,pctDiffStr,scheduleAhead};
+  return{sessions,subjs,goals,TOTAL_REQ,totalLogged,remaining,toClear,pct,now,MONTHS,recentH,hasGoodData,pace,paceIsGoal,estDateStr,estDate,checkpointEstDate,checkpointEstStr,targetDate,diffDays,ahead,neededPace,expectedPct,pctDiffStr,scheduleAhead};
 }
 
 function _renderGradEstCard(){
   const v=_gradSharedVars();
-  const {remaining,pace,paceIsGoal,estDateStr,estDate,targetDate,ahead,neededPace,recentH,MONTHS,now,sessions,subjs}=v;
+  const {remaining,toClear,pace,paceIsGoal,checkpointEstStr,targetDate,ahead,neededPace,recentH,MONTHS,now,sessions,subjs}=v;
   // Future subjects = not done, 0 base hours, and no sessions logged yet
   const loggedBySubj={};
   sessions.forEach(s=>{if(s.subjectId)loggedBySubj[s.subjectId]=(loggedBySubj[s.subjectId]||0)+s.hours});
@@ -9883,7 +9895,7 @@ function _renderGradEstCard(){
   const futureNames=futureSubjs.map(s=>s.name).join(', ');
   const weeksToGrad=Math.round(Math.max(0,(targetDate-now)/(1000*60*60*24*7)));
   const onTrack=ahead;
-  const targetWeeksLeft=teacherWeekly()>0?remaining/teacherWeekly():null;
+  const targetWeeksLeft=teacherWeekly()>0?toClear/teacherWeekly():null;
   let targetEstDate=null,targetEstStr='—';
   if(targetWeeksLeft!==null){
     targetEstDate=new Date(now);targetEstDate.setDate(now.getDate()+Math.round(targetWeeksLeft*7));
@@ -9896,26 +9908,27 @@ function _renderGradEstCard(){
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;flex:1;min-height:0">'+
       '<div style="background:var(--bg3);border-radius:var(--radius);padding:24px;border:1.5px solid '+(onTrack?'var(--ok)':'var(--err)')+';display:flex;flex-direction:column;justify-content:center">'+
         '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">'+currentPaceLabel+'</div>'+
-        '<div style="font-size:40px;font-weight:900;color:'+(onTrack?'var(--ok)':'var(--err)')+';letter-spacing:-1px;line-height:1.1">'+estDateStr+'</div>'+
+        '<div style="font-size:40px;font-weight:900;color:'+(onTrack?'var(--ok)':'var(--err)')+';letter-spacing:-1px;line-height:1.1">'+checkpointEstStr+'</div>'+
         '<div style="font-size:13px;font-weight:700;color:'+(onTrack?'var(--ok)':'var(--err)')+';margin-top:12px">'+
-          (onTrack?'Before deadline':'After deadline')+
+          (onTrack?'&le;150h left before Jul 20':'&le;150h left after Jul 20')+
         '</div>'+
         '<div style="font-size:12px;color:var(--text3);margin-top:6px">'+fmtH(pace)+'/wk &middot; '+(!paceIsGoal&&recentH>0?'last 28d':'goal pace')+'</div>'+
       '</div>'+
       '<div style="background:var(--bg3);border-radius:var(--radius);padding:24px;border:1.5px solid '+(targetOnTime?'var(--ok)':'var(--od2)')+';display:flex;flex-direction:column;justify-content:center">'+
-        '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Teacher\'s target</div>'+
-        '<div style="font-size:40px;font-weight:900;color:'+(targetOnTime?'var(--ok)':'var(--text)')+';letter-spacing:-1px;line-height:1.1">Sep 20, 2027</div>'+
+        '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">First Graduation Guidance</div>'+
+        '<div style="font-size:40px;font-weight:900;color:'+(targetOnTime?'var(--ok)':'var(--text)')+';letter-spacing:-1px;line-height:1.1">Jul 20, 2027</div>'+
         '<div style="font-size:13px;font-weight:700;color:'+(targetOnTime?'var(--ok)':'var(--text2)')+';margin-top:12px">'+
           (targetOnTime?'On time':'Meets standard')+
         '</div>'+
         '<div style="font-size:12px;color:var(--text3);margin-top:6px">'+fmtH(teacherWeekly())+'/wk &middot; '+fmtH(teacherDaily())+'/day</div>'+
+        '<div style="font-size:11px;color:var(--text3);margin-top:4px">Must have &le;150h of study left (max 7 credits unfinished)</div>'+
       '</div>'+
     '</div>'+
     '<div style="background:var(--bg3);border-radius:var(--radius);padding:16px 20px;display:flex;align-items:center;justify-content:space-between">'+
       '<div>'+
-        '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Work deadline</div>'+
-        '<div style="font-size:22px;font-weight:800;color:var(--text);letter-spacing:-0.5px">Sep 20, 2027</div>'+
-        '<div style="font-size:11px;color:var(--text3);margin-top:3px">3rd Graduation Guidance &middot; ceremony Oct 31, 2027</div>'+
+        '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Next checkpoint</div>'+
+        '<div style="font-size:22px;font-weight:800;color:var(--text);letter-spacing:-0.5px">Jul 20, 2027</div>'+
+        '<div style="font-size:11px;color:var(--text3);margin-top:3px">1st Graduation Guidance &middot; '+fmtH(toClear)+' to clear &middot; ceremony Oct 31, 2027</div>'+
       '</div>'+
       '<div style="text-align:right">'+
         '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Weeks left</div>'+
@@ -9924,11 +9937,11 @@ function _renderGradEstCard(){
     '</div>'+
     (!onTrack?
     '<div style="background:rgba(239,68,68,0.08);border:1.5px solid rgba(239,68,68,0.18);border-radius:var(--radius);padding:14px 18px;font-size:13px;color:var(--err);line-height:1.5">'+
-      'To finish by Sep 20, 2027 you need <strong>'+fmtH(neededPace)+'/week</strong> — you\'re at <strong>'+fmtH(pace)+'/week</strong>. '+
+      'To be at &le;150h left by Jul 20, 2027 you need <strong>'+fmtH(neededPace)+'/week</strong> — you\'re at <strong>'+fmtH(pace)+'/week</strong>. '+
       'That\'s <strong>'+fmtH(Math.max(0,neededPace-pace))+'/week more</strong> (about '+fmtH(Math.max(0,neededPace-pace)/TEACHER_DAYS)+'/day extra).'+
     '</div>':
     '<div style="background:rgba(34,197,94,0.08);border:1.5px solid rgba(34,197,94,0.18);border-radius:var(--radius);padding:14px 18px;font-size:13px;color:var(--ok);line-height:1.5">'+
-      'You\'re on track to finish before Sep 20, 2027 at your current pace of '+fmtH(pace)+'/week.'+
+      'You\'re on track to be at &le;150h left before Jul 20, 2027 at your current pace of '+fmtH(pace)+'/week.'+
     '</div>'
     )+
     (futureH>0?
@@ -10225,7 +10238,8 @@ function renderPlan(){
   const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
   const totalLogged=getTotalLogged();
   const remaining=Math.max(0,TOTAL_REQ-totalLogged);
-  const targetDate=new Date(WORK_DEADLINE);
+  const toClear=_hoursToCheckpoint(remaining); // to reach <=150h left by Jul 20
+  const targetDate=new Date(FIRST_GUIDANCE_DEADLINE);
   const daysLeft=Math.max(1,(targetDate-now)/(1000*60*60*24));
   const personalTarget=goals.daily;       // what YOU want to do per day
   const daysPerWeek=goals.daysPerWeek||5; // days per week you plan to study
@@ -10233,7 +10247,7 @@ function renderPlan(){
   // Bare minimum daily hours — scale by study days/week, not all calendar days
   const weeksLeft=daysLeft/7;
   const studyDaysLeft=weeksLeft*daysPerWeek;
-  const bareMinimum=remaining/Math.max(1,studyDaysLeft);
+  const bareMinimum=toClear/Math.max(1,studyDaysLeft);
   // Personal base: your goal or the bare minimum, whichever is higher
   const baseTarget=Math.max(bareMinimum,personalTarget);
 
@@ -10242,7 +10256,7 @@ function renderPlan(){
   const weeklyTeacher=teacherWeekly();
   function estFinish(weeklyH){
     if(weeklyH<=0)return null;
-    const weeksNeeded=remaining/weeklyH;
+    const weeksNeeded=toClear/weeklyH;
     const d=new Date(now);d.setDate(now.getDate()+Math.round(weeksNeeded*7));return d;
   }
   // Actual pace: same method as Graduation page (last 28 days / 4 weeks),
@@ -10257,7 +10271,7 @@ function renderPlan(){
   const finishAtActual=actualWeeklyPace?estFinish(actualWeeklyPace):null;
   const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   function fmtDate(d){return d?MONTHS[d.getMonth()]+' '+d.getFullYear():'—'}
-  const targetDate2=new Date(WORK_DEADLINE);
+  const targetDate2=new Date(FIRST_GUIDANCE_DEADLINE);
   const personalOnTime=finishAtPersonal&&finishAtPersonal<=targetDate2;
   const teacherOnTime=finishAtTeacher&&finishAtTeacher<=targetDate2;
   const actualOnTime=finishAtActual&&finishAtActual<=targetDate2;
@@ -10278,8 +10292,9 @@ function renderPlan(){
   }
   // Spread deficit over 60 days — gentle long-term catch-up (~40min extra/day)
   const catchUp=recentDeficit/7;
-  // Cap at 7.5h so it never feels overwhelming
-  const smartTarget=Math.min(7.5,baseTarget+catchUp);
+  // Catch-up is capped at 7.5h so it never feels overwhelming - but the target
+  // can never drop BELOW the bare minimum (which is now above 7.5h).
+  const smartTarget=Math.max(baseTarget,Math.min(7.5,baseTarget+catchUp));
 
   // ── Yesterday's feedback ──────────────────────────────────────────────────
   const ydStr=dateStr(-1);
@@ -10414,10 +10429,10 @@ function renderPlan(){
             )+
           '</div>'+
           '<div style="text-align:right">'+
-            '<div style="font-size:11px;color:var(--text3)">Est. finish</div>'+
+            '<div style="font-size:11px;color:var(--text3)">&le;150h left by</div>'+
             '<div style="font-size:16px;font-weight:800;color:'+(finishAtActual?(actualOnTime?'var(--ok)':'var(--err)'):'var(--text3)')+'">'+fmtDate(finishAtActual)+'</div>'+
             (finishAtActual?'<div style="font-size:11px;font-weight:600;color:'+(actualOnTime?'var(--ok)':'var(--err)')+'">'+
-              (actualOnTime?'✓ On time':' Misses Sep 2027')+'</div>':'<div style="font-size:11px;color:var(--text3)">Keep logging to see</div>')+
+              (actualOnTime?'✓ On time':' Misses Jul 2027')+'</div>':'<div style="font-size:11px;color:var(--text3)">Keep logging to see</div>')+
           '</div>'+
         '</div>'+
       '</div>'+
@@ -10428,7 +10443,7 @@ function renderPlan(){
           '<div style="font-size:15px;font-weight:900;color:var(--text)">'+fmtH(personalTarget)+'/day</div>'+
           '<div style="font-size:11px;color:var(--text3);margin-top:1px">'+daysPerWeek+'d · '+fmtH(weeklyPersonal)+'/wk</div>'+
           '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">'+
-            '<div style="font-size:11px;color:var(--text3)">Est. finish</div>'+
+            '<div style="font-size:11px;color:var(--text3)">&le;150h left by</div>'+
             '<div style="font-size:13px;font-weight:800;color:'+(personalOnTime?'var(--ok)':'var(--err)')+'">'+fmtDate(finishAtPersonal)+'</div>'+
             '<div style="font-size:10px;font-weight:600;color:'+(personalOnTime?'var(--ok)':'var(--err)')+'">'+
               (personalOnTime?'✓ On time':' Misses')+
@@ -10441,7 +10456,7 @@ function renderPlan(){
           '<div style="font-size:15px;font-weight:900;color:var(--text)">'+fmtH(teacherDaily())+'/day</div>'+
           '<div style="font-size:11px;color:var(--text3);margin-top:1px">'+TEACHER_DAYS+'d · '+fmtH(teacherWeekly())+'/wk</div>'+
           '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">'+
-            '<div style="font-size:11px;color:var(--text3)">Est. finish</div>'+
+            '<div style="font-size:11px;color:var(--text3)">&le;150h left by</div>'+
             '<div style="font-size:13px;font-weight:800;color:'+(teacherOnTime?'var(--ok)':'var(--err)')+'">'+fmtDate(finishAtTeacher)+'</div>'+
             '<div style="font-size:10px;font-weight:600;color:'+(teacherOnTime?'var(--ok)':'var(--err)')+'">'+
               (teacherOnTime?'✓ On time':' Misses')+
@@ -10481,11 +10496,11 @@ function _renderStudyCalendar(targetElId){
   const remaining=Math.max(0,TOTAL_REQ-totalLogged);
   const personalTarget=goals.daily;
   const daysPerWeek=goals.daysPerWeek||5;
-  const targetDate=new Date(WORK_DEADLINE);
+  const targetDate=new Date(FIRST_GUIDANCE_DEADLINE);
   const daysLeft=Math.max(1,(targetDate-now)/(1000*60*60*24));
   const weeksLeft=daysLeft/7;
   const studyDaysLeft=weeksLeft*daysPerWeek;
-  const bareMinimum=remaining/Math.max(1,studyDaysLeft);
+  const bareMinimum=_hoursToCheckpoint(remaining)/Math.max(1,studyDaysLeft);
   const baseTarget=Math.max(bareMinimum,personalTarget);
   function hoursOn(dStr){return _hoursOnDate(sessions,dStr)}
   function dateStr(offset){const d=new Date(now);d.setDate(now.getDate()+offset);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
@@ -10659,7 +10674,7 @@ function _renderPaceDropCard(){
   const guideRate=guideEl&&parseFloat(guideEl.value)>0?parseFloat(guideEl.value):teacherDaily();
 
   const now=nowLocal();
-  const deadline=new Date(WORK_DEADLINE);
+  const deadline=new Date(FIRST_GUIDANCE_DEADLINE);
   const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
   const studyDaysPerMonth=daysPerWeek*4.33;
@@ -10668,7 +10683,7 @@ function _renderPaceDropCard(){
   // Current teacher required rate (today)
   const daysLeftNow=Math.max(1,(deadline-now)/(1000*60*60*24));
   const studyDaysLeftNow=Math.max(1,daysLeftNow/7*daysPerWeek);
-  const currentRequired=(TOTAL_REQ-totalLogged)/studyDaysLeftNow;
+  const currentRequired=_hoursToCheckpoint(TOTAL_REQ-totalLogged)/studyDaysLeftNow;
 
   // Month-by-month simulation
   const rows=[];
@@ -10679,15 +10694,15 @@ function _renderPaceDropCard(){
     remaining=Math.max(0,remaining-hoursPerMonth);
     const daysLeft=Math.max(1,(deadline-simDate)/(1000*60*60*24));
     const studyDaysLeft=Math.max(1,daysLeft/7*daysPerWeek);
-    const required=remaining>0?remaining/studyDaysLeft:0;
+    const required=_hoursToCheckpoint(remaining)/studyDaysLeft;
     rows.push({
       label:MONTHS[simDate.getMonth()]+' '+simDate.getFullYear(),
       shortLabel:MONTHS[simDate.getMonth()]+' '+(simDate.getFullYear()+'').slice(2),
       remaining:Math.max(0,Math.round(remaining)),
       required:Math.max(0,required),
-      done:remaining<=0
+      done:remaining<=FIRST_GUIDANCE_FLOOR_H
     });
-    if(remaining<=0)break;
+    if(remaining<=FIRST_GUIDANCE_FLOOR_H)break;
     simDate=new Date(simDate.getFullYear(),simDate.getMonth()+1,1);
   }
 
@@ -10834,49 +10849,59 @@ function applySidebarState(){
 
 // ── GOAL SETTINGS ─────────────────────────────────────────────────────────────
 // Teacher's standard is NO LONGER a fixed number. It is derived live from the
-// hours still outstanding and the study days left until WORK_DEADLINE (below),
+// hours still to clear before the Jul 20 checkpoint and the study days left until
+// FIRST_GUIDANCE_DEADLINE (below),
 // so it cannot go stale the way the hard-coded 6.3 did. See teacherDaily().
 const TEACHER_DAYS=5;           // teacher's plan is 5 study days per week
-const TEACHER_STATED_DAILY=7.2; // 7h12m — what the teacher quoted off the
-                                // 2026-07-31 TIHS report. Fallback only.
+const TEACHER_STATED_DAILY=8.0; // 8h/day — what the teacher told Noah for the
+                                // 1st Graduation Guidance (2026-09-27). Fallback only.
 
 // Official graduation totals (from TIHS requirements spreadsheet)
 // Total: 24.0 credits. Transferred from old school: 4.5 credits.
 // That leaves 19.5 to earn at TIHS, of which EL1+EL2+EL3=3cr are now complete → 16.5 left.
 const GRAD_TOTAL_CREDITS=24.0;
 const GRAD_TRANSFER_CREDITS=4.5; // English9(1) + Lab Sci(1) + Soc.Studies.Elect.(0.5) + CTE(1) + Electives(1)
-// ── TWO DATES. DO NOT CONFLATE THEM. ─────────────────────────────────────────
-// WORK_DEADLINE (2027-09-20) — the 3rd Graduation Guidance. ALL coursework must be
-//   finished by this date. Miss it and graduation is deferred and tuition extends.
-//   EVERY pace, minimum, projection and on-track calculation uses this date.
+// ── THREE DATES. DO NOT CONFLATE THEM. ───────────────────────────────────────
+// FIRST_GUIDANCE_DEADLINE (2027-07-20) — the 1st Graduation Guidance. On this date
+//   the school checks that Noah has NO MORE THAN 150h of study left (spread over at
+//   most 7 unfinished credits — the 150h cap is what binds). Miss it and he cannot
+//   graduate in Oct 2027 and tuition extends. EVERY pace, minimum, projection and
+//   on-track calculation targets THIS date, clearing (remaining - 150h), not zero.
+// FINAL_DEADLINE (2027-09-20) — the 3rd Graduation Guidance: remaining hours must be
+//   ZERO. Kept as a constant only; per Noah (2026-09-27) it is NOT shown in the UI
+//   and NOT used for pace math while the Jul 20 checkpoint is the binding one.
 // GRAD_DEADLINE (2027-10-31) — the ceremony date. DISPLAY ONLY. Never pace math.
 //
-// Why 2027-09-20: confirmed with Noah 2026-08-05. The teacher's quoted 7h12m/day
-// reverse-solves to this date at 5 days/week (2143h29m remaining / 293 weekdays =
-// 7h19m). No other Graduation Guidance date fits at 5 days/week — the next closest,
-// 2027-08-20, needs 7h53m. The old code used 2027-10-31 for pace, which understated
-// the required daily minimum by 41 minutes (showed 6h39m, truth is 7h19m).
-// NOTE: keep WORK_DEADLINE in sync with .github/workflows/study-notify.yml
-//       (Date.UTC(2027, 8, 20)).
-const WORK_DEADLINE='2027-09-20';
+// History: until 2026-09-27 pace math used 2027-09-20 to zero (7h22m/day on that
+// date). Noah then confirmed the 150h-by-Jul-20 rule via a classmate, which lands
+// near the teacher's stated 8h/day (8h13m/day computed 2026-09-27 from 1880h55m left).
+// NOTE: keep in sync with .github/workflows/study-notify.yml (Date.UTC(2027, 6, 20)
+//       and CHECKPOINT_FLOOR_H = 150).
+const FIRST_GUIDANCE_DEADLINE='2027-07-20';
+const FIRST_GUIDANCE_FLOOR_H=150;
+const FINAL_DEADLINE='2027-09-20';
 const GRAD_DEADLINE='2027-10-31';
+// Hours that must still be cleared before the Jul 20 checkpoint.
+function _hoursToCheckpoint(remaining){return Math.max(0,(remaining||0)-FIRST_GUIDANCE_FLOOR_H)}
 
 // Graduation hours still outstanding (extra-credit subjects excluded).
 function _remainingGradH(){
   const subjs=_canonicalSubjs().filter(s=>!s.extraCredit);
   return Math.max(0,subjs.reduce((a,s)=>a+s.req,0)-getTotalLogged());
 }
-// Weekday-equivalent study days between now and WORK_DEADLINE.
+// Weekday-equivalent study days between now and FIRST_GUIDANCE_DEADLINE.
+// (Name kept for call-site stability; it now targets the Jul 20 checkpoint.)
 function _studyDaysToWorkDeadline(dpw){
-  const daysLeft=Math.max(1,(new Date(WORK_DEADLINE)-nowLocal())/86400000);
+  const daysLeft=Math.max(1,(new Date(FIRST_GUIDANCE_DEADLINE)-nowLocal())/86400000);
   return Math.max(1,daysLeft/7*(dpw||TEACHER_DAYS));
 }
-// Teacher's target, computed live. Logging hours moves it down; slipping moves it
-// up. Falls back to the quoted 7h12m only if the computation is unavailable.
+// Teacher's target, computed live: hours still to clear to reach <=150h left,
+// divided by study days to Jul 20. Logging hours moves it down; slipping moves it
+// up. Falls back to the stated 8h only if the computation is unavailable.
 function teacherDaily(){
   try{
-    const v=_remainingGradH()/_studyDaysToWorkDeadline(TEACHER_DAYS);
-    return(isFinite(v)&&v>0)?v:TEACHER_STATED_DAILY;
+    const v=_hoursToCheckpoint(_remainingGradH())/_studyDaysToWorkDeadline(TEACHER_DAYS);
+    return(isFinite(v)&&v>=0)?v:TEACHER_STATED_DAILY;
   }catch(e){return TEACHER_STATED_DAILY}
 }
 function teacherWeekly(){return teacherDaily()*TEACHER_DAYS}
@@ -10926,8 +10951,8 @@ function computeGoalRec(){
     const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
     const totalLogged=getTotalLogged();
     const remaining=Math.max(0,TOTAL_REQ-totalLogged);
-    const daysLeft=Math.max(1,(new Date(WORK_DEADLINE)-Date.now())/(1000*60*60*24));
-    const bareMin=remaining/Math.max(1,(daysLeft/7)*daysPerWeek);
+    const daysLeft=Math.max(1,(new Date(FIRST_GUIDANCE_DEADLINE)-Date.now())/(1000*60*60*24));
+    const bareMin=_hoursToCheckpoint(remaining)/Math.max(1,(daysLeft/7)*daysPerWeek);
     const cutoffStr=new Date(Date.now()-28*24*3600000).toISOString().slice(0,10);
     const _ec=_extraCreditIds();
     const recent28=sessions.filter(s=>s.date>=cutoffStr&&!_ec.has(s.subjectId)).reduce((a,s)=>a+s.hours,0);
@@ -10973,12 +10998,12 @@ function openGoalSettings(){
     const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
     const totalLogged=getTotalLogged();
     const remaining=Math.max(0,TOTAL_REQ-totalLogged);
-    const targetDate=new Date(WORK_DEADLINE);
+    const targetDate=new Date(FIRST_GUIDANCE_DEADLINE);
     const nowMs=Date.now();
     const daysLeft=Math.max(1,(targetDate-nowMs)/(1000*60*60*24));
     const weeksLeft=daysLeft/7;
     const studyDaysLeft=weeksLeft*daysPerWeek;
-    const bareMin=remaining/Math.max(1,studyDaysLeft);
+    const bareMin=_hoursToCheckpoint(remaining)/Math.max(1,studyDaysLeft);
 
     // Actual daily pace — last 28 days
     const cutoff=new Date(nowMs-28*24*3600000);
@@ -12309,7 +12334,7 @@ function exportReport(){
   <div class="stat"><div class="stat-val orange">${totalLogged.toFixed(1)}h</div><div class="stat-lbl">Hours Logged</div></div>
   <div class="stat"><div class="stat-val">${remaining.toFixed(1)}h</div><div class="stat-lbl">Hours Remaining</div></div>
   <div class="stat"><div class="stat-val orange">${Math.round(pct)}%</div><div class="stat-lbl">Complete</div></div>
-  <div class="stat"><div class="stat-val ${estDate&&estDate<=new Date(WORK_DEADLINE)?'green':'orange'}">${estDateStr}</div><div class="stat-lbl">Est. Finish</div></div>
+  <div class="stat"><div class="stat-val ${estDate&&estDate<=new Date(FINAL_DEADLINE)?'green':'orange'}">${estDateStr}</div><div class="stat-lbl">Est. Finish</div></div>
 </div>
 <div class="big-bar-wrap"><div class="big-bar-fill" style="width:${pct.toFixed(1)}%"></div></div>
 <div class="bar-labels"><span>${totalLogged.toFixed(1)}h logged</span><span>${TOTAL_REQ}h required</span></div>
@@ -12328,7 +12353,7 @@ function exportReport(){
 
 <div class="footer">
   <span>StudyTrack · noshnoshnoah999.github.io/studytrack</span>
-  <span>Work deadline: Sep 20, 2027 · ${pace.toFixed(1)}h/wk current pace</span>
+  <span>Next checkpoint: 1st Graduation Guidance, Jul 20, 2027 (&le;150h left) · ${pace.toFixed(1)}h/wk current pace</span>
 </div>
 </body></html>`;
 
@@ -12630,8 +12655,9 @@ function _aiMakeContext(){
   const remaining=(grad.remaining!=null)?grad.remaining:Math.max(0,TOTAL_REQ-totalLogged);
   const pace=grad.pace||0;                 // h/week the app is actually projecting from
   const estDateStr=grad.estDateStr||'—';   // projected finish month/year
-  const neededPace=grad.neededPace||0;     // h/week required to hit the deadline
-  const onTrack=grad.ahead===true;         // app's own on-track verdict
+  const neededPace=grad.neededPace||0;     // h/week required to reach <=150h left by Jul 20
+  const onTrack=grad.ahead===true;         // app's own on-track verdict (checkpoint)
+  const checkpointEstStr=grad.checkpointEstStr||'—';
 
   // ── SUBJECT LINES (with remaining, from precomputed values) ────────────────
   const subjLines=subjs.map(s=>{
@@ -12669,7 +12695,7 @@ function _aiMakeContext(){
   return{
     subjLines,schedLines,sessionLines,todoLines,goals,subjs,schedule,now,DAYS,MONTHS_FULL,
     totalLogged,TOTAL_REQ,overallPct,todayH,weekH,rolling7H,monthH,
-    remaining,pace,estDateStr,neededPace,onTrack,sessionCount:sessions.length
+    remaining,pace,estDateStr,checkpointEstStr,neededPace,onTrack,sessionCount:sessions.length
   };
 }
 
@@ -12677,10 +12703,10 @@ function _aiSystemPrompt(ctx){
   const {
     subjLines,schedLines,sessionLines,todoLines,goals,subjs,now,DAYS,MONTHS_FULL,
     totalLogged,TOTAL_REQ,overallPct,todayH,weekH,rolling7H,monthH,
-    remaining,pace,estDateStr,neededPace,onTrack,sessionCount
+    remaining,pace,estDateStr,checkpointEstStr,neededPace,onTrack,sessionCount
   }=ctx;
   const hm=_fmtDecimalToHm;
-  return `You are the Schedule Coach inside Noah's StudyTrack app. Noah is a TIHS student in Tokyo (JST) on a self-paced US-diploma track, working toward a HARD COURSEWORK DEADLINE of ${WORK_DEADLINE} — the 3rd Graduation Guidance. All work must be finished by then or graduation is deferred and tuition extends. The ceremony is ${GRAD_DEADLINE}; never use the ceremony date when giving pace advice.
+  return `You are the Schedule Coach inside Noah's StudyTrack app. Noah is a TIHS student in Tokyo (JST) on a self-paced US-diploma track, whose binding checkpoint is the 1st Graduation Guidance on ${FIRST_GUIDANCE_DEADLINE}: by then he must have NO MORE THAN ${FIRST_GUIDANCE_FLOOR_H}h of study left (at most 7 credits unfinished). Miss it and he cannot graduate in October 2027 and tuition extends. All pace advice targets this checkpoint. The remaining ${FIRST_GUIDANCE_FLOOR_H}h must then be finished by ${FINAL_DEADLINE}; mention that date only if Noah asks what happens after the checkpoint. The ceremony is ${GRAD_DEADLINE}; never use the ceremony date when giving pace advice.
 
 === PRECOMPUTED FIGURES (authoritative — REPORT these, never recalculate) ===
 The app has already done all the math. When Noah asks about progress, pace, hours, or timing, quote these numbers directly. Do NOT add up sessions yourself or estimate — you will get it wrong; trust these.
@@ -12693,10 +12719,11 @@ TODAY SO FAR: ${todayH.toFixed(1)}h (${hm(todayH)})
 THIS CALENDAR WEEK (Mon–Sun): ${weekH.toFixed(1)}h (${hm(weekH)})
 LAST 7 DAYS (rolling): ${rolling7H.toFixed(1)}h
 THIS MONTH SO FAR: ${monthH.toFixed(1)}h
-PROJECTED PACE: ${pace.toFixed(1)}h/week → estimated finish ${estDateStr}
-PACE NEEDED to hit ${WORK_DEADLINE}: ${neededPace.toFixed(1)}h/week
-ON TRACK FOR DEADLINE: ${onTrack?'yes, ahead of/at the required pace':'no, currently behind the required pace'}
-TEACHER'S TARGET (computed live to ${WORK_DEADLINE}, 5 days/wk): ${teacherDaily().toFixed(2)}h/day (${hm(teacherDaily())})
+HOURS TO CLEAR BEFORE CHECKPOINT (remaining minus ${FIRST_GUIDANCE_FLOOR_H}h): ${Math.max(0,remaining-FIRST_GUIDANCE_FLOOR_H).toFixed(1)}h
+PROJECTED PACE: ${pace.toFixed(1)}h/week → reaches ${FIRST_GUIDANCE_FLOOR_H}h left around ${checkpointEstStr}; full finish (0h) around ${estDateStr}
+PACE NEEDED to be at <=${FIRST_GUIDANCE_FLOOR_H}h left by ${FIRST_GUIDANCE_DEADLINE}: ${neededPace.toFixed(1)}h/week
+ON TRACK FOR CHECKPOINT: ${onTrack?'yes, ahead of/at the required pace':'no, currently behind the required pace'}
+FIRST GRADUATION GUIDANCE TARGET (computed live to ${FIRST_GUIDANCE_DEADLINE}, 5 days/wk): ${teacherDaily().toFixed(2)}h/day (${hm(teacherDaily())})
 NOAH'S GOAL: ${goals.daily}h/day, ${goals.weekly||((goals.daily||0)*(goals.daysPerWeek||5))}h/week over ${goals.daysPerWeek||5} days
 
 SUBJECTS (name (id): logged / required = % — remaining):
