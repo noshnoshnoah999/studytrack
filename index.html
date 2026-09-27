@@ -9311,7 +9311,7 @@ function _renderProgGradCard(){
   const el=document.getElementById('prog-grad-card');
   if(!el)return;
   const v=_gradSharedVars();
-  const {pct,expectedPct,pctDiffStr,scheduleAhead,totalLogged,remaining}=v;
+  const {pct,expectedPct,checkpointPct,pctDiffStr,scheduleAhead,totalLogged,remaining}=v;
   el.innerHTML=
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
       '<div>'+
@@ -9328,9 +9328,16 @@ function _renderProgGradCard(){
     '<div style="height:8px;background:var(--bg3);border-radius:100px;overflow:hidden;position:relative">'+
       '<div id="prog-grad-bar" style="height:100%;width:'+pct.toFixed(2)+'%;background:var(--o);border-radius:100px"></div>'+
       '<div style="position:absolute;top:0;bottom:0;left:'+expectedPct.toFixed(2)+'%;width:2px;background:var(--text3);border-radius:2px" title="Expected: '+expectedPct.toFixed(1)+'%"></div>'+
+      // Jul 20 checkpoint target: 150h left = (TOTAL_REQ-150)/TOTAL_REQ. Brighter and
+      // wider than the Expected tick so the two are distinguishable in the mono palette.
+      '<div style="position:absolute;top:0;bottom:0;left:calc('+checkpointPct.toFixed(2)+'% - 1.5px);width:3px;background:var(--text);border-radius:2px" title="Jul 20, 2027 target: '+checkpointPct.toFixed(1)+'% (150h left)"></div>'+
     '</div>'+
     '<div style="display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:var(--text3)">'+
       '<span>0%</span><span style="color:var(--text3)">Expected: '+expectedPct.toFixed(1)+'%</span><span>100%</span>'+
+    '</div>'+
+    '<div style="margin-top:4px;font-size:10px;color:var(--text2);text-align:right">'+
+      '<span style="display:inline-block;width:3px;height:8px;background:var(--text);border-radius:2px;vertical-align:-1px;margin-right:5px"></span>'+
+      'Jul 20, 2027 target: '+checkpointPct.toFixed(1)+'% (150h left)'+
     '</div>';
   // Animate bar
   const bar=el.querySelector('#prog-grad-bar');
@@ -9881,7 +9888,7 @@ function _gradSharedVars(){
   const pctDiff=pct-expectedPct;
   const pctDiffStr=(pctDiff>=0?'+':'')+pctDiff.toFixed(1)+'%';
   const scheduleAhead=pctDiff>=0;
-  return{sessions,subjs,goals,TOTAL_REQ,totalLogged,remaining,toClear,pct,now,MONTHS,recentH,hasGoodData,pace,paceIsGoal,estDateStr,estDate,checkpointEstDate,checkpointEstStr,targetDate,diffDays,ahead,neededPace,expectedPct,pctDiffStr,scheduleAhead};
+  return{sessions,subjs,goals,TOTAL_REQ,totalLogged,remaining,toClear,pct,now,MONTHS,recentH,hasGoodData,pace,paceIsGoal,estDateStr,estDate,checkpointEstDate,checkpointEstStr,targetDate,diffDays,ahead,neededPace,expectedPct,checkpointPct,pctDiffStr,scheduleAhead};
 }
 
 function _renderGradEstCard(){
@@ -12251,6 +12258,10 @@ function exportReport(){
   const estWeeks=pace>0?remaining/pace:null;
   const estDate=estWeeks!=null?new Date(now.getTime()+estWeeks*7*24*3600*1000):null;
   const estDateStr=estDate?MONTHS[estDate.getMonth()]+' '+estDate.getFullYear():'—';
+  // Also project when remaining reaches the 150h allowed at the Jul 20 checkpoint.
+  const cpWeeks=pace>0?_hoursToCheckpoint(remaining)/pace:null;
+  const cpDate=cpWeeks!=null?new Date(now.getTime()+cpWeeks*7*24*3600*1000):null;
+  const cpDateStr=cpDate?MONTHS[cpDate.getMonth()]+' '+cpDate.getFullYear():'—';
 
   // Subject rows
   const subjMap={};allSubjsForLookup.forEach(s=>{subjMap[s.id]=s});
@@ -12310,7 +12321,7 @@ function exportReport(){
   h1{font-size:28px;font-weight:800;letter-spacing:-0.5px;color:#111;margin-bottom:4px}
   h2{font-size:16px;font-weight:700;color:#111;margin:32px 0 12px;padding-bottom:8px;border-bottom:2px solid #f3f4f6}
   .meta{font-size:13px;color:#6b7280;margin-bottom:36px}
-  .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:8px}
+  .stat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:8px}
   .stat{background:#f9fafb;border-radius:12px;padding:16px 18px;border:1px solid #f3f4f6}
   .stat-val{font-size:26px;font-weight:800;color:#111;letter-spacing:-0.5px}
   .stat-lbl{font-size:11px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px}
@@ -12334,7 +12345,8 @@ function exportReport(){
   <div class="stat"><div class="stat-val orange">${totalLogged.toFixed(1)}h</div><div class="stat-lbl">Hours Logged</div></div>
   <div class="stat"><div class="stat-val">${remaining.toFixed(1)}h</div><div class="stat-lbl">Hours Remaining</div></div>
   <div class="stat"><div class="stat-val orange">${Math.round(pct)}%</div><div class="stat-lbl">Complete</div></div>
-  <div class="stat"><div class="stat-val ${estDate&&estDate<=new Date(FINAL_DEADLINE)?'green':'orange'}">${estDateStr}</div><div class="stat-lbl">Est. Finish</div></div>
+  <div class="stat"><div class="stat-val ${cpDate&&cpDate<=new Date(FIRST_GUIDANCE_DEADLINE)?'green':'orange'}">${cpDateStr}</div><div class="stat-lbl">150h Left By (target Jul 20)</div></div>
+  <div class="stat"><div class="stat-val ${estDate&&estDate<=new Date(FINAL_DEADLINE)?'green':'orange'}">${estDateStr}</div><div class="stat-lbl">Full Finish (0h)</div></div>
 </div>
 <div class="big-bar-wrap"><div class="big-bar-fill" style="width:${pct.toFixed(1)}%"></div></div>
 <div class="bar-labels"><span>${totalLogged.toFixed(1)}h logged</span><span>${TOTAL_REQ}h required</span></div>
