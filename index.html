@@ -1199,6 +1199,7 @@ button:active{transform:scale(0.96)}
             </div>
           </div>
         </div>
+        <div id="log-health-note" style="display:none;font-size:13px;line-height:1.5;color:var(--text);margin:12px 0 0 0">Ensure that I am studying topics in Health Science that are included in the contract title: Toxicology, Cosmetic Ingredients, Endocrine System, Fluoride, Energy Drinks</div>
         <div class="duration-display" id="log-duration" style="margin:10px 0 14px"></div>
         <div id="log-dayload" style="display:none;margin-bottom:14px"></div>
         <div class="form-group" style="margin-bottom:16px">
@@ -2107,6 +2108,11 @@ button:active{transform:scale(0.96)}
 <script>
 // ── UTILITIES ─────────────────────────────────────────────────────────────────
 function genId(){return Math.random().toString(36).slice(2,9)+Math.random().toString(36).slice(2,5)}
+// Subjects that were removed on 2026-10-01 (PE #3, Electives 5, Electives 6 -
+// extra credit Noah no longer does). loadSubjects()/loadSessions() filter these
+// out on READ so a stale device or a cloud pull can never bring them back, and
+// migration v21 deletes the stored rows (after backing them up locally).
+const REMOVED_SUBJECT_IDS=['pe3','el5','el6'];
 // Form config per subject: url + confirm checkbox entry ID (differs per form)
 // confirmId: found in page source FB_PUBLIC_LOAD_DATA_ — null = not yet known (checkbox skipped)
 const _SUBJECT_FORMS={
@@ -2116,13 +2122,6 @@ const _SUBJECT_FORMS={
   // was .../1FAIpQLScr3Pp0jDNTQ6P3n6YAFLBzcuKWqb6YiC6lQtJqU3aKFNw-iQ/... with
   // confirmId 144075977 — kept here only as a record, nothing points at it now.
   pe:       {url:'https://docs.google.com/forms/d/e/1FAIpQLSfH7ynrmIUQr3QljYOEeUQDBBWVTxbaMCyeGj-7r-U2Cvy4kQ/viewform', confirmId:'1203417410'},
-  // PE #3 (extra credit, 150h) - its own contract, approved by the teacher
-  // 2026-09-05, so it needs its own form. Field IDs verified identical to every
-  // other form on 2026-09-05 by loading a prefilled link and reading the values
-  // back; only confirmId differs, as always. NOTE: the confirm checkbox does NOT
-  // prefill from the URL on ANY of these forms (PE #2 tested as a control) -
-  // Noah ticks it by hand. That is expected, not a bug in this entry.
-  pe3:      {url:'https://docs.google.com/forms/d/e/1FAIpQLSeSBbX2NmJG_mypKjUfg1KBMJMQ0RBCHARO0miJMUirvvOh2g/viewform', confirmId:'934725923'},
   japanese: {url:'https://docs.google.com/forms/d/e/1FAIpQLSfw8qjM8JkTLAsJgxgeDdd4TfqStnxK3hRz9prObOIqxcTL8w/viewform', confirmId:'1757403334'},
   cwp:      {url:'https://docs.google.com/forms/d/e/1FAIpQLSdl9Qkm0AreT18YF1Yx-sHXzdMygeR7E3LtZkt1PNEtwc1wvg/viewform', confirmId:'1832701138'},
   english:  {url:'https://docs.google.com/forms/d/e/1FAIpQLSfS0CMd-ejWxQvAw9Y6x1T_HLgn30j7QFJ_pMs-MpDSdFhqQg/viewform', confirmId:'782219930'},
@@ -2135,46 +2134,17 @@ const _SUBJECT_FORMS={
   lab_sci:  {url:'https://docs.google.com/forms/d/e/1FAIpQLScw0KynyQ6IKxDhTVEMUX9nmi1teL2PgBcLMKlDu4H0_izuCQ/viewform', confirmId:'1347563556'},
   algebra1: {url:'https://docs.google.com/forms/d/e/1FAIpQLSeNbuYwyIvbTFJMU3CiaMsz080GIlltcCsCouwC_pmGyBXjIg/viewform', confirmId:'496521582'},
   el4:      {url:'https://docs.google.com/forms/d/e/1FAIpQLSf0FVqiA69J6mjnirxeSjeFOi_WPL8FiO8aOZEJqwayhJdukg/viewform', confirmId:'892713493'},
-  // EL5/EL6 confirmIds read from FB_PUBLIC_LOAD_DATA_ on 2026-09-09. The four
-  // shared entry IDs (911550456 date / 2130026531 start / 1426010469 end /
-  // 706383331 contents) were verified IDENTICAL on both forms, as on every other
-  // form - only confirmId differs, which is the rule this map is built on.
-  el5:      {url:'https://docs.google.com/forms/d/e/1FAIpQLSdJnU1QYMMjlyFr_RjRwC-afRc9srovyaXVJ6vsxubOGJIG2Q/viewform', confirmId:'1310844807'},
-  el6:      {url:'https://docs.google.com/forms/d/e/1FAIpQLSdpjAAL-KyS7U66DmNlQpU2e_oO5A8-8vvvV3LPMJe9n89Pcw/viewform', confirmId:'2090681393'},
 };
 
-// -- PE CONTRACT ROUTING ---------------------------------------------------
-// PE is a SERIES of contracts: `pe` carries the 225h requirement (PE #1 + #2)
-// and `pe3` is the first extra-credit one (150h). Every flow that auto-fills a
-// PE session routes through _peTargetId() so it lands in whichever contract is
-// actually open, instead of hardcoding 'pe' and quietly overflowing a full one.
-//
-// Noah's rule (2026-09-05, explicit): stay on `pe` while it has even ONE MINUTE
-// left, EVEN IF that session overshoots its requirement. Only move to `pe3`
-// once `pe` is genuinely full. Splitting one workout across two contracts is
-// worse than a small overshoot on the last session of the old one. Do not
-// "optimise" this into picking whichever contract has room for the duration.
-//
-// _isPeId() is the read-side counterpart: anything that used to ask
-// `subjectId === 'pe'` to decide PE-specific BEHAVIOUR must accept pe3 too, or
-// pe3 journals come out formatted differently from pe ones. The dated base /
-// migration blocks further down deliberately still say 'pe' - they describe
-// history and must not be widened.
-const PE_SERIES=['pe','pe3'];
+// -- PE ROUTING -------------------------------------------------------------
+// PE has ONE contract row, `pe` (225h = PE #1 + PE #2, both finished). The extra-
+// credit PE #3 row, its router and its banner were removed 2026-10-01 (Noah is
+// not doing extra credit for PE or Electives any more). Every PE auto-fill flow
+// still calls _peTargetId()/_isPeId() so there is one place to change if that
+// ever comes back; do not widen these without a real second PE subject.
+const PE_SERIES=['pe'];
 function _isPeId(id){ return PE_SERIES.indexOf(id)!==-1 }
-function _peTargetId(){
-  try{
-    const subjs=loadSubjects(),hours=loadHours();
-    for(let i=0;i<PE_SERIES.length;i++){
-      const id=PE_SERIES[i];
-      const s=subjs.find(x=>x.id===id);
-      if(!s)continue;
-      if(!s.done&&((s.base||0)+(hours[id]||0))<s.req)return id;
-    }
-    const last=subjs.find(x=>x.id===PE_SERIES[PE_SERIES.length-1]);
-    return last?last.id:'pe';
-  }catch(e){return 'pe'}
-}
+function _peTargetId(){ return 'pe' }
 
 function _openFormForSession(sessionId){
   const sessions=loadSessions();
@@ -2365,6 +2335,13 @@ function updateKaProofBanner(selectId,bannerId){
   const sel=document.getElementById(selectId);
   const banner=document.getElementById(bannerId);
   if(!sel||!banner)return;
+  // Health Science reminder: plain text inside the Log form card (not a banner).
+  // Piggybacks on this function because it already runs on every subject change,
+  // including the places that set the select's value in code. Log page only.
+  if(selectId==='log-subject'){
+    const hn=document.getElementById('log-health-note');
+    if(hn)hn.style.display=(sel.value==='health')?'block':'none';
+  }
   if(_isKaProofSubject(sel.value)){
     banner.innerHTML=KA_PROOF_TEXT;
     banner.classList.add('show');
@@ -2779,19 +2756,6 @@ const DEFAULT_SUBJECTS=[
   // May-2026 teacher-report snapshot that predates full session logging, and was being
   // double-counted on top of sessions that already include that same period (2026-07-15).
   {id:'el4',         name:'Electives 4',         req:150, base:0,  passive:true,  locked:false, done:false, extraCredit:true},
-  // EL5 and EL6 = extra credit, exactly like el4: GPA only, ZERO hours toward the
-  // 24-credit requirement and zero effect on the projected graduation date. Both
-  // are 1 credit / 150h, contracts and forms supplied by Noah 2026-09-09. base=0 -
-  // both start empty, there is no teacher-report history to fold in.
-  //
-  // ORDER MATTERS - this IS the sequencing mechanism. The work-shift chips on the
-  // Log page (hasActiveElective / activeElective) pick the FIRST id in the
-  // ['el1'..'el6'] list that is not done and still under its req. el1-el3 are
-  // done:true and el4 is full at 150h 9m, so work routes to el5 until it fills,
-  // then el6 - which is Noah's stated sequence (2026-09-09). This needs NO
-  // PE-style _peTargetId() router: do not add one, and do not reorder these rows.
-  {id:'el5',         name:'Electives 5',         req:150, base:0,  passive:true,  locked:false, done:false, extraCredit:true},
-  {id:'el6',         name:'Electives 6',         req:150, base:0,  passive:true,  locked:false, done:false, extraCredit:true},
   // History
   {id:'wa_hist',     name:'WA State History',    req:75,  base:8.1,   passive:false, locked:false, done:false},
   {id:'us_hist',     name:'US History',          req:150, base:23.2,  passive:false, locked:false, done:false},
@@ -2800,13 +2764,6 @@ const DEFAULT_SUBJECTS=[
   {id:'fine_art',    name:'Fine Art / Film',     req:150, base:28.9,  passive:true,  locked:false, done:false},
   // PE — 1.5 credits = 225h
   {id:'pe',          name:'PE / Cardio',         req:225, base:50.1,  passive:true,  locked:false, done:false},
-  // PE #3 - EXTRA CREDIT, 1 credit = 150h. Contract approved 2026-09-05, period
-  // 2026-09-07 to 2027-03-31. A SEPARATE row, not a bump of pe.req to 375: `pe`
-  // is not extraCredit and getTotalLogged() filters on the subject-level flag,
-  // so folding 150h of extra credit into `pe` would silently count it toward
-  // graduation and move the projected date. See _peTargetId() for which of the
-  // two a newly auto-filled session lands in.
-  {id:'pe3',         name:'PE #3 | Extra',       req:150, base:0,     passive:true,  locked:false, done:false, extraCredit:true},
   // Health
   {id:'health',      name:'Health Science',      req:75,  base:3.3,   passive:false, locked:false, done:false},
   // Science — 1 credit each remaining
@@ -3469,6 +3426,50 @@ function runMigrations(){
     }catch(e){console.warn('[Migration v20] Error:',e);v20done=false}
     if(v20done)localStorage.setItem('st_migration_v20_civics_labsci_fix_sep24_2026','1');
   }
+  // ── Migration v21: remove PE #3 / Electives 5 / Electives 6 (1 Oct 2026) ──────
+  // Noah no longer does extra credit for PE or Electives (coach: it only nudges
+  // GPA). Deletes those three subject rows and every session logged under them
+  // (1h 01m under PE #3 at the time of writing; none under el5/el6). Everything
+  // removed is first copied to localStorage key st_backup_removed_pe3_el56_v21
+  // (local only) so the deletion can be undone by hand. Session ids are
+  // tombstoned so other devices drop them on their next sync instead of merging
+  // them back. Gated on _baseMigrationsAllowed() like v13-v20: never runs before
+  // a confirmed-good cloud sync, so it cannot act on a half-merged session list.
+  if(!localStorage.getItem('st_migration_v21_remove_pe3_el56_oct01_2026')&&_baseMigrationsAllowed()){
+    let v21done=true;
+    try{
+      const sessions=JSON.parse(localStorage.getItem('st_sessions')||'[]');
+      const subjsRaw=localStorage.getItem('st_subjs');
+      const subjs=subjsRaw?JSON.parse(subjsRaw):[];
+      const doomedSess=sessions.filter(x=>REMOVED_SUBJECT_IDS.includes(x.subjectId));
+      const doomedSubj=subjs.filter(x=>REMOVED_SUBJECT_IDS.includes(x.id));
+      if(doomedSess.length||doomedSubj.length){
+        localStorage.setItem('st_backup_removed_pe3_el56_v21',JSON.stringify({
+          at:new Date().toISOString(),sessions:doomedSess,subjects:doomedSubj}));
+        if(doomedSess.length){
+          doomedSess.forEach(x=>_tombstoneSession(x.id));
+          const kept=sessions.filter(x=>!REMOVED_SUBJECT_IDS.includes(x.subjectId));
+          localStorage.setItem('st_sessions',JSON.stringify(kept));
+          const newV=_getSessV()+1;
+          _setSessLV(newV);
+          sbPush('st_sessions',kept).then(()=>{_setSessCV(newV)});
+        }
+        const hrs=JSON.parse(localStorage.getItem('st_hours')||'{}');
+        REMOVED_SUBJECT_IDS.forEach(id=>{delete hrs[id]});
+        localStorage.setItem('st_hours',JSON.stringify(hrs));
+        sbPush('st_hours',hrs,{silent:true});
+        if(doomedSubj.length){
+          const keptSubj=subjs.filter(x=>!REMOVED_SUBJECT_IDS.includes(x.id));
+          localStorage.setItem('st_subjs',JSON.stringify(keptSubj));
+          localStorage.setItem('st_subjs_updated_at',new Date().toISOString());
+          sbPush('st_subjs',keptSubj,{silent:true});
+        }
+        console.log('[Migration v21] removed '+doomedSubj.length+' subject row(s) and '+
+          doomedSess.length+' session(s); backup in st_backup_removed_pe3_el56_v21');
+      }
+    }catch(e){console.warn('[Migration v21] Error:',e);v21done=false}
+    if(v21done)localStorage.setItem('st_migration_v21_remove_pe3_el56_oct01_2026','1');
+  }
   if(!localStorage.getItem('st_migration_v7')){
     try{
       const raw=localStorage.getItem('st_sched');
@@ -3597,7 +3598,7 @@ function loadSubjects(){
       DEFAULT_SUBJECTS.forEach(def=>{
         if(!result.find(s=>s.id===def.id)) result.push({...def});
       });
-      return result;
+      return result.filter(x=>!REMOVED_SUBJECT_IDS.includes(x.id));
     }
   }catch(e){}
   return JSON.parse(JSON.stringify(DEFAULT_SUBJECTS));
@@ -3625,7 +3626,7 @@ function saveSchedule(s){
   sbPush('st_sched',s).then(()=>{_setSchedCV(newV)});
 }
 function loadSessions(){
-  try{const s=localStorage.getItem('st_sessions');if(s)return JSON.parse(s)}catch(e){}
+  try{const s=localStorage.getItem('st_sessions');if(s)return JSON.parse(s).filter(x=>!REMOVED_SUBJECT_IDS.includes(x.subjectId))}catch(e){}
   return[];
 }
 // Version guard (same pattern as st_sched, see _getSchedV/_setSchedLV/_setSchedCV):
@@ -4628,9 +4629,9 @@ async function useWorkoutResult(){
 // minutes to a session. Everything else here mirrors _fillRunLogForm().
 // A Bungu work shift is logged as an ELECTIVES extra-credit session \u2014 same
 // treatment as EL4 today \u2014 but unlike Preply\u2192japanese or Run\u2192pe, there is no
-// fixed subject id to select yet: no Electives 5+ contract exists, no teacher
-// approval, no _SUBJECT_FORMS entry (Noah, 2026-09-02 \u2014 built ahead of time on
-// purpose, wired to a real subject later, same pattern as pe3). So the subject
+// fixed subject id to select yet: no Electives 5+ contract exists (removed
+// 2026-10-01 - Noah no longer does extra credit), no teacher
+// approval, no _SUBJECT_FORMS entry. So the subject
 // dropdown is deliberately left exactly as it was rather than guessing or
 // forcing a value \u2014 Noah picks the right elective subject himself once one
 // exists. Everything else (date, times, duration, journal) is filled in full.
@@ -6071,7 +6072,7 @@ function renderLog(){
 
   // ── Smart suggestions: past study/class/work blocks not yet logged ─────────
   // Work blocks only appear if there's still an incomplete elective to log toward
-  const hasActiveElective=subjs.some(s=>['el1','el2','el3','el4','el5','el6'].includes(s.id)&&!s.done&&getLogged(s.id)<s.req);
+  const hasActiveElective=subjs.some(s=>['el1','el2','el3','el4'].includes(s.id)&&!s.done&&getLogged(s.id)<s.req);
   const pastUnlogged=getTodayActualBlocks()
     .filter(b=>(b.subjectId||(b.type==='work'&&hasActiveElective))&&nowMins>toMins(b.end))
     .filter(b=>{
@@ -6091,7 +6092,7 @@ function renderLog(){
       const chips=pastUnlogged.map(b=>{
         const isWork=b.type==='work';
         // Work blocks log toward the first incomplete elective; skip entirely if all electives done
-        const activeElective=isWork?subjs.find(s=>['el1','el2','el3','el4','el5','el6'].includes(s.id)&&!s.done&&getLogged(s.id)<s.req):null;
+        const activeElective=isWork?subjs.find(s=>['el1','el2','el3','el4'].includes(s.id)&&!s.done&&getLogged(s.id)<s.req):null;
         if(isWork&&!activeElective)return''; // all electives complete — don't show work chip
         const workSubjId=activeElective?activeElective.id:'';
         const subj=b.subjectId?subjs.find(s=>s.id===b.subjectId):null;
@@ -9478,11 +9479,7 @@ const CONTRACT_LEAD_H=10;   // hours of warning before a boundary is reached
 // from the contracts already inside the requirement — PE's 225h is #1 and #2, so
 // the next one he opens is PE #3. Wording only; add a line when a new series
 // contract is created.
-const CONTRACT_SERIES={
-  pe:  'PE #3',
-  pe3: 'PE #4',
-  el4: 'Electives 5'
-};
+const CONTRACT_SERIES={}; // empty on purpose: no extra-credit series any more (2026-10-01)
 
 // Boundaries that were already dealt with before these banners existed, so they
 // must not fire on day one. PE crossed 150h long ago and PE #2 has been live since
@@ -9560,57 +9557,6 @@ function outstandingContracts(){
   return out;
 }
 
-// -- PE CONTRACT SWITCH NUDGE ----------------------------------------------
-// _peTargetId() moves new sessions onto pe3 by itself, so this banner REPORTS a
-// switch that has already happened rather than asking for an action. Sticky
-// until ticked (Noah, 2026-09-05) precisely because an automatic switch is the
-// kind of thing he would otherwise not notice for weeks - the same failure that
-// left Electives 4 full and silent from July.
-//
-// The tick lives on the `pe` subject in st_subjs, which is already in the sync
-// KEYS list, so it crosses devices with no new synced key. _canonicalSubjs()
-// spreads {...def,...s} and only force-overrides req/extraCredit, so these
-// fields survive. Last-writer-wins can drop it; worst case the banner returns
-// once and he re-ticks. Do NOT add a second flag to "fix" that.
-function _peSwitchBannerHtml(){
-  try{
-    const subjs=loadSubjects();
-    const pe=subjs.find(s=>s.id==='pe'), pe3=subjs.find(s=>s.id==='pe3');
-    if(!pe||!pe3||pe.peSwitchAck)return '';
-    const logged=(pe.base||0)+(loadHours()['pe']||0);
-    if(!(pe.done||logged>=pe.req))return '';
-    const ticked=!!pe._peSwitchTick;
-    return '<div class="contract-banner">'+
-      '<div class="contract-banner-title">PE #2 is full - new PE sessions now go to '+escHtml(pe3.name)+'.</div>'+
-      '<div class="contract-banner-sub">'+fmtH(logged)+' logged against '+fmtH(pe.req)+' required. Workout imports and every stretch log now fill in <strong>'+escHtml(pe3.name)+'</strong> automatically and open its Google Form instead. Nothing for you to change - just don\'t submit new PE work to the PE #2 form.</div>'+
-      '<div class="contract-banner-checks">'+
-        '<label class="contract-check"><input type="checkbox" '+(ticked?'checked':'')+' onchange="togglePeSwitchCheck(this.checked)"><span>Got it - PE sessions go to '+escHtml(pe3.name)+' from now on</span></label>'+
-      '</div>'+
-      '<div class="contract-banner-actions">'+
-        '<button class="contract-banner-btn" '+(ticked?'':'disabled')+' onclick="confirmPeSwitch()">'+(ticked?'Confirm and dismiss':'Tick to dismiss')+'</button>'+
-      '</div>'+
-    '</div>';
-  }catch(e){return ''}
-}
-function togglePeSwitchCheck(v){
-  const subjs=loadSubjects();
-  const pe=subjs.find(s=>s.id==='pe');
-  if(!pe)return;
-  pe._peSwitchTick=!!v;
-  saveSubjects(subjs);
-  renderContractBanners();
-}
-function confirmPeSwitch(){
-  const subjs=loadSubjects();
-  const pe=subjs.find(s=>s.id==='pe');
-  if(!pe||!pe._peSwitchTick)return;
-  delete pe._peSwitchTick;
-  pe.peSwitchAck=true;
-  saveSubjects(subjs);
-  renderContractBanners();
-  if(typeof showToast==='function')showToast('PE #3 is now the active contract','var(--ok)');
-}
-
 // -- PE BASE DRIFT CHECK -------------------------------------------------------
 // pe.base is a DERIVED number and it has now silently gone wrong three times
 // (migrations v17, v18, v19), each time because a device wrote it against a
@@ -9664,10 +9610,9 @@ function renderContractBanners(){
   const host=document.getElementById('contract-banners');
   if(!host)return;
   const items=outstandingContracts();
-  const switchHtml=_peSwitchBannerHtml();
   const driftHtml=_peBaseDriftBannerHtml();
-  if(!items.length&&!switchHtml&&!driftHtml){host.innerHTML='';return}
-  host.innerHTML=driftHtml+switchHtml+items.map(function(it){
+  if(!items.length&&!driftHtml){host.innerHTML='';return}
+  host.innerHTML=driftHtml+items.map(function(it){
     const a=_contractAck(it.s,it.at);
     const key="'"+it.s.id+"',"+it.at;
     if(!it.next){
@@ -9928,7 +9873,7 @@ function _renderGradEstCard(){
           (targetOnTime?'On time':'Meets standard')+
         '</div>'+
         '<div style="font-size:12px;color:var(--text3);margin-top:6px">'+fmtH(teacherWeekly())+'/wk &middot; '+fmtH(teacherDaily())+'/day</div>'+
-        '<div style="font-size:11px;color:var(--text3);margin-top:4px">Must have &le;150h of study left (max 7 credits unfinished)</div>'+
+        '<div style="font-size:11px;color:var(--text3);margin-top:4px">Must have &le;150h of study left (max 5 credits unfinished)</div>'+
       '</div>'+
     '</div>'+
     '<div style="background:var(--bg3);border-radius:var(--radius);padding:16px 20px;display:flex;align-items:center;justify-content:space-between">'+
@@ -10871,7 +10816,7 @@ const GRAD_TRANSFER_CREDITS=4.5; // English9(1) + Lab Sci(1) + Soc.Studies.Elect
 // ── THREE DATES. DO NOT CONFLATE THEM. ───────────────────────────────────────
 // FIRST_GUIDANCE_DEADLINE (2027-07-20) — the 1st Graduation Guidance. On this date
 //   the school checks that Noah has NO MORE THAN 150h of study left (spread over at
-//   most 7 unfinished credits — the 150h cap is what binds). Miss it and he cannot
+//   most 5 unfinished credits — the 150h cap is what binds). Miss it and he cannot
 //   graduate in Oct 2027 and tuition extends. EVERY pace, minimum, projection and
 //   on-track calculation targets THIS date, clearing (remaining - 150h), not zero.
 // FINAL_DEADLINE (2027-09-20) — the 3rd Graduation Guidance: remaining hours must be
@@ -12718,7 +12663,7 @@ function _aiSystemPrompt(ctx){
     remaining,pace,estDateStr,checkpointEstStr,neededPace,onTrack,sessionCount
   }=ctx;
   const hm=_fmtDecimalToHm;
-  return `You are the Schedule Coach inside Noah's StudyTrack app. Noah is a TIHS student in Tokyo (JST) on a self-paced US-diploma track, whose binding checkpoint is the 1st Graduation Guidance on ${FIRST_GUIDANCE_DEADLINE}: by then he must have NO MORE THAN ${FIRST_GUIDANCE_FLOOR_H}h of study left (at most 7 credits unfinished). Miss it and he cannot graduate in October 2027 and tuition extends. All pace advice targets this checkpoint. The remaining ${FIRST_GUIDANCE_FLOOR_H}h must then be finished by ${FINAL_DEADLINE}; mention that date only if Noah asks what happens after the checkpoint. The ceremony is ${GRAD_DEADLINE}; never use the ceremony date when giving pace advice.
+  return `You are the Schedule Coach inside Noah's StudyTrack app. Noah is a TIHS student in Tokyo (JST) on a self-paced US-diploma track, whose binding checkpoint is the 1st Graduation Guidance on ${FIRST_GUIDANCE_DEADLINE}: by then he must have NO MORE THAN ${FIRST_GUIDANCE_FLOOR_H}h of study left (at most 5 credits unfinished). Miss it and he cannot graduate in October 2027 and tuition extends. All pace advice targets this checkpoint. The remaining ${FIRST_GUIDANCE_FLOOR_H}h must then be finished by ${FINAL_DEADLINE}; mention that date only if Noah asks what happens after the checkpoint. The ceremony is ${GRAD_DEADLINE}; never use the ceremony date when giving pace advice.
 
 === PRECOMPUTED FIGURES (authoritative — REPORT these, never recalculate) ===
 The app has already done all the math. When Noah asks about progress, pace, hours, or timing, quote these numbers directly. Do NOT add up sessions yourself or estimate — you will get it wrong; trust these.
@@ -13272,8 +13217,8 @@ window.addEventListener('load',function(){
       var ds=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
       var subjs=JSON.parse(localStorage.getItem('st_subjs')||'[]');
       var ecSet=new Set(subjs.filter(function(s){return s.extraCredit}).map(function(s){return s.id}));
-      // Also add built-in extra credit IDs (el4 etc) in case st_subjs not yet loaded
-      ['el4','el5','el6'].forEach(function(id){ecSet.add(id)});
+      // Also add built-in extra credit IDs (el4) in case st_subjs not yet loaded
+      ['el4'].forEach(function(id){ecSet.add(id)});
       var yh=ss.filter(function(s){return s.date===ds&&!ecSet.has(s.subjectId)}).reduce(function(a,s){return a+(s.hours||0)},0);
       var pc=tg>0?yh/tg:1;
       function hm(h){var tot=Math.round(h*60);var hr=Math.floor(tot/60),mn=tot%60;return hr&&mn?hr+'h '+mn+'m':hr?hr+'h':mn+'m'}
