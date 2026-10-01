@@ -1030,6 +1030,68 @@ button:active{transform:scale(0.96)}
 
 /* ── IN-APP BANNER ───────────────────────────────────────────────────────── */
 
+/* ── MONTHLY FOCUS (2026-10-01) ──────────────────────────────────────────────
+   The red in this section is a DELIBERATE exception to the monochrome palette:
+   Noah asked for the focus block to be bold red on every page. Keep the red to
+   these fc-* classes - it must not leak into the rest of the app. */
+.fc-block{background:#7f1d1d;border:2px solid #ef4444;border-radius:14px;padding:14px 16px;margin:0 0 12px 0;color:#fff}
+.fc-block-title{font-size:16px;font-weight:800;line-height:1.35;color:#fff;letter-spacing:-0.2px}
+.fc-block-note{font-size:12px;font-weight:600;color:#fecaca;margin-top:4px;line-height:1.45}
+.fc-rows{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.fc-row{display:block;width:100%;text-align:left;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.22);border-radius:10px;padding:10px 12px;color:#fff;font-family:inherit;cursor:pointer;min-width:0}
+.fc-row-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.fc-row-slot{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.6px;color:#fecaca;margin-right:6px}
+.fc-row-name{font-size:14px;font-weight:800;color:#fff}
+.fc-row-left{font-size:12.5px;font-weight:800;color:#fff;white-space:nowrap}
+.fc-row-track{font-size:12px;line-height:1.45;margin-top:5px;color:#fee2e2;word-break:break-word}
+.fc-row-track b{color:#fff;font-weight:700}
+.fc-row-edit{font-size:10.5px;color:#fecaca;margin-top:6px;text-decoration:underline}
+.fc-alert{margin-top:12px;background:rgba(0,0,0,0.32);border:1px solid rgba(255,255,255,0.25);border-radius:10px;padding:12px}
+.fc-alert-title{font-size:13.5px;font-weight:800;color:#fff;margin-bottom:6px;line-height:1.4}
+.fc-pick{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.fc-pick-label{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;opacity:0.85;display:block;margin-bottom:4px}
+.fc-pick-locked{font-size:13px;line-height:1.45;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,0.08)}
+.fc-pick-btn{margin-top:10px;background:#fff;color:#7f1d1d;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit}
+.fc-choose{background:rgba(239,68,68,0.10);border:2px solid rgba(239,68,68,0.55);border-radius:12px;padding:14px 16px;margin:0 0 12px 0;font-size:13px;color:var(--text)}
+.fc-choose-title{font-size:14.5px;font-weight:800;color:var(--text);line-height:1.35;margin-bottom:4px}
+.fc-choose-sub{font-size:12.5px;color:var(--text2);line-height:1.5}
+.fc-choose .fc-pick-btn{background:var(--o);color:var(--bg)}
+.fc-book-banner{display:none;background:rgba(239,68,68,0.12);border:2px solid rgba(239,68,68,0.6);border-radius:12px;padding:12px 16px;margin:0 0 14px 0;font-size:13px;color:var(--text);line-height:1.5}
+.fc-book-banner.show{display:block}
+.fc-book-fields{display:none;grid-template-columns:2fr 1fr 1fr;gap:10px;margin:14px 0 0 0}
+.fc-noform{display:none;background:#7f1d1d;border:2px solid #ef4444;color:#fff;border-radius:10px;padding:11px 14px;margin:12px 0 0 0;font-size:13px;font-weight:700;line-height:1.45}
+.fc-noform.show{display:block}
+input.form-input.fc-locked{background:var(--bg4);color:var(--text2);cursor:not-allowed}
+.fc-log-block{display:none;background:#7f1d1d;border:2px solid #ef4444;border-radius:14px;padding:16px;margin:0 0 12px 0;color:#fff;font-size:13.5px;line-height:1.5}
+.fc-log-block.show{display:block}
+.fc-other-overlay{position:fixed;inset:0;z-index:1500;background:rgba(0,0,0,0.94);display:none;align-items:center;justify-content:center;padding:24px}
+.fc-other-overlay.show{display:flex}
+.fc-other-card{background:var(--bg2);border:2px solid #ef4444;border-radius:18px;max-width:420px;width:100%;padding:24px 22px;text-align:center}
+.fc-other-title{font-size:19px;font-weight:800;color:var(--text);margin-bottom:10px}
+.fc-other-text{font-size:14px;color:var(--text2);line-height:1.55;margin-bottom:18px}
+.fc-other-card .btn-save{margin-bottom:8px}
+.fc-park-warn{display:none;background:rgba(239,68,68,0.12);border:1.5px solid rgba(239,68,68,0.55);border-radius:10px;padding:10px 13px;margin:0 0 14px 0;font-size:12.5px;color:var(--text);line-height:1.5}
+.fc-park-warn.show{display:block}
+.fc-jr-lock{margin-top:8px;font-size:12px;line-height:1.5;color:#fca5a5;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.35);border-radius:8px;padding:8px 10px}
+.jr-btn.fc-btn-locked,.morning-stretch-banner-btn.fc-btn-locked{opacity:0.45;cursor:not-allowed}
+.fc-hist-tag{display:inline-block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.4px;padding:2px 7px;border-radius:100px;background:var(--bg4);color:var(--text2);margin:4px 6px 0 0}
+.fc-hist-noform{display:inline-block;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.4px;padding:3px 8px;border-radius:6px;background:#b91c1c;color:#fff;margin:4px 6px 0 0}
+.fc-del-locked{display:flex;align-items:center;justify-content:center;color:var(--text3);cursor:not-allowed}
+.fc-del-locked:hover{background:none!important;color:var(--text3)!important}
+.fc-lock-note{background:rgba(239,68,68,0.12);border:1.5px solid rgba(239,68,68,0.55);border-radius:10px;padding:10px 13px;margin:0 0 14px 0;font-size:12.5px;color:var(--text);line-height:1.5}
+.fc-hist-month{background:var(--bg2);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px}
+.fc-hist-month-name{font-size:15px;font-weight:800;color:var(--text);margin-bottom:6px}
+.fc-hist-line{font-size:13px;line-height:1.5;color:var(--text);padding:7px 0;border-top:1px solid var(--border)}
+.fc-hist-meta{display:block;font-size:12px;color:var(--text2)}
+.fc-pin-head{font-size:11px;font-weight:800;color:var(--text);text-transform:uppercase;letter-spacing:0.7px;padding:2px 2px 8px}
+.fc-pin-slot{font-size:10px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;padding:4px 2px}
+.fc-divider{height:3px;background:var(--text2);border-radius:2px;margin:14px 0 16px}
+@media(max-width:600px){
+  .fc-rows,.fc-pick{grid-template-columns:1fr}
+  .fc-book-fields{grid-template-columns:1fr 1fr}
+  .fc-book-fields .fc-book-name{grid-column:1 / -1}
+}
+
 
 </style>
 <!-- NoSleep.js: prevents screen dim/sleep during timer on Safari/older browsers -->
@@ -1086,6 +1148,11 @@ button:active{transform:scale(0.96)}
 
   <!-- MAIN -->
   <main id="main">
+    <!-- Monthly focus (2026-10-01). #focus-block is the red block Noah asked for
+         on EVERY page - no x, it cannot be dismissed. #focus-choose is "Banner 2":
+         choosing next month's subjects. Both are owned by renderFocusBlock(). -->
+    <div id="focus-block"></div>
+    <div id="focus-choose"></div>
     <!-- Contract banners. One per contract boundary that is reached, or within
          CONTRACT_LEAD_H of being reached, and not yet confirmed. Sticky: there is
          no × here on purpose. Owned by renderContractBanners(). -->
@@ -1161,6 +1228,9 @@ button:active{transform:scale(0.96)}
         <div class="morning-stretch-banner-text" id="journal-note-banner-text"></div>
         <button onclick="hideJournalNoteBanner()" title="Dismiss" aria-label="Dismiss" style="background:none;border:none;color:var(--text3);font-size:20px;line-height:1;cursor:pointer;font-family:inherit;padding:0 2px;flex-shrink:0">&times;</button>
       </div>
+      <!-- Shown INSTEAD of the log form while this month's focus subjects are
+           still to be chosen (owned by renderLog via _fcRenderLogBlock). -->
+      <div class="fc-log-block" id="fc-log-block"></div>
       <div class="card log-form-card" id="log-form-card" style="margin-bottom:12px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:8px;flex-wrap:wrap">
           <div class="card-title" style="margin-bottom:0">Log a Session</div>
@@ -1171,10 +1241,11 @@ button:active{transform:scale(0.96)}
           </div>
         </div>
         <div class="ka-proof-banner" id="ka-proof-banner-log"></div>
+        <div class="fc-book-banner" id="fc-book-banner"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
           <div class="form-group" style="margin-bottom:0">
             <label class="form-label">Subject</label>
-            <select class="form-input" id="log-subject" onchange="updateLogFormColour();dismissDupWarn();updateJournalLenWarn();updateKaProofBanner()"></select>
+            <select class="form-input" id="log-subject" onchange="_fcOnLogSubjectChange();updateLogFormColour();dismissDupWarn();updateJournalLenWarn();updateKaProofBanner()"></select>
           </div>
           <div class="form-group" style="margin-bottom:0">
             <label class="form-label">Date</label>
@@ -1200,10 +1271,27 @@ button:active{transform:scale(0.96)}
           </div>
         </div>
         <div id="log-health-note" style="display:none;font-size:13px;line-height:1.5;color:var(--text);margin:12px 0 0 0">Ensure that I am studying topics in Health Science that are included in the contract title: Toxicology, Cosmetic Ingredients, Endocrine System, Fluoride, Energy Drinks</div>
+        <!-- English book reading (when English is not the core subject). The title
+             is BUILT from these three fields; log-notes becomes a locked preview. -->
+        <div class="fc-book-fields" id="fc-book-fields">
+          <div class="form-group fc-book-name" style="margin-bottom:0">
+            <label class="form-label">Book name</label>
+            <input type="text" class="form-input" id="fc-book-name" autocomplete="off" oninput="_fcRefreshBookPreview()">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">From page</label>
+            <input type="text" class="form-input" id="fc-book-from" inputmode="numeric" autocomplete="off" oninput="_fcRefreshBookPreview()">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">To page</label>
+            <input type="text" class="form-input" id="fc-book-to" inputmode="numeric" autocomplete="off" oninput="_fcRefreshBookPreview()">
+          </div>
+        </div>
+        <div class="fc-noform" id="fc-book-noform"></div>
         <div class="duration-display" id="log-duration" style="margin:10px 0 14px"></div>
         <div id="log-dayload" style="display:none;margin-bottom:14px"></div>
         <div class="form-group" style="margin-bottom:16px">
-          <label class="form-label">Journal Content/What You Studied</label>
+          <label class="form-label" id="log-notes-label">Journal Content/What You Studied</label>
           <input type="text" class="form-input" id="log-notes" oninput="updateJournalLenWarn()">
           <div id="log-notes-len" style="display:none;font-size:11px;line-height:1.45;margin-top:6px"></div>
         </div>
@@ -1314,6 +1402,7 @@ button:active{transform:scale(0.96)}
       <div style="display:flex;gap:6px;margin-bottom:16px">
         <button id="hist-tab-sessions" onclick="switchHistTab('sessions')" style="flex:1;padding:9px 0;border-radius:100px;font-size:13px;font-weight:700;border:none;cursor:pointer;background:var(--o);color:var(--bg);font-family:inherit">Sessions</button>
         <button id="hist-tab-calendar" onclick="switchHistTab('calendar')" style="flex:1;padding:9px 0;border-radius:100px;font-size:13px;font-weight:700;border:none;cursor:pointer;background:var(--bg2);color:var(--text2);font-family:inherit">Calendar</button>
+        <button id="hist-tab-focus" onclick="switchHistTab('focus')" style="flex:1;padding:9px 0;border-radius:100px;font-size:13px;font-weight:700;border:none;cursor:pointer;background:var(--bg2);color:var(--text2);font-family:inherit">Focus</button>
       </div>
       <!-- Sessions view -->
       <div id="hist-sessions-view">
@@ -1356,6 +1445,10 @@ button:active{transform:scale(0.96)}
       <!-- Calendar view -->
       <div id="hist-calendar-view" style="display:none">
         <div id="hist-calendar-inner"></div>
+      </div>
+      <!-- Focus view: month-by-month log of core/side subjects (renderFocusHistory) -->
+      <div id="hist-focus-view" style="display:none">
+        <div id="hist-focus-inner"></div>
       </div>
     </div>
 
@@ -1445,7 +1538,7 @@ button:active{transform:scale(0.96)}
       <div id="nav-reorder-list" style="display:flex;flex-direction:column;gap:6px;margin-top:4px"></div>
     </div>
     <div class="form-group" style="margin-top:6px">
-      <label class="form-label">Anthropic API Key <span style="font-weight:400;color:var(--text3)">(for workout import)</span></label>
+      <label class="form-label">Anthropic API Key <span style="font-weight:400;color:var(--text3)">(for the Preply import)</span></label>
       <input type="password" class="form-input" id="settings-anthropic-key" placeholder="sk-ant-...">
       <div style="font-size:11px;color:var(--text3);margin-top:4px">Stored locally on your device only. Get yours at console.anthropic.com</div>
     </div>
@@ -1457,20 +1550,6 @@ button:active{transform:scale(0.96)}
          is still in Supabase, so signing back in restores everything. -->
     <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);text-align:center">
       <button onclick="confirmLogout()" style="background:none;border:none;color:var(--err);font-size:13px;cursor:pointer;font-family:inherit;text-decoration:underline">Sign out of this device</button>
-    </div>
-  </div>
-</div>
-
-<!-- AFTER-RUN STRETCHES PROMPT -->
-<div class="modal-overlay" id="prerun-stretch-modal-overlay" onclick="handleOverlayClick(event,'prerun-stretch-modal-overlay')">
-  <div class="modal-sheet" onclick="event.stopPropagation()">
-    <div class="modal-handle"></div>
-    <div class="modal-title">Pre-Run Stretches?</div>
-    <div style="font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:14px">Log your pre-run stretches first? I'll fill the form in — review it and tap Log Session. The run itself follows straight after.</div>
-    <div id="prerun-stretch-preview" style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:13px;line-height:1.7"></div>
-    <div class="modal-actions">
-      <button class="btn-save" onclick="fillPreRunStretchLog()">Fill it in</button>
-      <button class="btn-cancel" onclick="skipPreRunStretch()">Skip to the run</button>
     </div>
   </div>
 </div>
@@ -1682,6 +1761,7 @@ button:active{transform:scale(0.96)}
       <input type="text" class="form-input" id="jr-title" placeholder="e.g. 2nd September - Algebra 1 Unit 4 Review">
       <div style="font-size:11px;color:var(--text3);margin-top:5px;line-height:1.45">Fills &ldquo;Journal Content/What You Studied&rdquo; on the Log page, and the Google Form.</div>
     </div>
+    <div class="fc-park-warn" id="fc-park-warn"></div>
     <div class="form-group" style="margin-bottom:14px">
       <label class="form-label">Description</label>
       <textarea class="form-input" id="jr-desc" placeholder="What this was, what proof you still need, anything you want to remember when you come back to it."></textarea>
@@ -1691,7 +1771,7 @@ button:active{transform:scale(0.96)}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
       <div class="form-group" style="margin-bottom:0">
         <label class="form-label">Subject</label>
-        <select class="form-input" id="jr-subject" onchange="_jrCheckForm();updateKaProofBanner('jr-subject','ka-proof-banner-jr')"></select>
+        <select class="form-input" id="jr-subject" onchange="_jrCheckForm();updateKaProofBanner('jr-subject','ka-proof-banner-jr');_fcUpdateParkWarn()"></select>
       </div>
       <div class="form-group" style="margin-bottom:0">
         <label class="form-label">Day Studied</label>
@@ -1973,12 +2053,38 @@ button:active{transform:scale(0.96)}
   </div>
 </div>
 
+<!-- MONTHLY FOCUS: "Other subjects" picked on the Log page. Full-screen on
+     purpose - nothing outside this month's subjects is logged from the Log page;
+     it is parked as a journal instead. Owned by _fcShowOther()/fcCloseOther(). -->
+<div class="fc-other-overlay" id="fc-other-overlay" role="dialog" aria-modal="true">
+  <div class="fc-other-card">
+    <div class="fc-other-title">Park it as a journal</div>
+    <div class="fc-other-text" id="fc-other-text"></div>
+    <button class="btn-save" onclick="fcParkOther()">Go to Journals and park it</button>
+    <button class="btn-cancel" onclick="fcCloseOther()">Back to the Log page</button>
+  </div>
+</div>
+
+<!-- MONTHLY FOCUS: work tracker edit box ("Left off at" / "Next up" per focus
+     subject). Body is built by openFocusTracker(). -->
+<div class="modal-overlay" id="fc-tracker-overlay" onclick="handleOverlayClick(event,'fc-tracker-overlay')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="fc-tracker-title">Work tracker</div>
+    <div id="fc-tracker-body"></div>
+    <div class="modal-actions">
+      <button class="btn-save" onclick="saveFocusTracker()">Save</button>
+      <button class="btn-cancel" id="fc-tracker-cancel" onclick="closeModal('fc-tracker-overlay')">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- WORKOUT IMPORT MODAL -->
 <div class="modal-overlay" id="workout-import-overlay" onclick="_workoutOverlayClick(event)">
   <div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
     <div class="modal-title">Import Screenshot</div>
-    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Strava (cycle / walk) · Runna (run) · Preply (Japanese lesson) · Bungu (work shift)</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Preply (Japanese lesson)</div>
 
     <div id="workout-upload-area">
       <!-- Paste target — hidden contenteditable so native paste (Cmd+V / long-press) works -->
@@ -2003,13 +2109,6 @@ button:active{transform:scale(0.96)}
       </div>
       <input type="file" id="workout-file-input" accept="image/*" style="display:none" onchange="handleWorkoutFile(event)">
       <img id="workout-img-preview" class="img-preview" style="display:none;margin-bottom:8px">
-      <a href="https://drive.google.com/drive/u/1/folders/1-EyjijcAu7nNWqJEfu_xViufRc_Nk49t" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;color:var(--text3);font-size:12.5px;text-decoration:underline;padding:6px 0">Open Google Drive folder</a>
-      <a href="https://docs.google.com/spreadsheets/d/1lrLzNnAL4YQ6sZp4tASW52eZPXNGNgfhIwqLS6o_guQ/edit?gid=1291500163#gid=1291500163" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;color:var(--text3);font-size:12.5px;text-decoration:underline;padding:6px 0">PE Journal Responses</a>
-
-      <!-- No screenshot to hand. Goes straight to the result screen with the
-           date / activity / time / duration fields shown, skipping the API
-           entirely — nothing is read and nothing is sent. -->
-      <button onclick="openManualWorkoutEntry()" style="width:100%;background:none;border:none;color:var(--text3);font-size:12.5px;cursor:pointer;font-family:inherit;text-decoration:underline;padding:6px 0">No screenshot? Enter the details manually</button>
     </div>
 
     <!-- Spinner sits outside the upload/source areas so it stays visible while
@@ -2022,48 +2121,9 @@ button:active{transform:scale(0.96)}
       <img id="workout-source-preview" class="img-preview" style="margin-bottom:14px;max-height:200px;object-fit:contain">
 
       <div id="workout-step-app">
-        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Which app is this from?</div>
+        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Is this a Preply lesson card?</div>
         <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Nothing is sent until you choose.</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <button onclick="pickWorkoutApp('Strava')" style="background:var(--ol);border:1.5px solid var(--o);border-radius:12px;padding:16px 10px;font-size:14px;font-weight:700;color:var(--o);cursor:pointer;font-family:inherit"> Strava</button>
-          <button onclick="pickWorkoutApp('Runna')" style="background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:16px 10px;font-size:14px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit"> Runna</button>
-        </div>
         <button onclick="pickWorkoutApp('Preply')" style="width:100%;margin-top:10px;background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:16px 10px;font-size:14px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit"> Preply</button>
-        <button onclick="pickWorkoutApp('Bungu')" style="width:100%;margin-top:10px;background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:16px 10px;font-size:14px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit"> Bungu (work shift)</button>
-      </div>
-
-      <div id="workout-step-activity" style="display:none">
-        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Cycle or walk?</div>
-        <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Strava tracks both, so I need to know which.</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <button onclick="pickWorkoutActivity('Cycle')" style="background:var(--ol);border:1.5px solid var(--o);border-radius:12px;padding:16px 10px;font-size:14px;font-weight:700;color:var(--o);cursor:pointer;font-family:inherit"> Cycle</button>
-          <button onclick="pickWorkoutActivity('Walk')" style="background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:16px 10px;font-size:14px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit"> Walk</button>
-        </div>
-      </div>
-
-      <!-- Second screenshot for a Bungu import: the Bungu Scheduler calendar for
-           the same month as the King of Time screenshot. Skipping it never changes
-           the logged duration — the King of Time clock-in/out is the source of
-           truth — it only leaves out the Shift Start/End line in the journal,
-           which _fillBunguLogForm() handles on its own if this step is skipped
-           via the explicit "no schedule" link. -->
-      <div id="workout-step-bungu-schedule" style="display:none">
-        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Now the Bungu Scheduler screenshot</div>
-        <div style="font-size:12px;color:var(--text3);margin-bottom:12px">The monthly calendar view. I'll find the same date as the King of Time screenshot and read its <b>blue</b> shift time — the green block is your break, not a second shift, and is ignored.</div>
-        <img id="workout-bungu-schedule-preview" class="img-preview" style="display:none;margin-bottom:10px;max-height:220px;object-fit:contain">
-        <div id="workout-bungu-schedule-drop-zone"
-          ondragenter="_wBsDragEnter(event)" ondragover="_wBsDragOver(event)" ondragleave="_wBsDragLeave(event)" ondrop="_wBsDrop(event)"
-          onclick="document.getElementById('workout-bungu-schedule-file-input').click()"
-          style="border:2px dashed var(--border);border-radius:14px;padding:24px 16px;text-align:center;cursor:pointer;margin-bottom:10px">
-          <div style="font-size:14px;font-weight:700;color:var(--text2);margin-bottom:4px">Drop image here</div>
-          <div style="font-size:12px;color:var(--text3)">or click to choose a photo</div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-          <button onclick="document.getElementById('workout-bungu-schedule-file-input').click()" style="background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:14px 10px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit">Choose File</button>
-          <button onclick="pasteBunguScheduleImage()" style="background:var(--ol);border:1.5px solid var(--o);border-radius:12px;padding:14px 10px;font-size:13px;font-weight:700;color:var(--o);cursor:pointer;font-family:inherit">Paste</button>
-        </div>
-        <input type="file" id="workout-bungu-schedule-file-input" accept="image/*" style="display:none" onchange="handleBunguScheduleFile(event)">
-        <button onclick="skipBunguScheduleShot()" style="width:100%;background:none;border:none;color:var(--text3);font-size:12.5px;cursor:pointer;font-family:inherit;text-decoration:underline;padding:8px 0">No schedule for this date — leave Shift Start/End out of the journal</button>
       </div>
 
       <button class="btn-cancel" style="margin-top:12px;width:100%" onclick="backToWorkoutUpload()">← Choose a different image</button>
@@ -2071,32 +2131,6 @@ button:active{transform:scale(0.96)}
 
     <div id="workout-result-area" style="display:none">
       <div class="workout-summary-card" id="workout-summary-card"></div>
-      <div id="workout-manual-row" style="display:none">
-        <div class="form-group" style="margin:12px 0 0">
-          <label class="form-label">Date</label>
-          <input type="date" class="form-input" id="workout-date-input">
-        </div>
-        <div class="form-group" style="margin:10px 0 0">
-          <label class="form-label">Activity</label>
-          <select class="form-input" id="workout-activity-input">
-            <option value="Run">Run</option>
-            <option value="Cycle">Cycle</option>
-            <option value="Walk">Walk</option>
-          </select>
-        </div>
-        <div class="form-group" style="margin:10px 0 0">
-          <label class="form-label">Start time</label>
-          <input type="time" class="form-input" id="workout-starttime-input">
-        </div>
-        <div class="form-group" style="margin:10px 0 0">
-          <label class="form-label">Duration <span style="font-weight:400;color:var(--text3)">(minutes)</span></label>
-          <input type="number" min="1" class="form-input" id="workout-duration-input" placeholder="45">
-        </div>
-      </div>
-      <div class="form-group" id="workout-cyclenum-row" style="margin:10px 0 0;display:none">
-        <label class="form-label">Number today <span style="font-weight:400;color:var(--text3)">(e.g. 2 for your second ride)</span></label>
-        <input type="number" min="1" class="form-input" id="workout-cyclenum-input" placeholder="1">
-      </div>
       <div class="modal-actions" style="margin-top:14px">
         <button class="btn-save" onclick="useWorkoutResult()">Use this →</button>
         <button class="btn-cancel" onclick="backToWorkoutUpload()">← Back</button>
@@ -2341,6 +2375,8 @@ function updateKaProofBanner(selectId,bannerId){
   if(selectId==='log-subject'){
     const hn=document.getElementById('log-health-note');
     if(hn)hn.style.display=(sel.value==='health')?'block':'none';
+    // English book-reading mode (monthly focus) piggybacks for the same reason.
+    if(typeof _fcUpdateBookMode==='function')_fcUpdateBookMode();
   }
   if(_isKaProofSubject(sel.value)){
     banner.innerHTML=KA_PROOF_TEXT;
@@ -3676,53 +3712,11 @@ const WORKOUT_MODEL='claude-haiku-4-5-20251001';
 // to see exactly what came back.
 let _lastWorkoutRaw=null;
 
-function _buildWorkoutPrompt(app,activity,hasBunguScheduleShot){
+// Preply is the only import left. The Strava/Runna (PE) and Bungu (work shift ->
+// Electives) imports were removed 2026-10-01: PE and the electives are finished,
+// so neither had a subject left to log to.
+function _buildWorkoutPrompt(app){
   const today=new Date().toISOString().slice(0,10);
-  // Bungu: TWO images always. The first is a King of Time "Work details"
-  // screen (clock-in/out, source of truth for the session's actual times).
-  // The second, when supplied, is a Bungu Scheduler month calendar — read
-  // ONLY for the date matching the King of Time screenshot, and ONLY its BLUE
-  // chip (the shift). The green chip on that calendar is Noah's break, not a
-  // second shift, and must never be read as one.
-  if(app==='Bungu'){
-    let p='This is a screenshot of a King of Time "Work details" screen \u2014 a work\n'+
-      'clock-in/clock-out record for one specific date.\n\n';
-    if(hasBunguScheduleShot){
-      p+='A SECOND image is attached: a Bungu Scheduler month calendar (a work\n'+
-         'shift schedule). It shows one cell per day, each with zero, one or two\n'+
-         'small colored time-range chips.\n\n';
-    }
-    p+='Today\'s date is '+today+'.\n\n';
-    p+='Read ONLY the fields listed below. NEVER guess or estimate a value that is not shown \u2014 return null instead.\n\n';
-    p+='Return ONLY valid JSON, no markdown fences:\n'+
-       '{"date":"YYYY-MM-DD","clockIn":"HH:MM","clockOut":"HH:MM"'+
-       (hasBunguScheduleShot?',"shiftStart":"HH:MM"|null,"shiftEnd":"HH:MM"|null':'')+'}\n\n'+
-       'RULES:\n'+
-       '- FIRST image only: date, from the header line reading like "2026/08/31(Mon)" \u2014 that is\n'+
-       '  YYYY/MM/DD, convert to YYYY-MM-DD. Ignore the day-of-week letters, they are not needed.\n'+
-       '- FIRST image only: clockIn is the "Clock-in" column value. clockOut is the "Clock-out"\n'+
-       '  column value. Both are 24-hour HH:MM. Copy them exactly \u2014 do not round or shift them.\n'+
-       '- FIRST image only: "Start break" and "End break" are shown on the same row but are\n'+
-       '  DELIBERATELY NOT WANTED \u2014 do not return them under any field name.\n';
-    if(hasBunguScheduleShot){
-      p+='- SECOND image only: find the calendar cell whose day-of-month number matches the date\n'+
-         '  you read from the first image (same month/year as the calendar header). Inside that\n'+
-         '  cell there may be ONE OR TWO small colored time-range chips like "10:30\u201317" or\n'+
-         '  "14\u201314:30".\n'+
-         '- shiftStart / shiftEnd: read ONLY from the BLUE chip in that cell. The blue chip is\n'+
-         '  always the longer, primary shift block. Convert its "H:MM\u2013H:MM" or "H\u2013H:MM" style\n'+
-         '  range to two 24-hour HH:MM values, e.g. "10:30\u201317" means shiftStart "10:30", shiftEnd\n'+
-         '  "17:00". A bare hour like "17" or "14" means that exact hour, minutes "00".\n'+
-         '- The GREEN chip in that cell (if present) is a break block, NEVER a shift \u2014 do not read\n'+
-         '  it, do not merge it with the blue chip, do not return it under any field name.\n'+
-         '- If that date\'s cell has no blue chip at all, return null for both shiftStart and\n'+
-         '  shiftEnd. Do not substitute a different date\'s chip and do not estimate.\n';
-    }
-    p+='- Return NO other field. The month/allowed-hours summary box, the shift-count fraction\n'+
-       '  (e.g. "3/13") printed above each day, and any other calendar chrome are deliberately not\n'+
-       '  wanted.\n';
-    return p;
-  }
   // Preply asks for four plain fields off the lesson card and nothing else. No
   // title is requested: a Preply card has no title Noah wrote, and the journal
   // line is assembled in JS from the date, times and teacher name.
@@ -3743,35 +3737,10 @@ function _buildWorkoutPrompt(app,activity,hasBunguScheduleShot){
       '- Return NO other field. The "Confirmed" status, the star rating, the tutor photo, the price\n'+
       '  and any buttons are deliberately not wanted.\n';
   }
-  let p='This is a screenshot from '+app+'. The activity is a '+activity+'.\n\nToday\'s date is '+today+'.\n\n';
-  p+='Read ONLY the fields listed below. NEVER guess or estimate a value that is not shown — return null instead.\n\n';
-  if(app==='Strava'){
-    p+='STRAVA NOTES:\n'+
-       '- The timestamp ("Today at HH:MM", "Yesterday at HH:MM", or a date) is ALWAYS the START time, never the end.\n'+
-       '- "Yesterday" means subtract one day from today\'s date.\n\n';
-  }else{
-    p+='RUNNA NOTES:\n'+
-       '- The header reads like "31 Jul 2026 at 20:49". That single timestamp is the START time. There is no end time shown — do not invent one.\n\n';
-  }
-  p+='Return ONLY valid JSON, no markdown fences:\n'+
-     '{"activityTitle":string|null,"date":"YYYY-MM-DD","timestampWasRelative":boolean,"startTime":"HH:MM","durationSeconds":number}\n\n'+
-     'RULES:\n'+
-     '- activityTitle: the large activity title on the screen, copied out EXACTLY and in full,\n'+
-     ' e.g. "1st August - Afternoon Cycle 2". If there is no title, return null. Do not tidy it up,\n'+
-     ' do not translate it, do not drop a trailing number. This is important.\n'+
-     '- timestampWasRelative: true if the screen said "Today at" / "Yesterday at" with no explicit\n'+
-     ' calendar date. false if an actual date was printed, e.g. "31 Jul 2026 at 20:49".\n'+
-     '- durationSeconds: from the FIRST image, convert the displayed time exactly. "10m 29s" = 629.\n'+
-     ' "27:10" = 1630. Never round up.\n'+
-     '- date: from the relative timestamp ("Yesterday at...") ONLY as a fallback. If the title contains\n'+
-     ' a date, that date is the truth — I write those titles myself and they are correct even when the\n'+
-     ' screenshot was taken days later.\n'+
-     '- Return NO other field. Distance, pace, heart rate, cadence, calories, power, elevation, steps,\n'+
-     ' achievements and location are deliberately not wanted.\n';
-  return p;
+  return null;
 }
 
-async function _callWorkoutModel(model,key,base64,mimeType,promptText,signal,secondB64,secondMime){
+async function _callWorkoutModel(model,key,base64,mimeType,promptText,signal){
   const resp=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     signal:signal,
@@ -3788,7 +3757,6 @@ async function _callWorkoutModel(model,key,base64,mimeType,promptText,signal,sec
       max_tokens:2000,
       messages:[{role:'user',content:(function(){
         const c=[{type:'image',source:{type:'base64',media_type:mimeType,data:base64}}];
-        if(secondB64)c.push({type:'image',source:{type:'base64',media_type:secondMime||'image/jpeg',data:secondB64}});
         c.push({type:'text',text:promptText});
         return c;
       })()}]
@@ -3797,17 +3765,18 @@ async function _callWorkoutModel(model,key,base64,mimeType,promptText,signal,sec
   return resp;
 }
 
-async function analyseWorkoutImage(base64,mimeType,secondB64,secondMime){
+async function analyseWorkoutImage(base64,mimeType){
+  if(_workoutApp!=='Preply'){showToast('Only a Preply lesson card can be imported','var(--err)');return null}
   const key=localStorage.getItem('st_anthropic_key');
   if(!key){showToast('Add Anthropic API key in  Settings','var(--err)');return null}
-  const app=_workoutApp||'Strava';
-  const activity=_workoutActivity||'Run';
+  const app=_workoutApp;
+  const activity=_workoutActivity||'Lesson';
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),45000);
   try{
-    const promptText=_buildWorkoutPrompt(app,activity,app==='Bungu'&&!!secondB64);
+    const promptText=_buildWorkoutPrompt(app);
 
-    const resp=await _callWorkoutModel(WORKOUT_MODEL,key,base64,mimeType,promptText,controller.signal,secondB64,secondMime);
+    const resp=await _callWorkoutModel(WORKOUT_MODEL,key,base64,mimeType,promptText,controller.signal);
     const usedModel=WORKOUT_MODEL;
     clearTimeout(timer);
     if(!resp.ok){
@@ -3849,37 +3818,8 @@ async function analyseWorkoutImage(base64,mimeType,secondB64,secondMime){
     parsed.activity=activity;
     parsed.model=usedModel;
 
-    // BUNGU. King of Time gives the real clock-in/clock-out, which is the
-    // session's actual length — never adjusted, never estimated. The Bungu
-    // Scheduler screenshot (if supplied) only contributes shiftStart/shiftEnd,
-    // which are informational (the journal's "Shift Start/End" line) and never
-    // affect the logged duration. Bail out only if the KOT times themselves
-    // are unreadable — a missing schedule is fine, see buildBunguJournal().
-    if(app==='Bungu'){
-      parsed.dateSource='absolute';
-      let cm=0;
-      if(parsed.clockIn&&parsed.clockOut){
-        cm=toMins(parsed.clockOut)-toMins(parsed.clockIn);
-        if(cm<0)cm+=1440;                       // an overnight shift
-      }
-      if(!parsed.date||!parsed.clockIn||!parsed.clockOut||cm<=0){
-        _lastWorkoutRaw=data;
-        showToast('Could not read the date and clock-in/out off the King of Time screenshot','var(--err)');
-        return null;
-      }
-      parsed.startTime=parsed.clockIn;
-      parsed.workoutEndTime=parsed.clockOut;
-      parsed.durationSeconds=cm*60;
-      parsed.durationMinutes=cm;
-      parsed.shiftStart=parsed.shiftStart||null;
-      parsed.shiftEnd=parsed.shiftEnd||null;
-      parsed.hasSchedule=!!(parsed.shiftStart&&parsed.shiftEnd);
-      return parsed;
-    }
-
     // PREPLY. The card gives both ends of the lesson, so the length is
-    // arithmetic rather than a reading, and none of the Strava/Runna title or
-    // relative-date handling below applies. Bail out with a clear message rather
+    // arithmetic rather than a reading. Bail out with a clear message rather
     // than half-filling the form: a lesson entry with no times is worse than no
     // entry at all.
     if(app==='Preply'){
@@ -3906,32 +3846,7 @@ async function analyseWorkoutImage(base64,mimeType,secondB64,secondMime){
       return parsed;
     }
 
-    // The title Noah wrote overrides the relative timestamp.
-    const _titleDate=_parseTitleDate(parsed.activityTitle,todayStr());
-    if(_titleDate&&_titleDate!==parsed.date){
-      parsed.dateFromTimestamp=parsed.date;
-      parsed.date=_titleDate;
-      parsed.dateSource='title';
-    }else if(_titleDate){
-      parsed.dateSource='title';
-    }else{
-      // Only flag this as risky when the screen showed a RELATIVE timestamp
-      // ("Yesterday at..."). Runna prints an absolute date, so there is nothing
-      // to check and warning every time would just train Noah to ignore it.
-      parsed.dateSource=parsed.timestampWasRelative?'relative':'absolute';
-    }
-    parsed.titleNumber=_parseTitleNumber(parsed.activityTitle);
-
-    // Derive end time from start + floored duration. Runna shows no end time
-    // at all, and Strava's displayed seconds must never round up.
-    const secs=Math.max(0,parseInt(parsed.durationSeconds||0,10));
-    parsed.durationSeconds=secs;
-    parsed.durationMinutes=Math.floor(parsed.durationSeconds/60);
-    if(parsed.startTime){
-      const total=toMins(parsed.startTime)+parsed.durationMinutes;
-      parsed.workoutEndTime=String(Math.floor(total/60)%24).padStart(2,'0')+':'+String(total%60).padStart(2,'0');
-    }
-    return parsed;
+    return null;
   }catch(err){
     clearTimeout(timer);
     if(err.name==='AbortError'){showToast('Timed out — check your API key and connection','var(--err)')}
@@ -3988,6 +3903,8 @@ function _wDrop(e){
 }
 
 function openWorkoutImport(){
+  // Monthly focus: the Preply import is paused while a choice is outstanding.
+  if(_fcBlockedNow()){showToast('Choose this month\u2019s focus subjects first \u2014 the Preply import is paused until you do.','var(--err)');return}
   // Reset state
   _workoutImageBase64=null;
   _workoutImageMime=null;
@@ -4057,146 +3974,35 @@ function _handleWorkoutBlob(blob){
 }
 
 // ── Source picker (runs BEFORE any API call) ────────────────────────────────
-// Strava tracks both cycles and walks, so it needs a follow-up question.
-// Runna is running-only, so it goes straight through.
+// Asked before anything is sent, so a screenshot is never uploaded by accident.
 let _workoutApp=null, _workoutActivity=null;
-// Second screenshot for a Bungu import: the Bungu Scheduler calendar, read for
-// the blue (shift) chip on the same date as the King of Time screenshot.
-// Skippable via skipBunguScheduleShot(): the King of Time clock-in/out stays the
-// source of truth, so skipping only drops the Shift Start/End line.
-let _workoutBunguScheduleBase64=null, _workoutBunguScheduleMime=null;
-
-// ── Bungu Scheduler screenshot (second image, Bungu import only) ───────────
-// Targets its own #workout-bungu-schedule-* elements with its own handlers,
-// kept separate from the first image's so picking one never overwrites the other.
-function _resetBunguScheduleShot(){
-  _workoutBunguScheduleBase64=null; _workoutBunguScheduleMime=null;
-  const pv=document.getElementById('workout-bungu-schedule-preview');
-  if(pv){pv.src='';pv.style.display='none'}
-  const fi=document.getElementById('workout-bungu-schedule-file-input');
-  if(fi)fi.value='';
-  const st=document.getElementById('workout-step-bungu-schedule');
-  if(st)st.style.display='none';
-}
-function _wBsDragEnter(e){
-  e.preventDefault();e.stopPropagation();
-  const dz=document.getElementById('workout-bungu-schedule-drop-zone');
-  if(dz){dz.style.borderColor='var(--o)';dz.style.background='var(--ol)';const l=dz.querySelector('div');if(l)l.textContent='Drop it!'}
-}
-function _wBsDragOver(e){e.preventDefault();e.stopPropagation()}
-function _wBsDragLeave(e){
-  e.preventDefault();e.stopPropagation();
-  const dz=document.getElementById('workout-bungu-schedule-drop-zone');
-  if(dz){
-    dz.style.borderColor='';dz.style.background='';
-    const l=dz.querySelector('div');
-    if(l)l.textContent='Drop image here';
-  }
-}
-function _wBsDrop(e){
-  e.preventDefault();e.stopPropagation();
-  const dz=document.getElementById('workout-bungu-schedule-drop-zone');
-  if(dz){dz.style.borderColor='';dz.style.background=''}
-  const file=[...(e.dataTransfer.files||[])].find(f=>f.type.startsWith('image/'));
-  if(!file){showToast('Please drop an image file','var(--err)');return}
-  _handleBunguScheduleBlob(file);
-}
-function handleBunguScheduleFile(event){
-  const f=event.target.files[0];
-  if(f)_handleBunguScheduleBlob(f);
-}
-function _handleBunguScheduleBlob(blob){
-  _workoutBunguScheduleMime='image/jpeg';
-  compressWorkoutImage(blob,function(dataUrl){
-    _workoutBunguScheduleBase64=dataUrl.split(',')[1];
-    const pv=document.getElementById('workout-bungu-schedule-preview');
-    if(pv){pv.src=dataUrl;pv.style.display='block'}
-    document.getElementById('workout-step-bungu-schedule').style.display='none';
-    document.getElementById('workout-source-area').style.display='none';
-    runWorkoutAnalysis();
-  });
-}
-async function pasteBunguScheduleImage(){
-  if(navigator.clipboard&&navigator.clipboard.read){
-    try{
-      const items=await navigator.clipboard.read();
-      for(const item of items){
-        const t=item.types.find(x=>x.startsWith('image/'));
-        if(t){_handleBunguScheduleBlob(await item.getType(t));return}
-      }
-    }catch(e){}
-  }
-  showToast('Could not read the clipboard — use Choose File','var(--err)');
-}
-// Explicit opt-out for a shift that genuinely was not on the Bungu Scheduler
-// calendar (Noah: "i wont work a day if it isnt on the schedule" — this is for
-// the rare exception, not the normal path). The journal then simply omits the
-// Shift Start/End line rather than showing a blank or guessed time.
-function skipBunguScheduleShot(){
-  _resetBunguScheduleShot();
-  document.getElementById('workout-source-area').style.display='none';
-  showToast('No schedule screenshot — journal will omit Shift Start/End','var(--err)');
-  runWorkoutAnalysis();
-}
-
 function _showWorkoutSourcePicker(dataUrl){
   _workoutApp=null; _workoutActivity=null;
-  _resetBunguScheduleShot();
   const p=document.getElementById('workout-source-preview');
   if(p&&dataUrl)p.src=dataUrl;
   document.getElementById('workout-upload-area').style.display='none';
   document.getElementById('workout-result-area').style.display='none';
-  document.getElementById('workout-step-activity').style.display='none';
   document.getElementById('workout-step-app').style.display='block';
   document.getElementById('workout-source-area').style.display='block';
 }
 
 function backToWorkoutUpload(){
-  _resetBunguScheduleShot();
   document.getElementById('workout-source-area').style.display='none';
   document.getElementById('workout-result-area').style.display='none';
   document.getElementById('workout-upload-area').style.display='block';
 }
 
 function pickWorkoutApp(app){
-  _workoutApp=app;
-  if(app==='Bungu'){
-    // A work-shift import always needs the Bungu Scheduler screenshot too, so
-    // go straight to that step rather than analysing off one image. There is
-    // no activity question — a Bungu shift is not Run/Cycle/Walk.
-    _workoutActivity='Shift';
-    _resetBunguScheduleShot();
-    document.getElementById('workout-step-app').style.display='none';
-    document.getElementById('workout-step-bungu-schedule').style.display='block';
-    return;
-  }
-  if(app==='Preply'){
-    // A Preply lesson card states BOTH ends of the lesson itself, so there is no
-    // activity question — the length is arithmetic, not a reading off a screen.
-    _workoutActivity='Lesson';
-    document.getElementById('workout-source-area').style.display='none';
-    runWorkoutAnalysis();
-    return;
-  }
-  if(app==='Runna'){
-    // Runna is running only — no activity question, straight to analysis.
-    _workoutActivity='Run';
-    document.getElementById('workout-source-area').style.display='none';
-    runWorkoutAnalysis();
-    return;
-  }
-  document.getElementById('workout-step-app').style.display='none';
-  document.getElementById('workout-step-activity').style.display='block';
-}
-
-function pickWorkoutActivity(act){
-  _workoutActivity=act;
-  // One screenshot is all a cycle or a walk needs: the duration on that first
-  // screen is what gets logged, exactly as it already works for a run.
-  document.getElementById('workout-step-activity').style.display='none';
+  // Preply is the only import left (2026-10-01). A lesson card states BOTH ends
+  // of the lesson itself, so there is no follow-up question - the length is
+  // arithmetic, not a reading off a screen.
+  if(app!=='Preply')return;
+  _workoutApp='Preply';
+  _workoutActivity='Lesson';
   document.getElementById('workout-source-area').style.display='none';
   runWorkoutAnalysis();
 }
+
 async function pasteWorkoutImage(){
   // Try Clipboard API first (works on Mac Chrome/Safari, iOS 16+)
   if(navigator.clipboard&&navigator.clipboard.read){
@@ -4240,11 +4046,7 @@ async function runWorkoutAnalysis(){
   let result=null;
   _workoutAnalysing=true;   // see _workoutOverlayClick — the modal is sealed while this is true
   try{
-    // The "second image" slot is used ONLY by a Bungu import, for the Bungu
-    // Scheduler calendar. Every other import sends its one screenshot alone.
-    const _2ndB64=_workoutApp==='Bungu'?_workoutBunguScheduleBase64:null;
-    const _2ndMime=_workoutApp==='Bungu'?_workoutBunguScheduleMime:null;
-    result=await analyseWorkoutImage(_workoutImageBase64,_workoutImageMime||'image/jpeg',_2ndB64,_2ndMime||'image/jpeg');
+    result=await analyseWorkoutImage(_workoutImageBase64,_workoutImageMime||'image/jpeg');
   }finally{
     _workoutAnalysing=false;
   }
@@ -4252,7 +4054,6 @@ async function runWorkoutAnalysis(){
   if(!result){
     // Failed — go back to the source picker so the choice is not lost.
     document.getElementById('workout-source-area').style.display='block';
-    document.getElementById('workout-step-activity').style.display='none';
     document.getElementById('workout-step-app').style.display='block';
     return;
   }
@@ -4262,60 +4063,7 @@ async function runWorkoutAnalysis(){
 
 function showWorkoutSummary(result){
   if(!result)return;
-  if(result.app==='Preply'){showPreplySummary(result);return}
-  if(result.app==='Bungu'){showBunguSummary(result);return}
-  let dateLabel='Unknown date';
-  if(result.date)dateLabel=_ordinalDate(result.date)+' '+_journalYear(result.date);
-  const daypart=_timeOfDay(result.startTime,null);
-  // Include the number so the preview matches the title that actually gets written.
-  const _n=result.titleNumber||null;
-  const activityLabel=daypart+' '+(result.activity||'Workout')+((result.activity==='Cycle'&&_n&&_n>1)?' '+_n:'');
-  const workoutMins=Math.floor((result.durationSeconds||0)/60);
-  // End Time is start + the activity duration. Nothing is added on top.
-  const sessionEnd=result.startTime?_addMins(result.startTime,workoutMins):'';
-  let timeStr='Unknown times';
-  if(result.startTime)timeStr=result.startTime+' – '+sessionEnd+'  ('+_fmtHoursMins(workoutMins,false)+')';
-  const summaryEl=document.getElementById('workout-summary-card');
-  if(summaryEl){
-    summaryEl.innerHTML=
-      '<div class="workout-summary-row"><span>'+escHtml(dateLabel)+
-        (result.dateSource==='title'? ' <span style="color:var(--text3);font-size:11px">(from your title'+(result.dateFromTimestamp?', not "'+escHtml(_ordinalDate(result.dateFromTimestamp))+'"':'')+')</span>': result.dateSource==='relative'? ' <span style="color:var(--o);font-size:11px">(screenshot only said &ldquo;yesterday&rdquo; — check this)</span>': ' <span style="color:var(--text3);font-size:11px">(dated on the screenshot)</span>')+
-        '</span></div>'+
-      '<div class="workout-summary-row"><span>'+escHtml(activityLabel)+'</span></div>'+
-      '<div class="workout-summary-row"><span>'+escHtml(timeStr)+'</span></div>';
-  }
-  // A manual entry has no times off a screenshot. Ask for them here rather than
-  // later in the log form, so the journal, the log times and the pre-run stretch
-  // window all get real figures from one place.
-  const manual=!result.startTime;
-  const manRow=document.getElementById('workout-manual-row');
-  if(manRow)manRow.style.display=manual?'block':'none';
-  const dtEl=document.getElementById('workout-date-input');
-  if(dtEl)dtEl.value=manual?(result.date||todayStr()):'';
-  const acEl=document.getElementById('workout-activity-input');
-  if(acEl)acEl.value=result.activity||'Run';
-  const stEl=document.getElementById('workout-starttime-input');
-  if(stEl)stEl.value='';
-  const durEl=document.getElementById('workout-duration-input');
-  if(durEl)durEl.value='';
-
-  // Cycle number: suggested from existing sessions, but editable.
-  const numRow=document.getElementById('workout-cyclenum-row');
-  const numEl=document.getElementById('workout-cyclenum-input');
-  if(numRow&&numEl){
-    if(result.activity==='Cycle'){
-      numRow.style.display='block';
-      // The number in Noah's own title wins. Counting logged sessions only
-      // works if every earlier ride was actually logged — it often wasn't.
-      numEl.value=result.titleNumber||(countWorkoutsOnDate('Cycle',result.date,_timeOfDay(result.startTime,null))+1);
-    }else{
-      numRow.style.display='none';
-      numEl.value='';
-    }
-  }
-  document.getElementById('workout-upload-area').style.display='none';
-  document.getElementById('workout-source-area').style.display='none';
-  document.getElementById('workout-result-area').style.display='block';
+  if(result.app==='Preply')showPreplySummary(result);
 }
 
 // The Preply confirmation screen. It states the lesson length and the logged
@@ -4342,53 +4090,6 @@ function showPreplySummary(result){
       (result.teacher?'':'<div class="workout-summary-row"><span style="color:var(--o);font-size:11px">'+
         'No teacher name was read off the card \u2014 the title will leave it off</span></div>');
   }
-  // None of the workout fields apply, and a stale value in any of them would be
-  // picked up by useWorkoutResult() and silently overwrite the card's figures.
-  const manRow=document.getElementById('workout-manual-row');
-  if(manRow)manRow.style.display='none';
-  const numRow=document.getElementById('workout-cyclenum-row');
-  if(numRow)numRow.style.display='none';
-  const numEl=document.getElementById('workout-cyclenum-input');
-  if(numEl)numEl.value='';
-  const stEl=document.getElementById('workout-starttime-input');
-  if(stEl)stEl.value='';
-  const durEl=document.getElementById('workout-duration-input');
-  if(durEl)durEl.value='';
-  document.getElementById('workout-upload-area').style.display='none';
-  document.getElementById('workout-source-area').style.display='none';
-  document.getElementById('workout-result-area').style.display='block';
-}
-
-// The Bungu confirmation screen. States the actual KOT clock-in/out (the
-// figures the session is logged on) and, separately, whether a scheduled
-// shift was found \u2014 so a missing schedule is visible here, before anything is
-// logged rather than discovered later in the journal.
-function showBunguSummary(result){
-  const dateLabel=result.date?((_weekdayName(result.date)?_weekdayName(result.date)+' ':'')+_ordinalDate(result.date)+' '+_journalYear(result.date)):'Unknown date';
-  const mins=Math.max(0,result.durationMinutes||0);
-  const el=document.getElementById('workout-summary-card');
-  if(el){
-    el.innerHTML=
-      '<div class="workout-summary-row"><span>'+escHtml(dateLabel)+
-        ' <span style="color:var(--text3);font-size:11px">(dated on the King of Time screenshot)</span></span></div>'+
-      '<div class="workout-summary-row"><span>Work Shift at Bungu</span></div>'+
-      '<div class="workout-summary-row"><span>'+escHtml(
-        'Clock In '+(result.clockIn||'')+' \u2013 Clock Out '+(result.clockOut||'')+'  ('+_fmtHoursMins(mins,false)+')')+'</span></div>'+
-      (result.hasSchedule
-        ? '<div class="workout-summary-row"><span style="color:var(--text3);font-size:11px">Scheduled shift '+escHtml(result.shiftStart+' \u2013 '+result.shiftEnd)+' \u2014 will be included in the journal</span></div>'
-        : '<div class="workout-summary-row"><span style="color:var(--o);font-size:11px">No scheduled shift found for this date \u2014 the journal will not include a Shift Start/End line</span></div>');
-  }
-  // None of the workout-specific fields apply.
-  const manRow=document.getElementById('workout-manual-row');
-  if(manRow)manRow.style.display='none';
-  const numRow=document.getElementById('workout-cyclenum-row');
-  if(numRow)numRow.style.display='none';
-  const numEl=document.getElementById('workout-cyclenum-input');
-  if(numEl)numEl.value='';
-  const stEl=document.getElementById('workout-starttime-input');
-  if(stEl)stEl.value='';
-  const durEl=document.getElementById('workout-duration-input');
-  if(durEl)durEl.value='';
   document.getElementById('workout-upload-area').style.display='none';
   document.getElementById('workout-source-area').style.display='none';
   document.getElementById('workout-result-area').style.display='block';
@@ -4400,50 +4101,7 @@ function showBunguSummary(result){
 // end, total. Noah writes anything beyond that himself, in his own words.
 // The old "Journal Writing Time" allowance was removed at the same time: End
 // Time is now start + the activity duration, with no minutes added on top.
-const WEEKDAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-
 function _journalYear(ds){const p=(ds||'').split('-');return p.length?p[0]:''}
-
-// ── TITLE PARSING ───────────────────────────────────────────────────────────
-// Noah renames his Strava/Runna activities to "1st August - Afternoon Cycle 2".
-// That title is HIS OWN record and is authoritative. Strava's "Yesterday at
-// 15:32" is relative to when the SCREENSHOT was taken, which may be days after
-// the ride — trusting it dated a 1 August ride as 3 August, and then pulled the
-// wrong day's weather. Likewise the trailing number is his count of rides that
-// day, which the app cannot infer if a session was never logged.
-// So: if the title says it, the title wins.
-const _MONTHS_RE='january|february|march|april|may|june|july|august|september|october|november|december';
-
-function _parseTitleDate(title,todayISO){
-  if(!title)return null;
-  const m=String(title).match(new RegExp('\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+('+_MONTHS_RE+')\\b','i'));
-  if(!m)return null;
-  const day=parseInt(m[1],10);
-  const mon=_MONTHS_RE.split('|').indexOf(m[2].toLowerCase());
-  if(mon<0||day<1||day>31)return null;
-  // An explicit year in the title wins outright if present.
-  const ym=String(title).match(/\b(20\d{2})\b/);
-  const today=new Date(todayISO+'T00:00:00');
-  let year=ym?parseInt(ym[1],10):today.getFullYear();
-  if(!ym){
-    // No year given. Choose the one that doesn't put the date in the future —
-    // handles a late-December activity logged in early January.
-    const cand=new Date(year,mon,day);
-    if(cand.getTime()-today.getTime()>7*86400000)year-=1;
-  }
-  const d=new Date(year,mon,day);
-  if(d.getMonth()!==mon||d.getDate()!==day)return null;   // e.g. 31 February
-  return year+'-'+String(mon+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
-}
-
-// "1st August - Afternoon Cycle 2" -> 2 ; "... Afternoon Cycle" -> null
-function _parseTitleNumber(title){
-  if(!title)return null;
-  const m=String(title).match(/\b(?:cycle|ride|run|walk)\s+(\d{1,2})\s*$/i);
-  if(!m)return null;
-  const n=parseInt(m[1],10);
-  return (n>=1&&n<=20)?n:null;
-}
 
 // Whole minutes only, floored. Seconds were dropped from the Total Time line so
 // the arithmetic reads cleanly (23 + 10 = 33, not "23 Minutes 2 Seconds + 10").
@@ -4482,18 +4140,6 @@ function _fmtHoursMins(mins,longUnit){
   const hu=(h===1?' Hour':' Hours');
   return m===0?(h+hu):(h+hu+' '+m+mu);
 }
-// The journal label for a cycle / run / walk — e.g. "11th July - Morning Cycle".
-// ONE LINE, nothing else. The date/time block this used to append was dropped on
-// 2026-08-19: the Google Form already has its own Date, Start Time and End Time
-// fields, so repeating them inside the Contents box was pure duplication.
-function buildWorkoutJournal(r,cycleNum){
-  const act=r.activity;
-  const daypart=_timeOfDay(r.startTime,null);
-  let title=_ordinalDate(r.date)+' - '+daypart+' '+act;
-  if(act==='Cycle'&&cycleNum&&cycleNum>1)title+=' '+cycleNum;
-  return title;
-}
-
 // Lesson length as it reads in front of the word "Lesson": "25 Minute",
 // "50 Minute", "1 Hour 20 Minute", "1 Hour". The unit stays SINGULAR because it
 // is an adjective there, not a count standing on its own — which is why this
@@ -4523,152 +4169,25 @@ function buildPreplyJournal(r){
   return t;
 }
 
-// The journal for a Bungu work-shift import \u2014 THREE fixed lines, exact format
-// Noah specified 2026-09-02, all times 24-hour zero-padded, no AM/PM anywhere:
-//   Monday 31st August 2026 - Work Shift at Bungu
-//   Shift Start: 10:30 - Shift End: 17:00      (omitted entirely if no schedule was read)
-//   Actual Clock In Time: 09:26 - Actual Clock Out Time: 17:05
-// Line 1 is deliberately the ONLY line before _formContents() splices in
-// "Journal Writing Time (Included in Study Time):" \u2014 Noah confirmed he wants
-// that line to land here, straight after the title, same as every other
-// non-PE subject, then write his own shift summary below all of it himself.
-function _weekdayName(ds){
-  const d=new Date((ds||'')+'T00:00:00');
-  return isNaN(d.getTime())?'':WEEKDAYS[d.getDay()];
-}
-function buildBunguJournal(r){
-  const wd=_weekdayName(r.date);
-  let t=(wd?wd+' ':'')+_ordinalDate(r.date)+' '+_journalYear(r.date)+' - Work Shift at Bungu';
-  if(r.hasSchedule&&r.shiftStart&&r.shiftEnd){
-    t+='\nShift Start: '+r.shiftStart+' - Shift End: '+r.shiftEnd;
-  }
-  t+='\nActual Clock In Time: '+(r.clockIn||r.startTime||'')+' - Actual Clock Out Time: '+(r.clockOut||r.workoutEndTime||'');
-  return t;
-}
-
-// Stretch label — e.g. "11th June - After-Run Stretches". One line, same rule as
-// buildWorkoutJournal(): the form supplies date and times itself. The routine
-// itself is in the attached Runner's Stretch Guide PDF.
-// Hyphenated since 2026-08-19 so it matches "Pre-Run Stretches". Sessions logged
-// before then read "After Run Stretches"; nothing matches on this text, so the
-// old entries are only a cosmetic difference in history.
-function buildStretchJournal(dateStr,label){
-  return _ordinalDate(dateStr)+' - '+(label||'After-Run Stretches');
-}
-
-// How many of this activity are already logged in the SAME PART OF THE DAY?
-// The number in "Evening Cycle 2" means the second cycle that EVENING, not the
-// second of the day — counting the whole day labelled a first evening ride as
-// "Evening Cycle 2" just because there had been an afternoon one.
-// Still only a suggestion: a ride Noah never logged would throw the count off,
-// so the field stays editable and a number in his own title always wins.
-function countWorkoutsOnDate(activity,date,daypart){
-  try{
-    return loadSessions().filter(s=> _isPeId(s.subjectId)&&s.date===date&&
-      s.journalMeta&&s.journalMeta.activity===activity&&
-      (!daypart||_timeOfDay(s.start,null)===daypart)
-    ).length;
-  }catch(e){return 0}
-}
-
-function openManualWorkoutEntry(){
-  // Manual entry is always a WORKOUT. If Preply was picked and then backed out
-  // of, the leftover app/activity would send a blank Preply lesson through
-  // _fillPreplyLogForm() and produce a "0 Minute" title, so clear it here.
-  if(_workoutApp==='Preply'){_workoutApp=null;_workoutActivity=null}
-  _workoutApp=_workoutApp||'Strava';
-  _workoutActivity=_workoutActivity||'Run';
-  _workoutResult={date:todayStr(),startTime:null,durationSeconds:0,durationMinutes:0,
-    activity:_workoutActivity,app:_workoutApp};
-  showWorkoutSummary(_workoutResult);
-}
-
 async function useWorkoutResult(){
   if(!_workoutResult)return;
-  const result=_workoutResult;
-  // Manual entries carry nothing off a screenshot — take the date, activity,
-  // start time and duration from the fields on the result screen instead.
-  // They are blank and hidden for imports, so imports are unaffected.
-  const manRow=document.getElementById('workout-manual-row');
-  const isManual=manRow&&manRow.style.display!=='none';
-  if(isManual){
-    const dtEl=document.getElementById('workout-date-input');
-    if(dtEl&&dtEl.value)result.date=dtEl.value;
-    const acEl=document.getElementById('workout-activity-input');
-    if(acEl&&acEl.value)result.activity=acEl.value;
-  }
-  const stEl=document.getElementById('workout-starttime-input');
-  if(stEl&&stEl.value)result.startTime=stEl.value;
-  const durEl=document.getElementById('workout-duration-input');
-  if(durEl&&durEl.value){
-    const m=Math.max(0,parseInt(durEl.value,10)||0);
-    result.durationSeconds=m*60;
-    result.durationMinutes=m;
-  }
-  const numEl0=document.getElementById('workout-cyclenum-input');
-  const cycleNum0=numEl0&&numEl0.value?parseInt(numEl0.value,10):1;
-
-  // Runs only. The pre-run stretch is offered BEFORE the run's own form so the
-  // two journals are submitted in the order they happened. The run is parked in
-  // localStorage, not just a variable, so a reload while the stretch form is
-  // open cannot lose it.
-  if(result.activity==='Run'){
-    const w=_preRunStretchWindow(result.date,result.startTime);
-    if(w){
-      _savePendingRun(result,cycleNum0);
-      closeModal('workout-import-overlay');
-      _showPreRunStretchPrompt(w);
-      return;
-    }
-  }
-  _fillRunLogForm(result,cycleNum0);
+  if(_workoutResult.app==='Preply')_fillPreplyLogForm(_workoutResult);
 }
 
 // A Preply lesson is logged as JAPANESE, not PE, and its End Time is the
 // lesson's own end plus PREPLY_REVIEW_MINS — the only place in the app that adds
-// minutes to a session. Everything else here mirrors _fillRunLogForm().
-// A Bungu work shift is logged as an ELECTIVES extra-credit session \u2014 same
-// treatment as EL4 today \u2014 but unlike Preply\u2192japanese or Run\u2192pe, there is no
-// fixed subject id to select yet: no Electives 5+ contract exists (removed
-// 2026-10-01 - Noah no longer does extra credit), no teacher
-// approval, no _SUBJECT_FORMS entry. So the subject
-// dropdown is deliberately left exactly as it was rather than guessing or
-// forcing a value \u2014 Noah picks the right elective subject himself once one
-// exists. Everything else (date, times, duration, journal) is filled in full.
-function _fillBunguLogForm(result){
-  const ld=document.getElementById('log-date');
-  if(ld&&result.date)ld.value=result.date;
-  if(result.clockIn&&result.clockOut){
-    setLogTime('log-start',result.clockIn);
-    setLogTime('log-end',result.clockOut);
-  }
-  updateLogDuration();
-  updateLogFormColour();
-  const notesEl=document.getElementById('log-notes');
-  if(notesEl)notesEl.value=buildBunguJournal(result);
-  _pendingJournalMeta={
-    activity:'Shift', app:'Bungu',
-    durationSeconds:(result.durationSeconds||0), model:result.model||null,
-    // Carried so re-opening this session's form from History can rebuild the
-    // exact same journal text, same purpose as journalMeta.preply.
-    bungu:true, clockIn:result.clockIn||null, clockOut:result.clockOut||null,
-    shiftStart:result.shiftStart||null, shiftEnd:result.shiftEnd||null,
-    hasSchedule:!!result.hasSchedule
-  };
-  updateJournalLenWarn();
-  hidePreplyProofBanner();
-  closeModal('workout-import-overlay');
-  const anchor=document.getElementById('log-form-card');
-  if(anchor)anchor.scrollIntoView({behavior:'auto',block:'start'});
-  showToast('Imported \u2014 choose the Electives subject, check the journal, then Log Session','var(--ok)');
-}
-
+// minutes to a session.
 function _fillPreplyLogForm(result){
   const subjs=loadSubjects();
   const sel=document.getElementById('log-subject');
   if(sel){
     const jp=subjs.find(s=>s.id==='japanese');
-    if(jp)sel.value=jp.id;
+    if(jp){
+      if(_fcState().active){
+        if(!_fcSelectLogSubject(jp.id)){showToast('Japanese cannot be logged right now, so the lesson was not filled in.','var(--err)');return}
+      }
+      else sel.value=jp.id;
+    }
   }
   const ld=document.getElementById('log-date');
   if(ld&&result.date)ld.value=result.date;
@@ -4695,56 +4214,6 @@ function _fillPreplyLogForm(result){
   const anchor=document.getElementById('preply-proof-banner')||document.getElementById('log-form-card');
   if(anchor)anchor.scrollIntoView({behavior:'auto',block:'start'});
   showToast('Imported \u2014 review the journal, then Log Session','var(--ok)');
-}
-
-// Fills the log form with the workout itself. Split out of useWorkoutResult so
-// the pre-run stretch step can call it afterwards.
-function _fillRunLogForm(result,cycleNum){
-  if(!result)return;
-  if(result.app==='Preply'){_fillPreplyLogForm(result);return}
-  if(result.app==='Bungu'){_fillBunguLogForm(result);return}
-  hidePreplyProofBanner();
-  const subjs=loadSubjects();
-  // Every import is now a PE workout — King of Time / work-shift handling was
-  // removed once Electives 4 was finished. The el4 subject itself is untouched.
-  const sel=document.getElementById('log-subject');
-  if(sel){
-    // Whichever PE contract is still open - see _peTargetId().
-    const peId=_peTargetId()||(subjs[0]?subjs[0].id:'');
-    if(peId)sel.value=peId;
-  }
-  const ld=document.getElementById('log-date');
-  if(ld&&result.date)ld.value=result.date;
-
-  // End Time is start + the activity duration only. Both times match the
-  // screenshot exactly, so the entry can be checked against the proof.
-  const workoutMins=Math.floor((result.durationSeconds||0)/60);
-  if(result.startTime){
-    setLogTime('log-start',result.startTime);
-    setLogTime('log-end',_addMins(result.startTime,workoutMins));
-  }
-  updateLogDuration();
-  updateLogFormColour();
-
-  let title=_ordinalDate(result.date)+' - '+_timeOfDay(result.startTime,null)+' '+result.activity;
-  if(result.activity==='Cycle'&&cycleNum>1)title+=' '+cycleNum;
-
-  const notesEl=document.getElementById('log-notes');
-  if(notesEl)notesEl.value=buildWorkoutJournal(result,cycleNum);
-  updateJournalLenWarn();
-
-  // Minimal record: countWorkoutsOnDate() reads .activity, and .durationSeconds
-  // keeps the session self-describing in a restore. Nothing else is extracted
-  // any more, so nothing else is stored.
-  _pendingJournalMeta={
-    activity:result.activity, app:result.app,
-    durationSeconds:result.durationSeconds||0, model:result.model||null
-  };
-
-  closeModal('workout-import-overlay');
-  const card=document.getElementById('log-form-card');
-  if(card)card.scrollIntoView({behavior:'auto',block:'start'});
-  showToast('Imported — review the journal, then Log Session','var(--ok)');
 }
 
 function renderTodos(){
@@ -5014,12 +4483,13 @@ function showPage(id){
     p.classList.toggle('active',p.id==='page-'+id);
   });
   buildNav();
+  if(typeof renderFocusBlock==='function')renderFocusBlock();
   // Scroll to top on page change
   window.scrollTo(0,0);
   if(id==='dashboard')renderDashboard();
   else if(id==='schedule'){renderSchedule()}
   else if(id==='log')renderLog();
-  else if(id==='history')renderHistory();
+  else if(id==='history'){renderHistory();const fv=document.getElementById('hist-focus-view');if(fv&&fv.style.display!=='none')renderFocusHistory()}
   else if(id==='journals')renderJournals();
   else if(id==='schoolwork')renderSchoolwork();
   else if(id==='progress')renderProgress();
@@ -6060,10 +5530,18 @@ function clearLogForm(){
   _logDayLoad();
   dismissDupWarn();
   updateLogFormColour();
+  // Monthly focus: empty the book fields and put the core subject back. The
+  // stashed pre-English notes go too, so Clear really clears.
+  {const _n=document.getElementById('log-notes');if(_n)delete _n.dataset.fcStash}
+  _fcClearBookFields();
+  _fcResetLogSubject();
 }
 function renderLog(){
   const subjs=loadSubjects();
   const available=subjs.filter(s=>!s.done&&getLogged(s.id)<s.req);
+  // Monthly focus. _fAllowed is null before the rules start (3 Oct 2026).
+  const _fst=_fcState();
+  const _fAllowed=_fst.active?_fcAllowedIds(_fst).filter(id=>!_fcBookMode(id,_fst)):null;
 
   const now=nowLocal();
   const nowMins=now.getHours()*60+now.getMinutes();
@@ -6082,6 +5560,8 @@ function renderLog(){
       }
       return!sessions.find(s=>s.subjectId===b.subjectId&&s.date===todayStr2&&s.start===b.start);
     })
+    // Monthly focus: only offer chips for subjects that may be logged this month.
+    .filter(b=>!_fAllowed||(b.subjectId&&_fAllowed.includes(b.subjectId)))
     .sort((a,b)=>toMins(a.start)-toMins(b.start));
 
   const promptsEl=document.getElementById('class-log-prompts');
@@ -6139,17 +5619,66 @@ function renderLog(){
 
   const sel=document.getElementById('log-subject');
   const prev=sel.value;
-  sel.innerHTML=opts;
-  if(prev&&available.find(s=>s.id===prev))sel.value=prev;
+  if(_fst.active){
+    // Monthly focus: only this month's subjects. The core is pre-selected unless
+    // something else was put in the box on purpose (see _fcLogSubjAuto).
+    sel.innerHTML=_fcLogOptionsHtml(_fst);
+    // A form filled from an unlocked parked journal keeps that subject when Noah
+    // tabs away and back.
+    if(_pendingJournalEntryId){
+      const pj=loadJournals().find(x=>x.id===_pendingJournalEntryId);
+      if(pj&&pj.subjectId&&_fcParkedJournal(pj.subjectId,_fst))_fcEnsureParkedOption(pj.subjectId);
+    }
+    const listed=v=>Array.prototype.some.call(sel.options,o=>o.value===v&&!o.disabled);
+    const chosen=prev&&prev!==_fcLogSubjAuto&&prev!==FOCUS_OTHER;
+    if(_fst.blocked){
+      // Logging is paused and the form is hidden. A journal filled into the form
+      // is taken back off it now - otherwise, once the choice is made, its title
+      // and times would sit under whatever subject the box then defaults to.
+      _fcLogSubjAuto='';
+      if(_pendingJournalEntryId){
+        clearLogForm();
+        hideJournalNoteBanner();
+        showToast('Logging is paused until you choose this month\u2019s subjects, so the journal was taken off the Log page. It is still on the Journals page.','var(--err)');
+      }
+    }
+    else if(chosen&&listed(prev))sel.value=prev;
+    else{
+      const d=_fcDefaultLogSubject(_fst);if(d&&listed(d))sel.value=d;_fcLogSubjAuto=sel.value;
+      if(chosen){
+        // What was in the box can no longer be logged (a parked journal locked
+        // again overnight, a subject was completed, the month turned). Leaving
+        // its title and times under the core subject would credit the hours to
+        // the wrong subject, so a journal fill is cleared, and anything else is
+        // flagged loudly.
+        if(_pendingJournalEntryId){
+          clearLogForm();
+          hideJournalNoteBanner();
+          showToast(_fcName(prev)+' can no longer be logged here, so the journal was taken off the Log page. It is still on the Journals page.','var(--err)');
+        }else{
+          showToast(_fcName(prev)+' is no longer one of '+_fcMonthName(_fst.ym)+'\u2019s subjects \u2014 '+(sel.value?'the subject was reset to '+_fcName(sel.value)+'. ':'')+'Check it before logging.','var(--err)');
+        }
+      }
+    }
+  }else{
+    sel.innerHTML=opts;
+    if(prev&&available.find(s=>s.id===prev))sel.value=prev;
+  }
 
   // Keep timer subject dropdown in sync (only exists if timer page rendered)
   const tsel=document.getElementById('tp-subject');
   if(tsel){
     const tprev=tsel.value;
-    tsel.innerHTML=opts;
-    if(tprev&&available.find(s=>s.id===tprev))tsel.value=tprev;
-    else if(schedSubj&&!tprev)tsel.value=schedSubj.id;
-    if(tsel.value&&!sel.value)sel.value=tsel.value;
+    let tAvail=available, tOpts=opts;
+    if(_fst.active){
+      tAvail=_timerAvailable(subjs);
+      tOpts=(schedSubj&&tAvail.find(s=>s.id===schedSubj.id)?schedOpt:'')+
+        tAvail.map(s=>'<option value="'+s.id+'">'+escHtml(s.name)+'</option>').join('');
+    }
+    tsel.innerHTML=tOpts;
+    if(tprev&&tAvail.find(s=>s.id===tprev))tsel.value=tprev;
+    else if(schedSubj&&!tprev&&(!_fst.active||tAvail.find(s=>s.id===schedSubj.id)))tsel.value=schedSubj.id;
+    if(!_fst.active&&tsel.value&&!sel.value)sel.value=tsel.value;
   }
 
   // Only refresh the date if it is still the value renderLog last auto-filled.
@@ -6167,6 +5696,7 @@ function renderLog(){
   updateLogFormColour();
   updateKaProofBanner();
   if(typeof renderOpenSessionBanner==='function')renderOpenSessionBanner();
+  _fcRenderLogBlock(_fst);
 }
 
 // ── Log form colour accent ────────────────────────────────────────────────────
@@ -6186,8 +5716,8 @@ function updateLogFormColour(){
 
 function autofillFromBlock(subjectId,start,end){
   hidePreplyProofBanner();
-  const sel=document.getElementById('log-subject');
-  if(sel){sel.value=subjectId;updateLogFormColour();updateKaProofBanner()}
+  if(_fcState().active)_fcSelectLogSubject(subjectId);
+  else{const sel=document.getElementById('log-subject');if(sel){sel.value=subjectId;updateLogFormColour();updateKaProofBanner()}}
   setLogTime('log-start',start);
   setLogTime('log-end',end);
   setLogDateAuto(todayStr());
@@ -6219,7 +5749,7 @@ function renderLogEntries(){
       '</div>'+
       formPill+
       '<div class="entry-dur">'+fmtH(s.hours)+'</div>'+
-      '<button class="btn-del" onclick="deleteEntry(\''+s.id+'\')">×</button>'+
+      (s.bookReading?'<span class="btn-del fc-del-locked" title="'+_FC_NO_DELETE+'">'+_FC_LOCK_SVG+'</span>':'<button class="btn-del" onclick="deleteEntry(\''+s.id+'\')">×</button>')+
     '</div>';
   }).join('');
   updateFormsPending();
@@ -6469,23 +5999,20 @@ function _renderHistWeekChart(){
 }
 
 function switchHistTab(tab){
-  const sessions=document.getElementById('hist-sessions-view');
-  const calendar=document.getElementById('hist-calendar-view');
-  const btnS=document.getElementById('hist-tab-sessions');
-  const btnC=document.getElementById('hist-tab-calendar');
-  if(tab==='sessions'){
-    sessions.style.display='';
-    calendar.style.display='none';
-    btnS.style.background='var(--o)';btnS.style.color='#fff';
-    btnC.style.background='var(--bg2)';btnC.style.color='var(--text2)';
-    _calDayDetailOpen=null; // don't carry a stale expanded day back into the next Calendar visit
-  } else {
-    sessions.style.display='none';
-    calendar.style.display='';
-    btnS.style.background='var(--bg2)';btnS.style.color='var(--text2)';
-    btnC.style.background='var(--o)';btnC.style.color='#fff';
-    _renderStudyCalendar('hist-calendar-inner');
-  }
+  // Three views since 2026-10-01 (Focus = the monthly focus log). The active tab
+  // uses var(--bg) text on the near-white --o, matching the markup's initial
+  // state - the old code set #fff there, which was white on near-white.
+  const views={sessions:'hist-sessions-view',calendar:'hist-calendar-view',focus:'hist-focus-view'};
+  if(!views[tab])tab='sessions';
+  Object.keys(views).forEach(k=>{
+    const v=document.getElementById(views[k]);
+    if(v)v.style.display=(k===tab)?'':'none';
+    const b=document.getElementById('hist-tab-'+k);
+    if(b){b.style.background=(k===tab)?'var(--o)':'var(--bg2)';b.style.color=(k===tab)?'var(--bg)':'var(--text2)'}
+  });
+  if(tab!=='calendar')_calDayDetailOpen=null; // don't carry a stale expanded day back into the next Calendar visit
+  if(tab==='calendar')_renderStudyCalendar('hist-calendar-inner');
+  if(tab==='focus')renderFocusHistory();
 }
 
 function onHistRangeChange(){
@@ -6647,6 +6174,7 @@ function renderHistory(){
             (timeStr?'<span class="hist-card-time">'+timeStr+'</span>':'')+
           '</div>'+
           (s.notes?'<div class="hist-card-notes">'+escHtml(s.notes)+'</div>':'')+
+          (s.bookReading?'<div><span class="fc-hist-tag">Book reading \u00b7 locked</span>'+(!_SUBJECT_FORMS[s.subjectId]?'<span class="fc-hist-noform">No form linked</span>':'')+'</div>':'')+
           '<div class="hist-card-logged" id="hist-logged-'+s.id+'" style="display:none">'+escHtml(_fmtLoggedAt(s.loggedAt))+'</div>'+
         '</div>'+
         formPill+
@@ -6660,7 +6188,7 @@ function renderHistory(){
         '<button class="hist-card-edit" onclick="openEditSession(\''+s.id+'\')" title="Edit">'+
           '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'+
         '</button>'+
-        '<button class="hist-card-del" onclick="deleteHistEntry(\''+s.id+'\')" title="Delete">×</button>'+
+        (s.bookReading?'<span class="hist-card-del fc-del-locked" title="'+_FC_NO_DELETE+'">'+_FC_LOCK_SVG+'</span>':'<button class="hist-card-del" onclick="deleteHistEntry(\''+s.id+'\')" title="Delete">×</button>')+
       '</div>';
     }).join('');
     return '<div class="hist-group">'+
@@ -6756,7 +6284,14 @@ function openEditSession(id){
   // Populate subject dropdown
   const subjs=loadSubjects();
   const sel=document.getElementById('es-subject');
-  sel.innerHTML=subjs.map(x=>'<option value="'+x.id+'"'+(x.id===s.subjectId?' selected':'')+'>'+escHtml(x.name)+'</option>').join('');
+  // Monthly focus: a book-reading session's subject never changes; any other
+  // session's subject may only change to one of this month's subjects (otherwise
+  // log Algebra 1, then switch it to anything). Before 3 Oct: unrestricted.
+  const _fst=_fcState();
+  const _esIds=s.bookReading?[s.subjectId]:(_fst.active?_fcEditSubjectIds(s,_fst):null);
+  const _esList=_esIds?subjs.filter(x=>_esIds.includes(x.id)):subjs;
+  sel.innerHTML=_esList.map(x=>'<option value="'+x.id+'"'+(x.id===s.subjectId?' selected':'')+'>'+escHtml(x.name)+'</option>').join('');
+  sel.disabled=!!s.bookReading;
 
   // Date
   const esDateEl=document.getElementById('es-date');
@@ -6777,6 +6312,21 @@ function openEditSession(id){
 
   // Notes
   document.getElementById('es-notes').value=s.notes||'';
+  // Book reading: the title is locked, there is no Delete, and the reason is
+  // shown. Everything is reset for any other session, as the modal is reused.
+  const _esNotes=document.getElementById('es-notes');
+  _esNotes.readOnly=!!s.bookReading;
+  _esNotes.classList.toggle('fc-locked',!!s.bookReading);
+  const _esNote=document.getElementById('es-lock-note');
+  if(_esNote){
+    if(s.bookReading){
+      _esNote.innerHTML='<strong>Book-reading session.</strong> The title and subject are locked and it can never be deleted. Only the date and times can be changed.'+
+        (!_SUBJECT_FORMS[s.subjectId]?' <strong>No Google Form is linked to '+escHtml(_fcName(s.subjectId))+'.</strong>':'');
+      _esNote.style.display='block';
+    }else _esNote.style.display='none';
+  }
+  const _esDel=document.getElementById('es-delete-btn');
+  if(_esDel)_esDel.style.display=s.bookReading?'none':'';
 
   updateKaProofBanner('es-subject','ka-proof-banner-es');
   _esCalcDur();
@@ -6822,11 +6372,21 @@ function saveEditSession(){
   const old=sessions.find(x=>x.id===id);
   if(!old)return;
 
-  const newSubjectId=document.getElementById('es-subject').value;
+  let newSubjectId=document.getElementById('es-subject').value;
   const newDate=document.getElementById('es-date').value;
   const newStart=_readSplitTime('es-start');
   const newEnd=_readSplitTime('es-end');
-  const newNotes=document.getElementById('es-notes').value.trim();
+  let newNotes=document.getElementById('es-notes').value.trim();
+  // Monthly focus. Book reading: title and subject are locked for good, whatever
+  // the form says. Anything else may only move to one of this month's subjects.
+  if(old.bookReading){newSubjectId=old.subjectId;newNotes=old.notes||''}
+  else if(newSubjectId!==old.subjectId){
+    const _fst=_fcState();
+    if(_fst.active&&!_fcEditSubjectIds(old,_fst).includes(newSubjectId)){
+      showToast(_fcName(newSubjectId)+' is not one of '+_fcMonthName(_fst.ym)+'\u2019s subjects, so a session cannot be moved to it.','var(--err)');
+      return;
+    }
+  }
 
   if(!newDate){showToast('Date required','var(--err)');return}
   if(!newSubjectId){showToast('Subject required','var(--err)');return}
@@ -6845,6 +6405,19 @@ function saveEditSession(){
     newHours=Math.round(mins/60*100)/100;
   }
 
+  // Monthly focus: shortening or re-dating an old session is fine, but hours can
+  // only be ADDED to one of this month's subjects - otherwise stretching an old
+  // Civics session would put new Civics hours in by the back door.
+  {const _fst=_fcState();
+   const _okIds=_fcAllowedIds(_fst).filter(id=>!_fcBookMode(id,_fst));
+   if(_fst.active&&!old.bookReading&&!_okIds.includes(newSubjectId)&&_fcMonthOf(newDate)>_fcMonthOf(old.date||newDate)){
+     showToast(_fcName(newSubjectId)+' is not one of '+_fcMonthName(_fst.ym)+'\u2019s subjects, so its session cannot be moved to a later month.','var(--err)');
+     return;
+   }
+   if(_fst.active&&!old.bookReading&&newHours>old.hours+1e-9&&!_okIds.includes(newSubjectId)){
+     showToast(_fcName(newSubjectId)+' is not one of '+_fcMonthName(_fst.ym)+'\u2019s subjects, so its session cannot be made longer.','var(--err)');
+     return;
+   }}
   // Fix up hours store: reverse old, apply new
   const hoursStore=loadHours();
   if(old.subjectId)hoursStore[old.subjectId]=Math.max(0,(hoursStore[old.subjectId]||0)-old.hours);
@@ -6865,11 +6438,14 @@ function saveEditSession(){
   if(currentPage==='progress')renderProgress();
   if(currentPage==='subjects')renderSubjectsPage();
   if(currentPage==='graduation')renderGraduationPage();
+  if(typeof renderFocusBlock==='function')renderFocusBlock();
 }
 
 function deleteFromEditModal(){
   const id=_editSessionId;
   if(!id)return;
+  const _bk=loadSessions().find(x=>x.id===id);
+  if(_bk&&_bk.bookReading){showToast(_FC_NO_DELETE,'var(--err)');return}
   closeModal('edit-session-overlay');
   const sessions=loadSessions();
   const s=sessions.find(x=>x.id===id);
@@ -6894,6 +6470,7 @@ function deleteHistEntry(id){
   const sessions=loadSessions();
   const s=sessions.find(x=>x.id===id);
   if(!s)return;
+  if(s.bookReading){showToast(_FC_NO_DELETE,'var(--err)');return}
   if(!confirm('Delete this session?'))return;
   const updated=sessions.filter(x=>x.id!==id);
   const hoursStore=loadHours();
@@ -7318,7 +6895,8 @@ function renderTimerPage(){
     const s=subjs.find(x=>x.id===id);if(!s)return 0;
     return(s.base||0)+(hours[id]||0);
   }
-  const available=subjs.filter(s=>!s.done&&getLogged(s.id)<s.req);
+  // Monthly focus: only this month's subjects (see _timerAvailable).
+  const available=_timerAvailable(subjs);
   const now=nowLocal();
   const nowMins=now.getHours()*60+now.getMinutes();
   const todayBlocks=getTodayActualBlocks().sort((a,b)=>toMins(a.start)-toMins(b.start));
@@ -7327,9 +6905,13 @@ function renderTimerPage(){
   const schedBlock=activeBlock||nextBlock;
   const schedSubj=schedBlock&&schedBlock.subjectId?subjs.find(s=>s.id===schedBlock.subjectId):null;
 
-  // Default subject
+  // Default subject. While the focus rules run, a scheduled subject that is not
+  // one of this month's is not suggested, and an idle timer left on one is reset.
+  const _tActive=_fcState().active;
+  const schedOk=!!(schedSubj&&(!_tActive||available.some(s=>s.id===schedSubj.id)));
+  if(_tActive&&timerSubjectId&&timerStart===null&&!available.some(s=>s.id===timerSubjectId))timerSubjectId=null;
   if(!timerSubjectId){
-    timerSubjectId=schedSubj?schedSubj.id:(available[0]?available[0].id:null);
+    timerSubjectId=schedOk?schedSubj.id:(available[0]?available[0].id:null);
   }
   const currentSubj=subjs.find(s=>s.id===timerSubjectId)||available[0];
   const subjColor=currentSubj?SUBJ_COLORS_T[currentSubj.id]||'var(--o)':'var(--o)';
@@ -7353,7 +6935,7 @@ function renderTimerPage(){
   }
 
   // Subject options with schedule suggestion at top
-  const schedOpt=schedSubj?
+  const schedOpt=schedOk?
     '<option value="'+schedSubj.id+'">'+(activeBlock?' Now: ':' Next: ')+escHtml(schedSubj.name)+'</option>'+
     '<option disabled>──────────</option>':'';
   const restOpts=available.map(s=>'<option value="'+s.id+'">'+escHtml(s.name)+'</option>').join('');
@@ -7576,15 +7158,41 @@ function stopTimerAndLog(){
   }else{
     endStr=fmt(toAppTz(timerStop?new Date(timerStop):new Date()));
   }
+  const _sid=timerSubjectId;
+  const _sd=toAppTz(timerStartWallClock);
+  const _sdate=_sd.getFullYear()+'-'+String(_sd.getMonth()+1).padStart(2,'0')+'-'+String(_sd.getDate()).padStart(2,'0');
+  const _fst=_fcState();
+  if(_fst.active&&_sid&&(_fcLogGate(_sid,{noParked:true})||!_fcSelectableNow(_sid))){
+    // Monthly focus: a timer that ran on a subject outside this month's list
+    // (one started from a schedule notification, say) is PARKED as a journal
+    // with its times - never dropped into the Log form, where it would end up
+    // under a different subject.
+    showPage('journals');
+    openJournalModal();
+    const js=document.getElementById('jr-subject');
+    if(js&&Array.prototype.some.call(js.options,o=>o.value===_sid))js.value=_sid;
+    document.getElementById('jr-date').value=_sdate;
+    setLogTime('jr-start',startStr);
+    setLogTime('jr-end',endStr);
+    _jrParkMode=true;
+    _jrCheckForm();
+    updateKaProofBanner('jr-subject','ka-proof-banner-jr');
+    _fcUpdateParkWarn();
+    _jrDayLoad();
+    updateJrDuration();
+    showToast(_fcName(_sid)+' is not one of '+_fcMonthName(_fst.ym)+'\u2019s subjects \u2014 the timer was parked as a journal instead.','var(--err)');
+  }else{
   // Navigate to log page and pre-fill fields
   showPage('log');
   setTimeout(()=>{
     const sel=document.getElementById('log-subject');
-    if(sel&&timerSubjectId)sel.value=timerSubjectId;
+    if(_fcState().active)_fcSelectLogSubject(_sid);
+    else if(sel&&_sid)sel.value=_sid;
     setLogTime('log-start',startStr);
     setLogTime('log-end',endStr);
     updateLogDuration();
   },100);
+  }
   // Reset timer state — and push the cleared state to sync. Without this push,
   // the cloud/other devices still see "running", and the 4s poll or realtime
   // broadcast resurrects the timer seconds after Stop & Log.
@@ -7598,6 +7206,12 @@ function stopTimerAndLog(){
 
 async function timerPageLog(){
   if(!timerStartWallClock)return;
+  // Monthly focus: same gate as the Log page. Book reading needs the book name
+  // and pages, which only the Log page asks for.
+  const _loggedSubj=timerSubjectId;
+  const _tGate=_fcLogGate(_loggedSubj,{noParked:true})||
+    (_fcBookMode(_loggedSubj)?'Book reading has to be logged on the Log page, with the book name and pages.':null);
+  if(_tGate){showToast(_tGate,'var(--err)');return}
   // Anti-duplicate: check Supabase to ensure another device hasn't already logged this session
   const mySessionId=timerSessionId;
   const myStartMs=timerStart;
@@ -7658,6 +7272,8 @@ async function timerPageLog(){
   if(currentPage==='subjects')renderSubjectsPage();
   if(currentPage==='graduation')renderGraduationPage();
   if(_SUBJECT_FORMS[timerSubjectId]) _openSubjectForm(timerSubjectId,ds,startStr,endStr,notes,_timerId);
+  if(typeof renderFocusBlock==='function')renderFocusBlock();
+  _fcOfferTracker(_loggedSubj);
 }
 
 
@@ -8045,6 +7661,9 @@ function logSession(){
   const start=document.getElementById('log-start').value;
   const end=document.getElementById('log-end').value;
   if(!subjectId){showToast('Please select a subject.','var(--err)');return}
+  if(subjectId===FOCUS_OTHER){_fcShowOther();return}
+  const fcErr=_fcLogGate(subjectId);
+  if(fcErr){showToast(fcErr,'var(--err)');return}
   if(!date){showToast('Please select a date.','var(--err)');return}
   if(!start||!end){showToast('Please enter start and end times.','var(--err)');return}
   const mins=toMins(end)-toMins(start);
@@ -8054,6 +7673,17 @@ function logSession(){
   // "log anyway" button would just re-open the hole with one extra click.
   const futureErr=_futureSessionError(date,end);
   if(futureErr){showToast(futureErr,'var(--err)');return}
+  // English book reading: the three fields must be valid, and - because these
+  // sessions can never be deleted - a duplicate is refused outright rather than
+  // offered a "Log Anyway".
+  if(_fcBookMode(subjectId)){
+    const b=_fcReadBook();
+    if(b.err){showToast(b.err,'var(--err)');return}
+    const ov=_fcBookOverlap(b);
+    if(ov){showToast('Already logged on '+_fcShortDate(ov.date)+': '+(ov.notes||'')+'. '+_FC_NO_DELETE+' A duplicate is refused.','var(--err)');return}
+    const dd=findDuplicateSession(subjectId,date,start,end);
+    if(dd&&dd.type==='exact'){showToast('This exact session is already logged. '+_FC_NO_DELETE+' A duplicate is refused.','var(--err)');return}
+  }
   // Check for duplicates — if found, show warning and stop here
   if(checkAndShowDupWarn(subjectId,date,start,end))return;
   _doLogSession();
@@ -8063,14 +7693,31 @@ function _doLogSession(){
   const date=document.getElementById('log-date').value;
   const start=document.getElementById('log-start').value;
   const end=document.getElementById('log-end').value;
-  const notes=document.getElementById('log-notes').value.trim();
   const mins=toMins(end)-toMins(start);
   if(mins<=0)return;
+  // Monthly focus - the authoritative check: logSessionConfirmed() reaches this
+  // function straight from the duplicate warning, past logSession().
+  const fcErr=_fcLogGate(subjectId);
+  if(fcErr){showToast(fcErr,'var(--err)');return}
+  let book=null;
+  if(_fcBookMode(subjectId)){
+    book=_fcReadBook();
+    if(book.err){showToast(book.err,'var(--err)');return}
+    if(_fcBookOverlap(book)){showToast('That book and page range is already logged. '+_FC_NO_DELETE,'var(--err)');return}
+    const dd=findDuplicateSession(subjectId,date,start,end);
+    if(dd&&dd.type==='exact'){showToast('This exact session is already logged. '+_FC_NO_DELETE,'var(--err)');return}
+  }
+  // A book-reading title is always the one built from the three fields, never
+  // whatever the box happens to hold.
+  const notes=book?book.title:document.getElementById('log-notes').value.trim();
   const hours=mins/60;
   const sessions=loadSessions();
   const hoursStore=loadHours();
   const _newId=genId();
   const _rec={id:_newId,subjectId,date,start,end,hours,notes,loggedAt:new Date().toISOString()};
+  // Marked explicitly, never inferred from the title: this flag is what locks the
+  // title and subject and blocks every delete path.
+  if(book){_rec.bookReading=true;_rec.book={name:book.name,from:book.from,to:book.to}}
   // Since 2026-08-19 `notes` IS the journal content (the separate Journal Content
   // box was merged in). It is a single line — e.g. "11th July - Morning Cycle" —
   // and that same line is what gets sent to the Google Form's Contents field.
@@ -8097,6 +7744,9 @@ function _doLogSession(){
   updateJournalLenWarn();
   document.getElementById('log-duration').textContent='';
   dismissDupWarn();
+  {const _n=document.getElementById('log-notes');if(_n)delete _n.dataset.fcStash}
+  if(book)_fcClearBookFields();
+  _fcResetLogSubject();
   renderLogEntries();
   updateSidebar();
   showToast('Session logged ✓','var(--ok)');
@@ -8108,15 +7758,13 @@ function _doLogSession(){
   // box was merged into Notes on 2026-08-19 there is only one field, so `notes`
   // IS the submission text. _buildSubjectFormUrl() adds the journal-writing line.
   if(_SUBJECT_FORMS[subjectId]) _openSubjectForm(subjectId,date,start,end,notes,_newId,!!(_rec.journalMeta&&_rec.journalMeta.preply));
-  // After a PE *run*, offer to pre-fill the post-run stretches (shows behind the
-  // form card above, so it's revealed once that's dismissed — i.e. after the form)
-  _maybeOfferStretches(subjectId,date,start,end,notes);
-  // If what was just logged is a pre-run stretch, the run it belongs to is
-  // parked in localStorage — fill its form in now, so the run follows the
-  // stretch rather than the other way round.
-  if(/Pre-Run Stretches\s*$/i.test(notes||''))_resumePendingRun();
   // A logged session is the usual moment a contract boundary is crossed.
   if(typeof renderContractBanners==='function')renderContractBanners();
+  // Hours left moved; a focus subject may have just been completed, which
+  // pauses logging until its replacement is chosen.
+  if(typeof renderFocusBlock==='function')renderFocusBlock();
+  _fcRenderLogBlock(_fcState());
+  _fcOfferTracker(subjectId);
 }
 
 // == SCHOOLWORK ==============================================================
@@ -8643,6 +8291,7 @@ function _journalPendingHtml(open){
 
 function renderJournals(){
   const all=loadJournals();
+  const _jst=_fcState();   // one focus state for every card (it is not cheap)
   const open=_sortJournals(all.filter(j=>!j.done));
   const done=all.filter(j=>j.done).sort((a,b)=>(b.completedAt||'').localeCompare(a.completedAt||''));
   const oh=document.getElementById('journals-open');
@@ -8651,7 +8300,7 @@ function renderJournals(){
   if(ph)ph.innerHTML=_journalPendingHtml(open);
   if(!oh||!dh)return;
   oh.innerHTML = open.length
-    ? open.map(_journalCard).join('')
+    ? open.map(j=>_journalCard(j,_jst)).join('')
     : '<div class="empty-state">Nothing outstanding. Add a journal whenever you do work you cannot log straight away.</div>';
   if(done.length){
     const collapsed=_journalsCompletedCollapsed();
@@ -8659,7 +8308,7 @@ function renderJournals(){
       '<button class="jr-sec-toggle" onclick="toggleJournalsCompleted()" aria-label="'+(collapsed?'Expand':'Collapse')+' completed journals">'+
         (collapsed?'&#9660;':'&#9650;')+
       '</button></div>';
-    if(!collapsed)dhtml+=done.map(_journalCard).join('');
+    if(!collapsed)dhtml+=done.map(j=>_journalCard(j,_jst)).join('');
     dh.innerHTML=dhtml;
   }else{
     dh.innerHTML='';
@@ -8667,7 +8316,10 @@ function renderJournals(){
   _updateJournalsBadge();
 }
 
-function _journalCard(j){
+function _journalCard(j,st){
+  // Monthly focus: why this journal cannot be submitted yet, if it cannot.
+  // (`st` is optional and only trusted when it is a state object.)
+  const fcLock=_fcJournalLock(j,(st&&typeof st==='object')?st:undefined);
   const over=_journalOverdue(j);
   const flags=
     (j.priority&&!j.done?'<span class="jr-flag jr-flag-prio">Priority</span>':'')+
@@ -8687,8 +8339,10 @@ function _journalCard(j){
     (bits.length?'<div class="jr-meta">'+bits.join(' · ')+'</div>':'')+
     (j.desc?'<div class="jr-desc">'+escHtml(j.desc)+'</div>':'')+
     (j.proof?'<div class="jr-proof">Proof: '+escHtml(j.proof)+'</div>':'')+
+    (fcLock?'<div class="fc-jr-lock"><strong>Locked.</strong> '+escHtml(fcLock.text)+'</div>':'')+
     '<div class="jr-actions">'+
-      (j.done?'':'<button class="jr-btn jr-btn-fill" onclick="fillLogFromJournal(\''+j.id+'\')">Fill Log &rarr;</button>')+
+      (j.done?'':(fcLock?'<button class="jr-btn fc-btn-locked" disabled title="'+escHtml(fcLock.text)+'">Locked</button>':
+        '<button class="jr-btn jr-btn-fill" onclick="fillLogFromJournal(\''+j.id+'\')">Fill Log &rarr;</button>'))+
       '<button class="jr-btn" onclick="toggleJournalDone(\''+j.id+'\')">'+(j.done?'Undo complete':'Complete')+'</button>'+
       '<button class="jr-btn" onclick="openJournalModal(\''+j.id+'\')">Edit</button>'+
       '<button class="jr-btn" onclick="deleteJournalEntry(\''+j.id+'\')">Delete</button>'+
@@ -8700,6 +8354,7 @@ function openJournalModal(editId){
   // Cleared on every open so a plain "+ New Journal" can never inherit the
   // Log-transfer flag and wipe a Log form Noah is still using.
   _jrFromLog=false;
+  _jrParkMode=false;   // set again by fcParkOther() when it opened this box
   const j = editId ? loadJournals().find(x=>x.id===editId) : null;
   document.getElementById('journal-modal-title').textContent = j ? 'Edit Journal' : 'New Journal';
   document.getElementById('journal-edit-id').value = j ? j.id : '';
@@ -8729,6 +8384,7 @@ function openJournalModal(editId){
                             // for a subject that still has no form.
   _jrCheckForm();
   updateKaProofBanner('jr-subject','ka-proof-banner-jr');
+  _fcUpdateParkWarn();
   _jrDayLoad();
   updateJrDuration();
   _jrSnapshot=_jrCurrentValues();   // baseline for the close-guard below - captured after every field is set
@@ -8889,8 +8545,15 @@ let _pendingJournalEntryId=null;
 function fillLogFromJournal(id){
   const j=loadJournals().find(x=>x.id===id);
   if(!j)return;
+  // Monthly focus: a locked journal cannot be submitted yet (the card says why).
+  const fcLock=_fcJournalLock(j);
+  if(fcLock){showToast(fcLock.text,'var(--err)');return}
   hidePreplyProofBanner();
   showPage('log');                      // renderLog() runs here - fill AFTER it
+  // An unlocked parked journal for a subject outside this month's list is the one
+  // way such a subject reaches the Log page: add it to the box for this fill.
+  {const _fst=_fcState();
+   if(_fst.active&&j.subjectId&&!_fcAllowedIds(_fst).includes(j.subjectId)&&_fcFillableSubject(j.subjectId))_fcEnsureParkedOption(j.subjectId);}
   const sub=document.getElementById('log-subject');
   if(sub&&j.subjectId){
     if(Array.prototype.some.call(sub.options,o=>o.value===j.subjectId)){
@@ -8911,6 +8574,14 @@ function fillLogFromJournal(id){
   setLogTime('log-end',j.end||'');
   const nEl=document.getElementById('log-notes');
   if(nEl)nEl.value=j.title||'';
+  // English book reading: the title must come from the three fields, so a title
+  // in the book format is split back into them; anything else leaves them blank.
+  if(sub&&sub.value===j.subjectId&&_fcBookMode(j.subjectId)){
+    const pb=_fcParseBookTitle(j.title);
+    const setv=(eid,v)=>{const e=document.getElementById(eid);if(e)e.value=v};
+    setv('fc-book-name',pb?pb.name:'');setv('fc-book-from',pb?pb.from:'');setv('fc-book-to',pb?pb.to:'');
+    _fcRefreshBookPreview();
+  }
   if(typeof updateJournalLenWarn==='function')updateJournalLenWarn();
   if(typeof dismissDupWarn==='function')dismissDupWarn();
   updateLogDuration();
@@ -8979,6 +8650,7 @@ function transferLogToJournal(){
   _jrFromLog=true;
   _jrCheckForm();
   updateKaProofBanner('jr-subject','ka-proof-banner-jr');
+  _fcUpdateParkWarn();
   _jrDayLoad();
   updateJrDuration();
   const dsc=document.getElementById('jr-desc'); if(dsc)dsc.focus();
@@ -9074,7 +8746,9 @@ function renderJournalsBacklog(){
   h+='<div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.4">'+
       open.length+' outstanding'+(_openNow?(' &middot; '+_openNow+' in progress'):'')+
       '. Priority and oldest first.</div>';
+  const _bst=_fcState();
   open.slice(0,5).forEach(function(j){
+    const _bl=_fcJournalLock(j,_bst);
     const meta=[j.subjectId?_journalSubjName(j.subjectId):'', j.date?_ordinalDate(j.date):''].filter(Boolean).join(' · ');
     h+='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--border)">'+
       '<div style="min-width:0;flex:1">'+
@@ -9085,7 +8759,8 @@ function renderJournalsBacklog(){
           escHtml(j.title||'(no title yet)')+'</div>'+
         (meta?'<div style="font-size:11px;color:var(--text3);margin-top:3px">'+escHtml(meta)+'</div>':'')+
       '</div>'+
-      '<button class="morning-stretch-banner-btn" style="flex-shrink:0" onclick="fillLogFromJournal(\''+j.id+'\')">Fill Log</button>'+
+      (_bl?'<button class="morning-stretch-banner-btn fc-btn-locked" style="flex-shrink:0" disabled title="'+escHtml(_bl.text)+'">Locked</button>':
+        '<button class="morning-stretch-banner-btn" style="flex-shrink:0" onclick="fillLogFromJournal(\''+j.id+'\')">Fill Log</button>')+
     '</div>';
   });
   if(open.length>5){
@@ -9096,14 +8771,6 @@ function renderJournalsBacklog(){
   host.innerHTML=h;
 }
 
-// ── After-run stretches auto-fill ───────────────────────────────────────────
-// After logging a PE run, the post-run stretches session is filled into the log
-// form automatically: PE/Cardio, starting 5 min after the run ends, 20 min long,
-// note "{15th June} - After-Run Stretches".
-// There used to be a "Fill it in / Not now" prompt here. Noah never picked "Not
-// now", so as of 2026-08-19 it just fills — the modal is gone. The fill happens
-// behind the Google Form card, so it is waiting on screen once that is dismissed.
-let _pendingStretch=null;
 // Metrics from the last import, attached to the session when it is logged so
 // the NEXT import can compare against it.
 let _pendingJournalMeta=null;
@@ -9115,16 +8782,6 @@ function _ordinalDate(ds){
   const M=['January','February','March','April','May','June','July','August','September','October','November','December'];
   return d+suf+' '+(M[mi]||'');
 }
-// Does this text describe a RUN (run/jog/sprint or a 5k/10k-style distance)?
-// Explicitly excludes other cardio (cycle/walk/swim/row) so they never trigger
-// the stretches flow — even if they mention a distance like "20km".
-function _looksLikeRun(str){
-  const n=(str||'').toLowerCase();
-  if(/\b(cycle|cycling|bike|biking|walk|walking|swim|swimming|row|rowing)\b/.test(n))return false;
-  if(/\b(run|running|jog|jogging|sprint|sprints)\b/.test(n))return true;
-  if(/\b\d+\s?k(m)?\b/.test(n))return true; // 5k, 10k, 5km, 10km, "easy 10km"
-  return false;
-}
 // Daypart label ("Morning"/"Afternoon"/"Evening") — prefer an explicit label,
 // else derive from the start time.
 function _timeOfDay(startStr,label){
@@ -9133,136 +8790,773 @@ function _timeOfDay(startStr,label){
   if(isNaN(h))return 'Morning';
   return h<12?'Morning':h<17?'Afternoon':'Evening';
 }
-function _maybeOfferStretches(subjectId,date,start,end,notes){
-  if(!_isPeId(subjectId))return;
-  if((notes||'').toLowerCase().includes('stretch'))return; // don't loop after the stretch session
-  if(!_looksLikeRun(notes))return;                          // runs/jogs/5k-10k only, not cycles/walks
-  _pendingStretch={date,end};
-  fillStretchLog();
-}
-function fillStretchLog(){
-  if(!_pendingStretch)return;
-  hidePreplyProofBanner();
-  const {date,end}=_pendingStretch;
-  // Starts 5 min after the run session ends. Since 18 Aug 2026 the run's End
-  // Time is the real end of the activity — journal-writing minutes no longer
-  // exist — so there is nothing left to double-count against.
-  const sStart=_addMins(end,5);
-  const stretchMins=20;
-  const sEnd=_addMins(sStart,stretchMins);
-  showPage('log');
-  const sub=document.getElementById('log-subject'); if(sub)sub.value=_peTargetId();
-  if(typeof updateLogFormColour==='function')updateLogFormColour();
-  const dEl=document.getElementById('log-date'); if(dEl)dEl.value=date;
-  setLogTime('log-start',sStart);
-  setLogTime('log-end',sEnd);
-  // Fixed content from the stretch guide — no model call needed.
-  const nEl=document.getElementById('log-notes');
-  if(nEl)nEl.value=buildStretchJournal(date);
-  updateJournalLenWarn();
-  _pendingJournalMeta={activity:'Stretch',app:null,durationSeconds:stretchMins*60};
-  updateLogDuration();
-  _pendingStretch=null;
-  // Same as the pre-run path: put the form where he lands after dismissing the
-  // Google Form card, rather than leaving him scrolled wherever he was.
-  const card=document.getElementById('log-form-card');
-  if(card)card.scrollIntoView({behavior:'auto',block:'start'});
-  showToast('After-run stretches filled in — review & log ✓','var(--ok)');
-}
+// == MONTHLY FOCUS ===========================================================
+// From October 2026 Noah studies ONE core + ONE side subject per month and wants
+// StudyTrack to enforce it strictly. Full spec, every item confirmed by Noah:
+// docs-private/HANDOFF-2026-10-01-monthly-focus-spec.md. In short:
+//   - October's rules run 3-31 Oct (sessions dated 1-2 Oct are unrestricted);
+//     every later month runs from the 1st to the last day.
+//   - The Log page lists only: core, side, Japanese, English as BOOK READING
+//     (unless English is the core), and "Other subjects", which parks a journal.
+//   - A focus subject is COMPLETED when StudyTrack's logged hours reach `req`.
+//     An unfinished one carries over, locked, into the next month - except a
+//     Japanese side subject, which Noah may keep or swap at month end.
+//   - Next month's subjects are chosen from 3 days before it starts; a subject
+//     completed mid-month is replaced there and then. Until a needed choice is
+//     made, the Log page, the Preply import and journal submission are blocked.
+//   - A parked journal for a subject outside this month's list unlocks in a later
+//     calendar month than its Day Studied, or on any day with 8h+ of allowed
+//     subjects logged (then every parked journal unlocks for the rest of that day).
+//
+// STORAGE. st_focus = {months:{'YYYY-MM':{core:[entry],side:[entry]}}}; an entry
+// is {id,since,how,at}, how = start|carry|choice|replace. Entries are APPEND-ONLY
+// (a mid-month replacement adds one), which is what lets the History focus log
+// show every month and every switch. October 2026 is SEED DATA (FOCUS_SEED) and
+// nothing is written at boot - a boot-time write is exactly how PE got corrupted
+// before. A month with nothing stored DERIVES its carry-over from the month
+// before (_fcSlotEntries), so nothing has to be written when a month turns over
+// either. st_focus_tracker = {subjectId:{left,next,updatedAt}} - kept apart from
+// st_focus so a tracker edit on a stale device cannot clobber a month's choice.
+// Both sync whole-object last-writer-wins, the same as st_journals.
+const FOCUS_KEY='st_focus';
+const FOCUS_TRACKER_KEY='st_focus_tracker';
+const FOCUS_START='2026-10-03';
+const FOCUS_FIRST_MONTH='2026-10';
+const FOCUS_SEED={'2026-10':{
+  core:[{id:'algebra1',since:'2026-10-03',how:'start'}],
+  side:[{id:'wa_hist',since:'2026-10-03',how:'start'}]
+}};
+const FOCUS_CORE_IDS=['algebra1','geometry','algebra2','science','english','english_11','english_12'];
+const FOCUS_SIDE_IDS=['japanese','cwp','wa_hist','us_hist','civics','fine_art','health','lab_sci'];
+const ENGLISH_SERIES=['english','english_11','english_12'];
+const FOCUS_DAY_UNLOCK_H=8;
+const FOCUS_CHOOSE_LEAD_DAYS=3;
+const FOCUS_OTHER='__other__';
+const _FC_EPS=1e-6;   // hours are float sums of minutes/60
+const _FC_NO_DELETE='Book-reading sessions can never be deleted.';
+const _FC_LOCK_SVG='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+const _FC_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-// ── Pre-run stretches ───────────────────────────────────────────────────────
-// Mirrors the post-run flow, but computed backwards from the run's start time:
-// 15 minutes of stretching, finishing 5 minutes before the run begins. This is
-// bookkeeping for a stretch Noah already does, not a live reminder.
-const PRERUN_STRETCH_MINS=15, PRERUN_GAP_MINS=5;
-const PENDING_RUN_KEY='st_pending_run';
-let _pendingPreRun=null;
-
-// The window is [runStart-20, runStart-5]. A session in this app is a single
-// date with end > start, so a window straddling midnight cannot be represented:
-// for runs starting 00:05–00:19 the prompt is skipped rather than writing a
-// wrong date. A run starting before 00:05 puts the whole window on the previous
-// day, which is representable, so the date is rolled back.
-function _preRunStretchWindow(runDate,runStart){
-  if(!runDate||!runStart)return null;
-  const span=PRERUN_STRETCH_MINS+PRERUN_GAP_MINS;
-  const s=toMins(runStart)-span, e=toMins(runStart)-PRERUN_GAP_MINS;
-  if(isNaN(s)||isNaN(e))return null;
-  if(s<0&&e>=0)return null;
-  let date=runDate;
-  if(e<0){
-    const d=new Date(runDate+'T12:00:00');
-    d.setDate(d.getDate()-1);
-    date=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-  }
-  return {date:date,start:_addMins(runStart,-span),end:_addMins(runStart,-PRERUN_GAP_MINS)};
-}
-
-function _savePendingRun(result,cycleNum){
-  try{localStorage.setItem(PENDING_RUN_KEY,JSON.stringify({result:result,cycleNum:cycleNum,savedAt:Date.now()}))}catch(e){}
-}
-function _loadPendingRun(){
+function loadFocus(){
   try{
-    const raw=localStorage.getItem(PENDING_RUN_KEY);
-    if(!raw)return null;
-    const p=JSON.parse(raw);
-    // Anything older than 12 hours is stale — a run parked yesterday must not
-    // resurface today and overwrite whatever is in the log form.
-    if(!p||!p.result||(Date.now()-(p.savedAt||0))>43200000){_clearPendingRun();return null}
-    return p;
-  }catch(e){return null}
+    const raw=localStorage.getItem(FOCUS_KEY);
+    if(raw){const p=JSON.parse(raw);if(p&&typeof p==='object'&&p.months&&typeof p.months==='object')return p}
+  }catch(e){}
+  return {months:{}};
 }
-function _clearPendingRun(){try{localStorage.removeItem(PENDING_RUN_KEY)}catch(e){}}
-
-function _resumePendingRun(){
-  const p=_loadPendingRun();
-  _clearPendingRun();
-  if(!p)return;
-  _fillRunLogForm(p.result,p.cycleNum||1);
+function saveFocus(f){
+  localStorage.setItem(FOCUS_KEY,JSON.stringify(f));
+  localStorage.setItem(FOCUS_KEY+'_updated_at',new Date().toISOString());
+  try{sbPush(FOCUS_KEY,f)}catch(e){}
 }
-
-function _showPreRunStretchPrompt(w){
-  _pendingPreRun=w;
-  const note=_ordinalDate(w.date)+' - Pre-Run Stretches';
-  const el=document.getElementById('prerun-stretch-preview');
-  if(el)el.innerHTML='<b style="color:var(--text)">PE / Cardio</b> · '+PRERUN_STRETCH_MINS+' min<br>'+w.start+' – '+w.end+'<br><span style="color:var(--text2)">'+escHtml(note)+'</span>';
-  const ov=document.getElementById('prerun-stretch-modal-overlay');
-  if(ov)ov.classList.add('open');
+function loadFocusTracker(){
+  try{
+    const raw=localStorage.getItem(FOCUS_TRACKER_KEY);
+    if(raw){const p=JSON.parse(raw);if(p&&typeof p==='object'&&!Array.isArray(p))return p}
+  }catch(e){}
+  return {};
+}
+function _fcSaveTrackerData(t){
+  localStorage.setItem(FOCUS_TRACKER_KEY,JSON.stringify(t));
+  localStorage.setItem(FOCUS_TRACKER_KEY+'_updated_at',new Date().toISOString());
+  try{sbPush(FOCUS_TRACKER_KEY,t)}catch(e){}
 }
 
-function fillPreRunStretchLog(){
-  hidePreplyProofBanner();
-  const w=_pendingPreRun;
-  _pendingPreRun=null;
-  closeModal('prerun-stretch-modal-overlay');
-  if(!w){_resumePendingRun();return}
-  showPage('log');
-  const sub=document.getElementById('log-subject'); if(sub)sub.value=_peTargetId();
+// ── dates (all Tokyo, via todayStr()/toAppTz) ───────────────────────────────
+function _fcMonthOf(ds){return String(ds||'').slice(0,7)}
+function _fcAddMonths(ym,n){
+  const d=new Date(parseInt(ym.slice(0,4),10),parseInt(ym.slice(5,7),10)-1+n,1);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+}
+function _fcMonthName(ym){return _FC_MONTHS[parseInt(String(ym).slice(5,7),10)-1]||String(ym)}
+function _fcMonthStart(ym){return ym===FOCUS_FIRST_MONTH?FOCUS_START:ym+'-01'}
+function _fcAddDays(ds,n){
+  const d=new Date(ds+'T12:00:00');
+  d.setDate(d.getDate()+n);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function _fcShortDate(ds){
+  const p=String(ds||'').split('-');
+  if(p.length<3)return String(ds||'');
+  return parseInt(p[2],10)+' '+(_FC_MONTHS[parseInt(p[1],10)-1]||'').slice(0,3)+' '+p[0];
+}
+function _fcIsoToTokyoDate(iso){
+  if(!iso)return '';
+  const d=new Date(iso);
+  if(isNaN(d.getTime()))return '';
+  const t=toAppTz(d);
+  return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
+}
+
+// ── subjects ────────────────────────────────────────────────────────────────
+function _fcName(id){return _journalSubjName(id)||String(id||'')}
+// Completed = StudyTrack's logged hours reach the requirement (Noah's
+// definition - not teacher confirmation). A subject marked Done by hand, or one
+// that no longer exists, also counts: neither can be studied any more.
+function _fcCompleted(id,subjs){
+  subjs=subjs||loadSubjects();
+  const s=subjs.find(x=>x.id===id);
+  if(!s)return true;
+  if(s.done)return true;
+  return s.req>0&&getLogged(id)>=s.req-_FC_EPS;
+}
+function _fcHoursLeft(id){
+  const s=loadSubjects().find(x=>x.id===id);
+  if(!s)return 0;
+  return Math.max(0,(s.req||0)-getLogged(id));
+}
+// The date a subject's logged hours crossed its requirement, read off the
+// session log. null when that cannot be known (already complete on base hours,
+// marked Done by hand) - the History log then says "completed" with no date
+// rather than inventing one.
+function _fcCompletedOn(id){
+  const s=loadSubjects().find(x=>x.id===id);
+  if(!s||!(s.req>0))return null;
+  let cum=s.base||0;
+  if(cum>=s.req-_FC_EPS)return null;
+  const list=loadSessions().filter(x=>x.subjectId===id)
+    .sort((a,b)=>((a.date||'')+(a.start||'')).localeCompare((b.date||'')+(b.start||'')));
+  for(const x of list){cum+=x.hours||0;if(cum>=s.req-_FC_EPS)return x.date||null}
+  return null;
+}
+// What can be picked for a slot: unfinished subjects from that slot's pool, with
+// the maths/English prerequisite order enforced for core.
+function _fcPool(slot,subjs){
+  subjs=subjs||loadSubjects();
+  const ids=slot==='core'?FOCUS_CORE_IDS:FOCUS_SIDE_IDS;
+  return ids.map(id=>subjs.find(s=>s.id===id))
+    .filter(s=>s&&!_fcCompleted(s.id,subjs)&&!(slot==='core'&&isSubjPrereqLocked(s.id,subjs)));
+}
+
+// ── month resolution ────────────────────────────────────────────────────────
+function _fcStoredSlot(ym,slot,f){
+  const m=f&&f.months&&f.months[ym];
+  if(m&&Array.isArray(m[slot])&&m[slot].length)return m[slot];
+  const seed=FOCUS_SEED[ym];
+  if(seed&&Array.isArray(seed[slot])&&seed[slot].length)return seed[slot];
+  return null;
+}
+// Every entry for one slot of one month, oldest first. When nothing is stored,
+// the previous month's LAST subject carries over (derived, never written) unless
+// it is a Japanese side subject, or it was finished before this month began.
+// A subject finished DURING this month still shows as carried - it was - and
+// _fcSlot() then asks for its replacement.
+function _fcSlotEntries(ym,slot,f,depth){
+  f=f||loadFocus(); depth=depth||0;
+  const stored=_fcStoredSlot(ym,slot,f);
+  if(stored)return stored.map(e=>Object.assign({},e));
+  if(ym<=FOCUS_FIRST_MONTH||depth>48)return [];
+  const prev=_fcSlotEntries(_fcAddMonths(ym,-1),slot,f,depth+1);
+  const last=prev.length?prev[prev.length-1]:null;
+  if(!last||!last.id)return [];
+  if(slot==='side'&&last.id==='japanese')return [];
+  const start=_fcMonthStart(ym);
+  if(_fcCompleted(last.id)){
+    const on=_fcCompletedOn(last.id);
+    if(!on||on<start)return [];
+  }
+  return [{id:last.id,since:start,how:'carry',derived:true}];
+}
+// state: ok      - a current, unfinished subject (id)
+//        replace - the subject in this slot is complete; pick its replacement
+//        choose  - nothing chosen for this month yet
+//        empty   - nothing left in the pool, so nothing to ask (never blocks)
+function _fcSlot(ym,slot,f){
+  f=f||loadFocus();
+  const entries=_fcSlotEntries(ym,slot,f);
+  const last=entries.length?entries[entries.length-1]:null;
+  if(last&&last.id&&!_fcCompleted(last.id))return {slot:slot,entries:entries,id:last.id,done:null,state:'ok'};
+  const canPick=_fcPool(slot).length>0;
+  return {slot:slot,entries:entries,id:null,done:last?last.id:null,state:canPick?(last?'replace':'choose'):'empty'};
+}
+function _fcState(today){
+  today=today||todayStr();
+  const ym=_fcMonthOf(today);
+  const f=loadFocus();
+  const core=_fcSlot(ym,'core',f), side=_fcSlot(ym,'side',f);
+  const active=today>=FOCUS_START;
+  const need=sl=>sl.state==='choose'||sl.state==='replace';
+  return {today:today,ym:ym,f:f,core:core,side:side,inRange:ym>=FOCUS_FIRST_MONTH,active:active,
+    blocked:active&&(need(core)||need(side))};
+}
+function _fcBlockedNow(){const st=_fcState();return st.active&&st.blocked}
+
+// ── what may be logged ──────────────────────────────────────────────────────
+function _fcEnglishTarget(subjs){
+  subjs=subjs||loadSubjects();
+  for(const id of ENGLISH_SERIES){if(subjs.find(s=>s.id===id)&&!_fcCompleted(id,subjs))return id}
+  return null;
+}
+function _fcEnglishIsCore(st){return !!(st&&st.core&&st.core.id&&ENGLISH_SERIES.includes(st.core.id))}
+// English is book-reading only while the rules run and English is NOT the core.
+function _fcBookMode(subjectId,st){
+  st=st||_fcState();
+  return !!(st.active&&subjectId&&ENGLISH_SERIES.includes(subjectId)&&!_fcEnglishIsCore(st));
+}
+// Subjects that may be LOGGED right now. Empty while a choice is outstanding.
+function _fcAllowedIds(st){
+  st=st||_fcState();
+  if(st._allowed)return st._allowed.slice();   // a state object is per-call, so this never goes stale
+  if(st.blocked){st._allowed=[];return []}
+  const subjs=loadSubjects();
+  const ids=[];
+  if(st.core.id)ids.push(st.core.id);
+  if(st.side.id&&!ids.includes(st.side.id))ids.push(st.side.id);
+  if(!ids.includes('japanese')&&subjs.find(s=>s.id==='japanese')&&!_fcCompleted('japanese',subjs))ids.push('japanese');
+  if(!_fcEnglishIsCore(st)){const e=_fcEnglishTarget(subjs);if(e&&!ids.includes(e))ids.push(e)}
+  st._allowed=ids.slice();
+  return ids;
+}
+// Subjects whose hours count towards the 8-hour unlock: every focus subject of
+// the month (a mid-month replacement does not stop the earlier one counting),
+// Japanese and English.
+function _fcMonthFocusIds(ym,f){
+  f=f||loadFocus();
+  const ids=[];
+  ['core','side'].forEach(sl=>_fcSlotEntries(ym,sl,f).forEach(e=>{if(e.id&&!ids.includes(e.id))ids.push(e.id)}));
+  return ids;
+}
+function _fcTodayAllowedHours(st){
+  st=st||_fcState();
+  if(typeof st._todayH==='number')return st._todayH;
+  const ids=new Set(_fcMonthFocusIds(st.ym,st.f).concat(['japanese'],ENGLISH_SERIES));
+  st._todayH=loadSessions().filter(s=>s.date===st.today&&ids.has(s.subjectId)).reduce((a,s)=>a+(s.hours||0),0);
+  return st._todayH;
+}
+// Why a pending journal cannot be submitted (Fill Log) right now, or null when
+// it can. "Parked in" is the journal's Day Studied - Noah dates a journal for
+// the day he actually studied (2026-10-01) - falling back to when it was made.
+function _fcJournalLock(j,st){
+  st=st||_fcState();
+  if(!st.active||!j||j.done)return null;
+  if(st.blocked)return {kind:'choose',text:'Locked until you choose '+_fcMonthName(st.ym)+'’s focus subjects in the red block at the top.'};
+  if(!j.subjectId)return null;
+  if(j.date&&j.date<FOCUS_START)return null;
+  if(_fcAllowedIds(st).includes(j.subjectId))return null;
+  const parked=_fcMonthOf(j.date||_fcIsoToTokyoDate(j.createdAt)||st.today);
+  if(parked<st.ym)return null;
+  const h=_fcTodayAllowedHours(st);
+  if(h>=FOCUS_DAY_UNLOCK_H-_FC_EPS)return null;
+  return {kind:'locked',text:_fcName(j.subjectId)+' is not one of '+_fcMonthName(st.ym)+'’s subjects. Unlocks on 1 '+
+    _fcMonthName(_fcAddMonths(parked,1))+', or today once '+FOCUS_DAY_UNLOCK_H+'h of allowed subjects are logged ('+fmtH(h)+' so far).'};
+}
+// True when the Log form was filled from an unlocked parked journal for exactly
+// this subject - the one way a non-focus subject reaches the Log page.
+function _fcParkedJournal(subjectId,st){
+  if(!_pendingJournalEntryId)return null;
+  const j=loadJournals().find(x=>x.id===_pendingJournalEntryId);
+  if(!j||j.done||j.subjectId!==subjectId||!_fcFillableSubject(subjectId))return null;
+  return _fcJournalLock(j,st)?null:j;
+}
+// A parked journal's subject can reach the Log page only if it can still be
+// studied at all: not complete, and not waiting on a prerequisite (so English 12
+// can never be logged ahead of English 11 this way).
+function _fcFillableSubject(id){
+  const subjs=loadSubjects();
+  return !!(id&&subjs.find(s=>s.id===id)&&!_fcCompleted(id,subjs)&&!isSubjPrereqLocked(id,subjs));
+}
+// The ONE check every logging path runs (Log page, Timer page). Returns why a
+// session may NOT be logged, or null.
+function _fcLogGate(subjectId,opts){
+  const st=_fcState();
+  if(!st.active)return null;
+  if(st.blocked)return 'Logging is paused until you choose '+_fcMonthName(st.ym)+'’s focus subjects in the red block at the top.';
+  if(!subjectId)return null;
+  if(subjectId===FOCUS_OTHER)return 'Other subjects are parked as a journal on the Journals page, not logged here.';
+  if(_fcAllowedIds(st).includes(subjectId))return null;
+  if(!(opts&&opts.noParked)){
+    const pj=_fcParkedJournal(subjectId,st);
+    if(pj){
+      // Logged on the day it was studied - otherwise "Fill Log, then change the
+      // date to today" would turn an old parked journal into today's hours.
+      const d=(document.getElementById('log-date')||{}).value||'';
+      if(!pj.date)return 'Set the Day Studied on this journal first \u2014 a parked journal is logged on the day it was studied.';
+      if(pj.date&&d!==pj.date)return 'A parked journal is logged on the day it was studied ('+_fcShortDate(pj.date)+'). Put the date back.';
+      return null;
+    }
+  }
+  return _fcName(subjectId)+' is not one of '+_fcMonthName(st.ym)+'\u2019s subjects. Park it as a journal on the Journals page.';
+}
+// What a logged session's subject may be changed TO in History > Edit Session
+// while the rules run: its own subject, or one of this month's subjects. English
+// book reading is left out, so a session can never be switched INTO English and
+// slip past the book-reading lock that way round.
+function _fcEditSubjectIds(sess,st){
+  const ids=[sess.subjectId];
+  _fcAllowedIds(st).forEach(id=>{if(!_fcBookMode(id,st)&&!ids.includes(id))ids.push(id)});
+  return ids;
+}
+// Subjects the Timer page may offer. While the rules run: the allowed subjects
+// minus English book reading, which needs the book name and pages that only the
+// Log page has.
+function _timerAvailable(subjs){
+  subjs=subjs||loadSubjects();
+  const st=_fcState();
+  if(!st.active)return subjs.filter(s=>!s.done&&getLogged(s.id)<s.req);
+  return _fcAllowedIds(st).filter(id=>!_fcBookMode(id,st)).map(id=>subjs.find(s=>s.id===id)).filter(Boolean);
+}
+
+// ── Log page: subject box ───────────────────────────────────────────────────
+// _fcLogSubjAuto is the last value renderLog itself put in the box - the same
+// sentinel idea as _logDateAuto. renderLog resets the box to the core subject
+// unless Noah (or an import / journal fill) has put something else there, so
+// tabbing away mid-entry can never silently switch a filled form's subject.
+let _fcLogSubjAuto='';
+function _fcLogOptionsHtml(st){
+  if(st.blocked)return '';   // nothing is loggable until the choice is made (the form is hidden too)
+  const opt=(id,label)=>'<option value="'+escHtml(id)+'">'+escHtml(label)+'</option>';
+  let h='';
+  if(st.core.id)h+=opt(st.core.id,_fcName(st.core.id)+' (Core)');
+  if(st.side.id&&st.side.id!==st.core.id)h+=opt(st.side.id,_fcName(st.side.id)+' (Side)');
+  _fcAllowedIds(st).forEach(id=>{
+    if(id===st.core.id||id===st.side.id)return;
+    h+=opt(id,ENGLISH_SERIES.includes(id)?_fcName(id)+' — book reading only':_fcName(id));
+  });
+  h+='<option disabled>──────────</option>';
+  h+=opt(FOCUS_OTHER,'Other subjects…');
+  return h;
+}
+function _fcDefaultLogSubject(st){
+  const ids=_fcAllowedIds(st);
+  return (st.core.id&&ids.includes(st.core.id))?st.core.id:(ids[0]||'');
+}
+function _fcAfterLogSubjectSet(){
   if(typeof updateLogFormColour==='function')updateLogFormColour();
-  const dEl=document.getElementById('log-date'); if(dEl)dEl.value=w.date;
-  setLogTime('log-start',w.start);
-  setLogTime('log-end',w.end);
-  const nEl=document.getElementById('log-notes');
-  if(nEl)nEl.value=buildStretchJournal(w.date,'Pre-Run Stretches');
-  updateJournalLenWarn();
-  _pendingJournalMeta={activity:'Stretch',app:null,durationSeconds:PRERUN_STRETCH_MINS*60};
-  updateLogDuration();
-  const card=document.getElementById('log-form-card');
-  if(card)card.scrollIntoView({behavior:'auto',block:'start'});
-  showToast('Pre-run stretches filled in — log this, then the run follows','var(--ok)');
+  updateKaProofBanner();     // also drives the Health note and English book mode
+  if(typeof updateJournalLenWarn==='function')updateJournalLenWarn();
+}
+// Back to the core subject: after a session is logged and when the form is
+// cleared, so the box shows the core "every time the page is shown".
+function _fcResetLogSubject(){
+  const st=_fcState();
+  if(!st.active)return;
+  const sel=document.getElementById('log-subject');
+  if(!sel)return;
+  // Rebuilt, not just re-selected: a parked journal's subject was only in the
+  // list for that one fill, and both callers have already dropped the link.
+  sel.innerHTML=_fcLogOptionsHtml(st);
+  const v=_fcDefaultLogSubject(st);
+  if(v&&Array.prototype.some.call(sel.options,o=>o.value===v))sel.value=v;
+  _fcLogSubjAuto=sel.value;   // whatever is showing now was put there by us, not by Noah
+  _fcAfterLogSubjectSet();
+}
+// True when `id` can go in the Log page box right now (an allowed subject).
+function _fcSelectableNow(id){
+  const st=_fcState();
+  return !st.active||_fcAllowedIds(st).includes(id);
+}
+// Puts a subject in the Log page box ONLY if it is listed there. Anything that
+// fills the form in code goes through this, so a subject outside this month's
+// list can never land in the box by the back door.
+function _fcSelectLogSubject(id){
+  const sel=document.getElementById('log-subject');
+  if(!sel||!id)return false;
+  const listed=()=>Array.prototype.some.call(sel.options,o=>o.value===id&&!o.disabled);
+  // The list can be stale (drawn before a choice was made, or on another day):
+  // rebuild it when the subject IS allowed now but is missing from the box.
+  if(!listed()){const st=_fcState();if(st.active&&_fcAllowedIds(st).includes(id))sel.innerHTML=_fcLogOptionsHtml(st)}
+  if(!listed())return false;
+  sel.value=id;
+  _fcAfterLogSubjectSet();
+  return true;
+}
+// An unlocked parked journal is the one way a non-focus subject reaches the Log
+// page; its subject is added to the box for that fill only.
+function _fcEnsureParkedOption(subjectId){
+  const sel=document.getElementById('log-subject');
+  if(!sel||!subjectId)return;
+  if(Array.prototype.some.call(sel.options,o=>o.value===subjectId))return;
+  const o=document.createElement('option');
+  o.value=subjectId;
+  o.textContent=_fcName(subjectId)+' (parked journal)';
+  const other=Array.prototype.find.call(sel.options,x=>x.value===FOCUS_OTHER);
+  const sep=other&&other.previousElementSibling&&other.previousElementSibling.disabled?other.previousElementSibling:other;
+  sel.insertBefore(o,sep||null);
+}
+function _fcOnLogSubjectChange(){
+  const sel=document.getElementById('log-subject');
+  if(!sel||sel.value!==FOCUS_OTHER)return;
+  const st=_fcState();
+  const v=_fcDefaultLogSubject(st);
+  if(v)sel.value=v;
+  _fcShowOther(st);
+}
+function _fcShowOther(st){
+  st=st||_fcState();
+  const t=document.getElementById('fc-other-text');
+  if(t)t.textContent='In '+_fcMonthName(st.ym)+' you only log '+_fcAllowedIds(st).map(_fcName).join(', ')+
+    '. Anything else is parked as a journal on the Journals page and submitted another time — nothing is logged from here.';
+  const o=document.getElementById('fc-other-overlay');
+  if(o)o.classList.add('show');
+}
+function fcCloseOther(){
+  const o=document.getElementById('fc-other-overlay');
+  if(o)o.classList.remove('show');
+}
+// Set by fcParkOther() AFTER openJournalModal() (which clears it), so the
+// "be very specific" warning shows even before a subject is picked.
+let _jrParkMode=false;
+function fcParkOther(){
+  fcCloseOther();
+  showPage('journals');
+  openJournalModal();
+  _jrParkMode=true;
+  _fcUpdateParkWarn();
+}
+function _fcUpdateParkWarn(){
+  const w=document.getElementById('fc-park-warn');
+  if(!w)return;
+  const st=_fcState();
+  const sel=document.getElementById('jr-subject');
+  const id=sel?sel.value:'';
+  const outside=!!(id&&!_fcAllowedIds(st).includes(id));
+  if(!st.active||!(_jrParkMode||outside)){w.classList.remove('show');return}
+  const d=(document.getElementById('jr-date')||{}).value||'';
+  w.innerHTML='<strong>Parking this session.</strong> Be very specific and detailed in the Description — what you studied, which pages, lessons or tasks, and the times — so nothing from the session is forgotten when you log it later.'+
+    (outside&&!(d&&d<FOCUS_START)?' '+escHtml(_fcName(id))+' is not one of '+_fcMonthName(st.ym)+'’s subjects, so this journal stays locked until a later month, or a day with '+FOCUS_DAY_UNLOCK_H+'h of allowed subjects logged.':'');
+  w.classList.add('show');
 }
 
-// "Skip to the run" — the stretch is dropped, the run is not.
-function skipPreRunStretch(){
-  _pendingPreRun=null;
-  closeModal('prerun-stretch-modal-overlay');
-  _resumePendingRun();
+// ── Log page: English book reading ──────────────────────────────────────────
+// The title is BUILT from three fields and shown in the (now read-only) Journal
+// Content box, so Noah cannot type anything else. Format from Noah's own
+// "(name of book) Reading | P?? --> P??", the brackets being his placeholder.
+let _fcBookOn=false;
+function _fcBookTitle(name,from,to){return name+' Reading | P'+from+' --> P'+to}
+function _fcReadBook(){
+  const v=id=>{const e=document.getElementById(id);return e?String(e.value||''):''};
+  const name=v('fc-book-name').trim().replace(/\s+/g,' ');
+  const fromS=v('fc-book-from').trim(), toS=v('fc-book-to').trim();
+  if(!name)return {err:'Enter the book name.'};
+  if(!fromS||!toS)return {err:'Enter both the From page and the To page.'};
+  if(!/^\d+$/.test(fromS)||!/^\d+$/.test(toS))return {err:'Page numbers must be whole numbers.'};
+  const from=parseInt(fromS,10), to=parseInt(toS,10);
+  if(from<1||to<1)return {err:'Page numbers start at 1.'};
+  if(to<from)return {err:'The To page cannot be lower than the From page.'};
+  return {name:name,from:from,to:to,title:_fcBookTitle(name,from,to)};
+}
+function _fcRefreshBookPreview(){
+  const notes=document.getElementById('log-notes');
+  if(!notes||!_fcBookOn)return;
+  const b=_fcReadBook();
+  notes.value=b.err?'':b.title;
+  if(typeof updateJournalLenWarn==='function')updateJournalLenWarn();
+}
+function _fcClearBookFields(){
+  ['fc-book-name','fc-book-from','fc-book-to'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+  _fcRefreshBookPreview();
+}
+// Runs from updateKaProofBanner(), i.e. on every Log subject change including
+// the ones made in code.
+function _fcUpdateBookMode(){
+  const sel=document.getElementById('log-subject');
+  const notes=document.getElementById('log-notes');
+  if(!sel||!notes)return;
+  const fields=document.getElementById('fc-book-fields');
+  const banner=document.getElementById('fc-book-banner');
+  const noform=document.getElementById('fc-book-noform');
+  const lbl=document.getElementById('log-notes-label');
+  const on=_fcBookMode(sel.value);
+  if(fields)fields.style.display=on?'grid':'none';
+  if(on){
+    if(banner){
+      banner.innerHTML='<strong>English is for book reading only.</strong> The title is built from the book name and pages below and cannot be typed. Once logged, the title and subject can never be edited, and the session can <strong>never be deleted</strong> — not from History and not from the Log page. Only its date and times can be changed.';
+      banner.classList.add('show');
+    }
+    if(lbl)lbl.textContent='Journal Title (built from the book fields — locked)';
+    if(!_fcBookOn)notes.dataset.fcStash=notes.value;   // put back if he switches away again
+    notes.readOnly=true;
+    notes.classList.add('fc-locked');
+    notes.placeholder='Book name Reading | P?? --> P??';
+    _fcBookOn=true;
+    _fcRefreshBookPreview();
+    if(noform){
+      if(!_SUBJECT_FORMS[sel.value]){
+        noform.textContent='NO GOOGLE FORM LINKED to '+_fcName(sel.value)+'. Logging this will NOT open a form, so the journal will not reach your teacher from StudyTrack. Ask Claude to add the form link as soon as your teacher issues it.';
+        noform.classList.add('show');
+      }else noform.classList.remove('show');
+    }
+  }else{
+    if(banner)banner.classList.remove('show');
+    if(noform)noform.classList.remove('show');
+    if(lbl)lbl.textContent='Journal Content/What You Studied';
+    if(_fcBookOn){
+      // Leaving book mode: the box only ever held our generated preview, never
+      // Noah's typing, so it is cleared rather than carried into another subject.
+      notes.readOnly=false;
+      notes.classList.remove('fc-locked');
+      notes.placeholder='';
+      notes.value=notes.dataset.fcStash||'';
+      delete notes.dataset.fcStash;
+      _fcBookOn=false;
+      if(typeof updateJournalLenWarn==='function')updateJournalLenWarn();
+    }
+  }
+}
+function _fcBookKey(n){return String(n||'').trim().replace(/\s+/g,' ').toLowerCase()}
+// A book-reading session can never be deleted, so a duplicate could never be
+// removed either. Refuse one whose book and page range overlap a session already
+// logged. Ranges that only TOUCH (P1-P40 then P40-P80, picking up mid-page) are
+// fine; the same range twice is not.
+function _fcBookOverlap(b){
+  const k=_fcBookKey(b.name);
+  return loadSessions().find(s=>s.bookReading&&s.book&&_fcBookKey(s.book.name)===k&&
+    ((s.book.from===b.from&&s.book.to===b.to)||(b.from<s.book.to&&s.book.from<b.to)))||null;
+}
+// Parses a title made by _fcBookTitle back into its fields (a book-reading
+// journal filled back into the Log page).
+function _fcParseBookTitle(t){
+  const m=String(t||'').match(/^(.+) Reading \| P(\d+) --> P(\d+)$/);
+  return m?{name:m[1],from:m[2],to:m[3]}:null;
+}
+
+// ── Log page: blocked state ─────────────────────────────────────────────────
+function _fcNeedWords(st){
+  const n=[];
+  if(st.core.state==='choose'||st.core.state==='replace')n.push('core subject');
+  if(st.side.state==='choose'||st.side.state==='replace')n.push('side subject');
+  return n.join(' and ')||'subjects';
+}
+function _fcRenderLogBlock(st){
+  const blk=document.getElementById('fc-log-block');
+  const card=document.getElementById('log-form-card');
+  if(!blk||!card)return;
+  if(st.active&&st.blocked){
+    blk.innerHTML='<div style="font-size:15px;font-weight:800;margin-bottom:6px">Logging is paused</div>'+
+      'Choose '+_fcMonthName(st.ym)+'’s '+_fcNeedWords(st)+' in the red block at the top of the page. The Log page, the Preply import and journal submission all stay locked until you do.';
+    blk.classList.add('show');
+    card.style.display='none';
+  }else{
+    blk.classList.remove('show');
+    card.style.display='';
+  }
+}
+
+// ── choosing subjects (Banner 2 and mid-month replacement) ──────────────────
+function _fcCommitChoices(ym,picks){
+  const f=loadFocus();
+  f.months=f.months||{};
+  const m=Object.assign({},f.months[ym]||{});
+  picks.forEach(p=>{
+    // Keep what the slot already held (seed, stored or derived carry-over), so the
+    // History log still shows the subject that was replaced.
+    const list=_fcSlotEntries(ym,p.slot,f).map(e=>{const c=Object.assign({},e);delete c.derived;return c});
+    list.push({id:p.id,since:p.since,how:p.how,at:new Date().toISOString()});
+    m[p.slot]=list;
+  });
+  f.months[ym]=m;
+  saveFocus(f);
+}
+function _fcChooserHtml(ym,mode,st){
+  const f=st.f;
+  const subjs=loadSubjects();
+  let anyPick=false, waiting=false;
+  const parts=['core','side'].map(slot=>{
+    const sl=_fcSlot(ym,slot,f);
+    const label=slot==='core'?'Core subject':'Side subject';
+    if(sl.state==='ok'){
+      const last=sl.entries[sl.entries.length-1];
+      const why=last.how==='carry'?'carried over — not finished yet, so it is locked in':'locked in';
+      return '<div><span class="fc-pick-label">'+label+'</span><div class="fc-pick-locked"><strong>'+escHtml(_fcName(sl.id))+'</strong> — '+why+'</div></div>';
+    }
+    if(sl.state==='empty')return '<div><span class="fc-pick-label">'+label+'</span><div class="fc-pick-locked">Nothing left to choose.</div></div>';
+    if(mode==='next'&&_fcCurrentSlotPending(ym,slot,f)){waiting=true;
+      return '<div><span class="fc-pick-label">'+label+'</span><div class="fc-pick-locked">Choose '+_fcMonthName(_fcAddMonths(ym,-1))+'\u2019s replacement first (in the red block) \u2014 if it is not finished by the end of the month, it carries over.</div></div>';}
+    anyPick=true;
+    const prevE=_fcSlotEntries(_fcAddMonths(ym,-1),slot,f);
+    const prevId=prevE.length?prevE[prevE.length-1].id:null;
+    let opts='<option value="">— Choose —</option>'+_fcPool(slot,subjs).map(s=>
+      '<option value="'+escHtml(s.id)+'">'+escHtml(s.name)+(s.id===prevId?' (keep)':'')+' · '+fmtH(_fcHoursLeft(s.id))+' left</option>').join('');
+    if(slot==='core'){
+      opts+=FOCUS_CORE_IDS.map(id=>subjs.find(s=>s.id===id))
+        .filter(s=>s&&!_fcCompleted(s.id,subjs)&&isSubjPrereqLocked(s.id,subjs))
+        .map(s=>'<option disabled>'+escHtml(s.name)+' (finish '+escHtml(_fcName(PREREQS[s.id]))+' first)</option>').join('');
+    }
+    const lead=(sl.state==='replace'&&sl.done)?'<div style="font-size:12px;margin-bottom:5px;line-height:1.4">'+escHtml(_fcName(sl.done))+' is complete. Pick its replacement:</div>':'';
+    return '<div><span class="fc-pick-label">'+label+'</span>'+lead+'<select class="form-input" id="fc-pick-'+mode+'-'+slot+'">'+opts+'</select></div>';
+  });
+  return {anyPick:anyPick,waiting:waiting,html:'<div class="fc-pick">'+parts.join('')+'</div>'+
+    (anyPick?'<button class="fc-pick-btn" onclick="fcLockIn(\''+ym+'\',\''+mode+'\')">Lock in '+_fcMonthName(ym)+'’s subjects</button>':'')};
+}
+// True when the month BEFORE `ym` still needs a choice in this slot.
+function _fcCurrentSlotPending(ym,slot,f){
+  const cur=_fcSlot(_fcAddMonths(ym,-1),slot,f);
+  return cur.state==='choose'||cur.state==='replace';
+}
+// Final once confirmed: there is deliberately no way to change a choice later.
+function fcLockIn(ym,mode){
+  const st=_fcState();
+  // The box was drawn for one month; if midnight on the 1st has passed since,
+  // redraw rather than write a choice into the wrong month.
+  if((mode==='now'&&ym!==st.ym)||(mode==='next'&&ym!==_fcAddMonths(st.ym,1))){
+    showToast('The month has changed \u2014 check the subjects again.','var(--err)');showPage(currentPage);return;
+  }
+  const picks=[];
+  for(const slot of ['core','side']){
+    const el=document.getElementById('fc-pick-'+mode+'-'+slot);
+    if(!el)continue;
+    const sl=_fcSlot(ym,slot,st.f);
+    if(sl.state==='ok'||sl.state==='empty')continue;   // settled since the box was drawn
+    if(mode==='next'&&_fcCurrentSlotPending(ym,slot,st.f))continue;
+    const v=el.value;
+    if(!v){showToast('Choose a '+slot+' subject first.','var(--err)');return}
+    if(!_fcPool(slot).some(s=>s.id===v)){showToast(_fcName(v)+' cannot be the '+slot+' subject.','var(--err)');return}
+    picks.push({slot:slot,id:v,how:(mode==='now'&&sl.state==='replace')?'replace':'choice',
+      since:mode==='now'?st.today:_fcMonthStart(ym)});
+  }
+  if(!picks.length){renderFocusBlock();return}
+  const lines=picks.map(p=>(p.slot==='core'?'Core: ':'Side: ')+_fcName(p.id)).join('\n');
+  if(!confirm('Lock in '+_fcMonthName(ym)+'’s subjects?\n\n'+lines+'\n\nThis is final — it cannot be changed afterwards.'))return;
+  _fcCommitChoices(ym,picks);
+  showToast(_fcMonthName(ym)+'’s subjects are locked in','var(--ok)');
+  showPage(currentPage);
+}
+
+// ── the red block (every page) + Banner 2 ───────────────────────────────────
+function renderFocusBlock(){
+  const host=document.getElementById('focus-block');
+  const chooseHost=document.getElementById('focus-choose');
+  if(!host)return;
+  const st=_fcState();
+  if(!st.inRange){host.innerHTML='';if(chooseHost)chooseHost.innerHTML='';return}
+  const tracker=loadFocusTracker();
+  const nm=sl=>sl.id?_fcName(sl.id):(sl.done?_fcName(sl.done)+' (complete)':'not chosen yet');
+  const row=(sl,label)=>{
+    const id=sl.id||sl.done;
+    if(!id)return '';
+    const t=tracker[id]||{};
+    return '<div class="fc-row" role="button" tabindex="0" onclick="openFocusTracker()" title="Update where you left off">'+
+      '<div class="fc-row-head"><span><span class="fc-row-slot">'+label+'</span><span class="fc-row-name">'+escHtml(_fcName(id))+'</span></span>'+
+        '<span class="fc-row-left">'+(sl.id?fmtH(_fcHoursLeft(id))+' left':'Complete')+'</span></div>'+
+      '<div class="fc-row-track"><b>Left off at:</b> '+(t.left?escHtml(t.left):'—')+'</div>'+
+      '<div class="fc-row-track"><b>Next up:</b> '+(t.next?escHtml(t.next):'—')+'</div>'+
+      '<div class="fc-row-edit">Tap to update</div>'+
+    '</div>';
+  };
+  let h='<div class="fc-block">'+
+    '<div class="fc-block-title">'+_fcMonthName(st.ym)+'’s Study &amp; Focus subjects are '+escHtml(nm(st.core))+' &amp; '+escHtml(nm(st.side))+'</div>';
+  if(!st.active)h+='<div class="fc-block-note">Starts 3 October — nothing is restricted until then.</div>';
+  h+='<div class="fc-rows">'+row(st.core,'Core')+row(st.side,'Side')+'</div>';
+  if(st.blocked){
+    const c=_fcChooserHtml(st.ym,'now',st);
+    const replacing=st.core.state==='replace'||st.side.state==='replace';
+    h+='<div class="fc-alert"><div class="fc-alert-title">'+(replacing?
+      'A focus subject is complete. Choose its replacement to keep logging.':
+      'Choose '+_fcMonthName(st.ym)+'’s subjects to start logging.')+'</div>'+c.html+'</div>';
+  }
+  h+='</div>';
+  host.innerHTML=h;
+  let ch='';
+  if(st.active&&chooseHost){
+    const next=_fcAddMonths(st.ym,1);
+    if(st.today>=_fcAddDays(_fcMonthStart(next),-FOCUS_CHOOSE_LEAD_DAYS)){
+      const c=_fcChooserHtml(next,'next',st);
+      ch='<div class="fc-choose"><div class="fc-choose-title">'+((c.waiting&&!c.anyPick)?
+          _fcMonthName(next)+' is approaching. Choose '+_fcMonthName(st.ym)+'\u2019s replacement first, then '+_fcMonthName(next)+'\u2019s subjects.':
+          c.anyPick?
+          _fcMonthName(next)+' is approaching. Choose one core subject and one side subject to study only for '+_fcMonthName(next)+'.':
+          _fcMonthName(next)+'’s subjects are set.')+'</div>'+
+        '<div class="fc-choose-sub">An unfinished subject carries over and stays locked. A Japanese side subject can be kept or swapped. A choice is final once locked in.</div>'+
+        c.html+'</div>';
+    }
+  }
+  if(chooseHost)chooseHost.innerHTML=ch;
+}
+
+// ── work tracker ────────────────────────────────────────────────────────────
+let _fcTrackerIds=[];
+function openFocusTracker(onlyId,afterLog){
+  const st=_fcState();
+  const ids=onlyId?[onlyId]:[st.core,st.side].map(sl=>sl.id||sl.done).filter(Boolean);
+  if(!ids.length)return;
+  _fcTrackerIds=ids.slice();
+  const t=loadFocusTracker();
+  const body=document.getElementById('fc-tracker-body');
+  if(!body)return;
+  body.innerHTML=ids.map(id=>{
+    const v=t[id]||{};
+    return '<div style="margin-bottom:16px">'+
+      '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:8px">'+escHtml(_fcName(id))+'</div>'+
+      '<div class="form-group" style="margin-bottom:10px"><label class="form-label">Left off at</label>'+
+        '<input type="text" class="form-input" id="fc-tr-left-'+escHtml(id)+'" value="'+escHtml(v.left||'')+'" autocomplete="off"></div>'+
+      '<div class="form-group" style="margin-bottom:0"><label class="form-label">Next up</label>'+
+        '<input type="text" class="form-input" id="fc-tr-next-'+escHtml(id)+'" value="'+escHtml(v.next||'')+'" autocomplete="off"></div>'+
+    '</div>';
+  }).join('');
+  document.getElementById('fc-tracker-title').textContent=afterLog?('Update your '+_fcName(ids[0])+' tracker?'):'Work tracker';
+  document.getElementById('fc-tracker-cancel').textContent=afterLog?'Skip':'Cancel';
+  document.getElementById('fc-tracker-overlay').classList.add('open');
+}
+function saveFocusTracker(){
+  const t=loadFocusTracker();
+  const now=new Date().toISOString();
+  _fcTrackerIds.forEach(id=>{
+    const l=document.getElementById('fc-tr-left-'+id), n=document.getElementById('fc-tr-next-'+id);
+    if(!l||!n)return;
+    t[id]={left:l.value.trim(),next:n.value.trim(),updatedAt:now};
+  });
+  _fcSaveTrackerData(t);
+  closeModal('fc-tracker-overlay');
+  renderFocusBlock();
+  showToast('Tracker updated','var(--ok)');
+}
+// After a session is logged for a focus subject, offer to update its tracker.
+// It opens behind the Google Form card, so it is waiting once that is closed.
+function _fcOfferTracker(subjectId){
+  const st=_fcState();
+  if(!st.active||!subjectId)return;
+  const ids=[st.core.id,st.core.done,st.side.id,st.side.done].filter(Boolean);
+  if(ids.includes(subjectId))openFocusTracker(subjectId,true);
+}
+
+// ── History: month-by-month focus log ───────────────────────────────────────
+function _fcHowText(e,ym){
+  if(e.how==='start')return 'from '+_fcShortDate(e.since);
+  if(e.how==='carry')return 'carried over from '+_fcMonthName(_fcAddMonths(ym,-1));
+  if(e.how==='replace')return 'mid-month replacement from '+_fcShortDate(e.since);
+  return 'chosen'+(e.since?' · from '+_fcShortDate(e.since):'');
+}
+function _fcHistMonthHtml(ym,f,st){
+  const future=ym>st.ym, current=ym===st.ym;
+  const nextYm=_fcAddMonths(ym,1);
+  const lines=[];
+  ['core','side'].forEach(slot=>{
+    const label=slot==='core'?'Core':'Side';
+    const entries=_fcSlotEntries(ym,slot,f);
+    if(!entries.length){lines.push('<div class="fc-hist-line"><strong>'+label+':</strong> not chosen</div>');return}
+    entries.forEach((e,i)=>{
+      const isLast=i===entries.length-1;
+      const meta=[_fcHowText(e,ym)];
+      if(_fcCompleted(e.id)){const on=_fcCompletedOn(e.id);meta.push(on?'completed '+_fcShortDate(on):'completed')}
+      else if(!future)meta.push(current&&isLast?'in progress':'not finished');
+      if(isLast&&!current&&!future){
+        const nx=_fcSlotEntries(nextYm,slot,f);
+        if(nx.length&&nx[0].id===e.id)meta.push((nx[0].how==='carry'?'carried over to ':'continued into ')+_fcMonthName(nextYm));
+      }
+      lines.push('<div class="fc-hist-line"><strong>'+label+':</strong> '+escHtml(_fcName(e.id))+'<span class="fc-hist-meta">'+meta.join(' · ')+'</span></div>');
+    });
+  });
+  const tag=future?' <span style="font-size:11px;color:var(--text3);font-weight:700">(chosen in advance)</span>':current?' <span style="font-size:11px;color:var(--text3);font-weight:700">(this month)</span>':'';
+  return '<div class="fc-hist-month"><div class="fc-hist-month-name">'+_fcMonthName(ym)+' '+ym.slice(0,4)+tag+'</div>'+lines.join('')+'</div>';
+}
+function renderFocusHistory(){
+  const host=document.getElementById('hist-focus-inner');
+  if(!host)return;
+  const st=_fcState();
+  if(!st.inRange){host.innerHTML='<div class="empty-state">The focus log starts in October 2026.</div>';return}
+  const months=[];
+  const next=_fcAddMonths(st.ym,1);
+  if(st.f.months&&st.f.months[next])months.push(next);
+  for(let m=st.ym;m>=FOCUS_FIRST_MONTH;m=_fcAddMonths(m,-1))months.push(m);
+  host.innerHTML='<div style="font-size:12px;color:var(--text3);line-height:1.5;margin:0 2px 12px">Each month’s core and side subjects, mid-month replacements, carry-overs and the date each subject was completed.</div>'+
+    months.map(m=>_fcHistMonthHtml(m,st.f,st)).join('');
 }
 
 function deleteEntry(id){
   let sessions=loadSessions();
   const s=sessions.find(x=>x.id===id);
   if(!s)return;
+  if(s.bookReading){showToast(_FC_NO_DELETE,'var(--err)');return}
   if(!confirm('Delete this session?'))return;
   const hoursStore=loadHours();
   hoursStore[s.subjectId]=Math.max(0,(hoursStore[s.subjectId]||0)-s.hours);
@@ -9682,9 +9976,19 @@ function renderSubjectsPage(){
 
   const SUBJ_COLORS={};
 
-  const prereqLocked=allSubjs.filter(s=>!s.done&&!(getLogged(s.id)>=s.req&&s.req>0)&&isSubjPrereqLocked(s.id,allSubjs));
-  const activeReal=allSubjs.filter(s=>!s.done&&!(getLogged(s.id)>=s.req&&s.req>0)&&!isSubjPrereqLocked(s.id,allSubjs));
-  const done=allSubjs.filter(s=>s.done||(getLogged(s.id)>=s.req&&s.req>0));
+  // Monthly focus: this month's core, side and Japanese are pinned at the top,
+  // above a divider; everything else - English included unless it is the core -
+  // goes below it.
+  const _fst=_fcState();
+  const pinIds=[];
+  if(_fst.inRange){
+    [_fst.core,_fst.side].forEach(sl=>{const id=sl.id||sl.done;if(id&&!pinIds.includes(id))pinIds.push(id)});
+    if(!pinIds.includes('japanese')&&allSubjs.some(s=>s.id==='japanese'))pinIds.push('japanese');
+  }
+  const notPinned=s=>!pinIds.includes(s.id);
+  const prereqLocked=allSubjs.filter(s=>!s.done&&!(getLogged(s.id)>=s.req&&s.req>0)&&isSubjPrereqLocked(s.id,allSubjs)).filter(notPinned);
+  const activeReal=allSubjs.filter(s=>!s.done&&!(getLogged(s.id)>=s.req&&s.req>0)&&!isSubjPrereqLocked(s.id,allSubjs)).filter(notPinned);
+  const done=allSubjs.filter(s=>s.done||(getLogged(s.id)>=s.req&&s.req>0)).filter(notPinned);
 
   function makeRow(s){
     const locked=isSubjPrereqLocked(s.id,allSubjs);
@@ -9763,7 +10067,12 @@ function renderSubjectsPage(){
       '<div style="font-size:20px;font-weight:800;color:var(--text);white-space:nowrap">'+fmtH(ecTotal)+'</div>'+
     '</div>':'';
 
-  el.innerHTML=ecHeader+rows+hiddenFooter;
+  const pinSlot=id=>id===(_fst.core.id||_fst.core.done)?'Core':id===(_fst.side.id||_fst.side.done)?'Side':'Japanese';
+  const pinHtml=pinIds.length?
+    '<div class="fc-pin-head">'+_fcMonthName(_fst.ym)+'\u2019s focus</div>'+
+    pinIds.map(id=>allSubjs.find(s=>s.id===id)).filter(Boolean).map(s=>'<div class="fc-pin-slot">'+pinSlot(s.id)+'</div>'+makeRow(s)).join('')+
+    '<div class="fc-divider"></div>':'';
+  el.innerHTML=pinHtml+ecHeader+rows+hiddenFooter;
   el.querySelectorAll('.subj-row').forEach((r,i)=>{
     r.classList.add('slide-up');
   });
@@ -11763,7 +12072,7 @@ async function syncFromCloud(){
   setSyncUI('syncing','Syncing…');
   _sbPullFailed=false; // reset per cycle — see _baseMigrationsAllowed()
   try{
-    const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_ai_history','st_holiday','st_notif_prefs','st_notif_templates','st_teacher_plan','st_journals','st_schoolwork']; // st_hours is recomputed from sessions below, not pulled directly. st_teacher_plan is written externally by the teacher RPC and only ever pulled here (cloud-authoritative, falls through to the default setItem branch — the app never sbPushes it).
+    const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_ai_history','st_holiday','st_notif_prefs','st_notif_templates','st_teacher_plan','st_journals','st_schoolwork','st_focus','st_focus_tracker']; // st_hours is recomputed from sessions below, not pulled directly. st_teacher_plan is written externally by the teacher RPC and only ever pulled here (cloud-authoritative, falls through to the default setItem branch — the app never sbPushes it).
     // Pull st_deleted_sessions upfront so we can use it synchronously inside forEach
     let cloudDeletedRaw=null;
     try{cloudDeletedRaw=await sbPull('st_deleted_sessions')}catch(e){}
@@ -11841,7 +12150,7 @@ async function syncFromCloud(){
             localStorage.setItem(k,JSON.stringify(cloud));
             _aiHistory=cloud;
           }
-        } else if(k==='st_subjs'||k==='st_goals'||k==='st_todos'||k==='st_sched_overrides'||k==='st_holiday'||k==='st_notif_prefs'||k==='st_notif_templates'||k==='st_journals'||k==='st_schoolwork'){
+        } else if(k==='st_subjs'||k==='st_goals'||k==='st_todos'||k==='st_sched_overrides'||k==='st_holiday'||k==='st_notif_prefs'||k==='st_notif_templates'||k==='st_journals'||k==='st_schoolwork'||k==='st_focus'||k==='st_focus_tracker'){
           // Timestamped last-writer-wins: keep whichever version is newer.
           // Prevents a device with stale data from reverting a fresh edit.
           const cloudUpdatedAt=rows[i].updated_at||'';
@@ -11890,6 +12199,7 @@ async function syncFromCloud(){
     renderHolidayUI(); // reflect any holiday state pulled from cloud
     // Hours and confirmations can both move on a sync, so re-derive the banners.
     if(typeof renderContractBanners==='function')renderContractBanners();
+    if(typeof renderFocusBlock==='function')renderFocusBlock();
     if(updated)showPage(currentPage);
   }catch(e){
     if(e.message&&e.message.includes('quota')){
@@ -12037,15 +12347,6 @@ async function syncFromCloud(){
   // Check todo due times every minute (in-app notification)
   setInterval(checkTodoNotifs, 60000);
   // Check schedule-based in-app notifications every minute
-  // A run parked mid-flow (pre-run stretch offered, app reloaded before the run
-  // itself was logged) is picked back up here rather than quietly lost.
-  try{
-    const _pr=_loadPendingRun();
-    if(_pr&&_pr.result){
-      const _w=_preRunStretchWindow(_pr.result.date,_pr.result.startTime);
-      if(_w)_showPreRunStretchPrompt(_w); else _resumePendingRun();
-    }
-  }catch(e){}
 })();
 
 
@@ -13158,6 +13459,7 @@ function renderAIPage(){
     <div class="modal-handle"></div>
     <div class="modal-title">Edit Session</div>
     <div class="ka-proof-banner" id="ka-proof-banner-es" style="margin-bottom:14px"></div>
+    <div class="fc-lock-note" id="es-lock-note" style="display:none"></div>
     <div class="form-group">
       <label class="form-label">Subject</label>
       <select class="form-input" id="es-subject" onchange="updateKaProofBanner('es-subject','ka-proof-banner-es')"></select>
@@ -13193,7 +13495,7 @@ function renderAIPage(){
     </div>
     <div class="modal-actions">
       <button class="btn-save" onclick="saveEditSession()">Save Changes</button>
-      <button class="btn-danger" onclick="deleteFromEditModal()">Delete</button>
+      <button class="btn-danger" id="es-delete-btn" onclick="deleteFromEditModal()">Delete</button>
       <button class="btn-cancel" onclick="closeModal('edit-session-overlay')">Cancel</button>
     </div>
   </div>
