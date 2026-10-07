@@ -3726,14 +3726,25 @@ function _buildWorkoutPrompt(app){
       'Read ONLY the fields listed below. NEVER guess or estimate a value that is not shown \u2014 return null instead.\n\n'+
       'Return ONLY valid JSON, no markdown fences:\n'+
       '{"date":"YYYY-MM-DD","startTime":"HH:MM","endTime":"HH:MM","teacher":string|null}\n\n'+
+      'The card comes in TWO layouts. Identify which one you are looking at, then apply its rules.\n\n'+
+      'LAYOUT A (mobile): one line like "Aug 26, 2026 · 16:00 — 16:25" and another line like\n'+
+      '"Japanese with Naoto". The date includes the year.\n\n'+
+      'LAYOUT B (desktop website): a heading like "Tuesday, Oct 6 · 10:00 – 10:50" followed by a star\n'+
+      'rating badge, and under it a line like "Paid ¥1,901 • Yukino, Japanese" (a tick or other icon may\n'+
+      'precede "Paid"). The date has a weekday and NO YEAR. The tutor name comes BEFORE the subject.\n\n'+
       'RULES:\n'+
-      '- The card prints one line like "Aug 26, 2026 \u00b7 16:00 \u2014 16:25". The date is on that line,\n'+
-      '  the FIRST time is the START and the SECOND is the END. Both are 24-hour.\n'+
-      '- date: from that line ONLY. It is an explicit calendar date \u2014 never substitute today\'s date.\n'+
+      '- The FIRST time on the date line is the START and the SECOND is the END. Both are 24-hour.\n'+
+      '  The separator may be a dash, an en dash or an em dash.\n'+
       '- startTime / endTime: copy both exactly as HH:MM. Do not round them, shift them, swap them,\n'+
       '  or convert them to any other clock. Reading the characters is the whole task.\n'+
-      '- teacher: the tutor\'s name, from the line reading like "Japanese with Naoto". Return the\n'+
-      '  NAME ONLY \u2014 "Naoto", not "Japanese with Naoto". If no name is shown, return null.\n'+
+      '- date: from the date line ONLY, never today\'s date as a substitute. If the card prints a year, use it.\n'+
+      '  If it prints NO year (Layout B), use the weekday to find it: choose the year, within one year of\n'+
+      '  today\'s date, in which that month and day fall on the printed weekday (for example Tuesday Oct 6\n'+
+      '  is 2026). If no year fits, return null for date.\n'+
+      '- teacher: the tutor\'s first name, whichever layout. Layout A: the name after "with". Layout B: the\n'+
+      '  name before ", Japanese" on the "Paid ..." line. If the layout is unfamiliar, the tutor name is the\n'+
+      '  person\'s name printed beside the word "Japanese". Return the NAME ONLY — "Naoto" or "Yukino" —\n'+
+      '  never "Japanese with Naoto", never a price, never "Japanese". If no name is shown, return null.\n'+
       '- Return NO other field. The "Confirmed" status, the star rating, the tutor photo, the price\n'+
       '  and any buttons are deliberately not wanted.\n';
   }
