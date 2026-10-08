@@ -1087,6 +1087,7 @@ input.form-input.fc-locked{background:var(--bg4);color:var(--text2);cursor:not-a
 .fc-pin-slot{font-size:10px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;padding:4px 2px}
 .fc-divider{height:3px;background:var(--text2);border-radius:2px;margin:14px 0 16px}
 @media(max-width:600px){
+  .coach-chip-goal{display:none}
   .fc-rows,.fc-pick{grid-template-columns:1fr}
   .fc-book-fields{grid-template-columns:1fr 1fr}
   .fc-book-fields .fc-book-name{grid-column:1 / -1}
@@ -1180,7 +1181,6 @@ input.form-input.fc-locked{background:var(--bg4);color:var(--text2);cursor:not-a
         <div id="today-card" data-block="today-card"></div>
         <div id="dash-pace-strip" style="margin-top:10px"></div>
         <div class="stats-strip" id="stats-strip" style="margin-top:10px" data-block="stats-strip"></div>
-        <div class="card" style="margin-top:10px" id="focus-card" data-block="focus-card"></div>
         <div id="dash-tasks-card" style="margin-top:10px" data-block="dash-tasks-card"></div>
         <div class="card" style="margin-top:10px" id="week-combined-card" data-block="week-combined-card"></div>
       </div>
@@ -1574,6 +1574,19 @@ input.form-input.fc-locked{background:var(--bg4);color:var(--text2);cursor:not-a
       <button class="btn-cancel" onclick="closeModal('holiday-modal-overlay')">Cancel</button>
     </div>
     <button id="holiday-resume-btn" onclick="setHoliday(false,null);closeModal('holiday-modal-overlay')" style="display:none;width:100%;margin-top:10px;background:none;border:none;color:var(--err);font-size:13px;font-weight:700;cursor:pointer;padding:8px">Resume reminders now</button>
+  </div>
+</div>
+
+<!-- COACH MEETINGS -->
+<div class="modal-overlay" id="coach-meet-overlay" onclick="handleOverlayClick(event,'coach-meet-overlay')">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="max-height:88vh;overflow-y:auto">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Coach meetings</div>
+    <div id="coach-meet-body"></div>
+    <div class="modal-actions">
+      <button class="btn-save" onclick="saveCoachSettings()">Save</button>
+      <button class="btn-cancel" onclick="closeModal('coach-meet-overlay')">Close</button>
+    </div>
   </div>
 </div>
 
@@ -4612,6 +4625,8 @@ function renderDashboard(){
         chip('Minimum',_fmtDecimalToHm(minRequired),minCol)+
         sep+
         chip('My goal',_fmtDecimalToHm(goals.daily),'var(--text2)')+
+        sep+
+        coachChipHtml()+
       '</div>';
   }
 
@@ -4658,7 +4673,6 @@ function renderDashboard(){
   renderWeekCombined();
 
 
-  renderFocusCard();
   renderHomePinned();
   renderDashTasksCard();
   renderWeeklySummary();
@@ -4684,15 +4698,16 @@ function renderDashboard(){
 const DASH_BLOCK_DEFS=[
   {id:'now-next-banner',  label:'Now / Next banner'},
   {id:'today-card',       label:"Today's hours"},
-  {id:'dash-pace-strip',  label:'Pace strip (min / target / goal)'},
+  {id:'dash-pace-strip',  label:'Pace strip (min / goal / coach)'},
   {id:'stats-strip',      label:'Stats strip'},
-  {id:'focus-card',       label:'Focus Today'},
   {id:'dash-tasks-card',  label:"Today's Tasks"},
   {id:'week-combined-card',label:'This Week & Last 7 Days'},
 ];
 
 function loadDashLayout(){
-  try{const s=localStorage.getItem('st_dash_layout');if(s)return JSON.parse(s)}catch(e){}
+  // Unknown ids (e.g. the removed 'focus-card') are dropped so the layout editor
+  // never lists a block that no longer exists.
+  try{const s=localStorage.getItem('st_dash_layout');if(s){const ids=DASH_BLOCK_DEFS.map(b=>b.id);return JSON.parse(s).filter(id=>ids.includes(id))}}catch(e){}
   return DASH_BLOCK_DEFS.map(b=>b.id);
 }
 
@@ -11339,64 +11354,255 @@ function useRecommendedGoal(){
 // ── UTILITIES ─────────────────────────────────────────────────────────────────
 function isWeekday(dateObj){ const d=dateObj.getDay(); return d>=1&&d<=5; }
 
-// ── FOCUS TODAY ───────────────────────────────────────────────────────────────
-function renderFocusCard(){
-  const subjs=loadSubjects();
-  const hours=loadHours();
-  const SUBJ_COLORS={};
-  const el=document.getElementById('focus-card');
-  if(!el)return;
+// ── COACH MEETINGS ────────────────────────────────────────────────────────────
+// Weekly meeting with the coach (default Thursday 13:00). The Dashboard pace strip
+// shows hours logged since the last meeting that actually happened, against the
+// coach's target: daily target x 5 study days per week, prorated per calendar day
+// (5/7 of a study day per day elapsed). Exactly 5 days per week on meeting day.
+//
+// st_coach = {anchor:'YYYY-MM-DDTHH:MM', dow:0-6, time:'HH:MM', daily:7.3,
+//             days:5, overrides:{'YYYY-MM-DD':'cancel'|'YYYY-MM-DDTHH:MM'}}
+//   anchor    — a meeting known to have happened. Rule occurrences are only
+//               generated AFTER it, so changing the weekly day/time re-anchors
+//               on the last held meeting and never rewrites history.
+//   overrides — keyed by the rule occurrence's ORIGINAL date: 'cancel' (cancelled
+//               ahead of time, or marked "didn't happen" afterwards) or a moved
+//               date-time for that week's meeting.
+// All times are Tokyo wall-clock strings, compared lexicographically.
+// Counts logged sessions only (never base — base is an undated lump), excludes
+// extraCredit subjects, and is NOT capped at the 150h contract.
+const COACH_KEY='st_coach';
+const COACH_DEFAULT={anchor:'2026-10-01T13:00',dow:4,time:'13:00',daily:7.3,days:5,overrides:{}};
+const _COACH_DT=/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+const _COACH_D=/^\d{4}-\d{2}-\d{2}$/;
+const _COACH_T=/^\d{2}:\d{2}$/;
+const _COACH_DOW=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
-  // Get today's scheduled study blocks (override-aware)
-  const todayBlocks=getTodayActualBlocks().filter(b=>b.type==='study'&&b.subjectId);
-
-  // Build scheduled hours per subject today
-  const schedMap={};
-  todayBlocks.forEach(b=>{
-    const [sh,sm]=b.start.split(':').map(Number);
-    const [eh,em]=b.end.split(':').map(Number);
-    const h=(eh*60+em-sh*60-sm)/60;
-    schedMap[b.subjectId]=(schedMap[b.subjectId]||0)+h;
+function loadCoach(){
+  let c=null;
+  try{c=JSON.parse(localStorage.getItem(COACH_KEY)||'null')}catch(e){}
+  const d=COACH_DEFAULT;
+  if(!c||typeof c!=='object')c={};
+  const out={
+    anchor:_COACH_DT.test(c.anchor||'')?c.anchor:d.anchor,
+    dow:(Number.isInteger(c.dow)&&c.dow>=0&&c.dow<=6)?c.dow:d.dow,
+    time:_COACH_T.test(c.time||'')?c.time:d.time,
+    daily:(typeof c.daily==='number'&&c.daily>0&&c.daily<=24)?c.daily:d.daily,
+    days:(Number.isInteger(c.days)&&c.days>=1&&c.days<=7)?c.days:d.days,
+    overrides:{}
+  };
+  const ov=(c.overrides&&typeof c.overrides==='object')?c.overrides:{};
+  Object.keys(ov).forEach(k=>{
+    if(_COACH_D.test(k)&&(ov[k]==='cancel'||_COACH_DT.test(ov[k]||'')))out.overrides[k]=ov[k];
   });
-
-  // Only subjects scheduled today, enriched with progress info
-  const scheduled=Object.keys(schedMap)
-    .map(id=>{
-      const s=subjs.find(x=>x.id===id);
-      const logged=s?((s.base||0)+(hours[s.id]||0)):0;
-      const pct=s&&s.req>0?logged/s.req*100:100;
-      if(!s||s.done||pct>=100)return null;
-      const left=Math.max(0,s.req-logged);
-      return{...s,logged,pct,left,schedH:schedMap[id]};
-    })
-    .filter(Boolean)
-    .sort((a,b)=>a.pct-b.pct); // most behind first
-
-  el.style.display='';
-  if(!scheduled.length){
-    el.innerHTML='<div class="card-title"> Today\'s Schedule</div>'+
-      '<div style="color:var(--text2);font-size:14px;padding:4px 0">Nothing scheduled for today</div>';
-    return;
-  }
-
-  let rows='';
-  scheduled.forEach(s=>{
-    const color=SUBJ_COLORS[s.id]||'var(--o)';
-    rows+='<div class="focus-row">'+
-      '<div class="focus-dot" style="background:'+color+'"></div>'+
-      '<div class="focus-main">'+
-        '<div class="focus-name">'+escHtml(s.name)+'</div>'+
-        '<div class="focus-behind">'+Math.round(s.pct)+'% complete · '+fmtH(s.left)+' left</div>'+
-      '</div>'+
-      '<div class="focus-suggest">'+fmtH(s.schedH)+'</div>'+
-    '</div>';
-  });
-  el.innerHTML='<div class="card-title"> Today\'s Schedule</div>'+rows;
-  // Stagger focus rows
-  el.querySelectorAll('.focus-row').forEach((r,i)=>{
-    r.classList.add('slide-in-left');
-  });
+  return out;
 }
+function saveCoach(c){
+  localStorage.setItem(COACH_KEY,JSON.stringify(c));
+  localStorage.setItem(COACH_KEY+'_updated_at',new Date().toISOString());
+  if(typeof sbPush==='function')sbPush(COACH_KEY,c);
+}
+
+// Date-string arithmetic in UTC so no DST or device-timezone can shift a day.
+function _coachAddDays(ds,n){
+  const p=ds.split('-').map(Number);
+  const d=new Date(Date.UTC(p[0],p[1]-1,p[2]+n));
+  return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');
+}
+function _coachDow(ds){const p=ds.split('-').map(Number);return new Date(Date.UTC(p[0],p[1]-1,p[2])).getUTCDay()}
+function _coachMinutes(dt){ // minutes since epoch for a wall-clock 'YYYY-MM-DDTHH:MM'
+  const p=dt.slice(0,10).split('-').map(Number);
+  return Date.UTC(p[0],p[1]-1,p[2])/60000+toMins(dt.slice(11,16));
+}
+function _coachNowStr(){
+  const n=nowLocal();
+  return todayStr()+'T'+String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');
+}
+function _coachFmt(dt){ // 'Thu 8 Oct, 13:00'
+  const p=dt.slice(0,10).split('-').map(Number);
+  const d=new Date(Date.UTC(p[0],p[1]-1,p[2]));
+  const mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()];
+  return _COACH_DOW[d.getUTCDay()].slice(0,3)+' '+d.getUTCDate()+' '+mon+', '+dt.slice(11,16);
+}
+
+// Every rule occurrence after the anchor, out to a horizon, with its override applied.
+// Returns [{key, at, state}] where state is 'held'|'moved'|'cancel'.
+function _coachOccurrences(c,horizonDays){
+  const list=[];
+  const anchorDate=c.anchor.slice(0,10);
+  let d=anchorDate;
+  const shift=(c.dow-_coachDow(d)+7)%7;
+  d=_coachAddDays(d,shift);
+  const end=_coachAddDays(todayStr(),horizonDays||70);
+  let guard=0;
+  while(d<=end&&guard++<2000){
+    const ruleAt=d+'T'+c.time;
+    if(ruleAt>c.anchor){
+      const ov=c.overrides[d];
+      if(ov==='cancel')list.push({key:d,at:ruleAt,state:'cancel'});
+      else if(ov)list.push({key:d,at:ov,state:'moved'});
+      else list.push({key:d,at:ruleAt,state:'held'});
+    }
+    d=_coachAddDays(d,7);
+  }
+  return list;
+}
+
+// last = most recent meeting that happened (or the anchor); next = soonest upcoming.
+function coachState(){
+  const c=loadCoach();
+  const now=_coachNowStr();
+  const occ=_coachOccurrences(c);
+  const live=occ.filter(o=>o.state!=='cancel');
+  let last={key:null,at:c.anchor,state:'anchor'};
+  live.forEach(o=>{if(o.at<=now&&o.at>last.at)last=o});
+  const upcoming=live.filter(o=>o.at>now).sort((a,b)=>a.at<b.at?-1:1);
+  const next=upcoming[0]||null;
+  const elapsedDays=Math.max(0,(_coachMinutes(now)-_coachMinutes(last.at))/1440);
+  const goal=c.daily*c.days/7*elapsedDays;
+  const done=coachHoursSince(last.at,now);
+  return{c,now,occ,last,next,elapsedDays,goal,done,ok:done>=goal-1e-9};
+}
+
+// Logged hours in (from, to]. A session on the meeting day that straddles the
+// meeting time counts only the part after it (prorated by minutes).
+function coachHoursSince(from,to){
+  const ecIds=_extraCreditIds();
+  const fromDate=from.slice(0,10),fromMin=toMins(from.slice(11,16));
+  const toDate=to.slice(0,10);
+  let total=0;
+  loadSessions().forEach(s=>{
+    if(!s||ecIds.has(s.subjectId)||typeof s.date!=='string')return;
+    const h=Number(s.hours)||0;
+    if(h<=0||s.date<fromDate||s.date>toDate)return;
+    if(s.date>fromDate){total+=h;return}
+    // Same day as the meeting.
+    if(!s.start||!s.end){total+=h;return}
+    const st=toMins(s.start);
+    let en=toMins(s.end);
+    if(en<=st)en+=1440;
+    const span=en-st;
+    if(span<=0)return;
+    const after=Math.max(0,en-Math.max(st,fromMin));
+    total+=h*Math.min(1,after/span);
+  });
+  return total;
+}
+
+// Dashboard pace-strip column.
+function coachChipHtml(){
+  let st;
+  try{st=coachState()}catch(e){return''}
+  const col=st.ok?'var(--ok)':'var(--err)';
+  const label='Coach'+(st.next?' · '+_coachFmt(st.next.at).split(',')[0].split(' ')[0]+' '+st.next.at.slice(11,16):'');
+  return '<div onclick="openCoachModal()" title="Coach meetings" style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;min-width:0;cursor:pointer">'+
+      '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">'+escHtml(label)+'</div>'+
+      '<div style="font-size:14px;font-weight:800;color:'+col+';letter-spacing:-0.3px;white-space:nowrap">'+fmtH(st.done)+'<span class="coach-chip-goal" style="color:var(--text3);font-weight:700"> / '+fmtH(st.goal)+'</span></div>'+
+    '</div>';
+}
+
+function openCoachModal(){
+  _renderCoachModal();
+  document.getElementById('coach-meet-overlay').classList.add('open');
+}
+function _coachBtn(label,fn,danger){
+  return '<button class="hol-preset" style="'+(danger?'color:var(--err);':'')+'" onclick="'+fn+'">'+label+'</button>';
+}
+function _renderCoachModal(){
+  const el=document.getElementById('coach-meet-body');
+  if(!el)return;
+  const st=coachState(),c=st.c;
+  const days=Math.floor(st.elapsedDays);
+  const diff=st.done-st.goal;
+  const lastIsRule=st.last.state==='held'||st.last.state==='moved';
+  let html='';
+  html+='<div class="form-label">Since last meeting</div>'+
+    '<div style="font-size:22px;font-weight:800;color:'+(st.ok?'var(--ok)':'var(--err)')+';margin-bottom:2px">'+fmtH(st.done)+' <span style="font-size:14px;color:var(--text3)">of '+fmtH(st.goal)+'</span></div>'+
+    '<div style="font-size:13px;color:var(--text2);margin-bottom:14px">'+(st.ok?'On track':'Behind by '+fmtH(-diff))+' · '+days+' day'+(days===1?'':'s')+' since '+escHtml(_coachFmt(st.last.at))+'</div>';
+  html+='<div class="form-label">Last meeting</div>'+
+    '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px"><span style="font-size:14px;color:var(--text)">'+escHtml(_coachFmt(st.last.at))+'</span>'+
+    (lastIsRule?_coachBtn("Didn't happen","coachSetOverride('"+st.last.key+"','cancel')",true):'')+'</div>';
+  html+='<div class="form-label">Next meeting</div>';
+  if(st.next){
+    html+='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px"><span style="font-size:14px;color:var(--text)">'+escHtml(_coachFmt(st.next.at))+(st.next.state==='moved'?' (moved)':'')+'</span>'+
+      _coachBtn('Cancel this week',"coachSetOverride('"+st.next.key+"','cancel')",true)+
+      (st.next.state==='moved'?_coachBtn('Undo move',"coachSetOverride('"+st.next.key+"',null)"):'')+'</div>'+
+      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px">'+
+        '<input type="date" class="form-input" id="coach-move-date" value="'+st.next.at.slice(0,10)+'" style="flex:1;min-width:130px">'+
+        '<input type="time" class="form-input" id="coach-move-time" value="'+st.next.at.slice(11,16)+'" style="width:110px">'+
+        _coachBtn('Move',"coachMoveNext('"+st.next.key+"')")+
+      '</div>';
+  }else{
+    html+='<div style="font-size:13px;color:var(--text3);margin-bottom:14px">None scheduled</div>';
+  }
+  // Recent and upcoming exceptions, so any cancel can be undone.
+  const exc=st.occ.filter(o=>o.state==='cancel').slice(-4);
+  if(exc.length){
+    html+='<div class="form-label">Cancelled</div><div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">'+
+      exc.map(o=>'<div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px;color:var(--text2);text-decoration:line-through">'+escHtml(_coachFmt(o.at))+'</span>'+_coachBtn('Restore',"coachSetOverride('"+o.key+"',null)")+'</div>').join('')+
+    '</div>';
+  }
+  html+='<div style="height:1px;background:var(--border);margin:4px 0 14px"></div>'+
+    '<div class="form-label">Weekly meeting</div>'+
+    '<div style="display:flex;gap:8px;margin-bottom:12px">'+
+      '<select class="form-input" id="coach-dow" style="flex:1">'+_COACH_DOW.map((n,i)=>'<option value="'+i+'"'+(i===c.dow?' selected':'')+'>'+n+'</option>').join('')+'</select>'+
+      '<input type="time" class="form-input" id="coach-time" value="'+c.time+'" style="width:110px">'+
+    '</div>'+
+    '<div class="form-label">Coach\'s daily target (hours)</div>'+
+    '<input type="number" class="form-input" id="coach-daily" min="0.5" max="24" step="0.1" value="'+c.daily+'" style="margin-bottom:4px">'+
+    '<div style="font-size:12px;color:var(--text3);margin-bottom:14px" id="coach-weekly-hint">= '+fmtH(c.daily*c.days)+' per week ('+c.days+' study days)</div>';
+  el.innerHTML=html;
+  const dl=document.getElementById('coach-daily');
+  if(dl)dl.oninput=()=>{const v=parseFloat(dl.value);const h=document.getElementById('coach-weekly-hint');if(h)h.textContent=(v>0&&v<=24)?'= '+fmtH(v*c.days)+' per week ('+c.days+' study days)':'Enter a number between 0.5 and 24'};
+}
+function _coachAfterChange(){
+  _renderCoachModal();
+  if(typeof currentPage!=='undefined'&&currentPage==='dashboard'&&typeof renderDashboard==='function')renderDashboard();
+}
+function coachSetOverride(key,val){
+  if(!_COACH_D.test(key||''))return;
+  const c=loadCoach();
+  if(val===null)delete c.overrides[key];
+  else if(val==='cancel'||_COACH_DT.test(val))c.overrides[key]=val;
+  else return;
+  saveCoach(c);
+  _coachAfterChange();
+}
+function coachMoveNext(key){
+  const d=(document.getElementById('coach-move-date')||{}).value||'';
+  const t=(document.getElementById('coach-move-time')||{}).value||'';
+  if(!_COACH_D.test(d)||!_COACH_T.test(t)){showToast('Pick a date and time');return}
+  const at=d+'T'+t;
+  if(at<=_coachNowStr()){showToast('Pick a time in the future');return}
+  const c=loadCoach();
+  // Moving back onto the original slot is just an undo.
+  if(at===key+'T'+c.time)delete c.overrides[key];else c.overrides[key]=at;
+  saveCoach(c);
+  _coachAfterChange();
+  showToast('Meeting moved to '+_coachFmt(at));
+}
+function saveCoachSettings(){
+  const c=loadCoach();
+  const dow=parseInt((document.getElementById('coach-dow')||{}).value,10);
+  const time=(document.getElementById('coach-time')||{}).value||'';
+  const daily=parseFloat((document.getElementById('coach-daily')||{}).value);
+  if(!(dow>=0&&dow<=6)||!_COACH_T.test(time)){showToast('Pick a day and time');return}
+  if(!(daily>=0.5&&daily<=24)){showToast('Daily target must be 0.5–24 hours');return}
+  if(dow!==c.dow||time!==c.time){
+    // Re-anchor on the last meeting that actually happened, then drop exceptions
+    // for later weeks — they were keyed to the old day and no longer line up.
+    const last=coachState().last.at;
+    c.anchor=last;
+    Object.keys(c.overrides).forEach(k=>{if(k>last.slice(0,10))delete c.overrides[k]});
+    c.dow=dow;c.time=time;
+  }
+  c.daily=Math.round(daily*100)/100;
+  saveCoach(c);
+  closeModal('coach-meet-overlay');
+  if(typeof currentPage!=='undefined'&&currentPage==='dashboard'&&typeof renderDashboard==='function')renderDashboard();
+  showToast('Coach meeting saved');
+}
+
 
 // ── DASHBOARD TASKS CARD ──────────────────────────────────────────────────────
 // Prominent card at the top of the dashboard for pinned tasks due TODAY.
@@ -12083,7 +12289,7 @@ async function syncFromCloud(){
   setSyncUI('syncing','Syncing…');
   _sbPullFailed=false; // reset per cycle — see _baseMigrationsAllowed()
   try{
-    const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_ai_history','st_holiday','st_notif_prefs','st_notif_templates','st_teacher_plan','st_journals','st_schoolwork','st_focus','st_focus_tracker']; // st_hours is recomputed from sessions below, not pulled directly. st_teacher_plan is written externally by the teacher RPC and only ever pulled here (cloud-authoritative, falls through to the default setItem branch — the app never sbPushes it).
+    const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_ai_history','st_holiday','st_notif_prefs','st_notif_templates','st_teacher_plan','st_journals','st_schoolwork','st_focus','st_focus_tracker','st_coach']; // st_hours is recomputed from sessions below, not pulled directly. st_teacher_plan is written externally by the teacher RPC and only ever pulled here (cloud-authoritative, falls through to the default setItem branch — the app never sbPushes it).
     // Pull st_deleted_sessions upfront so we can use it synchronously inside forEach
     let cloudDeletedRaw=null;
     try{cloudDeletedRaw=await sbPull('st_deleted_sessions')}catch(e){}
@@ -12161,7 +12367,7 @@ async function syncFromCloud(){
             localStorage.setItem(k,JSON.stringify(cloud));
             _aiHistory=cloud;
           }
-        } else if(k==='st_subjs'||k==='st_goals'||k==='st_todos'||k==='st_sched_overrides'||k==='st_holiday'||k==='st_notif_prefs'||k==='st_notif_templates'||k==='st_journals'||k==='st_schoolwork'||k==='st_focus'||k==='st_focus_tracker'){
+        } else if(k==='st_subjs'||k==='st_goals'||k==='st_todos'||k==='st_sched_overrides'||k==='st_holiday'||k==='st_notif_prefs'||k==='st_notif_templates'||k==='st_journals'||k==='st_schoolwork'||k==='st_focus'||k==='st_focus_tracker'||k==='st_coach'){
           // Timestamped last-writer-wins: keep whichever version is newer.
           // Prevents a device with stale data from reverting a fresh edit.
           const cloudUpdatedAt=rows[i].updated_at||'';
