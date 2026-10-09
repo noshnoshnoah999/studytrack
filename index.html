@@ -1491,9 +1491,9 @@ input.form-input.fc-locked{background:var(--bg4);color:var(--text2);cursor:not-a
     <div class="form-group">
       <label class="form-label">Model</label>
       <select class="form-input" id="ai-model-select">
-        <option value="claude-haiku-4-5-20251001">claude-haiku-4.5 (fast, cheap)</option>
-        <option value="claude-sonnet-5">claude-sonnet-5 (balanced)</option>
-        <option value="claude-opus-4-8">claude-opus-4.8 (smartest)</option>
+        <option value="claude-haiku-5-5">claude-haiku-5.5 (fast, cheap)</option>
+        <option value="claude-sonnet-5-5">claude-sonnet-5.5 (balanced)</option>
+        <option value="claude-opus-5-5">claude-opus-5.5 (smartest)</option>
       </select>
     </div>
     <div class="modal-actions">
@@ -2003,10 +2003,10 @@ input.form-input.fc-locked{background:var(--bg4);color:var(--text2);cursor:not-a
         <!-- Model picker -->
         <div style="display:flex;gap:8px;margin-bottom:10px">
           <label style="flex:1;display:flex;align-items:center;gap:6px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text2)">
-            <input type="radio" name="coach-model" value="claude-haiku-4-5-20251001" checked style="accent-color:var(--o)"> Haiku <span style="font-size:10px;color:var(--text3);font-weight:400">~$0.002</span>
+            <input type="radio" name="coach-model" value="claude-haiku-5-5" checked style="accent-color:var(--o)"> Haiku <span style="font-size:10px;color:var(--text3);font-weight:400">~$0.0002</span>
           </label>
           <label style="flex:1;display:flex;align-items:center;gap:6px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text2)">
-            <input type="radio" name="coach-model" value="claude-sonnet-5" style="accent-color:var(--o)"> Sonnet <span style="font-size:10px;color:var(--text3);font-weight:400">~$0.01</span>
+            <input type="radio" name="coach-model" value="claude-sonnet-5-5" style="accent-color:var(--o)"> Sonnet <span style="font-size:10px;color:var(--text3);font-weight:400">~$0.01</span>
           </label>
         </div>
         <div id="coach-img-preview" style="display:none;margin-bottom:8px;text-align:center">
@@ -3720,7 +3720,9 @@ let _workoutResult=null;
 // Haiku only. Extraction is now just title / date / start time / duration,
 // which does not need a larger model, and one fixed model removes the silent
 // downgrade path the old Sonnet-primary/Haiku-fallback arrangement had.
-const WORKOUT_MODEL='claude-haiku-4-5-20251001';
+// Migrate saved AI model choice from retired IDs to the 5.5 models (2026-10-09)
+try{var _m={'claude-haiku-4-5-20251001':'claude-haiku-5-5','claude-sonnet-5':'claude-sonnet-5-5','claude-opus-4-8':'claude-opus-5-5'};var _s=localStorage.getItem('st_ai_model');if(_s&&_m[_s])localStorage.setItem('st_ai_model',_m[_s]);}catch(e){}
+const WORKOUT_MODEL='claude-haiku-5-5';
 // Kept for diagnosis: after a failed import, type _lastWorkoutRaw in the console
 // to see exactly what came back.
 let _lastWorkoutRaw=null;
@@ -10438,7 +10440,7 @@ async function runCoachAnalysis(){
   const key=localStorage.getItem('st_anthropic_key');
   if(!key){showToast('Add Anthropic API key in  Settings','var(--err)');return}
   const modelEl=document.querySelector('input[name="coach-model"]:checked');
-  const model=modelEl?modelEl.value:'claude-haiku-4-5-20251001';
+  const model=modelEl?modelEl.value:'claude-haiku-5-5';
   const btn=document.getElementById('coach-analyse-btn');
   const status=document.getElementById('coach-scan-status');
   if(btn)btn.disabled=true;
@@ -13074,13 +13076,13 @@ function openAISettings(){
   // Settings modal alongside every other Anthropic-powered feature. Model choice
   // still has its own small panel.
   const modelEl=document.getElementById('ai-model-select');
-  if(modelEl)modelEl.value=localStorage.getItem('st_ai_model')||'claude-haiku-4-5-20251001';
+  if(modelEl)modelEl.value=localStorage.getItem('st_ai_model')||'claude-haiku-5-5';
   const keyEl=document.getElementById('ai-api-key-input');
   if(keyEl)keyEl.value=_aiGetKey();
   document.getElementById('ai-settings-overlay').classList.add('open');
 }
 function saveAISettings(){
-  const model=document.getElementById('ai-model-select').value||'claude-haiku-4-5-20251001';
+  const model=document.getElementById('ai-model-select').value||'claude-haiku-5-5';
   localStorage.setItem('st_ai_model',model);
   // Key: write to the shared store so main Settings and the scanners see it too.
   const keyEl=document.getElementById('ai-api-key-input');
@@ -13451,7 +13453,7 @@ async function _aiSendMsg(text,image=null){
   _aiRenderMessages();
   try{
     const ctx=_aiMakeContext();
-    const model=localStorage.getItem('st_ai_model')||'claude-haiku-4-5-20251001';
+    const model=localStorage.getItem('st_ai_model')||'claude-haiku-5-5';
     // Build messages for API — use full content (incl. images) for current session
     // Drop any corrupted entries (missing/empty content) so one bad message can't
     // permanently break every future request — see messages.N.content: Field required
@@ -13629,7 +13631,7 @@ function renderAIPage(){
   const statusEl=document.getElementById('ai-key-status');
   if(statusEl){
     const hasKey=!!_aiGetKey();
-    const model=localStorage.getItem('st_ai_model')||'claude-haiku-4-5-20251001';
+    const model=localStorage.getItem('st_ai_model')||'claude-haiku-5-5';
     statusEl.textContent=hasKey?model.replace('claude-','').replace('-2024',''):'No API key';
     statusEl.style.color=hasKey?'var(--ok)':'var(--err)';
   }
