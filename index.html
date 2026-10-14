@@ -1059,6 +1059,14 @@ button:active{transform:scale(0.96)}
 .fc-book-banner{display:none;background:rgba(239,68,68,0.12);border:2px solid rgba(239,68,68,0.6);border-radius:12px;padding:12px 16px;margin:0 0 14px 0;font-size:13px;color:var(--text);line-height:1.5}
 .fc-book-banner.show{display:block}
 .fc-book-fields{display:none;grid-template-columns:2fr 1fr 1fr;gap:10px;margin:14px 0 0 0}
+.fc-news-fields{display:none;grid-template-columns:1fr 2fr;gap:10px;margin:14px 0 0 0}
+.fc-news-fields .fc-news-link{grid-column:1 / -1}
+.fc-read-kind{display:none;gap:8px;margin:14px 0 0 0}
+.fc-kind-btn{flex:1;background:var(--bg3,var(--bg2));color:var(--text2);border:1.5px solid var(--border);border-radius:10px;padding:9px 12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.fc-kind-btn.on{background:var(--text);color:var(--bg);border-color:var(--text)}
+.fc-jr-read{display:none;margin:0 0 14px 0}
+.fc-jr-read .fc-read-kind,.fc-jr-read .fc-book-fields,.fc-jr-read .fc-news-fields{margin-top:0;margin-bottom:10px}
+.fc-hist-link{display:block;font-size:11.5px;color:var(--text2);text-decoration:underline;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;margin-top:3px}
 .fc-noform{display:none;background:#7f1d1d;border:2px solid #ef4444;color:#fff;border-radius:10px;padding:11px 14px;margin:12px 0 0 0;font-size:13px;font-weight:700;line-height:1.45}
 .fc-noform.show{display:block}
 input.form-input.fc-locked{background:var(--bg4);color:var(--text2);cursor:not-allowed}
@@ -1091,6 +1099,7 @@ input.form-input.fc-locked{background:var(--bg4);color:var(--text2);cursor:not-a
   .fc-rows,.fc-pick{grid-template-columns:1fr}
   .fc-book-fields{grid-template-columns:1fr 1fr}
   .fc-book-fields .fc-book-name{grid-column:1 / -1}
+  .fc-news-fields{grid-template-columns:1fr}
 }
 
 
@@ -1271,8 +1280,14 @@ input.form-input.fc-locked{background:var(--bg4);color:var(--text2);cursor:not-a
           </div>
         </div>
         <div id="log-health-note" style="display:none;font-size:13px;line-height:1.5;color:var(--text);margin:12px 0 0 0">Ensure that I am studying topics in Health Science that are included in the contract title: Toxicology, Cosmetic Ingredients, Endocrine System, Fluoride, Energy Drinks</div>
-        <!-- English book reading (when English is not the core subject). The title
-             is BUILT from these three fields; log-notes becomes a locked preview. -->
+        <!-- English reading (when English is not the core subject): a book OR a
+             news article. The title is BUILT from the fields; log-notes becomes a
+             locked preview. -->
+        <input type="hidden" id="fc-read-kind" value="book">
+        <div class="fc-read-kind" id="fc-read-kind-wrap">
+          <button type="button" class="fc-kind-btn on" id="fc-kind-book" onclick="_fcSetReadKind('fc','book')">Book</button>
+          <button type="button" class="fc-kind-btn" id="fc-kind-news" onclick="_fcSetReadKind('fc','news')">News article</button>
+        </div>
         <div class="fc-book-fields" id="fc-book-fields">
           <div class="form-group fc-book-name" style="margin-bottom:0">
             <label class="form-label">Book name</label>
@@ -1285,6 +1300,20 @@ input.form-input.fc-locked{background:var(--bg4);color:var(--text2);cursor:not-a
           <div class="form-group" style="margin-bottom:0">
             <label class="form-label">To page</label>
             <input type="text" class="form-input" id="fc-book-to" inputmode="numeric" autocomplete="off" oninput="_fcRefreshBookPreview()">
+          </div>
+        </div>
+        <div class="fc-news-fields" id="fc-news-fields">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Source</label>
+            <input type="text" class="form-input" id="fc-news-source" placeholder="e.g. NHK World" autocomplete="off" oninput="_fcRefreshBookPreview()">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Headline</label>
+            <input type="text" class="form-input" id="fc-news-headline" autocomplete="off" oninput="_fcRefreshBookPreview()">
+          </div>
+          <div class="form-group fc-news-link" style="margin-bottom:0">
+            <label class="form-label">Article link</label>
+            <input type="url" class="form-input" id="fc-news-link" placeholder="https://..." autocomplete="off" autocapitalize="off" spellcheck="false" oninput="_fcRefreshBookPreview()">
           </div>
         </div>
         <div class="fc-noform" id="fc-book-noform"></div>
@@ -1770,9 +1799,47 @@ input.form-input.fc-locked{background:var(--bg4);color:var(--text2);cursor:not-a
     <div class="modal-title" id="journal-modal-title">New Journal</div>
     <input type="hidden" id="journal-edit-id">
     <div class="form-group" style="margin-bottom:14px">
-      <label class="form-label">Journal Title</label>
+      <label class="form-label" id="jr-title-label">Journal Title</label>
       <input type="text" class="form-input" id="jr-title" placeholder="e.g. 2nd September - Algebra 1 Unit 4 Review">
       <div style="font-size:11px;color:var(--text3);margin-top:5px;line-height:1.45">Fills &ldquo;Journal Content/What You Studied&rdquo; on the Log page, and the Google Form.</div>
+    </div>
+    <!-- English reading (monthly focus): same Book / News article fields as the
+         Log page. The title above is built from them and locked. -->
+    <div class="fc-jr-read" id="jrfc-read">
+      <input type="hidden" id="jrfc-read-kind" value="book">
+      <div class="fc-read-kind" id="jrfc-read-kind-wrap" style="display:flex">
+        <button type="button" class="fc-kind-btn on" id="jrfc-kind-book" onclick="_fcSetReadKind('jrfc','book')">Book</button>
+        <button type="button" class="fc-kind-btn" id="jrfc-kind-news" onclick="_fcSetReadKind('jrfc','news')">News article</button>
+      </div>
+      <div class="fc-book-fields" id="jrfc-book-fields">
+        <div class="form-group fc-book-name" style="margin-bottom:0">
+          <label class="form-label">Book name</label>
+          <input type="text" class="form-input" id="jrfc-book-name" autocomplete="off" oninput="_fcRefreshJrPreview()">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">From page</label>
+          <input type="text" class="form-input" id="jrfc-book-from" inputmode="numeric" autocomplete="off" oninput="_fcRefreshJrPreview()">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">To page</label>
+          <input type="text" class="form-input" id="jrfc-book-to" inputmode="numeric" autocomplete="off" oninput="_fcRefreshJrPreview()">
+        </div>
+      </div>
+      <div class="fc-news-fields" id="jrfc-news-fields">
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Source</label>
+          <input type="text" class="form-input" id="jrfc-news-source" placeholder="e.g. NHK World" autocomplete="off" oninput="_fcRefreshJrPreview()">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Headline</label>
+          <input type="text" class="form-input" id="jrfc-news-headline" autocomplete="off" oninput="_fcRefreshJrPreview()">
+        </div>
+        <div class="form-group fc-news-link" style="margin-bottom:0">
+          <label class="form-label">Article link</label>
+          <input type="url" class="form-input" id="jrfc-news-link" placeholder="https://..." autocomplete="off" autocapitalize="off" spellcheck="false" oninput="_fcRefreshJrPreview()">
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);line-height:1.45" id="jrfc-read-hint"></div>
     </div>
     <div class="fc-park-warn" id="fc-park-warn"></div>
     <div class="form-group" style="margin-bottom:14px">
@@ -2197,7 +2264,7 @@ function _openFormForSession(sessionId){
   const sessions=loadSessions();
   const s=sessions.find(x=>x.id===sessionId);
   if(!s)return;
-  _openSubjectForm(s.subjectId,s.date,s.start,s.end,s.notes,sessionId,!!(s.journalMeta&&s.journalMeta.preply));
+  _openSubjectForm(s.subjectId,s.date,s.start,s.end,s.notes,sessionId,!!(s.journalMeta&&s.journalMeta.preply),_fcSessionLink(s));
 }
 
 // ── GOOGLE FORM SUBMISSION TRACKER ──────────────────────────────────────────
@@ -2331,9 +2398,14 @@ const JOURNAL_WRITING_PE_MIN_MINS=25;
 // else — never stored on the session, never shown in StudyTrack, never written by
 // a model. Order is title, then the Preply review line, then journal-writing
 // time, so it reads in the order things happened: the activity, then the write-up.
-function _formContents(subjectId,start,end,notes,preply){
+function _formContents(subjectId,start,end,notes,preply,link){
   const mins=(start&&end)?(toMins(end)-toMins(start)):0;
   const extra=[];
+  // English news-article reading: the article link goes straight under the
+  // title as "Source: <link>" (Noah, 2026-10-14). Unlike the lines below it IS
+  // stored - on the session, as article.url - because the "Forms to submit"
+  // list rebuilds this text later and must not lose it.
+  if(link)extra.push('Source: '+link);
   // Sits above the journal-writing line so the box reads in the order things
   // happened: the lesson, the review straight after it, then the write-up.
   if(preply)extra.push(PREPLY_REVIEW_LINE);
@@ -2346,14 +2418,14 @@ function _formContents(subjectId,start,end,notes,preply){
   return lines.join('\n');
 }
 
-function _buildSubjectFormUrl(subjectId,date,start,end,notes,preply){
+function _buildSubjectFormUrl(subjectId,date,start,end,notes,preply,link){
   const cfg=_SUBJECT_FORMS[subjectId];
   if(!cfg)return null;
   let url=cfg.url+'?usp=pp_url';
   if(date) url+='&entry.911550456='+encodeURIComponent(date);
   if(start){const p=start.split(':');url+='&entry.2130026531_hour='+p[0]+'&entry.2130026531_minute='+(p[1]||'00')}
   if(end){const p=end.split(':');url+='&entry.1426010469_hour='+p[0]+'&entry.1426010469_minute='+(p[1]||'00')}
-  const contents=_formContents(subjectId,start,end,notes,preply);
+  const contents=_formContents(subjectId,start,end,notes,preply,link);
   if(contents) url+='&entry.706383331='+encodeURIComponent(contents);
   if(cfg.confirmId) url+='&entry.'+cfg.confirmId+'='+encodeURIComponent('確認しました / Confirmed');
   return url;
@@ -2391,6 +2463,7 @@ function updateKaProofBanner(selectId,bannerId){
     // English book-reading mode (monthly focus) piggybacks for the same reason.
     if(typeof _fcUpdateBookMode==='function')_fcUpdateBookMode();
   }
+  if(selectId==='jr-subject'&&typeof _fcUpdateJrReadMode==='function')_fcUpdateJrReadMode();
   if(_isKaProofSubject(sel.value)){
     banner.innerHTML=KA_PROOF_TEXT;
     banner.classList.add('show');
@@ -2417,7 +2490,8 @@ function updateJournalLenWarn(){
     (document.getElementById('log-start')||{}).value||'',
     (document.getElementById('log-end')||{}).value||'',
     journal,
-    !!(_pendingJournalMeta&&_pendingJournalMeta.preply)
+    !!(_pendingJournalMeta&&_pendingJournalMeta.preply),
+    (typeof _fcLogNewsLink==='function')?_fcLogNewsLink():''
   );
   if(!url){el.style.display='none';return}
   const len=url.length;
@@ -2437,10 +2511,10 @@ function updateJournalLenWarn(){
   }
 }
 
-function _openSubjectForm(subjectId,date,start,end,notes,sessionId,preply){
+function _openSubjectForm(subjectId,date,start,end,notes,sessionId,preply,link){
   const cfg=_SUBJECT_FORMS[subjectId];
   if(!cfg)return; // no form for this subject
-  const url=_buildSubjectFormUrl(subjectId,date,start,end,notes,preply);
+  const url=_buildSubjectFormUrl(subjectId,date,start,end,notes,preply,link);
   if(url&&url.length>=_JOURNAL_URL_MAX){
     showToast('Journal may be truncated in the form — check it before submitting.','var(--err)');
   }
@@ -6202,7 +6276,8 @@ function renderHistory(){
             (timeStr?'<span class="hist-card-time">'+timeStr+'</span>':'')+
           '</div>'+
           (s.notes?'<div class="hist-card-notes">'+escHtml(s.notes)+'</div>':'')+
-          (s.bookReading?'<div><span class="fc-hist-tag">Book reading \u00b7 locked</span>'+(!_SUBJECT_FORMS[s.subjectId]?'<span class="fc-hist-noform">No form linked</span>':'')+'</div>':'')+
+          (s.bookReading?'<div><span class="fc-hist-tag">'+(s.article?'News article':'Book reading')+' \u00b7 locked</span>'+(!_SUBJECT_FORMS[s.subjectId]?'<span class="fc-hist-noform">No form linked</span>':'')+'</div>':'')+
+          (_fcSessionLink(s)?'<a class="fc-hist-link" href="'+escHtml(_fcSessionLink(s))+'" target="_blank" rel="noopener noreferrer">Source: '+escHtml(_fcSessionLink(s))+'</a>':'')+
           '<div class="hist-card-logged" id="hist-logged-'+s.id+'" style="display:none">'+escHtml(_fmtLoggedAt(s.loggedAt))+'</div>'+
         '</div>'+
         formPill+
@@ -6348,7 +6423,8 @@ function openEditSession(id){
   const _esNote=document.getElementById('es-lock-note');
   if(_esNote){
     if(s.bookReading){
-      _esNote.innerHTML='<strong>Book-reading session.</strong> The title and subject are locked and it can never be deleted. Only the date and times can be changed.'+
+      _esNote.innerHTML=(s.article?'<strong>News-article session.</strong> The title, link and subject are locked':'<strong>Book-reading session.</strong> The title and subject are locked')+' and it can never be deleted. Only the date and times can be changed.'+
+        (_fcSessionLink(s)?' Source: '+escHtml(_fcSessionLink(s))+'.':'')+
         (!_SUBJECT_FORMS[s.subjectId]?' <strong>No Google Form is linked to '+escHtml(_fcName(s.subjectId))+'.</strong>':'');
       _esNote.style.display='block';
     }else _esNote.style.display='none';
@@ -7238,7 +7314,7 @@ async function timerPageLog(){
   // and pages, which only the Log page asks for.
   const _loggedSubj=timerSubjectId;
   const _tGate=_fcLogGate(_loggedSubj,{noParked:true})||
-    (_fcBookMode(_loggedSubj)?'Book reading has to be logged on the Log page, with the book name and pages.':null);
+    (_fcBookMode(_loggedSubj)?'English reading (a book or a news article) has to be logged on the Log page, with its details.':null);
   if(_tGate){showToast(_tGate,'var(--err)');return}
   // Anti-duplicate: check Supabase to ensure another device hasn't already logged this session
   const mySessionId=timerSessionId;
@@ -7707,7 +7783,7 @@ function logSession(){
   if(_fcBookMode(subjectId)){
     const b=_fcReadBook();
     if(b.err){showToast(b.err,'var(--err)');return}
-    const ov=_fcBookOverlap(b);
+    const ov=_fcReadingDup(b);
     if(ov){showToast('Already logged on '+_fcShortDate(ov.date)+': '+(ov.notes||'')+'. '+_FC_NO_DELETE+' A duplicate is refused.','var(--err)');return}
     const dd=findDuplicateSession(subjectId,date,start,end);
     if(dd&&dd.type==='exact'){showToast('This exact session is already logged. '+_FC_NO_DELETE+' A duplicate is refused.','var(--err)');return}
@@ -7731,7 +7807,7 @@ function _doLogSession(){
   if(_fcBookMode(subjectId)){
     book=_fcReadBook();
     if(book.err){showToast(book.err,'var(--err)');return}
-    if(_fcBookOverlap(book)){showToast('That book and page range is already logged. '+_FC_NO_DELETE,'var(--err)');return}
+    if(_fcReadingDup(book)){showToast((book.kind==='news'?'That news article is already logged. ':'That book and page range is already logged. ')+_FC_NO_DELETE,'var(--err)');return}
     const dd=findDuplicateSession(subjectId,date,start,end);
     if(dd&&dd.type==='exact'){showToast('This exact session is already logged. '+_FC_NO_DELETE,'var(--err)');return}
   }
@@ -7745,7 +7821,14 @@ function _doLogSession(){
   const _rec={id:_newId,subjectId,date,start,end,hours,notes,loggedAt:new Date().toISOString()};
   // Marked explicitly, never inferred from the title: this flag is what locks the
   // title and subject and blocks every delete path.
-  if(book){_rec.bookReading=true;_rec.book={name:book.name,from:book.from,to:book.to}}
+  // A news article carries the same bookReading lock flag (so every delete and
+  // edit guard - including an older cached build on another device - treats it
+  // exactly like a book) plus article:{source,headline,url} instead of book.
+  if(book){
+    _rec.bookReading=true;
+    if(book.kind==='news'){_rec.readKind='news';_rec.article={source:book.source,headline:book.headline,url:book.url}}
+    else _rec.book={name:book.name,from:book.from,to:book.to};
+  }
   // Since 2026-08-19 `notes` IS the journal content (the separate Journal Content
   // box was merged in). It is a single line — e.g. "11th July - Morning Cycle" —
   // and that same line is what gets sent to the Google Form's Contents field.
@@ -7785,7 +7868,7 @@ function _doLogSession(){
   // Auto-open the subject's Google Form after logging. Since the Journal Content
   // box was merged into Notes on 2026-08-19 there is only one field, so `notes`
   // IS the submission text. _buildSubjectFormUrl() adds the journal-writing line.
-  if(_SUBJECT_FORMS[subjectId]) _openSubjectForm(subjectId,date,start,end,notes,_newId,!!(_rec.journalMeta&&_rec.journalMeta.preply));
+  if(_SUBJECT_FORMS[subjectId]) _openSubjectForm(subjectId,date,start,end,notes,_newId,!!(_rec.journalMeta&&_rec.journalMeta.preply),_fcSessionLink(_rec));
   // A logged session is the usual moment a contract boundary is crossed.
   if(typeof renderContractBanners==='function')renderContractBanners();
   // Hours left moved; a focus subject may have just been completed, which
@@ -8367,6 +8450,7 @@ function _journalCard(j,st){
     (bits.length?'<div class="jr-meta">'+bits.join(' · ')+'</div>':'')+
     (j.desc?'<div class="jr-desc">'+escHtml(j.desc)+'</div>':'')+
     (j.proof?'<div class="jr-proof">Proof: '+escHtml(j.proof)+'</div>':'')+
+    (_fcSessionLink(j)?'<a class="fc-hist-link" href="'+escHtml(_fcSessionLink(j))+'" target="_blank" rel="noopener noreferrer">Source: '+escHtml(_fcSessionLink(j))+'</a>':'')+
     (fcLock?'<div class="fc-jr-lock"><strong>Locked.</strong> '+escHtml(fcLock.text)+'</div>':'')+
     '<div class="jr-actions">'+
       (j.done?'':(fcLock?'<button class="jr-btn fc-btn-locked" disabled title="'+escHtml(fcLock.text)+'">Locked</button>':
@@ -8407,6 +8491,10 @@ function openJournalModal(editId){
   setLogTime('jr-end',   j?(j.end||''):'');
   document.getElementById('jr-proof').value = j?(j.proof||''):'';
   document.getElementById('jr-priority').checked = !!(j&&j.priority);
+  // English reading fields: reset, then filled from this journal (if any).
+  // updateKaProofBanner below switches the box into reading mode when needed.
+  _fcJrResetRead();
+  if(j&&j.subjectId&&ENGLISH_SERIES.includes(j.subjectId))_fcFillReading('jrfc',_fcJournalReading(j));
   _jrWarnDismissed=false;   // a dismissal lasts for THIS modal session only,
                             // so reopening the box can never hide the warning
                             // for a subject that still has no form.
@@ -8454,7 +8542,16 @@ function _jrCheckForm(){
 
 function saveJournalEntry(){
   const id=document.getElementById('journal-edit-id').value;
-  const title=document.getElementById('jr-title').value.trim();
+  let title=document.getElementById('jr-title').value.trim();
+  // English reading: the title is the one built from the fields, never typed.
+  // A news article needs all three fields; a book may leave To page blank only
+  // while the journal is still In progress (no End time yet).
+  let _rd=null;
+  if(_fcJrOn){
+    _rd=_fcReadReading('jrfc',{allowNoTo:!document.getElementById('jr-end').value});
+    if(_rd.err){showToast(_rd.err,'var(--err)');return}
+    title=_rd.title;
+  }
   const desc=document.getElementById('jr-desc').value.trim();
   const date=document.getElementById('jr-date').value;
   const subjectId=document.getElementById('jr-subject').value;
@@ -8478,10 +8575,13 @@ function saveJournalEntry(){
     if(!j)return;
     j.title=title; j.desc=desc; j.date=date; j.subjectId=subjectId;
     j.start=start; j.end=end; j.proof=proof; j.priority=priority; j.updatedAt=now;
+    _fcApplyReadingToJournal(j,_rd);
   } else {
-    list.push({id:genId(),title:title,desc:desc,date:date,subjectId:subjectId,
+    const nj={id:genId(),title:title,desc:desc,date:date,subjectId:subjectId,
       start:start,end:end,proof:proof,priority:priority,
-      done:false,completedBy:null,completedAt:null,createdAt:now,updatedAt:now});
+      done:false,completedBy:null,completedAt:null,createdAt:now,updatedAt:now};
+    _fcApplyReadingToJournal(nj,_rd);
+    list.push(nj);
   }
   saveJournals(list);
   closeModal('journal-modal-overlay');
@@ -8513,7 +8613,9 @@ function _jrCurrentValues(){
     start:document.getElementById('jr-start').value,
     end:document.getElementById('jr-end').value,
     proof:document.getElementById('jr-proof').value,
-    priority:document.getElementById('jr-priority').checked
+    priority:document.getElementById('jr-priority').checked,
+    read:['jrfc-read-kind','jrfc-book-name','jrfc-book-from','jrfc-book-to','jrfc-news-source','jrfc-news-headline','jrfc-news-link']
+      .map(i=>{const e=document.getElementById(i);return e?e.value:''}).join('\u0001')
   };
 }
 
@@ -8605,10 +8707,7 @@ function fillLogFromJournal(id){
   // English book reading: the title must come from the three fields, so a title
   // in the book format is split back into them; anything else leaves them blank.
   if(sub&&sub.value===j.subjectId&&_fcBookMode(j.subjectId)){
-    const pb=_fcParseBookTitle(j.title);
-    const setv=(eid,v)=>{const e=document.getElementById(eid);if(e)e.value=v};
-    setv('fc-book-name',pb?pb.name:'');setv('fc-book-from',pb?pb.from:'');setv('fc-book-to',pb?pb.to:'');
-    _fcRefreshBookPreview();
+    _fcFillReading('fc',_fcJournalReading(j));
   }
   if(typeof updateJournalLenWarn==='function')updateJournalLenWarn();
   if(typeof dismissDupWarn==='function')dismissDupWarn();
@@ -8640,10 +8739,17 @@ function transferLogToJournal(){
   const start=gv('log-start');
   const end=gv('log-end');
   const title=(gv('log-notes')||'').trim();
+  // English reading: carry the fields, not just the built title. Incomplete
+  // fields would give an empty title, so say what is missing instead.
+  let _trRead=null;
+  if(_fcBookOn){
+    _trRead=_fcReadReading('fc',{allowNoTo:!end});
+    if(_trRead.err){showToast(_trRead.err,'var(--err)');return}
+  }
   // saveJournalEntry() refuses an entry with no Title and no Description, so a
   // transfer with an empty content line would open a modal that cannot be
   // saved. Stop here and put the cursor where the text belongs instead.
-  if(!title){
+  if(!title&&!_trRead){
     showToast('Add the Journal Content line first - that becomes the journal title.','var(--err)');
     const n=document.getElementById('log-notes'); if(n)n.focus();
     return;
@@ -8669,6 +8775,7 @@ function transferLogToJournal(){
     }
   }
   const tEl=document.getElementById('jr-title'); if(tEl)tEl.value=title;
+  if(_trRead)_fcFillReading('jrfc',_trRead);
   if(date){const dEl=document.getElementById('jr-date'); if(dEl)dEl.value=date}
   setLogTime('jr-start',start);
   setLogTime('jr-end',end);
@@ -8861,7 +8968,7 @@ const FOCUS_DAY_UNLOCK_H=8;
 const FOCUS_CHOOSE_LEAD_DAYS=3;
 const FOCUS_OTHER='__other__';
 const _FC_EPS=1e-6;   // hours are float sums of minutes/60
-const _FC_NO_DELETE='Book-reading sessions can never be deleted.';
+const _FC_NO_DELETE='English reading sessions (books and news articles) can never be deleted.';
 const _FC_LOCK_SVG='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
 const _FC_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 
@@ -9138,7 +9245,7 @@ function _fcLogOptionsHtml(st){
   if(st.side.id&&st.side.id!==st.core.id)h+=opt(st.side.id,_fcName(st.side.id)+' (Side)');
   _fcAllowedIds(st).forEach(id=>{
     if(id===st.core.id||id===st.side.id)return;
-    h+=opt(id,ENGLISH_SERIES.includes(id)?_fcName(id)+' — book reading only':_fcName(id));
+    h+=opt(id,ENGLISH_SERIES.includes(id)?_fcName(id)+' — book or news reading only':_fcName(id));
   });
   h+='<option disabled>──────────</option>';
   h+=opt(FOCUS_OTHER,'Other subjects…');
@@ -9251,17 +9358,121 @@ function _fcUpdateParkWarn(){
 // "(name of book) Reading | P?? --> P??", the brackets being his placeholder.
 let _fcBookOn=false;
 function _fcBookTitle(name,from,to){return name+' Reading | P'+from+' --> P'+to}
-function _fcReadBook(){
-  const v=id=>{const e=document.getElementById(id);return e?String(e.value||''):''};
-  const name=v('fc-book-name').trim().replace(/\s+/g,' ');
-  const fromS=v('fc-book-from').trim(), toS=v('fc-book-to').trim();
+// News articles (Noah, 2026-10-14): "News Article Reading | Source: Headline",
+// one article per session, Source = the site or paper name, plus an Article link
+// that goes into the Google Form as "Source: <link>" under the title.
+function _fcNewsTitle(source,headline){return 'News Article Reading | '+source+': '+headline}
+// Only a real http(s) web address - a "javascript:" or "data:" link could run
+// code when tapped in History or on a journal card.
+function _fcValidLink(u){
+  u=String(u||'');
+  if(!/^https?:\/\/[^\s<>"']+$/i.test(u))return false;
+  try{const x=new URL(u);return (x.protocol==='http:'||x.protocol==='https:')&&/\./.test(x.hostname)}catch(e){return false}
+}
+// Same article = same host (any case, with or without www.), same path (case
+// kept - many sites use case-sensitive ids), same query once tracking
+// parameters (utm_*, fbclid, gclid...) are dropped. The #fragment is ignored.
+function _fcLinkKey(u){
+  try{
+    const x=new URL(String(u||'').trim());
+    const q=new URLSearchParams(x.search);
+    Array.from(q.keys()).forEach(k=>{if(/^(utm_|fbclid$|gclid$|mc_cid$|mc_eid$|ref_src$)/i.test(k))q.delete(k)});
+    const qs=q.toString();
+    return x.host.toLowerCase().replace(/^www\./,'')+x.pathname.replace(/\/+$/,'')+(qs?'?'+qs:'');
+  }catch(e){return String(u||'').trim()}
+}
+// The link stored on a session or journal, only if it is still a safe http(s)
+// address (synced data is re-checked every time it is rendered).
+function _fcSessionLink(o){
+  const u=o&&o.article&&o.article.url;
+  return _fcValidLink(u)?u:'';
+}
+function _fcKind(p){const e=document.getElementById(p+'-read-kind');return e&&e.value==='news'?'news':'book'}
+// Reads the Book or News fields with prefix p ('fc' = Log page, 'jrfc' = the
+// journal box). opts.allowNoTo lets a book journal still In progress be saved
+// without its To page.
+function _fcReadReading(p,opts){
+  opts=opts||{};
+  const v=id=>{const e=document.getElementById(p+'-'+id);return e?String(e.value||''):''};
+  const clean=t=>t.trim().replace(/\s+/g,' ');
+  if(_fcKind(p)==='news'){
+    const source=clean(v('news-source')), headline=clean(v('news-headline')), url=v('news-link').trim();
+    if(!source)return {err:'Enter the Source - the site or paper, e.g. NHK World.'};
+    if(/:\/\/|^www\.|^https?:|\//i.test(source))return {err:'The Source box looks like it has a link in it. Put the link in Article link - Source is the site name, e.g. NHK World.'};
+    if(/[:|]/.test(source))return {err:'The Source cannot contain ":" or "|" - they would break the title.'};
+    if(!headline)return {err:'Enter the article headline.'};
+    if(!url)return {err:'Paste the Article link.'};
+    if(!_fcValidLink(url))return {err:'The Article link must be a full web address starting with https:// (or http://).'};
+    return {kind:'news',source:source,headline:headline,url:url,title:_fcNewsTitle(source,headline)};
+  }
+  const name=clean(v('book-name'));
+  const fromS=v('book-from').trim(), toS=v('book-to').trim();
   if(!name)return {err:'Enter the book name.'};
-  if(!fromS||!toS)return {err:'Enter both the From page and the To page.'};
-  if(!/^\d+$/.test(fromS)||!/^\d+$/.test(toS))return {err:'Page numbers must be whole numbers.'};
-  const from=parseInt(fromS,10), to=parseInt(toS,10);
-  if(from<1||to<1)return {err:'Page numbers start at 1.'};
-  if(to<from)return {err:'The To page cannot be lower than the From page.'};
-  return {name:name,from:from,to:to,title:_fcBookTitle(name,from,to)};
+  if(!fromS)return {err:'Enter the From page.'};
+  if(!toS&&!opts.allowNoTo)return {err:'Enter both the From page and the To page.'};
+  if(!/^\d+$/.test(fromS)||(toS&&!/^\d+$/.test(toS)))return {err:'Page numbers must be whole numbers.'};
+  const from=parseInt(fromS,10), to=toS?parseInt(toS,10):null;
+  if(from<1||(to!==null&&to<1))return {err:'Page numbers start at 1.'};
+  if(to!==null&&to<from)return {err:'The To page cannot be lower than the From page.'};
+  if(to===null)return {kind:'book',name:name,from:from,to:null,title:name+' Reading | P'+from+' --> P??'};
+  return {kind:'book',name:name,from:from,to:to,title:_fcBookTitle(name,from,to)};
+}
+function _fcReadBook(){return _fcReadReading('fc')}
+// The duplicate rule for anything that can never be deleted: a book by name and
+// overlapping pages, a news article by Source + Headline OR by the same link.
+function _fcReadingDup(r){
+  if(r.kind!=='news')return _fcBookOverlap(r);
+  const sk=_fcBookKey(r.source), hk=_fcBookKey(r.headline), lk=_fcLinkKey(r.url);
+  return loadSessions().find(s=>s.bookReading&&s.article&&
+    ((_fcBookKey(s.article.source)===sk&&_fcBookKey(s.article.headline)===hk)||_fcLinkKey(s.article.url)===lk))||null;
+}
+// The link on the Log page right now, for the form-length warning (only when
+// the box is in news mode and the link is valid).
+function _fcLogNewsLink(){
+  if(!_fcBookOn||_fcKind('fc')!=='news')return '';
+  const r=_fcReadReading('fc');
+  return r.err?'':r.url;
+}
+// Puts a reading {kind,...} into the fields with prefix p.
+function _fcFillReading(p,r){
+  r=r||{kind:'book'};
+  const setv=(id,v)=>{const e=document.getElementById(p+'-'+id);if(e)e.value=(v===null||v===undefined)?'':String(v)};
+  setv('book-name',r.kind==='book'?r.name:'');setv('book-from',r.kind==='book'?r.from:'');setv('book-to',r.kind==='book'?r.to:'');
+  setv('news-source',r.kind==='news'?r.source:'');setv('news-headline',r.kind==='news'?r.headline:'');setv('news-link',r.kind==='news'?r.url:'');
+  _fcSetReadKind(p,r.kind==='news'?'news':'book');
+}
+// What a journal holds: the stored fields first, otherwise the title read back
+// (older journals), otherwise an empty book.
+function _fcJournalReading(j){
+  if(j.readKind==='news'&&j.article)return {kind:'news',source:j.article.source||'',headline:j.article.headline||'',url:j.article.url||''};
+  if(j.readKind==='book'&&j.book)return {kind:'book',name:j.book.name||'',from:j.book.from,to:j.book.to};
+  const pb=_fcParseBookTitle(j.title);
+  if(pb)return {kind:'book',name:pb.name,from:pb.from,to:pb.to};
+  const pq=String(j.title||'').match(/^(.+) Reading \| P(\d+) --> P\?\?$/);
+  if(pq)return {kind:'book',name:pq[1],from:pq[2],to:''};
+  const m=String(j.title||'').match(/^News Article Reading \| ([^:|]+): (.+)$/);
+  if(m)return {kind:'news',source:m[1],headline:m[2],url:''};
+  return {kind:'book'};
+}
+function _fcApplyReadingToJournal(j,r){
+  // Saved while English is unrestricted (before the rules, or English is the
+  // core): keep what the journal already holds, so its link is not lost.
+  if(!r&&ENGLISH_SERIES.includes(j.subjectId))return;
+  delete j.readKind; delete j.book; delete j.article;
+  if(!r)return;
+  j.readKind=r.kind;
+  if(r.kind==='news')j.article={source:r.source,headline:r.headline,url:r.url};
+  else j.book={name:r.name,from:r.from,to:r.to};
+}
+function _fcSetReadKind(p,k){
+  const h=document.getElementById(p+'-read-kind');
+  if(h)h.value=(k==='news')?'news':'book';
+  const kind=_fcKind(p);
+  const b=document.getElementById(p+'-kind-book'), n=document.getElementById(p+'-kind-news');
+  if(b)b.classList.toggle('on',kind==='book');
+  if(n)n.classList.toggle('on',kind==='news');
+  if(p==='fc'){_fcUpdateBookMode();_fcRefreshBookPreview()}
+  else {_fcUpdateJrReadMode();_fcRefreshJrPreview()}
 }
 function _fcRefreshBookPreview(){
   const notes=document.getElementById('log-notes');
@@ -9271,8 +9482,66 @@ function _fcRefreshBookPreview(){
   if(typeof updateJournalLenWarn==='function')updateJournalLenWarn();
 }
 function _fcClearBookFields(){
-  ['fc-book-name','fc-book-from','fc-book-to'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+  ['fc-book-name','fc-book-from','fc-book-to','fc-news-source','fc-news-headline','fc-news-link'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+  // Back to Book, the default, so the next English session starts the same way.
+  const h=document.getElementById('fc-read-kind');
+  if(h&&h.value!=='book')_fcSetReadKind('fc','book');
   _fcRefreshBookPreview();
+}
+
+// ── Journal box: English reading ────────────────────────────────────────────
+let _fcJrOn=false;
+function _fcJrResetRead(){
+  ['jrfc-book-name','jrfc-book-from','jrfc-book-to','jrfc-news-source','jrfc-news-headline','jrfc-news-link'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+  const h=document.getElementById('jrfc-read-kind'); if(h)h.value='book';
+  const b=document.getElementById('jrfc-kind-book'), n=document.getElementById('jrfc-kind-news');
+  if(b)b.classList.add('on'); if(n)n.classList.remove('on');
+  const t=document.getElementById('jr-title');
+  if(t){t.readOnly=false;t.classList.remove('fc-locked');t.placeholder='e.g. 2nd September - Algebra 1 Unit 4 Review';delete t.dataset.fcStash}
+  const lbl=document.getElementById('jr-title-label'); if(lbl)lbl.textContent='Journal Title';
+  const w=document.getElementById('jrfc-read'); if(w)w.style.display='none';
+  _fcJrOn=false;
+}
+function _fcRefreshJrPreview(){
+  const t=document.getElementById('jr-title');
+  if(!t||!_fcJrOn)return;
+  const r=_fcReadReading('jrfc',{allowNoTo:!((document.getElementById('jr-end')||{}).value)});
+  t.value=r.err?'':r.title;
+}
+// Runs on every jr-subject change (through updateKaProofBanner).
+function _fcUpdateJrReadMode(){
+  const sel=document.getElementById('jr-subject');
+  const t=document.getElementById('jr-title');
+  const w=document.getElementById('jrfc-read');
+  if(!sel||!t||!w)return;
+  const on=_fcBookMode(sel.value);
+  const kind=_fcKind('jrfc');
+  const bf=document.getElementById('jrfc-book-fields'), nf=document.getElementById('jrfc-news-fields');
+  if(on){
+    w.style.display='block';
+    if(bf)bf.style.display=kind==='book'?'grid':'none';
+    if(nf)nf.style.display=kind==='news'?'grid':'none';
+    const hint=document.getElementById('jrfc-read-hint');
+    if(hint)hint.textContent=kind==='news'
+      ?'English is for book or news reading only. All three are needed. The link goes into the Google Form as "Source: <link>" under the title.'
+      :'English is for book or news reading only. To page can stay empty while the journal is In progress (no End time yet).';
+    const lbl=document.getElementById('jr-title-label'); if(lbl)lbl.textContent='Journal Title (built from the fields below — locked)';
+    if(!_fcJrOn)t.dataset.fcStash=t.value;
+    t.readOnly=true; t.classList.add('fc-locked');
+    t.placeholder=kind==='news'?'News Article Reading | Source: Headline':'Book name Reading | P?? --> P??';
+    _fcJrOn=true;
+    _fcRefreshJrPreview();
+  }else{
+    w.style.display='none';
+    if(_fcJrOn){
+      t.readOnly=false; t.classList.remove('fc-locked');
+      t.placeholder='e.g. 2nd September - Algebra 1 Unit 4 Review';
+      t.value=t.dataset.fcStash||'';
+      delete t.dataset.fcStash;
+      const lbl=document.getElementById('jr-title-label'); if(lbl)lbl.textContent='Journal Title';
+      _fcJrOn=false;
+    }
+  }
 }
 // Runs from updateKaProofBanner(), i.e. on every Log subject change including
 // the ones made in code.
@@ -9285,17 +9554,23 @@ function _fcUpdateBookMode(){
   const noform=document.getElementById('fc-book-noform');
   const lbl=document.getElementById('log-notes-label');
   const on=_fcBookMode(sel.value);
-  if(fields)fields.style.display=on?'grid':'none';
+  const kind=_fcKind('fc');
+  const kwrap=document.getElementById('fc-read-kind-wrap');
+  const nfields=document.getElementById('fc-news-fields');
+  if(kwrap)kwrap.style.display=on?'flex':'none';
+  if(fields)fields.style.display=(on&&kind==='book')?'grid':'none';
+  if(nfields)nfields.style.display=(on&&kind==='news')?'grid':'none';
   if(on){
     if(banner){
-      banner.innerHTML='<strong>English is for book reading only.</strong> The title is built from the book name and pages below and cannot be typed. Once logged, the title and subject can never be edited, and the session can <strong>never be deleted</strong> — not from History and not from the Log page. Only its date and times can be changed.';
+      banner.innerHTML='<strong>English is for book or news-article reading only.</strong> The title is built from the fields below and cannot be typed. Once logged, the title'+(kind==='news'?', the link':'')+' and the subject can never be edited, and the session can <strong>never be deleted</strong> — not from History and not from the Log page. Only its date and times can be changed.'+
+        (kind==='news'?' The link goes into the Google Form as &ldquo;Source: &lt;link&gt;&rdquo; under the title.':'');
       banner.classList.add('show');
     }
-    if(lbl)lbl.textContent='Journal Title (built from the book fields — locked)';
+    if(lbl)lbl.textContent='Journal Title (built from the fields below — locked)';
     if(!_fcBookOn)notes.dataset.fcStash=notes.value;   // put back if he switches away again
     notes.readOnly=true;
     notes.classList.add('fc-locked');
-    notes.placeholder='Book name Reading | P?? --> P??';
+    notes.placeholder=kind==='news'?'News Article Reading | Source: Headline':'Book name Reading | P?? --> P??';
     _fcBookOn=true;
     _fcRefreshBookPreview();
     if(noform){
