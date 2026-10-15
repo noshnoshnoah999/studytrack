@@ -2264,7 +2264,7 @@ function _openFormForSession(sessionId){
   const sessions=loadSessions();
   const s=sessions.find(x=>x.id===sessionId);
   if(!s)return;
-  _openSubjectForm(s.subjectId,s.date,s.start,s.end,s.notes,sessionId,!!(s.journalMeta&&s.journalMeta.preply),_fcSessionLink(s));
+  _openSubjectForm(s.subjectId,s.date,s.start,s.end,s.notes,sessionId,_preplyReviewArg(s.journalMeta),_fcSessionLink(s));
 }
 
 // ── GOOGLE FORM SUBMISSION TRACKER ──────────────────────────────────────────
@@ -2357,12 +2357,27 @@ const JOURNAL_WRITING_LINE='Journal Writing Time (Included in Study Time):';
 // PREPLY LESSONS. A Preply lesson is logged PREPLY_REVIEW_MINS past the lesson's
 // own end time on the card. Those minutes are the post-lesson review: going back
 // through the tutor's notes and corrections in the Preply lesson chat straight
-// after the call. PREPLY_REVIEW_LINE is what states that on the Google Form, and
+// after the call. _preplyReviewLine() is what states that on the Google Form, and
 // like every other line in this block it is injected when the form URL is built
 // and NOWHERE else — never stored on the session, never shown in StudyTrack,
 // never written by a model. Noah, 2026-08-26.
+//
+// Since 2026-10-15 the review length is ASKED on the import confirmation screen
+// (some reviews run past ten minutes). PREPLY_REVIEW_MINS is now only the value
+// that box starts on, and the fallback for sessions logged before the box
+// existed. The number Noah types is stored on journalMeta.reviewMins and is what
+// End Time and the form line use. 0 = no review: the line is left off entirely.
 const PREPLY_REVIEW_MINS=10;
-const PREPLY_REVIEW_LINE='Post-Lesson Review ('+PREPLY_REVIEW_MINS+' Minutes)';
+// "Post-Lesson Review (1 Minute)" / "(20 Minutes)" - singular only at exactly 1.
+function _preplyReviewLine(mins){return 'Post-Lesson Review ('+mins+(mins===1?' Minute':' Minutes')+')'}
+// The value _formContents() takes for a session: false when it is not a Preply
+// lesson, otherwise the review minutes stored on it. Old sessions carry
+// reviewMins:10 already; anything missing falls back to PREPLY_REVIEW_MINS.
+function _preplyReviewArg(meta){
+  if(!meta||!meta.preply)return false;
+  const m=meta.reviewMins;
+  return (typeof m==='number'&&isFinite(m)&&m>=0)?Math.floor(m):PREPLY_REVIEW_MINS;
+}
 // Where the proof screenshot of the Preply chat goes. Set on the banner's link at
 // show time rather than hardcoded in the HTML, so there is exactly one copy of it.
 const PREPLY_PROOF_FOLDER_URL='https://drive.google.com/drive/u/1/folders/1gvfjEEpSvAEpVghbgB1w9dvk5p0ahU4F';
@@ -2408,7 +2423,10 @@ function _formContents(subjectId,start,end,notes,preply,link){
   if(link)extra.push('Source: '+link);
   // Sits above the journal-writing line so the box reads in the order things
   // happened: the lesson, the review straight after it, then the write-up.
-  if(preply)extra.push(PREPLY_REVIEW_LINE);
+  // `preply` is the review minutes (a number), or false for any other session.
+  // `true` is still accepted as "the default ten" in case an old caller passes it.
+  const reviewMins=(preply===true)?PREPLY_REVIEW_MINS:((typeof preply==='number'&&preply>0)?preply:0);
+  if(reviewMins>0)extra.push(_preplyReviewLine(reviewMins));
   if(!_isPeId(subjectId)||mins>JOURNAL_WRITING_PE_MIN_MINS)extra.push(JOURNAL_WRITING_LINE);
   if(!extra.length)return notes||'';
   const body=(notes||'').replace(/\r/g,'');
@@ -2490,7 +2508,7 @@ function updateJournalLenWarn(){
     (document.getElementById('log-start')||{}).value||'',
     (document.getElementById('log-end')||{}).value||'',
     journal,
-    !!(_pendingJournalMeta&&_pendingJournalMeta.preply),
+    _preplyReviewArg(_pendingJournalMeta),
     (typeof _fcLogNewsLink==='function')?_fcLogNewsLink():''
   );
   if(!url){el.style.display='none';return}
@@ -4172,8 +4190,6 @@ function showWorkoutSummary(result){
 function showPreplySummary(result){
   const dateLabel=result.date?(_ordinalDate(result.date)+' '+_journalYear(result.date)):'Unknown date';
   const lessonMins=Math.max(0,result.lessonMinutes||0);
-  const totalMins=lessonMins+PREPLY_REVIEW_MINS;
-  const sessionEnd=_addMins(result.startTime,totalMins);
   const el=document.getElementById('workout-summary-card');
   if(el){
     el.innerHTML=
@@ -4182,17 +4198,52 @@ function showPreplySummary(result){
       '<div class="workout-summary-row"><span>'+escHtml(
         _timeOfDay(result.startTime,null)+' | '+_fmtLessonLength(lessonMins)+
         ' Preply Japanese Lesson'+(result.teacher?' with '+result.teacher:''))+'</span></div>'+
-      '<div class="workout-summary-row"><span>'+escHtml(
-        result.startTime+' \u2013 '+sessionEnd+'  ('+_fmtHoursMins(totalMins,false)+')')+'</span></div>'+
-      '<div class="workout-summary-row"><span style="color:var(--text3);font-size:11px">'+escHtml(
-        _fmtHoursMins(lessonMins,false)+' lesson ('+result.startTime+'\u2013'+result.lessonEndTime+
-        ' on the card) + '+PREPLY_REVIEW_MINS+' min post-lesson review')+'</span></div>'+
+      // Asked here, before anything is logged, because the review is not on the
+      // card and sometimes runs past ten minutes. Noah, 2026-10-15.
+      '<div class="workout-summary-row" style="flex-direction:column;align-items:stretch;gap:6px;padding-top:10px">'+
+        '<label for="preply-review-mins" style="font-size:12px;font-weight:600;color:var(--text2)">How long did the post-lesson review take? (minutes)</label>'+
+        '<input type="number" class="form-input" id="preply-review-mins" min="0" step="1" inputmode="numeric" value="'+PREPLY_REVIEW_MINS+'" oninput="_updatePreplySummaryTimes()" style="border:1.5px solid var(--border)">'+
+      '</div>'+
+      '<div class="workout-summary-row"><span id="preply-summary-times"></span></div>'+
+      '<div class="workout-summary-row"><span id="preply-summary-breakdown" style="color:var(--text3);font-size:11px"></span></div>'+
       (result.teacher?'':'<div class="workout-summary-row"><span style="color:var(--o);font-size:11px">'+
         'No teacher name was read off the card \u2014 the title will leave it off</span></div>');
   }
+  _updatePreplySummaryTimes();
   document.getElementById('workout-upload-area').style.display='none';
   document.getElementById('workout-source-area').style.display='none';
   document.getElementById('workout-result-area').style.display='block';
+}
+
+// The review box on the Preply confirmation screen. Whole minutes, 0 or more,
+// no upper limit. Anything else (blank, decimal, negative) reads as null so the
+// Use button refuses rather than guessing a number.
+function _readPreplyReviewMins(){
+  const el=document.getElementById('preply-review-mins');
+  if(!el)return PREPLY_REVIEW_MINS;
+  const v=String(el.value||'').trim();
+  if(!/^\d+$/.test(v))return null;
+  return parseInt(v,10);
+}
+// Keeps the logged times on the confirmation screen in step with the box.
+function _updatePreplySummaryTimes(){
+  const r=_workoutResult;
+  const tEl=document.getElementById('preply-summary-times');
+  const bEl=document.getElementById('preply-summary-breakdown');
+  if(!r||!tEl||!bEl)return;
+  const lessonMins=Math.max(0,r.lessonMinutes||0);
+  const rm=_readPreplyReviewMins();
+  if(rm===null){
+    tEl.textContent='Enter the review minutes (0 or more)';
+    tEl.style.color='var(--err)';
+    bEl.textContent='';
+    return;
+  }
+  tEl.style.color='';
+  const totalMins=lessonMins+rm;
+  tEl.textContent=r.startTime+' \u2013 '+_addMins(r.startTime,totalMins)+'  ('+_fmtHoursMins(totalMins,false)+')';
+  bEl.textContent=_fmtHoursMins(lessonMins,false)+' lesson ('+r.startTime+'\u2013'+r.lessonEndTime+
+    ' on the card) + '+(rm>0?(rm+' min post-lesson review'):'no post-lesson review');
 }
 
 // ── JOURNAL CONTENT BUILDERS ────────────────────────────────────────────────
@@ -4259,7 +4310,7 @@ function _fmtLessonLength(mins){
 // The minutes here are the LESSON's own length off the card, never the logged
 // total. A 16:00–16:25 card gives "25 Minute" even though End Time on the form
 // reads 16:35 — so the title can never contradict the screenshot attached as
-// proof, and the ten extra minutes are accounted for by PREPLY_REVIEW_LINE
+// proof, and the extra review minutes are accounted for by the review line
 // instead. No teacher name on the card means the name is left off rather than
 // guessed at.
 function buildPreplyJournal(r){
@@ -4271,13 +4322,23 @@ function buildPreplyJournal(r){
 
 async function useWorkoutResult(){
   if(!_workoutResult)return;
-  if(_workoutResult.app==='Preply')_fillPreplyLogForm(_workoutResult);
+  if(_workoutResult.app==='Preply'){
+    const rm=_readPreplyReviewMins();
+    if(rm===null){
+      showToast('Enter how many minutes the post-lesson review took (0 or more)','var(--err)');
+      const el=document.getElementById('preply-review-mins');
+      if(el)el.focus();
+      return;
+    }
+    _fillPreplyLogForm(_workoutResult,rm);
+  }
 }
 
 // A Preply lesson is logged as JAPANESE, not PE, and its End Time is the
-// lesson's own end plus PREPLY_REVIEW_MINS — the only place in the app that adds
-// minutes to a session.
-function _fillPreplyLogForm(result){
+// lesson's own end plus the review minutes typed on the confirmation screen —
+// the only place in the app that adds minutes to a session.
+function _fillPreplyLogForm(result,reviewMins){
+  if(typeof reviewMins!=='number'||!isFinite(reviewMins)||reviewMins<0)reviewMins=PREPLY_REVIEW_MINS;
   const subjs=loadSubjects();
   const sel=document.getElementById('log-subject');
   if(sel){
@@ -4294,7 +4355,7 @@ function _fillPreplyLogForm(result){
   const lessonMins=Math.max(0,result.lessonMinutes||0);
   if(result.startTime){
     setLogTime('log-start',result.startTime);
-    setLogTime('log-end',_addMins(result.startTime,lessonMins+PREPLY_REVIEW_MINS));
+    setLogTime('log-end',_addMins(result.startTime,lessonMins+reviewMins));
   }
   updateLogDuration();
   updateLogFormColour();
@@ -4304,9 +4365,9 @@ function _fillPreplyLogForm(result){
     activity:'Lesson', app:'Preply', teacher:result.teacher||null,
     // The LESSON's length, matching the card — not the logged total.
     durationSeconds:lessonMins*60, model:result.model||null,
-    // Re-opening this session's form from History rebuilds PREPLY_REVIEW_LINE
-    // off this flag. Without it the line would silently vanish on a re-open.
-    preply:true, reviewMins:PREPLY_REVIEW_MINS
+    // Re-opening this session's form from History rebuilds the review line
+    // off these two. Without them the line would vanish or revert to ten.
+    preply:true, reviewMins:reviewMins
   };
   updateJournalLenWarn();
   showPreplyProofBanner();
@@ -7868,7 +7929,7 @@ function _doLogSession(){
   // Auto-open the subject's Google Form after logging. Since the Journal Content
   // box was merged into Notes on 2026-08-19 there is only one field, so `notes`
   // IS the submission text. _buildSubjectFormUrl() adds the journal-writing line.
-  if(_SUBJECT_FORMS[subjectId]) _openSubjectForm(subjectId,date,start,end,notes,_newId,!!(_rec.journalMeta&&_rec.journalMeta.preply),_fcSessionLink(_rec));
+  if(_SUBJECT_FORMS[subjectId]) _openSubjectForm(subjectId,date,start,end,notes,_newId,_preplyReviewArg(_rec.journalMeta),_fcSessionLink(_rec));
   // A logged session is the usual moment a contract boundary is crossed.
   if(typeof renderContractBanners==='function')renderContractBanners();
   // Hours left moved; a focus subject may have just been completed, which
