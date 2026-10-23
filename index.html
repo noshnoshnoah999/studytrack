@@ -2939,6 +2939,33 @@ function isSubjPrereqLocked(id, subjs){
 // One-time data migration: fixes existing stored subjects to match new structure.
 // Runs once per device; migration flag stored in localStorage so it never repeats.
 function runMigrations(){
+  // ── RETIRED migrations v4-v20 (retired 23 Oct 2026) ───────────────────────
+  // Every migration's done-flag lives only in that browser's localStorage, so
+  // a new browser/device or cleared site data runs them ALL again - and since
+  // the 2026-08-13 first-sync guard, against the REAL synced data. v13-v20
+  // recalculate base as "teacher total on REPORT_DATE minus sessions dated
+  // on/before REPORT_DATE", so sessions back-dated after their original run get
+  // subtracted a second time. On or after 9 Oct 2026 a re-run of v15 cut
+  // fine_art base from 34.15 to 14.24 (-19.91h): Fine Art fell from 151h
+  // (complete) to 131h. The older v4-v12 are just as unsafe on real data (v4
+  // forces el3 base to 150, v5 forces civics base to 1.7, v8 rebases every
+  // subject to the May 2026 report, v12 wipes the schedule) - previously
+  // v13-v20 happened to overwrite most of that damage. All of their results
+  // are already in the cloud rows, so none has anything left to do: mark them
+  // done up front so they can never run again on any device. v21 is left
+  // active (idempotent removal). v22 below repairs fine_art.
+  ['st_migration_v4','st_migration_v5','st_migration_v6b','st_migration_v7',
+   'st_migration_v8','st_migration_v9_el4_150','st_migration_v10_lang_art_transfer',
+   'st_migration_v11_el4_base_zero','st_migration_v12_clear_sched',
+   'st_migration_v13_base_recalib_jul2026',
+   'st_migration_v14_base_recalib_jul31_2026',
+   'st_migration_v15_base_recalib_aug06_2026',
+   'st_migration_v16_pe_total_aug12_2026',
+   'st_migration_v17_pe_corruption_fix_aug13_2026',
+   'st_migration_v18_pe_date_cutoff_fix_aug13_2026',
+   'st_migration_v19_pe_base_drift_sep09_2026',
+   'st_migration_v20_civics_labsci_fix_sep24_2026'
+  ].forEach(k=>{if(!localStorage.getItem(k))localStorage.setItem(k,'1')});
   // ── Migration v12: clear schedule so user can rebuild from scratch ─────────
   // One-time wipe of the weekly schedule, local AND cloud. Runs once per device
   // (guarded by st_migration_v12_clear_sched). Bumps the sched version counter so
@@ -3610,6 +3637,36 @@ function runMigrations(){
       }
     }catch(e){console.warn('[Migration v21] Error:',e);v21done=false}
     if(v21done)localStorage.setItem('st_migration_v21_remove_pe3_el56_oct01_2026','1');
+  }
+  // ── Migration v22: restore Fine Art base clobbered by a v15 re-run (23 Oct 2026) ──
+  // Teacher's Cinematography Art journal responses (50 confirmed entries) total
+  // 151:03 = 151.05h. Every StudyTrack fine_art session matches an entry; the
+  // base covers the 13 pre-app journals (Dec 2025 - Apr 2026, 31.9667h) plus
+  // 2.1833h of journal-writing time that went into the form only. Correct base
+  // = 151.05 - 116.8933 (session sum at fix time) = 34.1567, the same 34.15 that
+  // Noah confirmed as real on 2026-09-09. Writes a FIXED value (not derived from
+  // the session list) so it can never drift when sessions are back-dated, and
+  // only RAISES base, so it is a no-op once the cloud row carries the fix.
+  // Gated on a confirmed-good sync so it never pushes a stale st_subjs row.
+  if(!localStorage.getItem('st_migration_v22_fineart_base_restore_oct23_2026')&&_baseMigrationsAllowed()){
+    let v22done=true;
+    try{
+      const raw=localStorage.getItem('st_subjs');
+      if(raw){
+        const subjs=JSON.parse(raw);
+        const FA_BASE=34.1567;
+        const fa=subjs.find(x=>x.id==='fine_art');
+        if(fa&&(fa.base||0)<FA_BASE-0.01){
+          const was=fa.base||0;
+          fa.base=FA_BASE;
+          localStorage.setItem('st_subjs',JSON.stringify(subjs));
+          localStorage.setItem('st_subjs_updated_at',new Date().toISOString());
+          sbPush('st_subjs',subjs,{silent:true});
+          console.log('[Migration v22] fine_art base restored '+was+' -> '+FA_BASE+'h');
+        }
+      }
+    }catch(e){console.warn('[Migration v22] Error:',e);v22done=false}
+    if(v22done)localStorage.setItem('st_migration_v22_fineart_base_restore_oct23_2026','1');
   }
   if(!localStorage.getItem('st_migration_v7')){
     try{
