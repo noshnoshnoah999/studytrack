@@ -2212,7 +2212,8 @@ input.form-input.fc-locked{background:var(--bg4);color:var(--text2);cursor:not-a
     <div id="workout-result-area" style="display:none">
       <div class="workout-summary-card" id="workout-summary-card"></div>
       <div class="modal-actions" style="margin-top:14px">
-        <button class="btn-save" onclick="useWorkoutResult()">Use this →</button>
+        <button class="btn-save" id="wi-log-now" onclick="useWorkoutResult()">Log Now →</button>
+        <button class="btn-cancel" id="wi-park" onclick="parkWorkoutResult()">Park in Journals</button>
         <button class="btn-cancel" onclick="backToWorkoutUpload()">← Back</button>
       </div>
     </div>
@@ -2417,8 +2418,9 @@ const PREPLY_PROOF_FOLDER_URL='https://drive.google.com/drive/u/1/folders/1gvfjE
 // once the proof has actually been filed.
 //
 // Its state is a DOM class and NOTHING ELSE: never written to localStorage, never
-// restored on boot, and showPreplyProofBanner() has exactly ONE caller
-// (_fillPreplyLogForm). That is what makes it start hidden on every app open.
+// restored on boot, and showPreplyProofBanner() is called only when a Preply
+// lesson lands on the Log form (_fillPreplyLogForm, or fillLogFromJournal for a
+// parked Preply journal). That is what makes it start hidden on every app open.
 // Do not add persistence here — a banner that survived a reload would outlive the
 // upload it is asking for.
 function showPreplyProofBanner(){
@@ -4287,6 +4289,8 @@ function showWorkoutSummary(result){
 function showPreplySummary(result){
   const dateLabel=result.date?(_ordinalDate(result.date)+' '+_journalYear(result.date)):'Unknown date';
   const lessonMins=Math.max(0,result.lessonMinutes||0);
+  const _preplyTarget=_jpTargetId();
+  const _preplyNoForm=!_journalHasForm(_preplyTarget);
   const el=document.getElementById('workout-summary-card');
   if(el){
     el.innerHTML=
@@ -4304,8 +4308,15 @@ function showPreplySummary(result){
       '<div class="workout-summary-row"><span id="preply-summary-times"></span></div>'+
       '<div class="workout-summary-row"><span id="preply-summary-breakdown" style="color:var(--text3);font-size:11px"></span></div>'+
       (result.teacher?'':'<div class="workout-summary-row"><span style="color:var(--o);font-size:11px">'+
-        'No teacher name was read off the card \u2014 the title will leave it off</span></div>');
+        'No teacher name was read off the card \u2014 the title will leave it off</span></div>')+
+      (_preplyNoForm?'<div class="workout-summary-row" id="preply-park-hint"><span style="color:var(--o);font-size:11px">'+
+        escHtml(_journalSubjName(_preplyTarget))+' has no Google Form linked yet \u2014 Park in Journals is suggested</span></div>':'');
   }
+  // Park is SUGGESTED (primary style) when the Japanese contract the lesson
+  // would go to has no form yet - Log Now stays available. Noah, 2026-10-25.
+  const _ln=document.getElementById('wi-log-now'), _pk=document.getElementById('wi-park');
+  if(_ln)_ln.className=_preplyNoForm?'btn-cancel':'btn-save';
+  if(_pk)_pk.className=_preplyNoForm?'btn-save':'btn-cancel';
   _updatePreplySummaryTimes();
   document.getElementById('workout-upload-area').style.display='none';
   document.getElementById('workout-source-area').style.display='none';
@@ -4429,6 +4440,69 @@ async function useWorkoutResult(){
     }
     _fillPreplyLogForm(_workoutResult,rm);
   }
+}
+
+// The Preply facts a parked journal must keep so that, when it is later filled
+// back into the Log page, the Google Form still gets the Post-Lesson Review line
+// and the proof banner comes back. Without these the End Time (lesson + review)
+// would contradict the screenshot with nothing on the form explaining the gap.
+// Stored on the journal as j.preply; turned back into journalMeta by
+// _preplyMetaFromJournal(). Noah, 2026-10-25.
+function _preplyJournalData(teacher,lessonMins,reviewMins,model){
+  return {teacher:teacher||null,lessonMins:Math.max(0,lessonMins||0),
+          reviewMins:(typeof reviewMins==='number'&&isFinite(reviewMins)&&reviewMins>=0)?reviewMins:PREPLY_REVIEW_MINS,
+          model:model||null};
+}
+function _preplyMetaFromJournal(p){
+  return {activity:'Lesson', app:'Preply', teacher:p.teacher||null,
+    durationSeconds:Math.max(0,p.lessonMins||0)*60, model:p.model||null,
+    preply:true, reviewMins:(typeof p.reviewMins==='number'?p.reviewMins:PREPLY_REVIEW_MINS)};
+}
+
+// "Park in Journals" on the Preply confirmation screen: opens the New Journal box
+// filled in (nothing is stored until Save), for lessons that cannot be submitted
+// yet - e.g. while the coach has not made the next Japanese contract's form.
+// Pending journals count no hours, so nothing is double-counted: the hours are
+// logged once, when the journal is later filled into the Log page.
+function parkWorkoutResult(){
+  const r=_workoutResult;
+  if(!r||r.app!=='Preply')return;
+  const rm=_readPreplyReviewMins();
+  if(rm===null){
+    showToast('Enter how many minutes the post-lesson review took (0 or more)','var(--err)');
+    const el=document.getElementById('preply-review-mins');
+    if(el)el.focus();
+    return;
+  }
+  if(r.date&&r.date>todayStr()){
+    showToast('That date is in the future - a journal can only cover work you have already done.','var(--err)');return;
+  }
+  const lessonMins=Math.max(0,r.lessonMinutes||0);
+  const subjectId=_jpTargetId();
+  closeModal('workout-import-overlay');
+  showPage('journals');
+  openJournalModal();          // resets _jrFromLog / _jrPreplyData, snapshots EMPTY baseline
+  const sel=document.getElementById('jr-subject');
+  if(sel){
+    if(Array.prototype.some.call(sel.options,o=>o.value===subjectId))sel.value=subjectId;
+    else showToast(_journalSubjName(subjectId)+' is not selectable here - pick a subject by hand.','var(--err)');
+  }
+  const tEl=document.getElementById('jr-title'); if(tEl)tEl.value=buildPreplyJournal(r);
+  if(r.date){const dEl=document.getElementById('jr-date'); if(dEl)dEl.value=r.date}
+  if(r.startTime){
+    setLogTime('jr-start',r.startTime);
+    setLogTime('jr-end',_addMins(r.startTime,lessonMins+rm));
+  }
+  // Baseline NOT re-snapshotted (same as transferLogToJournal) so Cancel asks
+  // before throwing the read lesson away.
+  _jrPreplyData=_preplyJournalData(r.teacher,lessonMins,rm,r.model);
+  _jrCheckForm();
+  updateKaProofBanner('jr-subject','ka-proof-banner-jr');
+  _fcUpdateParkWarn();
+  _jrDayLoad();
+  updateJrDuration();
+  const dsc=document.getElementById('jr-desc'); if(dsc)dsc.focus();
+  showToast('Lesson ready to park - add anything missing, then Save','var(--ok)');
 }
 
 // A Preply lesson is logged as JAPANESE, not PE, and its End Time is the
@@ -8624,6 +8698,7 @@ function openJournalModal(editId){
   // Cleared on every open so a plain "+ New Journal" can never inherit the
   // Log-transfer flag and wipe a Log form Noah is still using.
   _jrFromLog=false;
+  _jrPreplyData=null;  // set again by parkWorkoutResult()/transferLogToJournal()
   _jrParkMode=false;   // set again by fcParkOther() when it opened this box
   const j = editId ? loadJournals().find(x=>x.id===editId) : null;
   document.getElementById('journal-modal-title').textContent = j ? 'Edit Journal' : 'New Journal';
@@ -8739,9 +8814,11 @@ function saveJournalEntry(){
       start:start,end:end,proof:proof,priority:priority,
       done:false,completedBy:null,completedAt:null,createdAt:now,updatedAt:now};
     _fcApplyReadingToJournal(nj,_rd);
+    if(_jrPreplyData)nj.preply=_jrPreplyData;
     list.push(nj);
   }
   saveJournals(list);
+  _jrPreplyData=null;
   closeModal('journal-modal-overlay');
   // Transferred from the Log page: the Log form is cleared ONLY now the
   // journal is safely stored. Clearing at click time would bin everything if
@@ -8790,6 +8867,7 @@ function _journalOverlayClick(e){
   if(e.target.id!=='journal-modal-overlay')return;   // click landed inside the sheet
   if(_jrHasUnsavedChanges()&&!confirm('Close without saving?\n\nYour journal entry will be discarded.'))return;
   _jrFromLog=false;   // abandoned transfer - the Log form keeps its values
+  _jrPreplyData=null;
   closeModal('journal-modal-overlay');
 }
 
@@ -8798,6 +8876,7 @@ function _journalOverlayClick(e){
 function _journalCancelClick(){
   if(_jrHasUnsavedChanges()&&!confirm('Close without saving?\n\nYour journal entry will be discarded.'))return;
   _jrFromLog=false;   // abandoned transfer - the Log form keeps its values
+  _jrPreplyData=null;
   closeModal('journal-modal-overlay');
 }
 
@@ -8871,6 +8950,11 @@ function fillLogFromJournal(id){
   if(typeof dismissDupWarn==='function')dismissDupWarn();
   updateLogDuration();
   _pendingJournalEntryId=j.id;
+  // A parked Preply lesson gets its journalMeta back, so the Google Form carries
+  // the Post-Lesson Review line, and the proof banner returns. Any other journal
+  // clears it, so stale Preply facts can never ride along on an unrelated fill.
+  if(j.preply){ _pendingJournalMeta=_preplyMetaFromJournal(j.preply); showPreplyProofBanner(); }
+  else _pendingJournalMeta=null;
   // AFTER the id is set, so the panel excludes the very journal just filled in
   // and does not warn that these times clash with themselves.
   _logDayLoad();
@@ -8884,6 +8968,10 @@ function fillLogFromJournal(id){
 // that is not a save clears it, so clearLogForm() can only ever fire on the
 // back of a journal that actually made it into storage.
 let _jrFromLog=false;
+// Preply facts for the journal being created (set by parkWorkoutResult() or by
+// transferLogToJournal() after a Preply import). Saved onto the NEW journal as
+// j.preply; cleared on every modal open and on Cancel.
+let _jrPreplyData=null;
 
 // Log form -> pending journal. The exact mirror of fillLogFromJournal above:
 // that turns a queued journal into a filled Log form, this turns a filled Log
@@ -8941,6 +9029,12 @@ function transferLogToJournal(){
   // the close-guard treats these transferred values as unsaved work and asks
   // before discarding them.
   _jrFromLog=true;
+  // A Preply import still on the Log form: keep its facts on the journal so the
+  // review line and proof banner come back when it is filled in later.
+  if(_pendingJournalMeta&&_pendingJournalMeta.preply){
+    const m=_pendingJournalMeta;
+    _jrPreplyData=_preplyJournalData(m.teacher,Math.round((m.durationSeconds||0)/60),m.reviewMins,m.model);
+  }
   _jrCheckForm();
   updateKaProofBanner('jr-subject','ka-proof-banner-jr');
   _fcUpdateParkWarn();
