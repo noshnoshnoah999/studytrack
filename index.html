@@ -2236,6 +2236,8 @@ const _SUBJECT_FORMS={
   // was .../1FAIpQLScr3Pp0jDNTQ6P3n6YAFLBzcuKWqb6YiC6lQtJqU3aKFNw-iQ/... with
   // confirmId 144075977 — kept here only as a record, nothing points at it now.
   pe:       {url:'https://docs.google.com/forms/d/e/1FAIpQLSfH7ynrmIUQr3QljYOEeUQDBBWVTxbaMCyeGj-7r-U2Cvy4kQ/viewform', confirmId:'1203417410'},
+  // Japanese #1 only. Japanese #2 has no form until the teacher makes it - its
+  // journals wait on the Journals page as "No form linked" until it is added here.
   japanese: {url:'https://docs.google.com/forms/d/e/1FAIpQLSfw8qjM8JkTLAsJgxgeDdd4TfqStnxK3hRz9prObOIqxcTL8w/viewform', confirmId:'1757403334'},
   cwp:      {url:'https://docs.google.com/forms/d/e/1FAIpQLSdl9Qkm0AreT18YF1Yx-sHXzdMygeR7E3LtZkt1PNEtwc1wvg/viewform', confirmId:'1832701138'},
   english:  {url:'https://docs.google.com/forms/d/e/1FAIpQLSfS0CMd-ejWxQvAw9Y6x1T_HLgn30j7QFJ_pMs-MpDSdFhqQg/viewform', confirmId:'782219930'},
@@ -2259,6 +2261,33 @@ const _SUBJECT_FORMS={
 const PE_SERIES=['pe'];
 function _isPeId(id){ return PE_SERIES.indexOf(id)!==-1 }
 function _peTargetId(){ return 'pe' }
+
+// -- JAPANESE ROUTING ---------------------------------------------------------
+// Japanese is three 150h contracts at school. Until 2026-10-24 StudyTrack held
+// it as ONE 450h row; Noah asked for three rows once Japanese #1 was full, so
+// each contract has its own bar, its own hours and its own Google Form.
+// `japanese` keeps its id and every session ever logged to it - it IS Japanese
+// #1 - and #2 / #3 are new rows chained through PREREQS (like the maths), so #3
+// stays locked until #2 is full. Nothing is migrated: req and name for these
+// rows are forced from DEFAULT_SUBJECTS on READ in loadSubjects(), because the
+// synced st_subjs still carries the old {name:'Japanese', req:450}.
+// Every Japanese auto-fill flow (Preply import, monthly-focus "Japanese is
+// always allowed") goes through _jpTargetId(), the first contract that is not
+// yet full.
+const JP_SERIES=['japanese','japanese2','japanese3'];
+function _isJpId(id){ return JP_SERIES.indexOf(id)!==-1 }
+function _jpTargetId(subjs){
+  subjs=subjs||loadSubjects();
+  const hours=loadHours();
+  for(const id of JP_SERIES){
+    const s=subjs.find(x=>x.id===id);
+    if(!s)continue;
+    if(s.done)continue;
+    if(s.req>0&&(s.base||0)+(hours[id]||0)>=s.req-1e-6)continue;
+    return id;
+  }
+  return JP_SERIES[JP_SERIES.length-1];
+}
 
 function _openFormForSession(sessionId){
   const sessions=loadSessions();
@@ -2879,8 +2908,11 @@ function parseLocalDate(s){
 
 // ── DEFAULT DATA ──────────────────────────────────────────────────────────────
 const DEFAULT_SUBJECTS=[
-  // Foreign Language — 3 credits = 450h (1 credit transferred from Fine Art, teacher-approved, 2026-07-02)
-  {id:'japanese',    name:'Japanese',            req:450, base:37.5,  passive:false, locked:false, done:false},
+  // Foreign Language — 3 credits = 450h (1 credit transferred from Fine Art, teacher-approved, 2026-07-02),
+  // held as three 150h contract rows since 2026-10-24 (see JP_SERIES). Order matters: #1, #2, #3.
+  {id:'japanese',    name:'Japanese #1',         req:150, base:37.5,  passive:false, locked:false, done:false},
+  {id:'japanese2',   name:'Japanese #2',         req:150, base:0,     passive:false, locked:false, done:false},
+  {id:'japanese3',   name:'Japanese #3',         req:150, base:0,     passive:false, locked:false, done:false},
   // Social Studies
   {id:'cwp',         name:'CWP / World History', req:75,  base:13.2,  passive:false, locked:false, done:false},
   // English: Grade 10→11→12 in order, 1 credit (150h) each
@@ -2923,7 +2955,9 @@ const PREREQS={
   'english_11': 'english',
   'english_12': 'english_11',
   'geometry':   'algebra1',
-  'algebra2':   'geometry'
+  'algebra2':   'geometry',
+  'japanese2':  'japanese',
+  'japanese3':  'japanese2'
 };
 
 // Returns true if the given subject can't be started yet (prereq not done)
@@ -3790,6 +3824,12 @@ function loadSubjects(){
       const result=stored.map(subj=>{
         const def=DEFAULT_SUBJECTS.find(d=>d.id===subj.id);
         if(!def) return subj;
+        // Japanese rows: req and the old one-row name come from the defaults (see JP_SERIES).
+        if(JP_SERIES.includes(subj.id)){
+          const o={...subj,req:def.req};
+          if(!o.name||o.name==='Japanese')o.name=def.name;
+          return o;
+        }
         return subj; // keep user's saved values as-is
       });
       // Add any new subjects from defaults not yet in stored data
@@ -4399,7 +4439,7 @@ function _fillPreplyLogForm(result,reviewMins){
   const subjs=loadSubjects();
   const sel=document.getElementById('log-subject');
   if(sel){
-    const jp=subjs.find(s=>s.id==='japanese');
+    const jp=subjs.find(s=>s.id===_jpTargetId(subjs));
     if(jp){
       if(_fcState().active){
         if(!_fcSelectLogSubject(jp.id)){showToast('Japanese cannot be logged right now, so the lesson was not filled in.','var(--err)');return}
@@ -9080,7 +9120,7 @@ const FOCUS_SEED={'2026-10':{
   side:[{id:'wa_hist',since:'2026-10-03',how:'start'}]
 }};
 const FOCUS_CORE_IDS=['algebra1','geometry','algebra2','science','english','english_11','english_12'];
-const FOCUS_SIDE_IDS=['japanese','cwp','wa_hist','us_hist','civics','fine_art','health','lab_sci'];
+const FOCUS_SIDE_IDS=['japanese','japanese2','japanese3','cwp','wa_hist','us_hist','civics','fine_art','health','lab_sci'];
 const ENGLISH_SERIES=['english','english_11','english_12'];
 const FOCUS_DAY_UNLOCK_H=8;
 const FOCUS_CHOOSE_LEAD_DAYS=3;
@@ -9178,7 +9218,7 @@ function _fcPool(slot,subjs){
   subjs=subjs||loadSubjects();
   const ids=slot==='core'?FOCUS_CORE_IDS:FOCUS_SIDE_IDS;
   return ids.map(id=>subjs.find(s=>s.id===id))
-    .filter(s=>s&&!_fcCompleted(s.id,subjs)&&!(slot==='core'&&isSubjPrereqLocked(s.id,subjs)));
+    .filter(s=>s&&!_fcCompleted(s.id,subjs)&&!((slot==='core'||_isJpId(s.id))&&isSubjPrereqLocked(s.id,subjs)));
 }
 
 // ── month resolution ────────────────────────────────────────────────────────
@@ -9202,7 +9242,7 @@ function _fcSlotEntries(ym,slot,f,depth){
   const prev=_fcSlotEntries(_fcAddMonths(ym,-1),slot,f,depth+1);
   const last=prev.length?prev[prev.length-1]:null;
   if(!last||!last.id)return [];
-  if(slot==='side'&&last.id==='japanese')return [];
+  if(slot==='side'&&_isJpId(last.id))return [];
   const start=_fcMonthStart(ym);
   if(_fcCompleted(last.id)){
     const on=_fcCompletedOn(last.id);
@@ -9255,7 +9295,7 @@ function _fcAllowedIds(st){
   const ids=[];
   if(st.core.id)ids.push(st.core.id);
   if(st.side.id&&!ids.includes(st.side.id))ids.push(st.side.id);
-  if(!ids.includes('japanese')&&subjs.find(s=>s.id==='japanese')&&!_fcCompleted('japanese',subjs))ids.push('japanese');
+  {const jp=_jpTargetId(subjs);if(!ids.includes(jp)&&subjs.find(s=>s.id===jp)&&!_fcCompleted(jp,subjs))ids.push(jp)}
   if(!_fcEnglishIsCore(st)){const e=_fcEnglishTarget(subjs);if(e&&!ids.includes(e))ids.push(e)}
   st._allowed=ids.slice();
   return ids;
@@ -9272,7 +9312,7 @@ function _fcMonthFocusIds(ym,f){
 function _fcTodayAllowedHours(st){
   st=st||_fcState();
   if(typeof st._todayH==='number')return st._todayH;
-  const ids=new Set(_fcMonthFocusIds(st.ym,st.f).concat(['japanese'],ENGLISH_SERIES));
+  const ids=new Set(_fcMonthFocusIds(st.ym,st.f).concat(JP_SERIES,ENGLISH_SERIES));
   st._todayH=loadSessions().filter(s=>s.date===st.today&&ids.has(s.subjectId)).reduce((a,s)=>a+(s.hours||0),0);
   return st._todayH;
 }
@@ -9284,6 +9324,7 @@ function _fcJournalLock(j,st){
   if(!st.active||!j||j.done)return null;
   if(st.blocked)return {kind:'choose',text:'Locked until you choose '+_fcMonthName(st.ym)+'’s focus subjects in the red block at the top.'};
   if(!j.subjectId)return null;
+  if(_isJpId(j.subjectId))return null;   // Japanese is always allowed, whichever contract the journal is on
   if(j.date&&j.date<FOCUS_START)return null;
   if(_fcAllowedIds(st).includes(j.subjectId))return null;
   const parked=_fcMonthOf(j.date||_fcIsoToTokyoDate(j.createdAt)||st.today);
@@ -10144,7 +10185,9 @@ function _renderProgSpotlight(){
 // cap is several contracts back to back: PE's 225h is 150 + 75, Japanese's 450h is
 // three 150s. StudyTrack still shows ONE row per subject carrying the full
 // requirement; the contracts appear as notches on the bar and as the contract
-// numbers the banners use.
+// numbers the banners use. Exception since 2026-10-24: Japanese is three 150h rows
+// (JP_SERIES), so each Japanese row has a single boundary and the next contract
+// comes from the PREREQS chain (Japanese #1 -> #2 -> #3).
 //
 // This replaces a hand-written CONTRACT_MARKERS table that only had room for one
 // notch per subject — which is why Japanese, needing two, showed none at all.
@@ -10404,7 +10447,7 @@ function renderSubjectsPage(){
   const pinIds=[];
   if(_fst.inRange){
     [_fst.core,_fst.side].forEach(sl=>{const id=sl.id||sl.done;if(id&&!pinIds.includes(id))pinIds.push(id)});
-    if(!pinIds.includes('japanese')&&allSubjs.some(s=>s.id==='japanese'))pinIds.push('japanese');
+    {const jp=_jpTargetId(allSubjs);if(!pinIds.includes(jp)&&allSubjs.some(s=>s.id===jp))pinIds.push(jp)}
   }
   const notPinned=s=>!pinIds.includes(s.id);
   const prereqLocked=allSubjs.filter(s=>!s.done&&!(getLogged(s.id)>=s.req&&s.req>0)&&isSubjPrereqLocked(s.id,allSubjs)).filter(notPinned);
@@ -10488,7 +10531,7 @@ function renderSubjectsPage(){
       '<div style="font-size:20px;font-weight:800;color:var(--text);white-space:nowrap">'+fmtH(ecTotal)+'</div>'+
     '</div>':'';
 
-  const pinSlot=id=>id===(_fst.core.id||_fst.core.done)?'Core':id===(_fst.side.id||_fst.side.done)?'Side':'Japanese';
+  const pinSlot=id=>id===(_fst.core.id||_fst.core.done)?'Core':id===(_fst.side.id||_fst.side.done)?'Side':'Japanese';  // the open Japanese contract
   const pinHtml=pinIds.length?
     '<div class="fc-pin-head">'+_fcMonthName(_fst.ym)+'\u2019s focus</div>'+
     pinIds.map(id=>allSubjs.find(s=>s.id===id)).filter(Boolean).map(s=>'<div class="fc-pin-slot">'+pinSlot(s.id)+'</div>'+makeRow(s)).join('')+
@@ -10839,7 +10882,7 @@ async function runCoachAnalysis(){
   if(btn)btn.disabled=true;
   if(status){status.style.display='block';status.textContent='Analysing with '+(model.includes('sonnet')?'Sonnet':'Haiku')+'…'}
 
-  const subjectList=`japanese=Japanese, cwp=CWP/Contemporary World Problems/World History, english=English/English Grade 10, english_11=English Grade 11, english_12=English Grade 12, el1=Electives 1/EL1, el2=Electives 2/EL2, el3=Electives 3/EL3, el4=Electives 4/EL4/Extra Credit, wa_hist=WA State History/Washington State History, us_hist=US History/United States History, civics=Civics, fine_art=Fine Art/Film/Fine Art & Film, pe=PE/Physical Education/PE Cardio/Cardio, health=Health/Health Science, science=Science, lab_sci=Lab Science/Laboratory Science, algebra1=Algebra 1/Algebra I, geometry=Geometry, algebra2=Algebra 2/Algebra II`;
+  const subjectList=`japanese=Japanese #1/Japanese 1/Japanese (first contract), japanese2=Japanese #2/Japanese 2, japanese3=Japanese #3/Japanese 3, cwp=CWP/Contemporary World Problems/World History, english=English/English Grade 10, english_11=English Grade 11, english_12=English Grade 12, el1=Electives 1/EL1, el2=Electives 2/EL2, el3=Electives 3/EL3, el4=Electives 4/EL4/Extra Credit, wa_hist=WA State History/Washington State History, us_hist=US History/United States History, civics=Civics, fine_art=Fine Art/Film/Fine Art & Film, pe=PE/Physical Education/PE Cardio/Cardio, health=Health/Health Science, science=Science, lab_sci=Lab Science/Laboratory Science, algebra1=Algebra 1/Algebra I, geometry=Geometry, algebra2=Algebra 2/Algebra II`;
 
   const prompt=`This is a teacher's progress report or weekly update for a student named Noah Flouty at TIHS school.
 
