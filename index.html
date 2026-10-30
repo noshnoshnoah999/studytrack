@@ -2085,7 +2085,11 @@ input.form-input.fc-locked{background:var(--bg4);color:var(--text2);cursor:not-a
       </div>
     </div>
 
-    <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.5">Total hours your teacher reported per subject — <em>leave blank to keep current</em></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <label for="coach-report-date" style="font-size:12px;font-weight:700;color:var(--text2);flex-shrink:0">Report date</label>
+      <input type="date" id="coach-report-date" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:14px;color:var(--text);font-family:inherit">
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.5">Total hours your teacher reported per subject, as of the report date — <em>leave blank to keep current</em>. Sessions you logged after that date are kept on top.</div>
     <div id="coach-report-list" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px;padding-right:2px"></div>
     <div class="modal-actions" style="margin-top:16px">
       <button class="btn-save" onclick="saveCoachReport()">Save All</button>
@@ -3017,7 +3021,7 @@ function runMigrations(){
       const newV=_getSchedV()+1;
       _setSchedLV(newV);
       // Push empty to cloud, then confirm the version so a later pull won't revert it.
-      sbPush('st_sched',[],{silent:true}).then(()=>{_setSchedCV(newV)});
+      sbPush('st_sched',[],{silent:true}).then(ok=>{if(ok)_setSchedCV(newV)});
       console.log('[Migration v12] Schedule cleared (local + cloud). Build from scratch in the Schedule tab.');
     }catch(e){console.warn('[Migration v12] Error:',e)}
     localStorage.setItem('st_migration_v12_clear_sched','1');
@@ -3658,7 +3662,7 @@ function runMigrations(){
           localStorage.setItem('st_sessions',JSON.stringify(kept));
           const newV=_getSessV()+1;
           _setSessLV(newV);
-          sbPush('st_sessions',kept).then(()=>{_setSessCV(newV)});
+          sbPush('st_sessions',kept).then(ok=>{if(ok)_setSessCV(newV)});
         }
         const hrs=JSON.parse(localStorage.getItem('st_hours')||'{}');
         REMOVED_SUBJECT_IDS.forEach(id=>{delete hrs[id]});
@@ -3718,7 +3722,7 @@ function runMigrations(){
           // Force push to cloud so all devices get the fix
           const newV=_getSchedV()+1;
           _setSchedLV(newV);
-          sbPush('st_sched',cleaned,{silent:true}).then(()=>{_setSchedCV(newV)});
+          sbPush('st_sched',cleaned,{silent:true}).then(ok=>{if(ok)_setSchedCV(newV)});
         }
       }
     }catch(e){}
@@ -3849,7 +3853,7 @@ function saveSubjects(s){const ts=new Date().toISOString();localStorage.setItem(
 // Persisted across reloads in localStorage so sync doesn't overwrite local edits
 function _getSchedV(){return parseInt(localStorage.getItem('st_sched_lv')||'0',10)}
 function _setSchedLV(v){localStorage.setItem('st_sched_lv',String(v))}
-function _setSchedCV(v){localStorage.setItem('st_sched_cv',String(v))}
+function _setSchedCV(v){if(v>_getSchedCV())localStorage.setItem('st_sched_cv',String(v))} // monotonic: an older push finishing late must not un-confirm a newer one
 function _getSchedCV(){return parseInt(localStorage.getItem('st_sched_cv')||'0',10)}
 function loadSchedule(){
   // Pure read: return exactly what is stored, never mutate/re-inject on load.
@@ -3865,7 +3869,7 @@ function saveSchedule(s){
   localStorage.setItem('st_sched',JSON.stringify(s));
   const newV=_getSchedV()+1;
   _setSchedLV(newV);
-  sbPush('st_sched',s).then(()=>{_setSchedCV(newV)});
+  sbPush('st_sched',s).then(ok=>{if(ok)_setSchedCV(newV)});
 }
 function loadSessions(){
   try{const s=localStorage.getItem('st_sessions');if(s)return JSON.parse(s).filter(x=>!REMOVED_SUBJECT_IDS.includes(x.subjectId))}catch(e){}
@@ -3877,23 +3881,138 @@ function loadSessions(){
 // this is what caused "edit a logged session, hit Save, it reverts."
 function _getSessV(){return parseInt(localStorage.getItem('st_sessions_lv')||'0',10)}
 function _setSessLV(v){localStorage.setItem('st_sessions_lv',String(v))}
-function _setSessCV(v){localStorage.setItem('st_sessions_cv',String(v))}
+function _setSessCV(v){if(v>_getSessCV())localStorage.setItem('st_sessions_cv',String(v))} // monotonic, see _setSchedCV
 function _getSessCV(){return parseInt(localStorage.getItem('st_sessions_cv')||'0',10)}
+// ── CROSS-DEVICE SESSION MERGE (2026-10-30 bug audit, bugs 3 + 4) ─────────────
+// Before: every save pushed this device's WHOLE session list, so a device holding
+// an older list (Mac left open while the iPhone edited) silently overwrote the
+// other device's edits; and the deleted-ids list was pushed whole too, so one
+// device's tombstones wiped the other's and deleted sessions could come back.
+// Now: each session carries updatedAt (stamped centrally here whenever its
+// content changes), every push first pulls the cloud list and merges it session
+// by session (newest edit wins, tombstoned ids never come back), and tombstone
+// lists are always UNIONED, never replaced. Sessions with no updatedAt (all
+// sessions saved before this change) tie, and on a tie the cloud copy wins -
+// exactly the old behaviour, so nothing already stored changes meaning.
+const TOMBSTONE_CAP=2000;
+let _sessPushChain=Promise.resolve(); // serialises session/tombstone pushes so they land in order
+
+function _stampSessionEdits(list){
+  const prev={};
+  try{(JSON.parse(localStorage.getItem('st_sessions')||'[]')).forEach(x=>{if(x&&x.id)prev[x.id]=x})}catch(e){}
+  const now=new Date().toISOString();
+  const body=o=>{const c={...o};delete c.updatedAt;return JSON.stringify(c)};
+  return list.map(x=>{
+    if(!x||!x.id)return x;
+    const p=prev[x.id];
+    if(p&&body(p)===body(x)){
+      if(p.updatedAt&&x.updatedAt!==p.updatedAt)return {...x,updatedAt:p.updatedAt};
+      return x;
+    }
+    return {...x,updatedAt:now};
+  });
+}
+// Union of two session lists by id. Newest updatedAt wins; on a tie the cloud
+// copy wins (old behaviour). Ids in deletedSet are dropped. Sessions without an
+// id (should not exist) are kept, de-duplicated by content.
+function _mergeSessionLists(local,cloud,deletedSet){
+  const byId=new Map(),order=[],noId=[],noIdSeen=new Set();
+  const put=(x,fromCloud)=>{
+    if(!x||typeof x!=='object')return;
+    if(!x.id){const k=JSON.stringify(x);if(!noIdSeen.has(k)){noIdSeen.add(k);noId.push(x)}return}
+    if(deletedSet&&deletedSet.has(x.id))return;
+    const cur=byId.get(x.id);
+    if(!cur){byId.set(x.id,x);order.push(x.id);return}
+    const a=cur.updatedAt||'',b=x.updatedAt||'';
+    if(b>a||(b===a&&fromCloud))byId.set(x.id,x);
+  };
+  (cloud||[]).forEach(x=>put(x,true));
+  (local||[]).forEach(x=>put(x,false));
+  return order.map(id=>byId.get(id)).concat(noId);
+}
+function _localTombstones(){
+  try{const l=JSON.parse(localStorage.getItem('st_deleted_sessions')||'[]');return Array.isArray(l)?l:[]}catch(e){return[]}
+}
+// Merge a SUCCESSFULLY pulled cloud tombstone row into the local list. Persists
+// the union locally, pushes it if the cloud was missing any, and returns the full
+// (uncapped) set for this merge. Never call with the result of a failed pull -
+// an empty "cloud" list would then be treated as real.
+function _mergeTombstones(cloudRow){
+  const local=_localTombstones();
+  const cloud=(cloudRow&&Array.isArray(cloudRow.value))?cloudRow.value:[];
+  const seen=new Set(),all=[];
+  cloud.concat(local).forEach(id=>{if(id&&!seen.has(id)){seen.add(id);all.push(id)}});
+  const capped=all.slice(-TOMBSTONE_CAP);
+  if(JSON.stringify(capped)!==JSON.stringify(local)){
+    try{localStorage.setItem('st_deleted_sessions',JSON.stringify(capped))}catch(e){}
+  }
+  const cloudSet=new Set(cloud);
+  if(capped.some(id=>!cloudSet.has(id)))sbPush('st_deleted_sessions',capped,{silent:true});
+  return new Set(all);
+}
+// st_hours is a cache derived from the session list (see syncFromCloud).
+function _recomputeHoursFromSessions(){
+  const all=JSON.parse(localStorage.getItem('st_sessions')||'[]');
+  const out={};
+  all.forEach(x=>{if(x&&x.subjectId)out[x.subjectId]=(out[x.subjectId]||0)+(x.hours||0)});
+  const next=JSON.stringify(out);
+  if((localStorage.getItem('st_hours')||'{}')!==next){
+    localStorage.setItem('st_hours',next);
+    sbPush('st_hours',out,{silent:true});
+    return true;
+  }
+  return false;
+}
+// Pull cloud sessions + tombstones, merge with what is stored locally NOW, write
+// the result back if the cloud added anything, then push it. Returns true only
+// when the push succeeded. If either pull fails nothing is pushed: pushing an
+// unmerged list is exactly what overwrote other devices' edits. The local edit
+// stays unconfirmed (lv != cv) and the next sync merges and pushes it.
+async function _pushSessionsMerged(){
+  const cl=await _sbPullStrict('st_sessions');
+  const tb=cl.ok?await _sbPullStrict('st_deleted_sessions'):{ok:false};
+  if(!cl.ok||!tb.ok){setSyncUI('error','Offline - will retry');return false}
+  const deletedSet=_mergeTombstones(tb.row);
+  const vNow=_getSessV();
+  const local=JSON.parse(localStorage.getItem('st_sessions')||'[]');
+  const cloud=(cl.row&&Array.isArray(cl.row.value))?cl.row.value:[];
+  const merged=_mergeSessionLists(local,cloud,deletedSet);
+  if(JSON.stringify(merged)!==JSON.stringify(local)){
+    try{localStorage.setItem('st_sessions',JSON.stringify(merged))}catch(e){console.error('[Sessions] local write failed:',e);return false}
+    _recomputeHoursFromSessions();
+    try{
+      updateSidebar();
+      if(['dashboard','history','progress','subjects','graduation'].includes(currentPage))showPage(currentPage);
+    }catch(e){}
+  }
+  const ok=await sbPush('st_sessions',merged);
+  if(ok)_setSessCV(vNow);
+  return ok;
+}
+function _queueSessionsPush(){
+  _sessPushChain=_sessPushChain.then(()=>_pushSessionsMerged()).catch(e=>{console.warn('[Sessions] push failed:',e);return false});
+  return _sessPushChain;
+}
 function saveSessions(s){
-  localStorage.setItem('st_sessions',JSON.stringify(s));
+  localStorage.setItem('st_sessions',JSON.stringify(_stampSessionEdits(s)));
   const newV=_getSessV()+1;
   _setSessLV(newV);
-  sbPush('st_sessions',s).then(()=>{_setSessCV(newV)});
+  setSyncUI('syncing','Saving…');
+  return _queueSessionsPush();
 }
 
-// Track deleted session IDs so deletions propagate across devices on sync
+// Track deleted session IDs so deletions propagate across devices on sync.
+// Added locally at once; the cloud list is then pulled and UNIONED (never
+// overwritten) - see _mergeTombstones.
 function _tombstoneSession(id){
   try{
-    const list=JSON.parse(localStorage.getItem('st_deleted_sessions')||'[]');
+    const list=_localTombstones();
     if(!list.includes(id))list.push(id);
-    const pruned=list.slice(-500); // keep last 500 tombstones max
-    localStorage.setItem('st_deleted_sessions',JSON.stringify(pruned));
-    sbPush('st_deleted_sessions',pruned,{silent:true});
+    localStorage.setItem('st_deleted_sessions',JSON.stringify(list.slice(-TOMBSTONE_CAP)));
+    _sessPushChain=_sessPushChain.then(async()=>{
+      const tb=await _sbPullStrict('st_deleted_sessions');
+      if(tb.ok)_mergeTombstones(tb.row);
+    }).catch(()=>{});
   }catch(e){}
 }
 
@@ -10864,12 +10983,24 @@ function openCoachReport(){
       </div>
     </div>`;
   }).join('');
+  const rd=document.getElementById('coach-report-date');
+  if(rd){rd.value=todayStr();rd.max=todayStr()}
   document.getElementById('coach-modal-overlay').classList.add('open');
 }
 
 function saveCoachReport(){
   const subjs=loadSubjects();
-  const hours=loadHours();
+  // The teacher's total only covers work up to the report's date. Only sessions
+  // dated ON OR BEFORE that day are subtracted to get the base; anything logged
+  // later stays on top of it. Before 2026-10-30 every logged session was
+  // subtracted, so entering a report a few days old silently removed those
+  // days' hours from the subject.
+  const rdEl=document.getElementById('coach-report-date');
+  const reportDate=(rdEl&&rdEl.value)||todayStr();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(reportDate)){showToast('Pick the date of the coach report.','var(--err)');return}
+  if(reportDate>todayStr()){showToast('The report date cannot be in the future.','var(--err)');return}
+  const loggedToReport={};
+  loadSessions().forEach(x=>{if(x&&x.subjectId&&x.date&&x.date<=reportDate)loggedToReport[x.subjectId]=(loggedToReport[x.subjectId]||0)+(x.hours||0)});
   let changed=0;
   document.querySelectorAll('#coach-report-list input[data-subj-id]').forEach(inp=>{
     const val=inp.value.trim();
@@ -10887,7 +11018,7 @@ function saveCoachReport(){
     // in st_hours. Previously this wrote enteredTotal straight to s.base,
     // which silently doubled every subject's hours the first time this
     // feature was used after any sessions had been logged.
-    const alreadyLogged=hours[s.id]||0;
+    const alreadyLogged=loggedToReport[s.id]||0; // sessions up to the report date only
     const newBase=Math.max(0,Math.round((enteredTotal-alreadyLogged)*10)/10);
     const oldBase=s.base||0;
     if(Math.abs(newBase-oldBase)<0.01)return; // no change
@@ -11766,7 +11897,10 @@ let _latestRecDaily=TEACHER_STATED_DAILY;
 function computeGoalRec(){
   try{
     const sessions=loadSessions();
-    const subjs=loadSubjects().filter(s=>!s.extraCredit);
+    // Same subject list as getTotalLogged() (2026-10-30 fix): required hours
+    // came from the stored list while logged hours came from the canonical one,
+    // so any drift between them skewed "hours still needed".
+    const subjs=_canonicalSubjs().filter(s=>!s.extraCredit);
     const goals=loadGoals();
     const daysPerWeek=goals.daysPerWeek||5;
     const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
@@ -11814,7 +11948,10 @@ function openGoalSettings(){
   // ── Calculate recommended goal ──────────────────────────────────────────────
   try{
     const sessions=loadSessions();
-    const subjs=loadSubjects();
+    // Canonical list minus extra credit, same as getTotalLogged() (2026-10-30
+    // fix): this used loadSubjects() unfiltered, so El4's 150h (extra credit,
+    // never counted) was added to "required" and inflated the recommendation.
+    const subjs=_canonicalSubjs().filter(s=>!s.extraCredit);
     const daysPerWeek=g.daysPerWeek||5;
     const TOTAL_REQ=subjs.reduce((a,s)=>a+s.req,0);
     const totalLogged=getTotalLogged();
@@ -12616,26 +12753,59 @@ async function verifyLoginCode(code){
 // Silently refresh the access token before it expires, so the session
 // behaves as "indefinite" without ever showing the login screen again
 // on this device (until the refresh token itself is revoked/expired).
-async function refreshSession(){
-  const s=getAuthSession();
-  if(!s||!s.refresh_token)return false;
-  try{
-    const res=await fetch(SB_URL+'/auth/v1/token?grant_type=refresh_token',{
-      method:'POST',
-      headers:{'apikey':SB_KEY,'Content-Type':'application/json'},
-      body:JSON.stringify({refresh_token:s.refresh_token})
-    });
-    if(!res.ok)return false;
-    const data=await res.json();
-    if(!data.access_token)return false;
-    setAuthSession({
-      access_token:data.access_token,
-      refresh_token:data.refresh_token||s.refresh_token,
-      user_id:data.user&&data.user.id||s.user_id,
-      expires_at:Date.now()+(data.expires_in||3600)*1000
-    });
-    return true;
-  }catch(e){return false}
+// Returns 'ok' | 'rejected' (Supabase refused the refresh token - a new login
+// code really is needed) | 'network' (offline, timeout, 5xx, 429 - try again
+// later) | 'none' (no stored sign-in). Concurrent callers share one request, so
+// a burst of 401s can never spend the same rotating refresh token twice.
+// Before 2026-10-30 every failure, including a Wi-Fi blip right after the Mac
+// woke, showed the login screen and forced a new emailed code.
+let _refreshInFlight=null;
+let _lastRefreshOkAt=0;
+function _refreshSessionDetailed(){
+  if(_refreshInFlight)return _refreshInFlight;
+  _refreshInFlight=(async()=>{
+    const s=getAuthSession();
+    if(!s||!s.refresh_token)return 'none';
+    try{
+      const res=await fetch(SB_URL+'/auth/v1/token?grant_type=refresh_token',{
+        method:'POST',
+        headers:{'apikey':SB_KEY,'Content-Type':'application/json'},
+        body:JSON.stringify({refresh_token:s.refresh_token})
+      });
+      if(!res.ok)return (res.status>=400&&res.status<500&&res.status!==408&&res.status!==429)?'rejected':'network';
+      const data=await res.json();
+      if(!data.access_token)return 'rejected';
+      setAuthSession({
+        access_token:data.access_token,
+        refresh_token:data.refresh_token||s.refresh_token,
+        user_id:data.user&&data.user.id||s.user_id,
+        expires_at:Date.now()+(data.expires_in||3600)*1000
+      });
+      _lastRefreshOkAt=Date.now();
+      return 'ok';
+    }catch(e){return 'network'}
+  })().finally(()=>{_refreshInFlight=null});
+  return _refreshInFlight;
+}
+async function refreshSession(){return (await _refreshSessionDetailed())==='ok'}
+// Used by sbPush/_sbPullStrict on a 401. Never shows the login screen itself.
+// If a refresh succeeded in the last 30s the token is already fresh, so just
+// retry with it rather than rotating the refresh token again.
+async function _refreshAuthOnce(){
+  if(Date.now()-_lastRefreshOkAt<30*1000)return true;
+  return (await _refreshSessionDetailed())==='ok';
+}
+// Refresh now; on a network failure retry every minute; only a refused refresh
+// token brings up the login screen.
+async function _runScheduledRefresh(){
+  const r=await _refreshSessionDetailed();
+  if(r==='ok'){scheduleTokenRefresh();return}
+  if(r==='network'){
+    if(_stRefreshTimer)clearTimeout(_stRefreshTimer);
+    _stRefreshTimer=setTimeout(_runScheduledRefresh,60*1000);
+    return;
+  }
+  showLoginScreen(); // refresh token dead (or no sign-in) — need a fresh code
 }
 
 function scheduleTokenRefresh(){
@@ -12644,12 +12814,19 @@ function scheduleTokenRefresh(){
   if(!s)return;
   // refresh 10 min before expiry, floor of 30s so we never spin
   const delay=Math.max((s.expires_at-Date.now())-10*60*1000,30*1000);
-  _stRefreshTimer=setTimeout(async()=>{
-    const ok=await refreshSession();
-    if(ok)scheduleTokenRefresh();
-    else showLoginScreen(); // refresh token dead — need a fresh code
-  },delay);
+  _stRefreshTimer=setTimeout(_runScheduledRefresh,delay);
 }
+// Timers freeze while the Mac sleeps or the PWA is in the background, so the
+// scheduled refresh can fire long after the token expired. Check again whenever
+// the app comes back to the screen or the network returns.
+function _refreshIfStale(){
+  const s=getAuthSession();
+  if(!s||!s.refresh_token)return;
+  if(Date.now()>(s.expires_at||0)-10*60*1000)_runScheduledRefresh();
+  else scheduleTokenRefresh();
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')_refreshIfStale()});
+window.addEventListener('online',_refreshIfStale);
 
 // Asks first — signing out means re-doing the emailed one-time code, which is
 // slow and needs the inbox to hand.
@@ -12751,8 +12928,16 @@ async function ensureAuthed(){
     return true;
   }
   if(Date.now()>s.expires_at-60*1000){
-    const ok=await refreshSession();
-    if(!ok){
+    const r=await _refreshSessionDetailed();
+    if(r==='network'){
+      // Offline at launch: open on local data and keep retrying in the
+      // background rather than demanding a new login code. Pulls fail while
+      // offline, so the sync and the base migrations stay safely gated.
+      if(_stRefreshTimer)clearTimeout(_stRefreshTimer);
+      _stRefreshTimer=setTimeout(_runScheduledRefresh,60*1000);
+      return true;
+    }
+    if(r!=='ok'){
       showLoginScreen();
       await _waitForLogin();
       return true;
@@ -12783,11 +12968,18 @@ async function sbPush(key,value,{silent=false}={}){
   try{
     const body={key,value,updated_at:new Date().toISOString()};
     if(uid)body.user_id=uid; // required once the RLS policy checks auth.uid() = user_id
-    const res=await fetch(SB_URL+'/rest/v1/study_data',{
+    const doPost=()=>fetch(SB_URL+'/rest/v1/study_data',{
       method:'POST',
       headers:{...sbHeaders(),'Prefer':'resolution=merge-duplicates'},
       body:JSON.stringify(body)
     });
+    let res=await doPost();
+    // Expired access token (Mac woke from sleep, refresh timer frozen): refresh
+    // once and retry instead of failing the save (2026-10-30 fix).
+    if(res.status===401&&await _refreshAuthOnce()){
+      if(!body.user_id){const u=getUserId();if(u)body.user_id=u}
+      res=await doPost();
+    }
     if(!silent){
       if(res.ok){setSyncUI('synced','Synced ✓')}
       else{setSyncUI('error','Sync error')}
@@ -12811,12 +13003,23 @@ let _syncOkThisLoad=false;
 function _baseMigrationsAllowed(){return _syncOkThisLoad}
 
 async function sbPull(key){
+  const r=await _sbPullStrict(key);
+  if(!r.ok){_sbPullFailed=true;return null}
+  return r.row;
+}
+// Like sbPull but says whether the request itself worked: {ok,row}. ok:false
+// means "unknown" (network error, rejected, or not signed in) and must never be
+// read as "the cloud has nothing" - the merge code depends on that difference.
+async function _sbPullStrict(key){
+  if(!getUserId())return {ok:false,row:null}; // signed out: RLS would return [] and look like an empty cloud
+  const doGet=()=>fetch(SB_URL+'/rest/v1/study_data?key=eq.'+encodeURIComponent(key)+'&select=value,updated_at',{headers:sbHeaders()});
   try{
-    const res=await fetch(SB_URL+'/rest/v1/study_data?key=eq.'+key+'&select=value,updated_at',{headers:sbHeaders()});
-    if(!res.ok){_sbPullFailed=true;return null}
+    let res=await doGet();
+    if(res.status===401&&await _refreshAuthOnce())res=await doGet();
+    if(!res.ok)return {ok:false,row:null};
     const rows=await res.json();
-    return rows&&rows[0]?rows[0]:null;
-  }catch(e){_sbPullFailed=true;return null}
+    return {ok:true,row:rows&&rows[0]?rows[0]:null};
+  }catch(e){return {ok:false,row:null}}
 }
 
 async function syncFromCloud(){
@@ -12825,46 +13028,34 @@ async function syncFromCloud(){
   try{
     const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_ai_history','st_holiday','st_notif_prefs','st_notif_templates','st_teacher_plan','st_journals','st_schoolwork','st_focus','st_focus_tracker','st_coach']; // st_hours is recomputed from sessions below, not pulled directly. st_teacher_plan is written externally by the teacher RPC and only ever pulled here (cloud-authoritative, falls through to the default setItem branch — the app never sbPushes it).
     // Pull st_deleted_sessions upfront so we can use it synchronously inside forEach
-    let cloudDeletedRaw=null;
-    try{cloudDeletedRaw=await sbPull('st_deleted_sessions')}catch(e){}
-    const cloudDeleted=Array.isArray(cloudDeletedRaw&&cloudDeletedRaw.value)?cloudDeletedRaw.value:[];
-    const localDeleted=JSON.parse(localStorage.getItem('st_deleted_sessions')||'[]');
-    const deletedSet=new Set([...cloudDeleted,...localDeleted]);
-    // If cloud had tombstones local didn't know about, persist them locally
-    if(cloudDeleted.length>localDeleted.length){
-      localStorage.setItem('st_deleted_sessions',JSON.stringify([...new Set([...localDeleted,...cloudDeleted])].slice(-500)));
-    }
+    // Tombstones are UNIONED with the cloud list (2026-10-30 fix): the old code
+    // only adopted the cloud list when it was longer, and pushed lists whole, so
+    // one device's deletions could erase the other's and sessions came back.
+    // A failed pull only uses the local list and pushes nothing.
+    const tbPull=await _sbPullStrict('st_deleted_sessions');
+    if(!tbPull.ok)_sbPullFailed=true;
+    const deletedSet=tbPull.ok?_mergeTombstones(tbPull.row):new Set(_localTombstones());
     const rows=await Promise.all(KEYS.map(k=>sbPull(k)));
     let updated=false;
-    let localOnlySessions=[]; // sessions we have locally that cloud didn't know about
     KEYS.forEach((k,i)=>{
       if(rows[i]&&rows[i].value!==undefined){
         if(k==='st_sessions'){
-          // Version guard: if there's a local edit (saveEditSession/saveSessions)
-          // whose push hasn't been confirmed yet, do NOT merge in the cloud copy —
-          // the ID-based merge below only adds sessions cloud doesn't have at all,
-          // so an *edited* session (same ID, changed fields) would otherwise have
-          // its cloud (stale) fields silently win. Instead re-push local and bail
-          // on this cycle; next sync will pick up the confirmed state.
-          const sessLv=_getSessV(),sessCv=_getSessCV();
-          if(sessLv!==0&&sessCv!==sessLv){
-            const localUnconfirmed=JSON.parse(localStorage.getItem('st_sessions')||'[]');
-            sbPush('st_sessions',localUnconfirmed).then(()=>{_setSessCV(sessLv)});
-            return; // skip merge for st_sessions this cycle — forEach `return` = continue
-          }
-          // Merge sessions by ID so local sessions are never lost if a push failed
+          // Session-by-session merge, newest edit wins (2026-10-30 fix, see
+          // _mergeSessionLists). This replaces both the old "cloud copy wins for
+          // the same id" merge - which reverted local edits whose push had not
+          // landed - and the lv/cv skip-and-repush guard, which re-pushed the
+          // whole local list and could overwrite another device's edits. A local
+          // edit now carries a newer updatedAt than the cloud copy, so it survives
+          // the merge whether or not its own push got through.
           const local=JSON.parse(localStorage.getItem('st_sessions')||'[]');
           const cloud=Array.isArray(rows[i].value)?rows[i].value:[];
-          const merged=cloud.filter(cs=>!deletedSet.has(cs.id));
-          for(const ls of local){
-            if(!deletedSet.has(ls.id)&&!merged.find(cs=>cs.id===ls.id)){
-              merged.push(ls);
-              localOnlySessions.push(ls); // track so we can patch st_hours below
-            }
-          }
-          // Push back if local added sessions OR cloud had tombstoned sessions that need cleaning
+          const vNow=_getSessV();
+          const merged=_mergeSessionLists(local,cloud,deletedSet);
           const cloudClean=cloud.filter(cs=>!deletedSet.has(cs.id));
-          if(merged.length!==cloudClean.length)sbPush('st_sessions',merged);
+          // Push only if the cloud is missing something - and through the same
+          // queue as saveSessions(), which re-pulls before pushing.
+          if(JSON.stringify(merged)!==JSON.stringify(cloudClean))_queueSessionsPush();
+          else _setSessCV(vNow); // cloud already holds exactly this state
           // Write with quota recovery — if full, nuke non-critical data and retry
           const _writeSessionsSafe=(data)=>{
             try{localStorage.setItem('st_sessions',JSON.stringify(data))}
@@ -12887,7 +13078,7 @@ async function syncFromCloud(){
             localStorage.setItem(k,JSON.stringify(rows[i].value));
           } else {
             // Unconfirmed local edits — push ours back up to cloud
-            sbPush('st_sched',JSON.parse(localStorage.getItem('st_sched')||'[]')).then(()=>{_setSchedCV(lv)});
+            sbPush('st_sched',JSON.parse(localStorage.getItem('st_sched')||'[]')).then(ok=>{if(ok)_setSchedCV(lv)});
           }
         } else if(k==='st_ai_history'){
           // Take whichever is longer (most messages) — don't overwrite a longer local history
@@ -12923,17 +13114,7 @@ async function syncFromCloud(){
     // Always recompute st_hours from the merged sessions list —
     // this prevents race conditions where sync overwrites a just-logged session's hours.
     // Sessions are the source of truth; st_hours is just a derived cache.
-    {
-      const allSessions=JSON.parse(localStorage.getItem('st_sessions')||'[]');
-      const recomputed={};
-      allSessions.forEach(s=>{if(s.subjectId)recomputed[s.subjectId]=(recomputed[s.subjectId]||0)+s.hours});
-      const prev=localStorage.getItem('st_hours')||'{}';
-      const next=JSON.stringify(recomputed);
-      if(prev!==next){
-        localStorage.setItem('st_hours',next);
-        sbPush('st_hours',recomputed,{silent:true});
-      }
-    }
+    _recomputeHoursFromSessions();
     // A sync only counts as "good" if nothing failed at the network level AND the
     // sessions row genuinely came back. Migrations that derive `base` from the
     // session list (v13-v19) are gated on this: running them against a partial
