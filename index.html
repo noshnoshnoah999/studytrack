@@ -1061,6 +1061,12 @@ button:active{transform:scale(0.96)}
 .fc-book-fields{display:none;grid-template-columns:2fr 1fr 1fr;gap:10px;margin:14px 0 0 0}
 .fc-news-fields{display:none;grid-template-columns:1fr 2fr;gap:10px;margin:14px 0 0 0}
 .fc-news-fields .fc-news-link{grid-column:1 / -1}
+/* Morning News Digest (2026-10-31): up to 3 articles in one English session. */
+.fc-news-extra{display:none;margin:0}
+.fc-news-rowhead{grid-column:1 / -1;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:800;color:var(--text2);margin-top:4px}
+.fc-news-rm{background:none;border:none;color:var(--text3);font-size:12px;font-weight:700;cursor:pointer;padding:2px 4px;font-family:inherit;text-decoration:underline}
+.fc-news-add{display:block;width:100%;background:none;border:1.5px dashed var(--border);color:var(--text2);border-radius:10px;padding:9px 12px;margin:10px 0 0 0;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.fc-news-topic{margin:10px 0 0 0}
 .fc-read-kind{display:none;gap:8px;margin:14px 0 0 0}
 .fc-kind-btn{flex:1;background:var(--bg3,var(--bg2));color:var(--text2);border:1.5px solid var(--border);border-radius:10px;padding:9px 12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
 .fc-kind-btn.on{background:var(--text);color:var(--bg);border-color:var(--text)}
@@ -1315,6 +1321,45 @@ input.form-input.fc-locked{background:var(--bg4);color:var(--text2);cursor:not-a
             <label class="form-label">Article link</label>
             <input type="url" class="form-input" id="fc-news-link" placeholder="https://..." autocomplete="off" autocapitalize="off" spellcheck="false" oninput="_fcRefreshBookPreview()">
           </div>
+        </div>
+        <!-- Morning News Digest (2026-10-31): articles 2 and 3 + Story topic. -->
+        <input type="hidden" id="fc-news-count" value="1">
+        <div class="fc-news-extra" id="fc-news-extra">
+          <div class="fc-news-fields" id="fc-news-row-2">
+            <div class="fc-news-rowhead"><span>Article 2</span><button type="button" class="fc-news-rm" onclick="_fcRemoveArticle('fc',2)">Remove</button></div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Source</label>
+              <input type="text" class="form-input" id="fc-news-source-2" placeholder="e.g. BBC News" autocomplete="off" oninput="_fcRefreshBookPreview()">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Headline</label>
+              <input type="text" class="form-input" id="fc-news-headline-2" autocomplete="off" oninput="_fcRefreshBookPreview()">
+            </div>
+            <div class="form-group fc-news-link" style="margin-bottom:0">
+              <label class="form-label">Article link</label>
+              <input type="url" class="form-input" id="fc-news-link-2" placeholder="https://..." autocomplete="off" autocapitalize="off" spellcheck="false" oninput="_fcRefreshBookPreview()">
+            </div>
+          </div>
+          <div class="fc-news-fields" id="fc-news-row-3">
+            <div class="fc-news-rowhead"><span>Article 3</span><button type="button" class="fc-news-rm" onclick="_fcRemoveArticle('fc',3)">Remove</button></div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Source</label>
+              <input type="text" class="form-input" id="fc-news-source-3" placeholder="e.g. BBC News" autocomplete="off" oninput="_fcRefreshBookPreview()">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Headline</label>
+              <input type="text" class="form-input" id="fc-news-headline-3" autocomplete="off" oninput="_fcRefreshBookPreview()">
+            </div>
+            <div class="form-group fc-news-link" style="margin-bottom:0">
+              <label class="form-label">Article link</label>
+              <input type="url" class="form-input" id="fc-news-link-3" placeholder="https://..." autocomplete="off" autocapitalize="off" spellcheck="false" oninput="_fcRefreshBookPreview()">
+            </div>
+          </div>
+          <div class="form-group fc-news-topic" id="fc-news-topic-wrap" style="margin-bottom:0">
+            <label class="form-label">Story topic (needed for 2+ articles)</label>
+            <input type="text" class="form-input" id="fc-news-topic" placeholder="e.g. Mass Protests Across France" autocomplete="off" oninput="_fcRefreshBookPreview()">
+          </div>
+          <button type="button" class="fc-news-add" id="fc-news-add" onclick="_fcAddArticle('fc')">+ Add another article</button>
         </div>
         <div class="fc-noform" id="fc-book-noform"></div>
         <div class="duration-display" id="log-duration" style="margin:10px 0 14px"></div>
@@ -1839,6 +1884,45 @@ input.form-input.fc-locked{background:var(--bg4);color:var(--text2);cursor:not-a
           <input type="url" class="form-input" id="jrfc-news-link" placeholder="https://..." autocomplete="off" autocapitalize="off" spellcheck="false" oninput="_fcRefreshJrPreview()">
         </div>
       </div>
+      <!-- Morning News Digest (2026-10-31): articles 2 and 3 + Story topic. -->
+      <input type="hidden" id="jrfc-news-count" value="1">
+      <div class="fc-news-extra" id="jrfc-news-extra">
+        <div class="fc-news-fields" id="jrfc-news-row-2">
+          <div class="fc-news-rowhead"><span>Article 2</span><button type="button" class="fc-news-rm" onclick="_fcRemoveArticle('jrfc',2)">Remove</button></div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Source</label>
+            <input type="text" class="form-input" id="jrfc-news-source-2" placeholder="e.g. BBC News" autocomplete="off" oninput="_fcRefreshJrPreview()">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Headline</label>
+            <input type="text" class="form-input" id="jrfc-news-headline-2" autocomplete="off" oninput="_fcRefreshJrPreview()">
+          </div>
+          <div class="form-group fc-news-link" style="margin-bottom:0">
+            <label class="form-label">Article link</label>
+            <input type="url" class="form-input" id="jrfc-news-link-2" placeholder="https://..." autocomplete="off" autocapitalize="off" spellcheck="false" oninput="_fcRefreshJrPreview()">
+          </div>
+        </div>
+        <div class="fc-news-fields" id="jrfc-news-row-3">
+          <div class="fc-news-rowhead"><span>Article 3</span><button type="button" class="fc-news-rm" onclick="_fcRemoveArticle('jrfc',3)">Remove</button></div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Source</label>
+            <input type="text" class="form-input" id="jrfc-news-source-3" placeholder="e.g. BBC News" autocomplete="off" oninput="_fcRefreshJrPreview()">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Headline</label>
+            <input type="text" class="form-input" id="jrfc-news-headline-3" autocomplete="off" oninput="_fcRefreshJrPreview()">
+          </div>
+          <div class="form-group fc-news-link" style="margin-bottom:0">
+            <label class="form-label">Article link</label>
+            <input type="url" class="form-input" id="jrfc-news-link-3" placeholder="https://..." autocomplete="off" autocapitalize="off" spellcheck="false" oninput="_fcRefreshJrPreview()">
+          </div>
+        </div>
+        <div class="form-group fc-news-topic" id="jrfc-news-topic-wrap" style="margin-bottom:0">
+          <label class="form-label">Story topic (needed for 2+ articles)</label>
+          <input type="text" class="form-input" id="jrfc-news-topic" placeholder="e.g. Mass Protests Across France" autocomplete="off" oninput="_fcRefreshJrPreview()">
+        </div>
+        <button type="button" class="fc-news-add" id="jrfc-news-add" onclick="_fcAddArticle('jrfc')">+ Add another article</button>
+      </div>
       <div style="font-size:11px;color:var(--text3);line-height:1.45" id="jrfc-read-hint"></div>
     </div>
     <div class="fc-park-warn" id="fc-park-warn"></div>
@@ -2300,7 +2384,7 @@ function _openFormForSession(sessionId){
   const sessions=loadSessions();
   const s=sessions.find(x=>x.id===sessionId);
   if(!s)return;
-  _openSubjectForm(s.subjectId,s.date,s.start,s.end,s.notes,sessionId,_preplyReviewArg(s.journalMeta),_fcSessionLink(s));
+  _openSubjectForm(s.subjectId,s.date,s.start,s.end,s.notes,sessionId,_preplyReviewArg(s.journalMeta),_fcSessionLinks(s));
 }
 
 // ── GOOGLE FORM SUBMISSION TRACKER ──────────────────────────────────────────
@@ -2453,11 +2537,14 @@ const JOURNAL_WRITING_PE_MIN_MINS=25;
 function _formContents(subjectId,start,end,notes,preply,link){
   const mins=(start&&end)?(toMins(end)-toMins(start)):0;
   const extra=[];
+  // Morning News Digest (2026-10-31): `link` may be an array - one "Source:"
+  // line per article, in order. A plain string still works for old callers.
+  const _links=(Array.isArray(link)?link:(link?[link]:[])).filter(Boolean);
   // English news-article reading: the article link goes straight under the
   // title as "Source: <link>" (Noah, 2026-10-14). Unlike the lines below it IS
   // stored - on the session, as article.url - because the "Forms to submit"
   // list rebuilds this text later and must not lose it.
-  if(link)extra.push('Source: '+link);
+  _links.forEach(l=>extra.push('Source: '+l));
   // Sits above the journal-writing line so the box reads in the order things
   // happened: the lesson, the review straight after it, then the write-up.
   // `preply` is the review minutes (a number), or false for any other session.
@@ -6629,8 +6716,8 @@ function renderHistory(){
             (timeStr?'<span class="hist-card-time">'+timeStr+'</span>':'')+
           '</div>'+
           (s.notes?'<div class="hist-card-notes">'+escHtml(s.notes)+'</div>':'')+
-          (s.bookReading?'<div><span class="fc-hist-tag">'+(s.article?'News article':'Book reading')+' \u00b7 locked</span>'+(!_SUBJECT_FORMS[s.subjectId]?'<span class="fc-hist-noform">No form linked</span>':'')+'</div>':'')+
-          (_fcSessionLink(s)?'<a class="fc-hist-link" href="'+escHtml(_fcSessionLink(s))+'" target="_blank" rel="noopener noreferrer">Source: '+escHtml(_fcSessionLink(s))+'</a>':'')+
+          (s.bookReading?'<div><span class="fc-hist-tag">'+(s.article?(_fcArticles(s).length>1?'News digest':'News article'):'Book reading')+' \u00b7 locked</span>'+(!_SUBJECT_FORMS[s.subjectId]?'<span class="fc-hist-noform">No form linked</span>':'')+'</div>':'')+
+          _fcLinksHtml(s)+
           '<div class="hist-card-logged" id="hist-logged-'+s.id+'" style="display:none">'+escHtml(_fmtLoggedAt(s.loggedAt))+'</div>'+
         '</div>'+
         formPill+
@@ -6776,8 +6863,8 @@ function openEditSession(id){
   const _esNote=document.getElementById('es-lock-note');
   if(_esNote){
     if(s.bookReading){
-      _esNote.innerHTML=(s.article?'<strong>News-article session.</strong> The title, link and subject are locked':'<strong>Book-reading session.</strong> The title and subject are locked')+' and it can never be deleted. Only the date and times can be changed.'+
-        (_fcSessionLink(s)?' Source: '+escHtml(_fcSessionLink(s))+'.':'')+
+      _esNote.innerHTML=(s.article?(_fcArticles(s).length>1?'<strong>News digest session.</strong> The title, links and subject are locked':'<strong>News-article session.</strong> The title, link and subject are locked'):'<strong>Book-reading session.</strong> The title and subject are locked')+' and it can never be deleted. Only the date and times can be changed.'+
+        (_fcSessionLinks(s).length?' '+_fcSessionLinks(s).map(l=>'Source: '+escHtml(l)).join(' ')+'.':'')+
         (!_SUBJECT_FORMS[s.subjectId]?' <strong>No Google Form is linked to '+escHtml(_fcName(s.subjectId))+'.</strong>':'');
       _esNote.style.display='block';
     }else _esNote.style.display='none';
@@ -8160,7 +8247,7 @@ function _doLogSession(){
   if(_fcBookMode(subjectId)){
     book=_fcReadBook();
     if(book.err){showToast(book.err,'var(--err)');return}
-    if(_fcReadingDup(book)){showToast((book.kind==='news'?'That news article is already logged. ':'That book and page range is already logged. ')+_FC_NO_DELETE,'var(--err)');return}
+    if(_fcReadingDup(book)){showToast((book.kind==='news'?((book.articles&&book.articles.length>1)?'One of these articles is already logged. ':'That news article is already logged. '):'That book and page range is already logged. ')+_FC_NO_DELETE,'var(--err)');return}
     const dd=findDuplicateSession(subjectId,date,start,end);
     if(dd&&dd.type==='exact'){showToast('This exact session is already logged. '+_FC_NO_DELETE,'var(--err)');return}
   }
@@ -8179,7 +8266,14 @@ function _doLogSession(){
   // exactly like a book) plus article:{source,headline,url} instead of book.
   if(book){
     _rec.bookReading=true;
-    if(book.kind==='news'){_rec.readKind='news';_rec.article={source:book.source,headline:book.headline,url:book.url}}
+    if(book.kind==='news'){
+      _rec.readKind='news';
+      // `article` is ALWAYS the first article, so an older cached build that only
+      // knows `article` still locks the session and shows a link. A digest adds
+      // `articles` (all of them, 2-3) and `topic`.
+      _rec.article={source:book.source,headline:book.headline,url:book.url};
+      if(book.articles&&book.articles.length>1){_rec.articles=book.articles.map(a=>({source:a.source,headline:a.headline,url:a.url}));_rec.topic=book.topic}
+    }
     else _rec.book={name:book.name,from:book.from,to:book.to};
   }
   // Since 2026-08-19 `notes` IS the journal content (the separate Journal Content
@@ -8221,7 +8315,7 @@ function _doLogSession(){
   // Auto-open the subject's Google Form after logging. Since the Journal Content
   // box was merged into Notes on 2026-08-19 there is only one field, so `notes`
   // IS the submission text. _buildSubjectFormUrl() adds the journal-writing line.
-  if(_SUBJECT_FORMS[subjectId]) _openSubjectForm(subjectId,date,start,end,notes,_newId,_preplyReviewArg(_rec.journalMeta),_fcSessionLink(_rec));
+  if(_SUBJECT_FORMS[subjectId]) _openSubjectForm(subjectId,date,start,end,notes,_newId,_preplyReviewArg(_rec.journalMeta),_fcSessionLinks(_rec));
   // A logged session is the usual moment a contract boundary is crossed.
   if(typeof renderContractBanners==='function')renderContractBanners();
   // Hours left moved; a focus subject may have just been completed, which
@@ -8803,7 +8897,7 @@ function _journalCard(j,st){
     (bits.length?'<div class="jr-meta">'+bits.join(' · ')+'</div>':'')+
     (j.desc?'<div class="jr-desc">'+escHtml(j.desc)+'</div>':'')+
     (j.proof?'<div class="jr-proof">Proof: '+escHtml(j.proof)+'</div>':'')+
-    (_fcSessionLink(j)?'<a class="fc-hist-link" href="'+escHtml(_fcSessionLink(j))+'" target="_blank" rel="noopener noreferrer">Source: '+escHtml(_fcSessionLink(j))+'</a>':'')+
+    _fcLinksHtml(j)+
     (fcLock?'<div class="fc-jr-lock"><strong>Locked.</strong> '+escHtml(fcLock.text)+'</div>':'')+
     '<div class="jr-actions">'+
       (j.done?'':(fcLock?'<button class="jr-btn fc-btn-locked" disabled title="'+escHtml(fcLock.text)+'">Locked</button>':
@@ -8970,7 +9064,8 @@ function _jrCurrentValues(){
     end:document.getElementById('jr-end').value,
     proof:document.getElementById('jr-proof').value,
     priority:document.getElementById('jr-priority').checked,
-    read:['jrfc-read-kind','jrfc-book-name','jrfc-book-from','jrfc-book-to','jrfc-news-source','jrfc-news-headline','jrfc-news-link']
+    read:['jrfc-read-kind','jrfc-book-name','jrfc-book-from','jrfc-book-to','jrfc-news-source','jrfc-news-headline','jrfc-news-link',
+      'jrfc-news-count','jrfc-news-source-2','jrfc-news-headline-2','jrfc-news-link-2','jrfc-news-source-3','jrfc-news-headline-3','jrfc-news-link-3','jrfc-news-topic']
       .map(i=>{const e=document.getElementById(i);return e?e.value:''}).join('\u0001')
   };
 }
@@ -9736,6 +9831,75 @@ function _fcBookTitle(name,from,to){return name+' Reading | P'+from+' --> P'+to}
 // one article per session, Source = the site or paper name, plus an Article link
 // that goes into the Google Form as "Source: <link>" under the title.
 function _fcNewsTitle(source,headline){return 'News Article Reading | '+source+': '+headline}
+// Morning News Digest (Noah, 2026-10-31): 2-3 articles logged as ONE session and
+// ONE Google Form, because the daily digest is one piece of work with one start
+// and end time. Title: "Morning News Digest | BBC News & NHK World - Topic".
+var FC_NEWS_MAX=3;   // var, not const: safe even if a render runs before this line
+function _fcJoinSources(list){
+  const s=list.slice();
+  if(s.length<=1)return s.join('');
+  const last=s.pop();
+  return s.join(', ')+' & '+last;
+}
+function _fcDigestTitle(sources,topic){return 'Morning News Digest | '+_fcJoinSources(sources)+' - '+topic}
+// Every article on a session or journal: `articles` when it is a digest,
+// otherwise the single `article` (all sessions logged before 2026-10-31).
+function _fcArticles(o){
+  if(o&&Array.isArray(o.articles)&&o.articles.length)return o.articles.filter(a=>a&&typeof a==='object');
+  if(o&&o.article&&typeof o.article==='object')return [o.article];
+  return [];
+}
+// Every safe link on a session or journal, in order.
+function _fcSessionLinks(o){
+  return _fcArticles(o).map(a=>a&&a.url).filter(u=>_fcValidLink(u));
+}
+// "Source: <link>" anchors for History and journal cards (one per article).
+function _fcLinksHtml(o){
+  return _fcSessionLinks(o).map(u=>'<a class="fc-hist-link" href="'+escHtml(u)+'" target="_blank" rel="noopener noreferrer">Source: '+escHtml(u)+'</a>').join('');
+}
+function _fcNewsCount(p){
+  const e=document.getElementById(p+'-news-count');
+  const n=e?parseInt(e.value,10):1;
+  return (n>=1&&n<=FC_NEWS_MAX)?n:1;
+}
+// Shows rows 2..n, the Story topic (2+ articles) and the Add button (< max),
+// only while the box is in News article mode.
+function _fcNewsRows(p,show){
+  const n=_fcNewsCount(p);
+  const ex=document.getElementById(p+'-news-extra');
+  if(ex)ex.style.display=show?'block':'none';
+  for(let i=2;i<=FC_NEWS_MAX;i++){const r=document.getElementById(p+'-news-row-'+i);if(r)r.style.display=(show&&i<=n)?'grid':'none'}
+  const tw=document.getElementById(p+'-news-topic-wrap'); if(tw)tw.style.display=(show&&n>1)?'block':'none';
+  const ab=document.getElementById(p+'-news-add'); if(ab)ab.style.display=(show&&n<FC_NEWS_MAX)?'block':'none';
+}
+function _fcNewsSetCount(p,n){
+  const e=document.getElementById(p+'-news-count'); if(e)e.value=String(Math.max(1,Math.min(FC_NEWS_MAX,n)));
+  _fcNewsRows(p,_fcKind(p)==='news'&&(p==='fc'?_fcBookOn:_fcJrOn));
+  if(p==='fc'){_fcUpdateBookMode();_fcRefreshBookPreview()}else{_fcUpdateJrReadMode();_fcRefreshJrPreview()}
+}
+function _fcAddArticle(p){
+  const n=_fcNewsCount(p);
+  if(n>=FC_NEWS_MAX){showToast('A digest can hold up to '+FC_NEWS_MAX+' articles.','var(--err)');return}
+  _fcNewsSetCount(p,n+1);
+  const f=document.getElementById(p+'-news-source-'+(n+1)); if(f)f.focus();
+}
+// Removing row i shifts the rows below it up, so there is never a gap.
+function _fcRemoveArticle(p,i){
+  const n=_fcNewsCount(p);
+  const g=(id)=>document.getElementById(p+'-news-'+id);
+  for(let k=i;k<n;k++){
+    ['source','headline','link'].forEach(f=>{const a=g(f+'-'+k),b=g(f+'-'+(k+1));if(a&&b)a.value=b.value});
+  }
+  ['source','headline','link'].forEach(f=>{const a=g(f+'-'+n);if(a)a.value=''});
+  if(n-1<=1){const t=g('topic');if(t)t.value=''}
+  _fcNewsSetCount(p,n-1);
+}
+function _fcClearNewsExtra(p){
+  for(let i=2;i<=FC_NEWS_MAX;i++)['source','headline','link'].forEach(f=>{const e=document.getElementById(p+'-news-'+f+'-'+i);if(e)e.value=''});
+  const t=document.getElementById(p+'-news-topic'); if(t)t.value='';
+  const c=document.getElementById(p+'-news-count'); if(c)c.value='1';
+  _fcNewsRows(p,false);
+}
 // Only a real http(s) web address - a "javascript:" or "data:" link could run
 // code when tapped in History or on a journal card.
 function _fcValidLink(u){
@@ -9770,14 +9934,31 @@ function _fcReadReading(p,opts){
   const v=id=>{const e=document.getElementById(p+'-'+id);return e?String(e.value||''):''};
   const clean=t=>t.trim().replace(/\s+/g,' ');
   if(_fcKind(p)==='news'){
-    const source=clean(v('news-source')), headline=clean(v('news-headline')), url=v('news-link').trim();
-    if(!source)return {err:'Enter the Source - the site or paper, e.g. NHK World.'};
-    if(/:\/\/|^www\.|^https?:|\//i.test(source))return {err:'The Source box looks like it has a link in it. Put the link in Article link - Source is the site name, e.g. NHK World.'};
-    if(/[:|]/.test(source))return {err:'The Source cannot contain ":" or "|" - they would break the title.'};
-    if(!headline)return {err:'Enter the article headline.'};
-    if(!url)return {err:'Paste the Article link.'};
-    if(!_fcValidLink(url))return {err:'The Article link must be a full web address starting with https:// (or http://).'};
-    return {kind:'news',source:source,headline:headline,url:url,title:_fcNewsTitle(source,headline)};
+    const n=_fcNewsCount(p);
+    const arts=[];
+    for(let i=1;i<=n;i++){
+      const sfx=i===1?'':'-'+i, pre=n>1?'Article '+i+': ':'';
+      const source=clean(v('news-source'+sfx)), headline=clean(v('news-headline'+sfx)), url=v('news-link'+sfx).trim();
+      if(!source)return {err:pre+'Enter the Source - the site or paper, e.g. NHK World.'};
+      if(/:\/\/|^www\.|^https?:|\//i.test(source))return {err:pre+'The Source box looks like it has a link in it. Put the link in Article link - Source is the site name, e.g. NHK World.'};
+      if(/[:|]/.test(source))return {err:pre+'The Source cannot contain ":" or "|" - they would break the title.'};
+      if(n>1&&/[&,]/.test(source))return {err:pre+'In a digest the Source cannot contain "&" or "," - they are used to join the sources in the title.'};
+      if(!headline)return {err:pre+'Enter the article headline.'};
+      if(!url)return {err:pre+'Paste the Article link.'};
+      if(!_fcValidLink(url))return {err:pre+'The Article link must be a full web address starting with https:// (or http://).'};
+      arts.push({source:source,headline:headline,url:url});
+    }
+    // The same article twice in one entry would be a duplicate that can never be deleted.
+    for(let a=0;a<arts.length;a++)for(let b=a+1;b<arts.length;b++){
+      if(_fcLinkKey(arts[a].url)===_fcLinkKey(arts[b].url)||(_fcBookKey(arts[a].source)===_fcBookKey(arts[b].source)&&_fcBookKey(arts[a].headline)===_fcBookKey(arts[b].headline)))
+        return {err:'Article '+(a+1)+' and Article '+(b+1)+' are the same article.'};
+    }
+    const f=arts[0];
+    if(arts.length===1)return {kind:'news',source:f.source,headline:f.headline,url:f.url,articles:arts,topic:'',title:_fcNewsTitle(f.source,f.headline)};
+    const topic=clean(v('news-topic'));
+    if(!topic)return {err:'Enter the Story topic - e.g. Mass Protests Across France.'};
+    if(/[|]/.test(topic))return {err:'The Story topic cannot contain "|" - it would break the title.'};
+    return {kind:'news',source:f.source,headline:f.headline,url:f.url,articles:arts,topic:topic,title:_fcDigestTitle(arts.map(a=>a.source),topic)};
   }
   const name=clean(v('book-name'));
   const fromS=v('book-from').trim(), toS=v('book-to').trim();
@@ -9796,29 +9977,37 @@ function _fcReadBook(){return _fcReadReading('fc')}
 // overlapping pages, a news article by Source + Headline OR by the same link.
 function _fcReadingDup(r){
   if(r.kind!=='news')return _fcBookOverlap(r);
-  const sk=_fcBookKey(r.source), hk=_fcBookKey(r.headline), lk=_fcLinkKey(r.url);
-  return loadSessions().find(s=>s.bookReading&&s.article&&
-    ((_fcBookKey(s.article.source)===sk&&_fcBookKey(s.article.headline)===hk)||_fcLinkKey(s.article.url)===lk))||null;
+  const mine=(r.articles&&r.articles.length)?r.articles:[{source:r.source,headline:r.headline,url:r.url}];
+  const same=(a,b)=>(_fcBookKey(a.source)===_fcBookKey(b.source)&&_fcBookKey(a.headline)===_fcBookKey(b.headline))||_fcLinkKey(a.url)===_fcLinkKey(b.url);
+  return loadSessions().find(s=>s.bookReading&&s.article&&_fcArticles(s).some(x=>mine.some(m=>same(m,x))))||null;
 }
 // The link on the Log page right now, for the form-length warning (only when
 // the box is in news mode and the link is valid).
 function _fcLogNewsLink(){
-  if(!_fcBookOn||_fcKind('fc')!=='news')return '';
+  if(!_fcBookOn||_fcKind('fc')!=='news')return [];
   const r=_fcReadReading('fc');
-  return r.err?'':r.url;
+  return r.err?[]:(r.articles||[{url:r.url}]).map(a=>a.url);
 }
 // Puts a reading {kind,...} into the fields with prefix p.
 function _fcFillReading(p,r){
   r=r||{kind:'book'};
   const setv=(id,v)=>{const e=document.getElementById(p+'-'+id);if(e)e.value=(v===null||v===undefined)?'':String(v)};
   setv('book-name',r.kind==='book'?r.name:'');setv('book-from',r.kind==='book'?r.from:'');setv('book-to',r.kind==='book'?r.to:'');
-  setv('news-source',r.kind==='news'?r.source:'');setv('news-headline',r.kind==='news'?r.headline:'');setv('news-link',r.kind==='news'?r.url:'');
+  const arts=(r.kind==='news')?((r.articles&&r.articles.length)?r.articles:[{source:r.source,headline:r.headline,url:r.url}]):[];
+  const a1=arts[0]||{};
+  setv('news-source',r.kind==='news'?a1.source:'');setv('news-headline',r.kind==='news'?a1.headline:'');setv('news-link',r.kind==='news'?a1.url:'');
+  for(let i=2;i<=FC_NEWS_MAX;i++){const a=arts[i-1]||{};setv('news-source-'+i,a.source);setv('news-headline-'+i,a.headline);setv('news-link-'+i,a.url)}
+  setv('news-topic',r.kind==='news'&&arts.length>1?(r.topic||''):'');
+  setv('news-count',Math.max(1,Math.min(FC_NEWS_MAX,arts.length||1)));
   _fcSetReadKind(p,r.kind==='news'?'news':'book');
 }
 // What a journal holds: the stored fields first, otherwise the title read back
 // (older journals), otherwise an empty book.
 function _fcJournalReading(j){
-  if(j.readKind==='news'&&j.article)return {kind:'news',source:j.article.source||'',headline:j.article.headline||'',url:j.article.url||''};
+  if(j.readKind==='news'&&j.article){
+    const arts=_fcArticles(j).map(a=>({source:a.source||'',headline:a.headline||'',url:a.url||''}));
+    return {kind:'news',source:arts[0].source,headline:arts[0].headline,url:arts[0].url,articles:arts,topic:arts.length>1?(j.topic||''):''};
+  }
   if(j.readKind==='book'&&j.book)return {kind:'book',name:j.book.name||'',from:j.book.from,to:j.book.to};
   const pb=_fcParseBookTitle(j.title);
   if(pb)return {kind:'book',name:pb.name,from:pb.from,to:pb.to};
@@ -9826,16 +10015,25 @@ function _fcJournalReading(j){
   if(pq)return {kind:'book',name:pq[1],from:pq[2],to:''};
   const m=String(j.title||'').match(/^News Article Reading \| ([^:|]+): (.+)$/);
   if(m)return {kind:'news',source:m[1],headline:m[2],url:''};
+  // A digest title read back (links can't be recovered from a title).
+  const dg=String(j.title||'').match(/^Morning News Digest \| (.+?) - (.+)$/);
+  if(dg){
+    const srcs=dg[1].split(/, | & /).map(x=>x.trim()).filter(Boolean).slice(0,FC_NEWS_MAX);
+    if(srcs.length>1)return {kind:'news',source:srcs[0],headline:'',url:'',articles:srcs.map(x=>({source:x,headline:'',url:''})),topic:dg[2]};
+  }
   return {kind:'book'};
 }
 function _fcApplyReadingToJournal(j,r){
   // Saved while English is unrestricted (before the rules, or English is the
   // core): keep what the journal already holds, so its link is not lost.
   if(!r&&ENGLISH_SERIES.includes(j.subjectId))return;
-  delete j.readKind; delete j.book; delete j.article;
+  delete j.readKind; delete j.book; delete j.article; delete j.articles; delete j.topic;
   if(!r)return;
   j.readKind=r.kind;
-  if(r.kind==='news')j.article={source:r.source,headline:r.headline,url:r.url};
+  if(r.kind==='news'){
+    j.article={source:r.source,headline:r.headline,url:r.url};
+    if(r.articles&&r.articles.length>1){j.articles=r.articles.map(a=>({source:a.source,headline:a.headline,url:a.url}));j.topic=r.topic}
+  }
   else j.book={name:r.name,from:r.from,to:r.to};
 }
 function _fcSetReadKind(p,k){
@@ -9847,6 +10045,7 @@ function _fcSetReadKind(p,k){
   if(n)n.classList.toggle('on',kind==='news');
   if(p==='fc'){_fcUpdateBookMode();_fcRefreshBookPreview()}
   else {_fcUpdateJrReadMode();_fcRefreshJrPreview()}
+  _fcNewsRows(p,kind==='news'&&(p==='fc'?_fcBookOn:_fcJrOn));
 }
 function _fcRefreshBookPreview(){
   const notes=document.getElementById('log-notes');
@@ -9857,6 +10056,7 @@ function _fcRefreshBookPreview(){
 }
 function _fcClearBookFields(){
   ['fc-book-name','fc-book-from','fc-book-to','fc-news-source','fc-news-headline','fc-news-link'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+  _fcClearNewsExtra('fc');
   // Back to Book, the default, so the next English session starts the same way.
   const h=document.getElementById('fc-read-kind');
   if(h&&h.value!=='book')_fcSetReadKind('fc','book');
@@ -9867,6 +10067,7 @@ function _fcClearBookFields(){
 let _fcJrOn=false;
 function _fcJrResetRead(){
   ['jrfc-book-name','jrfc-book-from','jrfc-book-to','jrfc-news-source','jrfc-news-headline','jrfc-news-link'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+  _fcClearNewsExtra('jrfc');
   const h=document.getElementById('jrfc-read-kind'); if(h)h.value='book';
   const b=document.getElementById('jrfc-kind-book'), n=document.getElementById('jrfc-kind-news');
   if(b)b.classList.add('on'); if(n)n.classList.remove('on');
@@ -9895,18 +10096,20 @@ function _fcUpdateJrReadMode(){
     w.style.display='block';
     if(bf)bf.style.display=kind==='book'?'grid':'none';
     if(nf)nf.style.display=kind==='news'?'grid':'none';
+    _fcNewsRows('jrfc',kind==='news');
     const hint=document.getElementById('jrfc-read-hint');
     if(hint)hint.textContent=kind==='news'
-      ?'English is for book or news reading only. All three are needed. The link goes into the Google Form as "Source: <link>" under the title.'
+      ?'English is for book or news reading only. Source, Headline and Article link are needed for every article (up to '+FC_NEWS_MAX+'); 2 or more also need a Story topic and become one Morning News Digest. Each link goes into the Google Form as "Source: <link>" under the title.'
       :'English is for book or news reading only. To page can stay empty while the journal is In progress (no End time yet).';
     const lbl=document.getElementById('jr-title-label'); if(lbl)lbl.textContent='Journal Title (built from the fields below — locked)';
     if(!_fcJrOn)t.dataset.fcStash=t.value;
     t.readOnly=true; t.classList.add('fc-locked');
-    t.placeholder=kind==='news'?'News Article Reading | Source: Headline':'Book name Reading | P?? --> P??';
+    t.placeholder=kind==='news'?(_fcNewsCount('jrfc')>1?'Morning News Digest | Source & Source - Story topic':'News Article Reading | Source: Headline'):'Book name Reading | P?? --> P??';
     _fcJrOn=true;
     _fcRefreshJrPreview();
   }else{
     w.style.display='none';
+    _fcNewsRows('jrfc',false);
     if(_fcJrOn){
       t.readOnly=false; t.classList.remove('fc-locked');
       t.placeholder='e.g. 2nd September - Algebra 1 Unit 4 Review';
@@ -9934,17 +10137,19 @@ function _fcUpdateBookMode(){
   if(kwrap)kwrap.style.display=on?'flex':'none';
   if(fields)fields.style.display=(on&&kind==='book')?'grid':'none';
   if(nfields)nfields.style.display=(on&&kind==='news')?'grid':'none';
+  _fcNewsRows('fc',on&&kind==='news');
+  const _dg=kind==='news'&&_fcNewsCount('fc')>1;
   if(on){
     if(banner){
-      banner.innerHTML='<strong>English is for book or news-article reading only.</strong> The title is built from the fields below and cannot be typed. Once logged, the title'+(kind==='news'?', the link':'')+' and the subject can never be edited, and the session can <strong>never be deleted</strong> — not from History and not from the Log page. Only its date and times can be changed.'+
-        (kind==='news'?' The link goes into the Google Form as &ldquo;Source: &lt;link&gt;&rdquo; under the title.':'');
+      banner.innerHTML='<strong>English is for book or news-article reading only.</strong> The title is built from the fields below and cannot be typed. Once logged, the title'+(kind==='news'?(_dg?', the links':', the link'):'')+' and the subject can never be edited, and the session can <strong>never be deleted</strong> — not from History and not from the Log page. Only its date and times can be changed.'+
+        (kind==='news'?(_dg?' Up to '+FC_NEWS_MAX+' articles log as ONE Morning News Digest session and ONE Google Form, each link as its own &ldquo;Source: &lt;link&gt;&rdquo; line under the title.':' The link goes into the Google Form as &ldquo;Source: &lt;link&gt;&rdquo; under the title. Read 2 or 3 articles on one story? Use &ldquo;+ Add another article&rdquo; to log them as one Morning News Digest.'):'');
       banner.classList.add('show');
     }
     if(lbl)lbl.textContent='Journal Title (built from the fields below — locked)';
     if(!_fcBookOn)notes.dataset.fcStash=notes.value;   // put back if he switches away again
     notes.readOnly=true;
     notes.classList.add('fc-locked');
-    notes.placeholder=kind==='news'?'News Article Reading | Source: Headline':'Book name Reading | P?? --> P??';
+    notes.placeholder=kind==='news'?(_dg?'Morning News Digest | Source & Source - Story topic':'News Article Reading | Source: Headline'):'Book name Reading | P?? --> P??';
     _fcBookOn=true;
     _fcRefreshBookPreview();
     if(noform){
