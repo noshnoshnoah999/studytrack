@@ -2537,14 +2537,16 @@ const JOURNAL_WRITING_PE_MIN_MINS=25;
 function _formContents(subjectId,start,end,notes,preply,link){
   const mins=(start&&end)?(toMins(end)-toMins(start)):0;
   const extra=[];
-  // Morning News Digest (2026-10-31): `link` may be an array - one "Source:"
-  // line per article, in order. A plain string still works for old callers.
+  // `link` may be an array (Morning News Digest) or a plain string (old callers).
   const _links=(Array.isArray(link)?link:(link?[link]:[])).filter(Boolean);
-  // English news-article reading: the article link goes straight under the
-  // title as "Source: <link>" (Noah, 2026-10-14). Unlike the lines below it IS
-  // stored - on the session, as article.url - because the "Forms to submit"
-  // list rebuilds this text later and must not lose it.
-  _links.forEach(l=>extra.push('Source: '+l));
+  // English news-article reading: the article links go straight under the
+  // title as ONE line (Noah, 2026-10-31) - "Source: <link>" for one article,
+  // "Sources: <link1> | <link2> | <link3>" for a digest, in article order, no
+  // line when there are none. Unlike the lines below the links ARE stored - on
+  // the session, as article.url / articles[].url - because the "Forms to
+  // submit" list rebuilds this text later and must not lose them.
+  if(_links.length===1)extra.push('Source: '+_links[0]);
+  else if(_links.length>1)extra.push('Sources: '+_links.join(' | '));
   // Sits above the journal-writing line so the box reads in the order things
   // happened: the lesson, the review straight after it, then the write-up.
   // `preply` is the review minutes (a number), or false for any other session.
@@ -6864,7 +6866,7 @@ function openEditSession(id){
   if(_esNote){
     if(s.bookReading){
       _esNote.innerHTML=(s.article?(_fcArticles(s).length>1?'<strong>News digest session.</strong> The title, links and subject are locked':'<strong>News-article session.</strong> The title, link and subject are locked'):'<strong>Book-reading session.</strong> The title and subject are locked')+' and it can never be deleted. Only the date and times can be changed.'+
-        (_fcSessionLinks(s).length?' '+_fcSessionLinks(s).map(l=>'Source: '+escHtml(l)).join(' ')+'.':'')+
+        (_fcSessionLinks(s).length?' '+(_fcSessionLinks(s).length>1?'Sources: ':'Source: ')+_fcSessionLinks(s).map(l=>escHtml(l)).join(' | ')+'.':'')+
         (!_SUBJECT_FORMS[s.subjectId]?' <strong>No Google Form is linked to '+escHtml(_fcName(s.subjectId))+'.</strong>':'');
       _esNote.style.display='block';
     }else _esNote.style.display='none';
@@ -9836,7 +9838,11 @@ function _fcNewsTitle(source,headline){return 'News Article Reading | '+source+'
 // and end time. Title: "Morning News Digest | BBC News & NHK World - Topic".
 var FC_NEWS_MAX=3;   // var, not const: safe even if a render runs before this line
 function _fcJoinSources(list){
-  const s=list.slice();
+  // Same outlet twice ("BBC News" + "bbc news ") is named once (2026-10-31):
+  // trimmed, compared case-insensitively, first spelling and order kept.
+  // "BBC" and "BBC News" are different text and both stay.
+  const seen=new Set(),s=[];
+  list.forEach(x=>{const t=String(x==null?'':x).trim();const k=t.toLowerCase();if(!seen.has(k)){seen.add(k);s.push(t)}});
   if(s.length<=1)return s.join('');
   const last=s.pop();
   return s.join(', ')+' & '+last;
@@ -10099,7 +10105,7 @@ function _fcUpdateJrReadMode(){
     _fcNewsRows('jrfc',kind==='news');
     const hint=document.getElementById('jrfc-read-hint');
     if(hint)hint.textContent=kind==='news'
-      ?'English is for book or news reading only. Source, Headline and Article link are needed for every article (up to '+FC_NEWS_MAX+'); 2 or more also need a Story topic and become one Morning News Digest. Each link goes into the Google Form as "Source: <link>" under the title.'
+      ?'English is for book or news reading only. Source, Headline and Article link are needed for every article (up to '+FC_NEWS_MAX+'); 2 or more also need a Story topic and become one Morning News Digest. The links go into the Google Form on one line under the title: "Source: <link>" for one article, "Sources: <link> | <link>" for a digest.'
       :'English is for book or news reading only. To page can stay empty while the journal is In progress (no End time yet).';
     const lbl=document.getElementById('jr-title-label'); if(lbl)lbl.textContent='Journal Title (built from the fields below — locked)';
     if(!_fcJrOn)t.dataset.fcStash=t.value;
@@ -10142,7 +10148,7 @@ function _fcUpdateBookMode(){
   if(on){
     if(banner){
       banner.innerHTML='<strong>English is for book or news-article reading only.</strong> The title is built from the fields below and cannot be typed. Once logged, the title'+(kind==='news'?(_dg?', the links':', the link'):'')+' and the subject can never be edited, and the session can <strong>never be deleted</strong> — not from History and not from the Log page. Only its date and times can be changed.'+
-        (kind==='news'?(_dg?' Up to '+FC_NEWS_MAX+' articles log as ONE Morning News Digest session and ONE Google Form, each link as its own &ldquo;Source: &lt;link&gt;&rdquo; line under the title.':' The link goes into the Google Form as &ldquo;Source: &lt;link&gt;&rdquo; under the title. Read 2 or 3 articles on one story? Use &ldquo;+ Add another article&rdquo; to log them as one Morning News Digest.'):'');
+        (kind==='news'?(_dg?' Up to '+FC_NEWS_MAX+' articles log as ONE Morning News Digest session and ONE Google Form, with all the links on one &ldquo;Sources: &lt;link&gt; | &lt;link&gt;&rdquo; line under the title.':' The link goes into the Google Form as &ldquo;Source: &lt;link&gt;&rdquo; under the title. Read 2 or 3 articles on one story? Use &ldquo;+ Add another article&rdquo; to log them as one Morning News Digest.'):'');
       banner.classList.add('show');
     }
     if(lbl)lbl.textContent='Journal Title (built from the fields below — locked)';
