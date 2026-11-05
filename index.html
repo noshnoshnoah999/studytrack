@@ -6574,7 +6574,22 @@ function onHistRangeChange(){
   }
   renderHistory();
 }
+// Month open/closed state, remembered across re-renders (a save rebuilds the whole
+// list). Key = body id, value = true/false. A month with no entry uses the default
+// (current month open, rest closed).
+const _histMonthState={};
+function _histScrollSnap(){
+  const m=document.getElementById('main');
+  return{mainTop:m?m.scrollTop:0,winTop:window.scrollY||0};
+}
+function _histScrollRestore(snap){
+  const m=document.getElementById('main');
+  if(m)m.scrollTop=snap.mainTop;
+  window.scrollTo(0,snap.winTop);
+}
+
 function renderHistory(){
+  const _scrollSnap=_histScrollSnap();
   _renderHistWeekChart();
   const sessions=loadSessions();
   const subjs=loadSubjects();
@@ -6762,6 +6777,8 @@ function renderHistory(){
       const monthDates=monthGroups[mk];
       const d=new Date(mk+'-15T12:00:00');
       const isCurrentMonth=mk===curMonth;
+      const _bid='hist-month-'+mk.replace('-','_');
+      const isOpen=(_bid in _histMonthState)?_histMonthState[_bid]:isCurrentMonth;
       const monthLabel=d.toLocaleDateString('en-AU',{month:'long',year:'numeric'});
       const monthTotal=monthDates.reduce((t,date)=>t+groups[date].filter(s=>!_ecH.has(s.subjectId)).reduce((a,s)=>a+s.hours,0),0);
       const sessionCount=monthDates.reduce((t,date)=>t+groups[date].length,0);
@@ -6771,13 +6788,13 @@ function renderHistory(){
       return '<div class="hist-month-group">'+
         '<div class="hist-month-header" onclick="toggleHistMonth(\''+bodyId+'\',this)">'+
           '<div class="hist-month-left">'+
-            '<span class="hist-month-chevron'+(isCurrentMonth?' open':'')+'">'+chevronSvg+'</span>'+
+            '<span class="hist-month-chevron'+(isOpen?' open':'')+'">'+chevronSvg+'</span>'+
             '<span class="hist-month-name">'+monthLabel+'</span>'+
             '<span class="hist-month-count">'+sessionCount+'</span>'+
           '</div>'+
           '<span class="hist-month-total">'+fmtH(monthTotal)+'</span>'+
         '</div>'+
-        '<div class="hist-month-body'+(isCurrentMonth?' open':'')+'" id="'+bodyId+'">'+
+        '<div class="hist-month-body'+(isOpen?' open':'')+'" id="'+bodyId+'">'+
           dayHtml+
         '</div>'+
       '</div>';
@@ -6790,6 +6807,7 @@ function renderHistory(){
   document.querySelectorAll('.hist-card,.hist-month-group').forEach((r,i)=>{
     r.classList.add('slide-up');
   });
+  _histScrollRestore(_scrollSnap);
 }
 
 function toggleHistMonth(bodyId, headerEl){
@@ -6797,6 +6815,7 @@ function toggleHistMonth(bodyId, headerEl){
   if(!body)return;
   const opening=!body.classList.contains('open');
   body.classList.toggle('open',opening);
+  _histMonthState[bodyId]=opening;
   const chevron=headerEl.querySelector('.hist-month-chevron');
   if(chevron)chevron.classList.toggle('open',opening);
 }
