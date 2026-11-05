@@ -11010,11 +11010,16 @@ function _gradSharedVars(){
   // falls to 150h at the current pace.
   const targetDate=new Date(FIRST_GUIDANCE_DEADLINE);
   const toClear=_hoursToCheckpoint(remaining);
-  let checkpointEstDate=null,checkpointEstStr='—';
+  let checkpointEstDate=null,checkpointEstStr='—',checkpointCardStr=null;
   if(pace>0){
     checkpointEstDate=new Date(now);checkpointEstDate.setDate(now.getDate()+Math.round(toClear/pace*7));
     checkpointEstStr=MONTHS[checkpointEstDate.getMonth()]+' '+checkpointEstDate.getFullYear();
+    // Card headline: exact day only when the estimate lands in the deadline's own month
+    // (July 2027), so a red 'Jul 2027' shows how many days past Jul 20 it is.
+    if(checkpointEstDate.getFullYear()===targetDate.getFullYear()&&checkpointEstDate.getMonth()===targetDate.getMonth())
+      checkpointCardStr=MONTHS[checkpointEstDate.getMonth()]+' '+checkpointEstDate.getDate()+', '+checkpointEstDate.getFullYear();
   }
+  if(checkpointCardStr===null)checkpointCardStr=checkpointEstStr;
   const diffDays=checkpointEstDate?Math.round((targetDate-checkpointEstDate)/(1000*60*60*24)):null;
   const ahead=diffDays!==null&&diffDays>=0;
   // Pace actually required to reach <=150h left by the checkpoint (dynamic).
@@ -11032,12 +11037,12 @@ function _gradSharedVars(){
   const pctDiff=pct-expectedPct;
   const pctDiffStr=(pctDiff>=0?'+':'')+pctDiff.toFixed(1)+'%';
   const scheduleAhead=pctDiff>=0;
-  return{sessions,subjs,goals,TOTAL_REQ,totalLogged,remaining,toClear,pct,now,MONTHS,recentH,hasGoodData,pace,paceIsGoal,estDateStr,estDate,checkpointEstDate,checkpointEstStr,targetDate,diffDays,ahead,neededPace,expectedPct,checkpointPct,pctDiffStr,scheduleAhead};
+  return{sessions,subjs,goals,TOTAL_REQ,totalLogged,remaining,toClear,pct,now,MONTHS,recentH,hasGoodData,pace,paceIsGoal,estDateStr,estDate,checkpointEstDate,checkpointEstStr,checkpointCardStr,targetDate,diffDays,ahead,neededPace,expectedPct,checkpointPct,pctDiffStr,scheduleAhead};
 }
 
 function _renderGradEstCard(){
   const v=_gradSharedVars();
-  const {remaining,toClear,pace,paceIsGoal,checkpointEstStr,targetDate,ahead,neededPace,recentH,MONTHS,now,sessions,subjs}=v;
+  const {remaining,toClear,pace,paceIsGoal,checkpointEstStr,checkpointCardStr,targetDate,ahead,neededPace,recentH,MONTHS,now,sessions,subjs}=v;
   // Future subjects = not done, 0 base hours, and no sessions logged yet
   const loggedBySubj={};
   sessions.forEach(s=>{if(s.subjectId)loggedBySubj[s.subjectId]=(loggedBySubj[s.subjectId]||0)+s.hours});
@@ -11059,7 +11064,7 @@ function _renderGradEstCard(){
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;flex:1;min-height:0">'+
       '<div style="background:var(--bg3);border-radius:var(--radius);padding:24px;border:1.5px solid '+(onTrack?'var(--ok)':'var(--err)')+';display:flex;flex-direction:column;justify-content:center">'+
         '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">'+currentPaceLabel+'</div>'+
-        '<div style="font-size:40px;font-weight:900;color:'+(onTrack?'var(--ok)':'var(--err)')+';letter-spacing:-1px;line-height:1.1">'+checkpointEstStr+'</div>'+
+        '<div style="font-size:40px;font-weight:900;color:'+(onTrack?'var(--ok)':'var(--err)')+';letter-spacing:-1px;line-height:1.1">'+checkpointCardStr+'</div>'+
         '<div style="font-size:13px;font-weight:700;color:'+(onTrack?'var(--ok)':'var(--err)')+';margin-top:12px">'+
           (onTrack?'&le;150h left before Jul 20':'&le;150h left after Jul 20')+
         '</div>'+
