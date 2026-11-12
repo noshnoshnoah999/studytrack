@@ -1046,6 +1046,12 @@ button:active{transform:scale(0.96)}
 .fc-row-track{font-size:12px;line-height:1.45;margin-top:5px;color:#fee2e2;word-break:break-word}
 .fc-row-track b{color:#fff;font-weight:700}
 .fc-row-edit{font-size:10.5px;color:#fecaca;margin-top:6px;text-decoration:underline}
+.fc-lock{margin-top:12px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.22);border-radius:10px;padding:10px 12px}
+.fc-lock.off{background:rgba(255,255,255,0.14);border:2px solid #fff}
+.fc-lock-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.fc-lock-state{font-size:13.5px;font-weight:800;color:#fff}
+.fc-lock-btn{background:#fff;color:#7f1d1d;border:none;border-radius:8px;padding:7px 12px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit}
+.fc-lock-stat{font-size:12px;color:#fecaca;margin-top:6px;font-weight:600;line-height:1.45}
 .fc-alert{margin-top:12px;background:rgba(0,0,0,0.32);border:1px solid rgba(255,255,255,0.25);border-radius:10px;padding:12px}
 .fc-alert-title{font-size:13.5px;font-weight:800;color:#fff;margin-bottom:6px;line-height:1.4}
 .fc-pick{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
@@ -6217,7 +6223,7 @@ function renderLog(){
     if(_fst.active){
       tAvail=_timerAvailable(subjs);
       tOpts=(schedSubj&&tAvail.find(s=>s.id===schedSubj.id)?schedOpt:'')+
-        tAvail.map(s=>'<option value="'+s.id+'">'+escHtml(s.name)+'</option>').join('');
+        _fcGroupOptions(tAvail,_fst,s=>'<option value="'+s.id+'">'+escHtml(s.name)+'</option>');
     }
     tsel.innerHTML=tOpts;
     if(tprev&&tAvail.find(s=>s.id===tprev))tsel.value=tprev;
@@ -6734,6 +6740,7 @@ function renderHistory(){
           '</div>'+
           (s.notes?'<div class="hist-card-notes">'+escHtml(s.notes)+'</div>':'')+
           (s.bookReading?'<div><span class="fc-hist-tag">'+(s.article?(_fcArticles(s).length>1?'News digest':'News article'):'Book reading')+' \u00b7 locked</span>'+(!_SUBJECT_FORMS[s.subjectId]?'<span class="fc-hist-noform">No form linked</span>':'')+'</div>':'')+
+          (s.lockOff?'<div><span class="fc-hist-tag" title="Logged while the focus lock was off">Lock off</span></div>':'')+
           _fcLinksHtml(s)+
           '<div class="hist-card-logged" id="hist-logged-'+s.id+'" style="display:none">'+escHtml(_fmtLoggedAt(s.loggedAt))+'</div>'+
         '</div>'+
@@ -6854,7 +6861,7 @@ function openEditSession(id){
   const _fst=_fcState();
   const _esIds=s.bookReading?[s.subjectId]:(_fst.active?_fcEditSubjectIds(s,_fst):null);
   const _esList=_esIds?subjs.filter(x=>_esIds.includes(x.id)):subjs;
-  sel.innerHTML=_esList.map(x=>'<option value="'+x.id+'"'+(x.id===s.subjectId?' selected':'')+'>'+escHtml(x.name)+'</option>').join('');
+  sel.innerHTML=_fcGroupOptions(_esList,_fst,x=>'<option value="'+x.id+'"'+(x.id===s.subjectId?' selected':'')+'>'+escHtml(x.name)+'</option>');
   sel.disabled=!!s.bookReading;
 
   // Date
@@ -6988,9 +6995,18 @@ function saveEditSession(){
   if(old.subjectId)hoursStore[old.subjectId]=Math.max(0,(hoursStore[old.subjectId]||0)-old.hours);
   hoursStore[newSubjectId]=(hoursStore[newSubjectId]||0)+newHours;
 
-  const updated=sessions.map(x=>x.id===id
-    ?{...x,subjectId:newSubjectId,date:newDate,start:newStart,end:newEnd,notes:newNotes,hours:newHours}
-    :x);
+  // Focus lock tag: moving a session to another subject re-decides it; adding
+  // hours or a later month to a non-focus subject while the lock is off tags it.
+  let _lockOff=old.lockOff||null;
+  {const _lo=_fcLockOffTag(newSubjectId);
+   if(newSubjectId!==old.subjectId)_lockOff=_lo;
+   else if(_lo&&(newHours>old.hours+1e-9||_fcMonthOf(newDate)>_fcMonthOf(old.date||newDate)))_lockOff=_lo;}
+  const updated=sessions.map(x=>{
+    if(x.id!==id)return x;
+    const n={...x,subjectId:newSubjectId,date:newDate,start:newStart,end:newEnd,notes:newNotes,hours:newHours};
+    if(_lockOff)n.lockOff=_lockOff;else delete n.lockOff;
+    return n;
+  });
 
   saveSessions(updated);
   saveHours(hoursStore);
@@ -7503,7 +7519,7 @@ function renderTimerPage(){
   const schedOpt=schedOk?
     '<option value="'+schedSubj.id+'">'+(activeBlock?' Now: ':' Next: ')+escHtml(schedSubj.name)+'</option>'+
     '<option disabled>──────────</option>':'';
-  const restOpts=available.map(s=>'<option value="'+s.id+'">'+escHtml(s.name)+'</option>').join('');
+  const restOpts=_fcGroupOptions(available,null,s=>'<option value="'+s.id+'">'+escHtml(s.name)+'</option>');
 
   const running=!!timerInterval;
   const stopped=!running&&timerStart!==null;
@@ -7824,7 +7840,9 @@ async function timerPageLog(){
   }
   const sessions=loadSessions();
   const _timerId=genId();
-  sessions.push({id:_timerId,subjectId:timerSubjectId,date:ds,hours:hrs,start:startStr,end:endStr,notes,loggedAt:new Date().toISOString()});
+  {const _tRec={id:_timerId,subjectId:timerSubjectId,date:ds,hours:hrs,start:startStr,end:endStr,notes,loggedAt:new Date().toISOString()};
+   const _lo=_fcLockOffTag(timerSubjectId);if(_lo)_tRec.lockOff=_lo;
+   sessions.push(_tRec);}
   saveSessions(sessions);
   const hoursStore=loadHours();
   hoursStore[timerSubjectId]=(hoursStore[timerSubjectId]||0)+hrs;
@@ -8280,6 +8298,7 @@ function _doLogSession(){
   const hoursStore=loadHours();
   const _newId=genId();
   const _rec={id:_newId,subjectId,date,start,end,hours,notes,loggedAt:new Date().toISOString()};
+  {const _lo=_fcLockOffTag(subjectId);if(_lo)_rec.lockOff=_lo}
   // Marked explicitly, never inferred from the title: this flag is what locks the
   // title and subject and blocks every delete path.
   // A news article carries the same bookReading lock flag (so every delete and
@@ -8945,7 +8964,7 @@ function openJournalModal(editId){
   const avail=loadSubjects().filter(s=>!s.done&&getLogged(s.id)<s.req);
   const sel=document.getElementById('jr-subject');
   let opts='<option value="">- Select -</option>'+
-    avail.map(s=>'<option value="'+s.id+'">'+escHtml(s.name)+'</option>').join('');
+    _fcGroupOptions(avail,null,s=>'<option value="'+s.id+'">'+escHtml(s.name)+'</option>');
   if(j&&j.subjectId&&!avail.find(s=>s.id===j.subjectId)){
     opts+='<option value="'+escHtml(j.subjectId)+'">'+escHtml(_journalSubjName(j.subjectId))+' (closed)</option>';
   }
@@ -9593,6 +9612,34 @@ function _fcSlot(ym,slot,f){
   const canPick=_fcPool(slot).length>0;
   return {slot:slot,entries:entries,id:null,done:last?last.id:null,state:canPick?(last?'replace':'choose'):'empty'};
 }
+// ── focus lock toggle (2026-11-12) ──────────────────────────────────────────
+// Noah can switch the monthly focus lock OFF for the rest of the day. It turns
+// itself back on at midnight: st_focus_lock stores the DATE it was turned off
+// and the lock only counts as off while that date is today, so nothing is
+// written at midnight or at boot. Every manual switch is appended to `log`
+// ({at,date,action:'off'|'on'}); the midnight re-lock is DERIVED (an 'off'
+// with no later 'on' that day), never written. A session logged outside the
+// focus subjects while the lock is off carries lockOff:'YYYY-MM-DD' (the day
+// it was logged) - that drives the counter on the red block and the History
+// tag. The toggle never bypasses "choose this month's subjects" (st.blocked),
+// English stays book/news reading only, and the carry-over rule is untouched.
+// Syncs whole-object last-writer-wins, the same as st_focus.
+const FOCUS_LOCK_KEY='st_focus_lock';
+function loadFocusLock(){
+  try{
+    const raw=localStorage.getItem(FOCUS_LOCK_KEY);
+    if(raw){const p=JSON.parse(raw);if(p&&typeof p==='object'&&!Array.isArray(p))return {
+      offDate:typeof p.offDate==='string'?p.offDate:null,
+      log:Array.isArray(p.log)?p.log.filter(e=>e&&e.at&&e.date&&(e.action==='off'||e.action==='on')):[]}}
+  }catch(e){}
+  return {offDate:null,log:[]};
+}
+function saveFocusLock(o){
+  localStorage.setItem(FOCUS_LOCK_KEY,JSON.stringify(o));
+  localStorage.setItem(FOCUS_LOCK_KEY+'_updated_at',new Date().toISOString());
+  try{sbPush(FOCUS_LOCK_KEY,o)}catch(e){}
+}
+function _fcLockOffToday(today){const l=loadFocusLock();return !!(l.offDate&&l.offDate===(today||todayStr()))}
 function _fcState(today){
   today=today||todayStr();
   const ym=_fcMonthOf(today);
@@ -9600,8 +9647,9 @@ function _fcState(today){
   const core=_fcSlot(ym,'core',f), side=_fcSlot(ym,'side',f);
   const active=today>=FOCUS_START;
   const need=sl=>sl.state==='choose'||sl.state==='replace';
+  const blocked=active&&(need(core)||need(side));
   return {today:today,ym:ym,f:f,core:core,side:side,inRange:ym>=FOCUS_FIRST_MONTH,active:active,
-    blocked:active&&(need(core)||need(side))};
+    blocked:blocked,lockOff:active&&!blocked&&_fcLockOffToday(today)};
 }
 function _fcBlockedNow(){const st=_fcState();return st.active&&st.blocked}
 
@@ -9617,19 +9665,58 @@ function _fcBookMode(subjectId,st){
   st=st||_fcState();
   return !!(st.active&&subjectId&&ENGLISH_SERIES.includes(subjectId)&&!_fcEnglishIsCore(st));
 }
-// Subjects that may be LOGGED right now. Empty while a choice is outstanding.
+// Subjects that may be LOGGED right now: the focus subjects, plus every other
+// open subject while the focus lock is off. Empty while a choice is outstanding.
 function _fcAllowedIds(st){
   st=st||_fcState();
   if(st._allowed)return st._allowed.slice();   // a state object is per-call, so this never goes stale
-  if(st.blocked){st._allowed=[];return []}
+  const ids=_fcFocusIds(st);
+  if(st.lockOff)_fcOtherIds(st).forEach(id=>{if(!ids.includes(id))ids.push(id)});
+  st._allowed=ids.slice();
+  return ids;
+}
+// What the focus lock opens: open subjects outside this month's list. Japanese
+// and English are left out - their own target contract is already a focus
+// subject, and the others are complete or waiting on a prerequisite.
+function _fcOtherIds(st){
+  const focus=_fcFocusIds(st);
+  return loadSubjects().filter(s=>!focus.includes(s.id)&&!_isJpId(s.id)&&!ENGLISH_SERIES.includes(s.id)&&_fcFillableSubject(s.id)).map(s=>s.id);
+}
+// The same state with the focus lock ON - what the rules alone would allow.
+function _fcStateLocked(st){const o=Object.assign({},st,{lockOff:false});delete o._allowed;return o}
+// The lockOff tag for a session about to be saved: today's date when only the
+// focus lock being off lets this subject through, otherwise null.
+function _fcLockOffTag(subjectId){
+  const st=_fcState();
+  if(!st.lockOff||!subjectId)return null;
+  if(_fcFocusIds(st).includes(subjectId))return null;
+  if(_fcParkedJournal(subjectId,_fcStateLocked(st)))return null;   // an unlocked parked journal was allowed anyway
+  return st.today;
+}
+// This month's focus subjects only (core, side, Japanese, English reading).
+function _fcFocusIds(st){
+  st=st||_fcState();
+  if(st._focus)return st._focus.slice();
+  if(st.blocked){st._focus=[];return []}
   const subjs=loadSubjects();
   const ids=[];
   if(st.core.id)ids.push(st.core.id);
   if(st.side.id&&!ids.includes(st.side.id))ids.push(st.side.id);
   {const jp=_jpTargetId(subjs);if(!ids.includes(jp)&&subjs.find(s=>s.id===jp)&&!_fcCompleted(jp,subjs))ids.push(jp)}
   if(!_fcEnglishIsCore(st)){const e=_fcEnglishTarget(subjs);if(e&&!ids.includes(e))ids.push(e)}
-  st._allowed=ids.slice();
+  st._focus=ids.slice();
   return ids;
+}
+// Any subject picker while the focus lock is off: this month's focus subjects
+// first, then the rest, in two labelled groups. Unchanged while it is on.
+function _fcGroupOptions(list,st,optFn){
+  st=st||_fcState();
+  if(!st.lockOff)return list.map(optFn).join('');
+  const focus=_fcFocusIds(st);
+  const isF=s=>focus.includes(s.id)||_isJpId(s.id)||ENGLISH_SERIES.includes(s.id);
+  const a=list.filter(isF), b=list.filter(s=>!isF(s));
+  return (a.length?'<optgroup label="This month\u2019s focus">'+a.map(optFn).join('')+'</optgroup>':'')+
+    (b.length?'<optgroup label="Other subjects">'+b.map(optFn).join('')+'</optgroup>':'');
 }
 // Subjects whose hours count towards the 8-hour unlock: every focus subject of
 // the month (a mid-month replacement does not stop the earlier one counting),
@@ -9733,10 +9820,16 @@ function _fcLogOptionsHtml(st){
   let h='';
   if(st.core.id)h+=opt(st.core.id,_fcName(st.core.id)+' (Core)');
   if(st.side.id&&st.side.id!==st.core.id)h+=opt(st.side.id,_fcName(st.side.id)+' (Side)');
-  _fcAllowedIds(st).forEach(id=>{
+  _fcFocusIds(st).forEach(id=>{
     if(id===st.core.id||id===st.side.id)return;
     h+=opt(id,ENGLISH_SERIES.includes(id)?_fcName(id)+' — book or news reading only':_fcName(id));
   });
+  if(st.lockOff){
+    // Focus lock off: everything open, in two groups, and no "park it" option.
+    const others=_fcOtherIds(st);
+    return '<optgroup label="This month\u2019s focus">'+h+'</optgroup>'+
+      (others.length?'<optgroup label="Other subjects (focus lock off)">'+others.map(id=>opt(id,_fcName(id))).join('')+'</optgroup>':'');
+  }
   h+='<option disabled>──────────</option>';
   h+=opt(FOCUS_OTHER,'Other subjects…');
   return h;
@@ -9809,7 +9902,7 @@ function _fcOnLogSubjectChange(){
 function _fcShowOther(st){
   st=st||_fcState();
   const t=document.getElementById('fc-other-text');
-  if(t)t.textContent='In '+_fcMonthName(st.ym)+' you only log '+_fcAllowedIds(st).map(_fcName).join(', ')+
+  if(t)t.textContent='In '+_fcMonthName(st.ym)+' you only log '+_fcFocusIds(st).map(_fcName).join(', ')+
     '. Anything else is parked as a journal on the Journals page and submitted another time — nothing is logged from here.';
   const o=document.getElementById('fc-other-overlay');
   if(o)o.classList.add('show');
@@ -9834,11 +9927,12 @@ function _fcUpdateParkWarn(){
   const st=_fcState();
   const sel=document.getElementById('jr-subject');
   const id=sel?sel.value:'';
-  const outside=!!(id&&!_fcAllowedIds(st).includes(id));
+  const outside=!!(id&&!_fcFocusIds(st).includes(id));
   if(!st.active||!(_jrParkMode||outside)){w.classList.remove('show');return}
   const d=(document.getElementById('jr-date')||{}).value||'';
   w.innerHTML='<strong>Parking this session.</strong> Be very specific and detailed in the Description — what you studied, which pages, lessons or tasks, and the times — so nothing from the session is forgotten when you log it later.'+
-    (outside&&!(d&&d<FOCUS_START)?' '+escHtml(_fcName(id))+' is not one of '+_fcMonthName(st.ym)+'’s subjects, so this journal stays locked until a later month, or a day with '+FOCUS_DAY_UNLOCK_H+'h of allowed subjects logged.':'');
+    (outside&&!(d&&d<FOCUS_START)?' '+escHtml(_fcName(id))+' is not one of '+_fcMonthName(st.ym)+'’s subjects, so this journal stays locked until a later month, or a day with '+FOCUS_DAY_UNLOCK_H+'h of allowed subjects logged'+
+      (st.lockOff?' \u2014 except today, while the focus lock is off.':'.'):'');
   w.classList.add('show');
 }
 
@@ -10344,6 +10438,7 @@ function renderFocusBlock(){
     '<div class="fc-block-title">'+_fcMonthName(st.ym)+'’s Study &amp; Focus subjects are '+escHtml(nm(st.core))+' &amp; '+escHtml(nm(st.side))+'</div>';
   if(!st.active)h+='<div class="fc-block-note">Starts 3 October — nothing is restricted until then.</div>';
   h+='<div class="fc-rows">'+row(st.core,'Core')+row(st.side,'Side')+'</div>';
+  if(st.active&&!st.blocked)h+=_fcLockRowHtml(st);
   if(st.blocked){
     const c=_fcChooserHtml(st.ym,'now',st);
     const replacing=st.core.state==='replace'||st.side.state==='replace';
@@ -10368,6 +10463,62 @@ function renderFocusBlock(){
     }
   }
   if(chooseHost)chooseHost.innerHTML=ch;
+}
+
+// ── focus lock toggle: red block row, switches, History record ─────────────
+function _fcLockStats(ym){
+  const l=loadFocusLock();
+  const offs=l.log.filter(e=>e.action==='off'&&String(e.date).slice(0,7)===ym).length;
+  const hrs=loadSessions().filter(s=>s.lockOff&&String(s.lockOff).slice(0,7)===ym).reduce((a,s)=>a+(s.hours||0),0);
+  return {offs:offs,hrs:hrs};
+}
+function _fcLockRowHtml(st){
+  const s=_fcLockStats(st.ym);
+  return '<div class="fc-lock'+(st.lockOff?' off':'')+'">'+
+    '<div class="fc-lock-head"><span class="fc-lock-state">Focus lock: '+(st.lockOff?'OFF until midnight':'ON')+'</span>'+
+      '<button class="fc-lock-btn" onclick="'+(st.lockOff?'fcLockOn()':'fcLockOff()')+'">'+(st.lockOff?'Turn back on':'Turn off for today')+'</button></div>'+
+    '<div class="fc-lock-stat">This month: lock off '+s.offs+' time'+(s.offs===1?'':'s')+' \u00b7 '+fmtH(s.hrs)+' logged outside focus</div>'+
+  '</div>';
+}
+function fcLockOff(){
+  const st=_fcState();
+  if(!st.active||st.blocked){showToast('Choose this month\u2019s subjects first.','var(--err)');renderFocusBlock();return}
+  if(st.lockOff){renderFocusBlock();return}
+  if(!confirm('Turn off focus lock until midnight?\n\nAny subject can be logged until then. Sessions outside '+_fcMonthName(st.ym)+'\u2019s focus subjects are tagged "Lock off" and counted on the red block.'))return;
+  const l=loadFocusLock();
+  const today=todayStr();
+  l.offDate=today;
+  l.log.push({at:new Date().toISOString(),date:today,action:'off'});
+  if(l.log.length>500)l.log=l.log.slice(-500);
+  saveFocusLock(l);
+  showToast('Focus lock off until midnight','var(--ok)');
+  showPage(currentPage);
+}
+function fcLockOn(){
+  const l=loadFocusLock();
+  const today=todayStr();
+  if(l.offDate!==today){showPage(currentPage);return}   // already back on (midnight, or another device)
+  l.offDate=null;
+  l.log.push({at:new Date().toISOString(),date:today,action:'on'});
+  if(l.log.length>500)l.log=l.log.slice(-500);
+  saveFocusLock(l);
+  showToast('Focus lock back on','var(--ok)');
+  showPage(currentPage);
+}
+function _fcLockTime(iso){
+  try{return new Date(iso).toLocaleString('en-GB',{timeZone:'Asia/Tokyo',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hour12:false})}catch(e){return String(iso)}
+}
+// Every switch in a month, plus the derived midnight re-locks.
+function _fcLockEvents(ym,today){
+  const log=loadFocusLock().log.slice().sort((a,b)=>a.at<b.at?-1:a.at>b.at?1:0);
+  const ev=[];
+  log.forEach((e,i)=>{
+    if(String(e.date).slice(0,7)!==ym)return;
+    ev.push(_fcLockTime(e.at)+' \u2014 turned '+(e.action==='off'?'off':'back on'));
+    const lastOfDay=!log.slice(i+1).some(x=>x.date===e.date);
+    if(e.action==='off'&&lastOfDay&&e.date<today)ev.push(_fcShortDate(_fcAddDays(e.date,1))+' 00:00 \u2014 back on automatically at midnight');
+  });
+  return ev;
 }
 
 // ── work tracker ────────────────────────────────────────────────────────────
@@ -10443,6 +10594,14 @@ function _fcHistMonthHtml(ym,f,st){
       lines.push('<div class="fc-hist-line"><strong>'+label+':</strong> '+escHtml(_fcName(e.id))+'<span class="fc-hist-meta">'+meta.join(' · ')+'</span></div>');
     });
   });
+  if(!future){
+    const ev=_fcLockEvents(ym,st.today);
+    if(ev.length){
+      const ls=_fcLockStats(ym);
+      lines.push('<div class="fc-hist-line"><strong>Focus lock:</strong> off '+ls.offs+' time'+(ls.offs===1?'':'s')+'<span class="fc-hist-meta">'+fmtH(ls.hrs)+' logged outside focus</span></div>');
+      ev.forEach(t=>lines.push('<div class="fc-hist-line"><span class="fc-hist-meta">'+escHtml(t)+'</span></div>'));
+    }
+  }
   const tag=future?' <span style="font-size:11px;color:var(--text3);font-weight:700">(chosen in advance)</span>':current?' <span style="font-size:11px;color:var(--text3);font-weight:700">(this month)</span>':'';
   return '<div class="fc-hist-month"><div class="fc-hist-month-name">'+_fcMonthName(ym)+' '+ym.slice(0,4)+tag+'</div>'+lines.join('')+'</div>';
 }
@@ -13261,7 +13420,7 @@ async function syncFromCloud(){
   setSyncUI('syncing','Syncing…');
   _sbPullFailed=false; // reset per cycle — see _baseMigrationsAllowed()
   try{
-    const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_ai_history','st_holiday','st_notif_prefs','st_notif_templates','st_teacher_plan','st_journals','st_schoolwork','st_focus','st_focus_tracker','st_coach']; // st_hours is recomputed from sessions below, not pulled directly. st_teacher_plan is written externally by the teacher RPC and only ever pulled here (cloud-authoritative, falls through to the default setItem branch — the app never sbPushes it).
+    const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_ai_history','st_holiday','st_notif_prefs','st_notif_templates','st_teacher_plan','st_journals','st_schoolwork','st_focus','st_focus_tracker','st_focus_lock','st_coach']; // st_hours is recomputed from sessions below, not pulled directly. st_teacher_plan is written externally by the teacher RPC and only ever pulled here (cloud-authoritative, falls through to the default setItem branch — the app never sbPushes it).
     // Pull st_deleted_sessions upfront so we can use it synchronously inside forEach
     // Tombstones are UNIONED with the cloud list (2026-10-30 fix): the old code
     // only adopted the cloud list when it was longer, and pushed lists whole, so
@@ -13327,7 +13486,7 @@ async function syncFromCloud(){
             localStorage.setItem(k,JSON.stringify(cloud));
             _aiHistory=cloud;
           }
-        } else if(k==='st_subjs'||k==='st_goals'||k==='st_todos'||k==='st_sched_overrides'||k==='st_holiday'||k==='st_notif_prefs'||k==='st_notif_templates'||k==='st_journals'||k==='st_schoolwork'||k==='st_focus'||k==='st_focus_tracker'||k==='st_coach'){
+        } else if(k==='st_subjs'||k==='st_goals'||k==='st_todos'||k==='st_sched_overrides'||k==='st_holiday'||k==='st_notif_prefs'||k==='st_notif_templates'||k==='st_journals'||k==='st_schoolwork'||k==='st_focus'||k==='st_focus_tracker'||k==='st_focus_lock'||k==='st_coach'){
           // Timestamped last-writer-wins: keep whichever version is newer.
           // Prevents a device with stale data from reverting a fresh edit.
           const cloudUpdatedAt=rows[i].updated_at||'';
