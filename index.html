@@ -3805,6 +3805,49 @@ function runMigrations(){
     }catch(e){console.warn('[Migration v22] Error:',e);v22done=false}
     if(v22done)localStorage.setItem('st_migration_v22_fineart_base_restore_oct23_2026','1');
   }
+  // ── Migration v23: un-round session hours saved by the History edit form (17 Nov 2026) ──
+  // saveEditSession() stored hours rounded to 2 decimals (2h40m -> 2.67), while
+  // the Log page stores exact minutes/60. Durations ending :10 :20 :40 :50 were
+  // each up to 0.3 min off, so day totals could read a minute out (16 Nov showed
+  // 9h 1m for exactly 9h 00m). This resets hours to (end - start)/60 ONLY where
+  // the stored value is exactly that duration rounded to 2 decimals - the
+  // fingerprint of the edit form - so timer sessions with pauses (hours less than
+  // the start-end span) and anything else are never touched. Safe to re-run on a
+  // fresh browser: once fixed, hours equals the exact value and nothing matches.
+  // Gated on a confirmed-good sync so a stale local copy can never be stamped
+  // newer and overwrite edits made on another device. st_hours is rebuilt from
+  // the session list afterwards. Changed ids + old hours kept in
+  // st_backup_hours_v23.
+  if(!localStorage.getItem('st_migration_v23_exact_hours_nov17_2026')&&_baseMigrationsAllowed()){
+    let v23done=true;
+    try{
+      const raw=localStorage.getItem('st_sessions');
+      if(raw){
+        const list=JSON.parse(raw);
+        const hm=/^(\d{1,2}):(\d{2})$/;
+        const changed=[];
+        const fixed=list.map(x=>{
+          if(!x||typeof x.hours!=='number'||!x.start||!x.end)return x;
+          const a=hm.exec(x.start),b=hm.exec(x.end);
+          if(!a||!b)return x;
+          const mins=(+b[1]*60+ +b[2])-(+a[1]*60+ +a[2]);
+          if(mins<=0)return x;
+          const exact=mins/60;
+          if(Math.abs(x.hours-exact)<1e-9)return x;
+          if(Math.abs(x.hours-Math.round(exact*100)/100)>1e-9)return x;
+          changed.push({id:x.id,was:x.hours});
+          return {...x,hours:exact};
+        });
+        if(changed.length){
+          localStorage.setItem('st_backup_hours_v23',JSON.stringify(changed));
+          saveSessions(fixed);
+          _recomputeHoursFromSessions();
+          console.log('[Migration v23] exact hours restored on '+changed.length+' session(s)');
+        }
+      }
+    }catch(e){console.warn('[Migration v23] Error:',e);v23done=false}
+    if(v23done)localStorage.setItem('st_migration_v23_exact_hours_nov17_2026','1');
+  }
   if(!localStorage.getItem('st_migration_v7')){
     try{
       const raw=localStorage.getItem('st_sched');
@@ -6974,7 +7017,10 @@ function saveEditSession(){
     const [eh,em]=newEnd.split(':').map(Number);
     const mins=(eh*60+em)-(sh*60+sm);
     if(mins<=0){showToast('End must be after start','var(--err)');return}
-    newHours=Math.round(mins/60*100)/100;
+    // Exact, like logSession(). This used to round to 2 decimals, which made a
+    // 2h40m session 2.67h (+0.2 min) and pushed day totals a minute off (9h 1m
+    // for five sessions that add up to exactly 9h 00m on 16 Nov 2026).
+    newHours=mins/60;
   }
 
   // Monthly focus: shortening or re-dating an old session is fine, but hours can
@@ -6986,7 +7032,7 @@ function saveEditSession(){
      showToast(_fcName(newSubjectId)+' is not one of '+_fcMonthName(_fst.ym)+'\u2019s subjects, so its session cannot be moved to a later month.','var(--err)');
      return;
    }
-   if(_fst.active&&!old.bookReading&&newHours>old.hours+1e-9&&!_okIds.includes(newSubjectId)){
+   if(_fst.active&&!old.bookReading&&Math.round(newHours*60)>Math.round((old.hours||0)*60)&&!_okIds.includes(newSubjectId)){
      showToast(_fcName(newSubjectId)+' is not one of '+_fcMonthName(_fst.ym)+'\u2019s subjects, so its session cannot be made longer.','var(--err)');
      return;
    }}
@@ -7000,7 +7046,7 @@ function saveEditSession(){
   let _lockOff=old.lockOff||null;
   {const _lo=_fcLockOffTag(newSubjectId);
    if(newSubjectId!==old.subjectId)_lockOff=_lo;
-   else if(_lo&&(newHours>old.hours+1e-9||_fcMonthOf(newDate)>_fcMonthOf(old.date||newDate)))_lockOff=_lo;}
+   else if(_lo&&(Math.round(newHours*60)>Math.round((old.hours||0)*60)||_fcMonthOf(newDate)>_fcMonthOf(old.date||newDate)))_lockOff=_lo;}
   const updated=sessions.map(x=>{
     if(x.id!==id)return x;
     const n={...x,subjectId:newSubjectId,date:newDate,start:newStart,end:newEnd,notes:newNotes,hours:newHours};
