@@ -2494,8 +2494,11 @@ const JOURNAL_WRITING_LINE='Journal Writing Time (Included in Study Time):';
 // existed. The number Noah types is stored on journalMeta.reviewMins and is what
 // End Time and the form line use. 0 = no review: the line is left off entirely.
 const PREPLY_REVIEW_MINS=10;
-// "Post-Lesson Review (1 Minute)" / "(20 Minutes)" - singular only at exactly 1.
-function _preplyReviewLine(mins){return 'Post-Lesson Review ('+mins+(mins===1?' Minute':' Minutes')+')'}
+// "Post-Lesson Review (1 Minute)" / "(20 Minutes)" / "(1 Hour)" / "(1 Hour 30 Minutes)" -
+// goes through _fmtHoursMins() so 60+ minutes read as hours. Noah, 2026-11-21: 90 must
+// read "1 Hour 30 Minutes" on the Form. Journal line ONLY - the grey line on the
+// import confirmation screen deliberately stays in minutes.
+function _preplyReviewLine(mins){return 'Post-Lesson Review ('+_fmtHoursMins(mins,true)+')'}
 // The value _formContents() takes for a session: false when it is not a Preply
 // lesson, otherwise the review minutes stored on it. Old sessions carry
 // reviewMins:10 already; anything missing falls back to PREPLY_REVIEW_MINS.
