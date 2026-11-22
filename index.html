@@ -3853,6 +3853,33 @@ function runMigrations(){
     }catch(e){console.warn('[Migration v23] Error:',e);v23done=false}
     if(v23done)localStorage.setItem('st_migration_v23_exact_hours_nov17_2026','1');
   }
+  // ── Migration v24: Lab Science base to 0 (23 Nov 2026) ──
+  // v20 stored base 0.05h (3 min) = the 24 Sep teacher report (2:18, rounded
+  // 2.3h) minus the then-only session (2:15). Noah confirmed the Lab Science
+  // Journal Responses sheet is 100% correct: its 4 entries total 6h 53m, which
+  // equals the app's session sum, so no hours exist outside the session list
+  // and the card read 6h 56m (3 min too high). Writes a FIXED 0, only LOWERS
+  // base, so it is a no-op once the cloud row carries the fix.
+  // Gated on a confirmed-good sync so it never pushes a stale st_subjs row.
+  if(!localStorage.getItem('st_migration_v24_labsci_base_zero_nov23_2026')&&_baseMigrationsAllowed()){
+    let v24done=true;
+    try{
+      const raw=localStorage.getItem('st_subjs');
+      if(raw){
+        const subjs=JSON.parse(raw);
+        const ls=subjs.find(x=>x.id==='lab_sci');
+        if(ls&&(ls.base||0)>0.0001){
+          const was=ls.base||0;
+          ls.base=0;
+          localStorage.setItem('st_subjs',JSON.stringify(subjs));
+          localStorage.setItem('st_subjs_updated_at',new Date().toISOString());
+          sbPush('st_subjs',subjs,{silent:true});
+          console.log('[Migration v24] lab_sci base '+was+' -> 0h');
+        }
+      }
+    }catch(e){console.warn('[Migration v24] Error:',e);v24done=false}
+    if(v24done)localStorage.setItem('st_migration_v24_labsci_base_zero_nov23_2026','1');
+  }
   if(!localStorage.getItem('st_migration_v7')){
     try{
       const raw=localStorage.getItem('st_sched');
