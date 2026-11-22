@@ -5208,6 +5208,7 @@ function renderDashboard(){
   const daysLeft=Math.max(1,(deadline-now)/(1000*60*60*24));
   const studyDaysLeft=Math.max(1,daysLeft/7*(goals.daysPerWeek||5));
   const minRequired=_hoursToCheckpoint(remaining)/studyDaysLeft;
+  try{_recordMonthGoal()}catch(e){}
   // Live value, not the persisted goals.teacherTarget snapshot, which goes stale.
   const teacherRate=teacherDaily();
   const paceStripEl=document.getElementById('dash-pace-strip');
@@ -6874,7 +6875,7 @@ function renderHistory(){
             '<span class="hist-month-name">'+monthLabel+'</span>'+
             '<span class="hist-month-count">'+sessionCount+'</span>'+
           '</div>'+
-          '<span class="hist-month-total">'+fmtH(monthTotal)+'</span>'+
+          _monthTotalHtml(mk,monthTotal)+
         '</div>'+
         '<div class="hist-month-body'+(isOpen?' open':'')+'" id="'+bodyId+'">'+
           dayHtml+
@@ -12309,9 +12310,70 @@ const GRAD_DEADLINE='2027-10-31';
 function _hoursToCheckpoint(remaining){return Math.max(0,(remaining||0)-FIRST_GUIDANCE_FLOOR_H)}
 
 // Graduation hours still outstanding (extra-credit subjects excluded).
+function _monthTotalHtml(mk,total){
+  const goal=_monthGoalFor(mk);
+  if(!goal)return '<span class="hist-month-total">'+fmtH(total)+'</span>';
+  const pct=total/goal;
+  const col=pct>=1?'var(--ok)':pct>=0.75?'var(--warn)':'var(--err)';
+  return '<span class="hist-month-total" style="color:'+col+'">'+fmtH(total)+' / '+fmtH(goal)+'</span>';
+}
 function _remainingGradH(){
   const subjs=_canonicalSubjs().filter(s=>!s.extraCredit);
   return Math.max(0,subjs.reduce((a,s)=>a+s.req,0)-getTotalLogged());
+}
+// ── Monthly study goal (History month headers) ───────────────────────────────
+// Goal = the Dashboard's "Minimum" (hours per study day to reach the Jul 20
+// checkpoint) x study days in that month (calendar days / 7 x days-per-week).
+// Shown from MONTH_GOAL_FIRST on. The CURRENT month is live (moves with the
+// minimum, and is snapshotted by _recordMonthGoal so it freezes when the month
+// ends). A PAST month is frozen in st_month_goals (synced), so its number and
+// colour never change again. A past month with no snapshot (Jul-Oct 2026, from
+// before this existed) is frozen the first time it is seen, at today's minimum.
+const MONTH_GOALS_KEY='st_month_goals';
+const MONTH_GOAL_FIRST='2026-07';
+function _loadMonthGoals(){
+  try{const o=JSON.parse(localStorage.getItem(MONTH_GOALS_KEY)||'{}');return o&&typeof o==='object'&&!Array.isArray(o)?o:{}}
+  catch(e){return {}}
+}
+function _saveMonthGoals(o){
+  localStorage.setItem(MONTH_GOALS_KEY,JSON.stringify(o));
+  localStorage.setItem(MONTH_GOALS_KEY+'_updated_at',new Date().toISOString());
+  try{sbPush(MONTH_GOALS_KEY,o,{silent:true})}catch(e){}
+}
+function _curMonthKey(){const n=nowLocal();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')}
+function _dailyMinimumNow(){
+  return _hoursToCheckpoint(_remainingGradH())/_studyDaysToWorkDeadline((goals&&goals.daysPerWeek)||5);
+}
+function _monthStudyDays(mk){
+  const p=mk.split('-').map(Number);
+  return new Date(p[0],p[1],0).getDate()/7*((goals&&goals.daysPerWeek)||5);
+}
+// Monthly goal in hours, or null when this month shows no goal.
+function _monthGoalFor(mk){
+  const cur=_curMonthKey();
+  if(mk<MONTH_GOAL_FIRST||mk>cur)return null;
+  const saved=_loadMonthGoals();
+  const g=_dailyMinimumNow()*_monthStudyDays(mk);
+  const ok=isFinite(g)&&g>0;
+  if(mk===cur)return ok?g:(typeof saved[mk]==='number'?saved[mk]:null);
+  if(typeof saved[mk]==='number')return saved[mk];
+  if(!ok)return null;
+  // Freeze it, but only on a confirmed-good sync so a stale local copy never
+  // writes a goal the cloud already has a different frozen value for.
+  if(_syncOkThisLoad){saved[mk]=Math.round(g*10000)/10000;_saveMonthGoals(saved)}
+  return g;
+}
+// Keep the current month's snapshot fresh so it is what gets frozen at month end.
+function _recordMonthGoal(){
+  if(!_syncOkThisLoad)return;
+  const cur=_curMonthKey();
+  if(cur<MONTH_GOAL_FIRST)return;
+  const g=_dailyMinimumNow()*_monthStudyDays(cur);
+  if(!isFinite(g)||g<=0)return;
+  const saved=_loadMonthGoals();
+  if(typeof saved[cur]==='number'&&Math.abs(saved[cur]-g)<0.01)return;
+  saved[cur]=Math.round(g*10000)/10000;
+  _saveMonthGoals(saved);
 }
 // Weekday-equivalent study days between now and FIRST_GUIDANCE_DEADLINE.
 // (Name kept for call-site stability; it now targets the Jul 20 checkpoint.)
@@ -13498,7 +13560,7 @@ async function syncFromCloud(){
   setSyncUI('syncing','Syncing…');
   _sbPullFailed=false; // reset per cycle — see _baseMigrationsAllowed()
   try{
-    const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_ai_history','st_holiday','st_notif_prefs','st_notif_templates','st_teacher_plan','st_journals','st_schoolwork','st_focus','st_focus_tracker','st_focus_lock','st_coach']; // st_hours is recomputed from sessions below, not pulled directly. st_teacher_plan is written externally by the teacher RPC and only ever pulled here (cloud-authoritative, falls through to the default setItem branch — the app never sbPushes it).
+    const KEYS=['st_subjs','st_sched','st_sessions','st_goals','st_todos','st_sched_overrides','st_ai_history','st_holiday','st_notif_prefs','st_notif_templates','st_teacher_plan','st_journals','st_schoolwork','st_focus','st_focus_tracker','st_focus_lock','st_coach','st_month_goals']; // st_hours is recomputed from sessions below, not pulled directly. st_teacher_plan is written externally by the teacher RPC and only ever pulled here (cloud-authoritative, falls through to the default setItem branch — the app never sbPushes it).
     // Pull st_deleted_sessions upfront so we can use it synchronously inside forEach
     // Tombstones are UNIONED with the cloud list (2026-10-30 fix): the old code
     // only adopted the cloud list when it was longer, and pushed lists whole, so
@@ -13564,6 +13626,20 @@ async function syncFromCloud(){
             localStorage.setItem(k,JSON.stringify(cloud));
             _aiHistory=cloud;
           }
+        } else if(k==='st_month_goals'){
+          // Frozen past-month goals: cloud wins on a conflict so every device
+          // converges on one value; keys only this device has are pushed up.
+          // The current month is live, so there the newer write wins.
+          try{
+            const cloudO=(rows[i].value&&typeof rows[i].value==='object'&&!Array.isArray(rows[i].value))?rows[i].value:{};
+            const localO=_loadMonthGoals();
+            const curMk=_curMonthKey();
+            const merged={...localO,...cloudO};
+            if(typeof localO[curMk]==='number'&&(localStorage.getItem(k+'_updated_at')||'')>(rows[i].updated_at||''))merged[curMk]=localO[curMk];
+            localStorage.setItem(k,JSON.stringify(merged));
+            localStorage.setItem(k+'_updated_at',rows[i].updated_at||'');
+            if(Object.keys(merged).some(m=>merged[m]!==cloudO[m]))sbPush(k,merged,{silent:true});
+          }catch(e){console.warn('[Sync] st_month_goals merge failed:',e)}
         } else if(k==='st_subjs'||k==='st_goals'||k==='st_todos'||k==='st_sched_overrides'||k==='st_holiday'||k==='st_notif_prefs'||k==='st_notif_templates'||k==='st_journals'||k==='st_schoolwork'||k==='st_focus'||k==='st_focus_tracker'||k==='st_focus_lock'||k==='st_coach'){
           // Timestamped last-writer-wins: keep whichever version is newer.
           // Prevents a device with stale data from reverting a fresh edit.
