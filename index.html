@@ -12311,7 +12311,9 @@ function _hoursToCheckpoint(remaining){return Math.max(0,(remaining||0)-FIRST_GU
 
 // Graduation hours still outstanding (extra-credit subjects excluded).
 function _monthTotalHtml(mk,total){
-  const goal=_monthGoalFor(mk);
+  // Never let the goal code break the History page: fall back to the plain total.
+  let goal=null;
+  try{goal=_monthGoalFor(mk)}catch(e){console.warn('[MonthGoal] '+mk+':',e)}
   if(!goal)return '<span class="hist-month-total">'+fmtH(total)+'</span>';
   const pct=total/goal;
   const col=pct>=1?'var(--ok)':pct>=0.75?'var(--warn)':'var(--err)';
@@ -12342,11 +12344,11 @@ function _saveMonthGoals(o){
 }
 function _curMonthKey(){const n=nowLocal();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')}
 function _dailyMinimumNow(){
-  return _hoursToCheckpoint(_remainingGradH())/_studyDaysToWorkDeadline((goals&&goals.daysPerWeek)||5);
+  return _hoursToCheckpoint(_remainingGradH())/_studyDaysToWorkDeadline((loadGoals()||{}).daysPerWeek||5);
 }
 function _monthStudyDays(mk){
   const p=mk.split('-').map(Number);
-  return new Date(p[0],p[1],0).getDate()/7*((goals&&goals.daysPerWeek)||5);
+  return new Date(p[0],p[1],0).getDate()/7*((loadGoals()||{}).daysPerWeek||5);
 }
 // Monthly goal in hours, or null when this month shows no goal.
 function _monthGoalFor(mk){
