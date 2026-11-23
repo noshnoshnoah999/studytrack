@@ -265,7 +265,8 @@ a{color:inherit;text-decoration:none}
 .hist-month-chevron.open{transform:rotate(180deg);color:var(--o)}
 .hist-month-name{font-size:16px;font-weight:700;color:var(--text)}
 .hist-month-count{font-size:12px;color:var(--text3);font-weight:500;background:var(--bg3);padding:2px 8px;border-radius:100px}
-.hist-month-total{font-size:16px;font-weight:800;color:var(--o)}
+.hist-month-total{font-size:16px;font-weight:800;color:var(--o);text-align:right}
+@media(max-width:600px){.hist-month-header{gap:10px}.hist-month-total{font-size:13px}}
 .hist-month-body{padding:0 12px 12px;overflow:hidden;max-height:0}
 .hist-month-body.open{max-height:6000px;opacity:1}
 .hist-month-body:not(.open){opacity:0}
@@ -10493,6 +10494,16 @@ function fcLockIn(ym,mode){
 }
 
 // ── the red block (every page) + Banner 2 ───────────────────────────────────
+// iPhone only (2026-11-23): the red block can be hidden until midnight with an X,
+// leaving just the Focus lock row. With the lock off the whole box is hidden until
+// midnight. Never offered while subjects must be chosen (st.blocked). Device-local,
+// not synced: MacBook/iPad never see the X.
+const FOCUS_DISMISS_KEY='st_focus_dismiss';
+function _isIPhone(){try{return /iPhone/.test(navigator.userAgent||'')}catch(e){return false}}
+function fcDismissToday(){
+  try{localStorage.setItem(FOCUS_DISMISS_KEY,todayStr())}catch(e){}
+  renderFocusBlock();
+}
 function renderFocusBlock(){
   const host=document.getElementById('focus-block');
   const chooseHost=document.getElementById('focus-choose');
@@ -10513,8 +10524,12 @@ function renderFocusBlock(){
       '<div class="fc-row-edit">Tap to update</div>'+
     '</div>';
   };
-  let h='<div class="fc-block">'+
-    '<div class="fc-block-title">'+_fcMonthName(st.ym)+'’s Study &amp; Focus subjects are '+escHtml(nm(st.core))+' &amp; '+escHtml(nm(st.side))+'</div>';
+  const canDismiss=_isIPhone()&&st.active&&!st.blocked;
+  const titleHtml='<div class="fc-block-title">'+_fcMonthName(st.ym)+'’s Study &amp; Focus subjects are '+escHtml(nm(st.core))+' &amp; '+escHtml(nm(st.side))+'</div>';
+  let h='<div class="fc-block">'+(canDismiss?
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">'+titleHtml+
+      '<button onclick="fcDismissToday()" aria-label="Hide until midnight" title="Hide until midnight" style="flex-shrink:0;background:none;border:none;color:#fff;font-size:24px;line-height:1;padding:0 2px;cursor:pointer">\u00d7</button></div>':
+    titleHtml);
   if(!st.active)h+='<div class="fc-block-note">Starts 3 October — nothing is restricted until then.</div>';
   h+='<div class="fc-rows">'+row(st.core,'Core')+row(st.side,'Side')+'</div>';
   if(st.active&&!st.blocked)h+=_fcLockRowHtml(st);
@@ -10526,6 +10541,11 @@ function renderFocusBlock(){
       'Choose '+_fcMonthName(st.ym)+'’s subjects to start logging.')+'</div>'+c.html+'</div>';
   }
   h+='</div>';
+  if(canDismiss){
+    if(st.lockOff)h='';
+    else{let d=null;try{d=localStorage.getItem(FOCUS_DISMISS_KEY)}catch(e){}
+      if(d===todayStr())h='<div class="fc-block">'+_fcLockRowHtml(st)+'</div>';}
+  }
   host.innerHTML=h;
   let ch='';
   if(st.active&&chooseHost){
@@ -12317,7 +12337,11 @@ function _monthTotalHtml(mk,total){
   if(!goal)return '<span class="hist-month-total">'+fmtH(total)+'</span>';
   const pct=total/goal;
   const col=pct>=1?'var(--ok)':pct>=0.75?'var(--warn)':'var(--err)';
-  return '<span class="hist-month-total" style="color:'+col+'">'+fmtH(total)+' / '+fmtH(goal)+'</span>';
+  // Percentage = share of the goal done, rounded DOWN, no decimals (Noah: 82%, 105%).
+  const pctTxt=Math.floor(pct*100)+'%';
+  const diff=goal-total;
+  const tail=diff>0?fmtH(diff)+' left ('+pctTxt+')':fmtH(-diff)+' over ('+pctTxt+')';
+  return '<span class="hist-month-total" style="color:'+col+'">'+fmtH(total)+' / '+fmtH(goal)+' | '+tail+'</span>';
 }
 function _remainingGradH(){
   const subjs=_canonicalSubjs().filter(s=>!s.extraCredit);
